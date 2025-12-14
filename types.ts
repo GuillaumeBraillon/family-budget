@@ -75,6 +75,8 @@ export interface PlannedItem {
   beneficiaryId: string;
   isExtra?: boolean;
   ownerId: string;
+  startMonth?: string;
+  endMonth?: string;
 }
 
 export interface WeeklyBudget {

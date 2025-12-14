@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { ExpenseConfig, WeeklyBudget, Account, AccountType, PlannedItem, Person } from '../../types';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
-import { Check, AlertTriangle, ArrowRightLeft, Calendar, ChevronLeft, ChevronRight, User, Users } from 'lucide-react';
+import { Check, AlertTriangle, ArrowRightLeft, Calendar, ChevronLeft, ChevronRight, User, Users, Clock, Search, X } from 'lucide-react';
 
 interface BudgetPlannerProps {
   configs: ExpenseConfig[];
@@ -14,6 +14,7 @@ interface BudgetPlannerProps {
 export const BudgetPlanner: React.FC<BudgetPlannerProps> = ({ configs, accounts, people, paidItems, onTogglePaid }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [activeWeek, setActiveWeek] = useState<number>(1);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const changeMonth = (delta: number) => {
     const newDate = new Date(currentDate);
@@ -25,6 +26,7 @@ export const BudgetPlanner: React.FC<BudgetPlannerProps> = ({ configs, accounts,
   const monthLabel = new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' }).format(currentDate);
   const currentMonthKey = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
 
+  // 1. Génération des données brutes pour le mois
   const generatedWeeks = useMemo(() => {
     const weeks: WeeklyBudget[] = [
       { weekNumber: 1, label: "Semaine 1 (1 au 7)", items: [] },
@@ -57,9 +59,11 @@ export const BudgetPlanner: React.FC<BudgetPlannerProps> = ({ configs, accounts,
         amount: conf.amount,
         category: conf.category,
         subCategory: conf.subCategory,
-        beneficiaryId: conf.beneficiaryId, // Uses ID now
-        ownerId: conf.ownerId, // Uses ID now
+        beneficiaryId: conf.beneficiaryId,
+        ownerId: conf.ownerId, 
         isExtra: conf.isExtra,
+        startMonth: conf.startMonth,
+        endMonth: conf.endMonth,
         isPaid: !!paidItems[instanceId]
       });
     });
@@ -68,13 +72,31 @@ export const BudgetPlanner: React.FC<BudgetPlannerProps> = ({ configs, accounts,
     return weeks;
   }, [configs, currentMonthKey, paidItems]);
 
-  const currentWeekData = generatedWeeks.find(w => w.weekNumber === activeWeek);
+  // 2. Filtrage basé sur la recherche
+  const filteredWeeks = useMemo(() => {
+    if (!searchQuery.trim()) return generatedWeeks;
+    
+    const lowerQuery = searchQuery.toLowerCase();
+    
+    return generatedWeeks.map(week => ({
+      ...week,
+      items: week.items.filter(item => 
+        item.label.toLowerCase().includes(lowerQuery) || 
+        item.amount.toString().includes(lowerQuery)
+      )
+    }));
+  }, [generatedWeeks, searchQuery]);
+
+  const currentWeekData = filteredWeeks.find(w => w.weekNumber === activeWeek);
   
   // Find Joint Account properly (looking for name containing Joint or owner is Joint Person)
   const jointPerson = people.find(p => p.name === 'Commun' || p.name === 'Joint');
   const jointAccount = accounts.find(a => a.ownerId === jointPerson?.id && a.type === AccountType.CHECKING);
   const lddsAccount = accounts.find(a => a.ownerId === jointPerson?.id && a.type === AccountType.SAVINGS && a.name.includes('LDDS'));
 
+  // Note: On calcule le "Reste à payer" sur les items filtrés ou globaux ? 
+  // UX Choice: Si on filtre, on veut voir le total de ce qu'on cherche, sinon global.
+  // Ici on garde la logique sur la semaine affichée (filtrée).
   const jointExpensesUnpaid = currentWeekData?.items
     .filter(i => !i.isPaid && i.ownerId === jointPerson?.id)
     .reduce((sum, item) => sum + item.amount, 0) || 0;
@@ -83,46 +105,114 @@ export const BudgetPlanner: React.FC<BudgetPlannerProps> = ({ configs, accounts,
   const projectedBalance = jointBalance - jointExpensesUnpaid;
   const needTransfer = projectedBalance < 0;
 
+  // Helper pour formater l'info "Extra"
+  const getExtraInfo = (item: PlannedItem) => {
+    if (!item.isExtra || !item.startMonth || !item.endMonth) return null;
+
+    const [startYear, startMonth] = item.startMonth.split('-').map(Number);
+    const [endYear, endMonth] = item.endMonth.split('-').map(Number);
+    const [currYear, currMonth] = currentMonthKey.split('-').map(Number);
+
+    const startVal = startYear * 12 + (startMonth - 1);
+    const endVal = endYear * 12 + (endMonth - 1);
+    const currVal = currYear * 12 + (currMonth - 1);
+
+    const totalSteps = endVal - startVal + 1;
+    const currentStep = currVal - startVal + 1;
+
+    const endDate = new Date(endYear, endMonth - 1);
+    const endDateStr = endDate.toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' });
+
+    return {
+        progress: `${currentStep}/${totalSteps}`,
+        endDate: endDateStr
+    };
+  };
+
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-            <Calendar className="text-indigo-600" />
-            Budget Mensuel
-        </h2>
-        
-        <div className="flex items-center bg-white rounded-lg shadow-sm border border-slate-200 p-1">
-          <button onClick={() => changeMonth(-1)} className="p-2 hover:bg-slate-100 rounded-md text-slate-600">
-            <ChevronLeft size={20} />
-          </button>
-          <span className="px-4 font-semibold text-slate-800 min-w-[140px] text-center capitalize">
-            {monthLabel}
-          </span>
-          <button onClick={() => changeMonth(1)} className="p-2 hover:bg-slate-100 rounded-md text-slate-600">
-            <ChevronRight size={20} />
-          </button>
-        </div>
-      </div>
+      
+      {/* Header Controls */}
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+                <Calendar className="text-indigo-600" />
+                Budget Mensuel
+            </h2>
+            
+            <div className="flex flex-col sm:flex-row gap-3">
+                {/* Search Bar */}
+                <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                    <input 
+                        type="text" 
+                        placeholder="Rechercher (libellé, montant)..." 
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="pl-9 pr-8 py-2 border border-slate-300 rounded-lg text-sm w-full sm:w-64 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none shadow-sm"
+                    />
+                    {searchQuery && (
+                        <button 
+                            onClick={() => setSearchQuery('')}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                        >
+                            <X size={14} />
+                        </button>
+                    )}
+                </div>
 
-      <div className="flex overflow-x-auto gap-2 pb-2 scrollbar-hide">
-        {generatedWeeks.map((week) => (
-          <button
-            key={week.weekNumber}
-            onClick={() => setActiveWeek(week.weekNumber)}
-            className={`px-4 py-2 rounded-full whitespace-nowrap text-sm font-medium transition-colors ${
-              activeWeek === week.weekNumber
-                ? 'bg-slate-900 text-white'
-                : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
-            }`}
-          >
-            {week.label}
-             {week.items.filter(i => !i.isPaid).length > 0 && (
-               <span className="ml-2 bg-indigo-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">
-                 {week.items.filter(i => !i.isPaid).length}
-               </span>
-             )}
-          </button>
-        ))}
+                {/* Month Navigation */}
+                <div className="flex items-center bg-white rounded-lg shadow-sm border border-slate-200 p-1">
+                    <button onClick={() => changeMonth(-1)} className="p-2 hover:bg-slate-100 rounded-md text-slate-600">
+                        <ChevronLeft size={20} />
+                    </button>
+                    <span className="px-4 font-semibold text-slate-800 min-w-[140px] text-center capitalize">
+                        {monthLabel}
+                    </span>
+                    <button onClick={() => changeMonth(1)} className="p-2 hover:bg-slate-100 rounded-md text-slate-600">
+                        <ChevronRight size={20} />
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        {/* Week Tabs */}
+        <div className="flex overflow-x-auto gap-2 pb-2 scrollbar-hide">
+            {filteredWeeks.map((week) => {
+                // Count items logic changes based on search
+                const hasSearch = searchQuery.length > 0;
+                const matchCount = week.items.length;
+                const unpaidCount = hasSearch ? 0 : week.items.filter(i => !i.isPaid).length;
+
+                return (
+                    <button
+                        key={week.weekNumber}
+                        onClick={() => setActiveWeek(week.weekNumber)}
+                        className={`px-4 py-2 rounded-full whitespace-nowrap text-sm font-medium transition-colors flex items-center gap-2 ${
+                        activeWeek === week.weekNumber
+                            ? 'bg-slate-900 text-white'
+                            : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+                        }`}
+                    >
+                        <span>{week.label}</span>
+                        
+                        {/* Badge Unpaid (Standard) */}
+                        {!hasSearch && unpaidCount > 0 && (
+                            <span className="bg-indigo-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">
+                                {unpaidCount}
+                            </span>
+                        )}
+
+                        {/* Badge Search Match */}
+                        {hasSearch && matchCount > 0 && (
+                             <span className="bg-emerald-500 text-white text-[10px] px-1.5 py-0.5 rounded-full flex items-center gap-1">
+                                <Search size={8} /> {matchCount}
+                            </span>
+                        )}
+                    </button>
+                );
+            })}
+        </div>
       </div>
 
       <Card>
@@ -137,6 +227,7 @@ export const BudgetPlanner: React.FC<BudgetPlannerProps> = ({ configs, accounts,
                 {currentWeekData?.items.map((item) => {
                     const ownerName = people.find(p => p.id === item.ownerId)?.name || 'Inconnu';
                     const beneficiaryName = people.find(p => p.id === item.beneficiaryId)?.name || 'Inconnu';
+                    const extraInfo = getExtraInfo(item);
                     
                     return (
                         <div key={item.instanceId} 
@@ -159,7 +250,17 @@ export const BudgetPlanner: React.FC<BudgetPlannerProps> = ({ configs, accounts,
                                             {item.label}
                                         </p>
                                         {item.isExtra && (
-                                            <span className="px-1.5 py-0.5 bg-amber-100 text-amber-700 text-[10px] rounded font-bold uppercase">Extra</span>
+                                            <div className="flex items-center gap-1.5 bg-amber-50 border border-amber-200 text-amber-800 text-[10px] px-1.5 py-0.5 rounded font-medium">
+                                                {extraInfo ? (
+                                                  <>
+                                                    <span className="font-bold">{extraInfo.progress}</span>
+                                                    <span className="text-amber-400">•</span>
+                                                    <span className="flex items-center gap-0.5"><Clock size={10} /> Fin {extraInfo.endDate}</span>
+                                                  </>
+                                                ) : (
+                                                  <span>EXTRA</span>
+                                                )}
+                                            </div>
                                         )}
                                     </div>
                                     <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1">
@@ -179,7 +280,12 @@ export const BudgetPlanner: React.FC<BudgetPlannerProps> = ({ configs, accounts,
                     );
                 })}
                 {currentWeekData?.items.length === 0 && (
-                    <div className="p-8 text-center text-slate-400">Aucune dépense planifiée pour cette semaine.</div>
+                    <div className="p-8 text-center text-slate-400">
+                        {searchQuery 
+                            ? "Aucun résultat pour cette semaine." 
+                            : "Aucune dépense planifiée pour cette semaine."
+                        }
+                    </div>
                 )}
             </div>
         </CardContent>
@@ -197,7 +303,9 @@ export const BudgetPlanner: React.FC<BudgetPlannerProps> = ({ configs, accounts,
              </div>
              
              <div className="space-y-1">
-                 <p className="text-sm text-slate-600">Dépenses prévues (Non payées)</p>
+                 <p className="text-sm text-slate-600">
+                    {searchQuery ? "Dépenses filtrées (Non payées)" : "Dépenses prévues (Non payées)"}
+                 </p>
                  <p className="text-xl font-bold text-red-600">- {jointExpensesUnpaid.toFixed(2)} €</p>
              </div>
 

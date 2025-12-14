@@ -1,5 +1,5 @@
 {
-  "name": "Budget Couple - Gestion Familiale",
-  "description": "Application de gestion financière pour couple avec suivi des comptes, méthode des enveloppes et calcul d'équité au prorata.",
+  "name": "Budget Familiale",
+  "description": "Application de gestion financière pour la famille avec suivi des comptes, méthode des enveloppes et calcul d'équité au prorata.",
   "requestFramePermissions": []
 }
