@@ -74,6 +74,7 @@ export const fetchInitialData = async () => {
     label: i.label,
     amount: i.amount ?? 0,
     ownerId: i.owner_id,
+    beneficiaryId: i.beneficiary_id || i.owner_id, // Fallback si pas encore défini
     dayOfMonth: i.day_of_month,
     category: i.category
   }));
@@ -122,7 +123,7 @@ export const seedDatabase = async () => {
     // 5. Income Configs
     for(const i of MOCK_INCOME_CONFIGS) {
         await supabase.from('income_configs').upsert({
-            id: i.id, label: i.label, amount: i.amount, owner_id: i.ownerId, day_of_month: i.dayOfMonth, category: i.category
+            id: i.id, label: i.label, amount: i.amount, owner_id: i.ownerId, beneficiary_id: i.beneficiaryId, day_of_month: i.dayOfMonth, category: i.category
         });
     }
 };
@@ -189,6 +190,7 @@ export const apiUpsertIncome = async (income: IncomeConfig) => {
     label: income.label,
     amount: income.amount,
     owner_id: income.ownerId,
+    beneficiary_id: income.beneficiaryId,
     day_of_month: income.dayOfMonth,
     category: income.category
   });

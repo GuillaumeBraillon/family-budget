@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { ExpenseConfig, IncomeConfig, WeeklyBudget, Account, AccountType, PlannedItem, Person, PaidItemDetails } from '../../types';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
-import { Check, AlertTriangle, ArrowRightLeft, Calendar, ChevronLeft, ChevronRight, User, Users, Clock, Search, X, CreditCard, RotateCcw, TrendingUp } from 'lucide-react';
+import { Check, AlertTriangle, ArrowRightLeft, Calendar, ChevronLeft, ChevronRight, User, Users, Clock, Search, X, CreditCard, RotateCcw, TrendingUp, Calculator, Wallet, PieChart, Banknote } from 'lucide-react';
 
 interface BudgetPlannerProps {
   configs: ExpenseConfig[];
@@ -121,8 +121,8 @@ export const BudgetPlanner: React.FC<BudgetPlannerProps> = ({ configs, incomeCon
         amount: effectiveAmount,
         category: inc.category,
         subCategory: '',
-        beneficiaryId: inc.ownerId, // Pour un revenu, le bénéficiaire c'est le compte qui reçoit
-        ownerId: inc.ownerId, // C'est le compte lié
+        beneficiaryId: inc.beneficiaryId, // La personne qui gagne l'argent (le bénéficiaire du revenu)
+        ownerId: inc.ownerId, // Le compte de réception
         isExtra: false,
         isPaid: !!paidInfo,
         paidDetails: paidInfo
@@ -149,49 +149,6 @@ export const BudgetPlanner: React.FC<BudgetPlannerProps> = ({ configs, incomeCon
   }, [generatedWeeks, searchQuery]);
 
   const currentWeekDisplayData = filteredWeeks.find(w => w.weekNumber === activeWeek);
-  
-  // LOGIQUE DE DÉTECTION DU COMPTE JOINT
-  const jointPerson = useMemo(() => {
-    return people.find(p => {
-        const n = p.name.toLowerCase();
-        return ['commun', 'joint', 'compte joint', 'couple', 'nous', 'famille'].some(k => n.includes(k));
-    });
-  }, [people]);
-
-  const jointAccount = useMemo(() => {
-      if (jointPerson) {
-          const acc = accounts.find(a => a.ownerId === jointPerson.id && a.type === AccountType.CHECKING);
-          if (acc) return acc;
-      }
-      return accounts.find(a => {
-          const n = a.name.toLowerCase();
-          return (n.includes('joint') || n.includes('commun')) && a.type === AccountType.CHECKING;
-      });
-  }, [accounts, jointPerson]);
-
-  const lddsAccount = useMemo(() => {
-      return accounts.find(a => a.type === AccountType.SAVINGS && a.name.toLowerCase().includes('ldds'));
-  }, [accounts]);
-
-
-  // 3. Calcul CUMULATIF (Trésorerie)
-  // On prend tout jusqu'à la fin de la semaine active
-  const itemsUntilNow = generatedWeeks
-    .filter(w => w.weekNumber <= activeWeek) 
-    .flatMap(w => w.items);
-  
-  const cumulativeJointExpensesUnpaid = itemsUntilNow
-    .filter(i => !i.isPaid && i.type === 'EXPENSE' && i.ownerId === jointPerson?.id)
-    .reduce((sum, item) => sum + (item.amount || 0), 0);
-  
-  const cumulativeJointIncomesPending = itemsUntilNow
-    .filter(i => !i.isPaid && i.type === 'INCOME' && i.ownerId === jointPerson?.id)
-    .reduce((sum, item) => sum + (item.amount || 0), 0);
-
-  const jointBalance = jointAccount?.currentBalance ?? 0;
-  // Solde Projeté = Solde Actuel - Dépenses non passées + Revenus non passés
-  const projectedBalance = jointBalance - cumulativeJointExpensesUnpaid + cumulativeJointIncomesPending;
-  const needTransfer = projectedBalance < 0;
 
   const getExtraInfo = (item: PlannedItem) => {
     if (!item.isExtra || !item.startMonth || !item.endMonth) return null;
@@ -207,6 +164,60 @@ export const BudgetPlanner: React.FC<BudgetPlannerProps> = ({ configs, incomeCon
     const endDateStr = endDate.toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' });
     return { progress: `${currentStep}/${totalSteps}`, endDate: endDateStr };
   };
+
+  // --- CALCUL DES STATISTIQUES HEBDOMADAIRES ---
+  const weeklyStats = useMemo(() => {
+    const items = currentWeekDisplayData?.items || [];
+    
+    // 1. GLOBAL
+    const totalPlanned = items.reduce((acc, item) => {
+        return item.type === 'EXPENSE' ? acc + item.amount : acc - item.amount;
+    }, 0);
+
+    const remainingToPay = items.reduce((acc, item) => {
+        if(item.isPaid) return acc;
+        return item.type === 'EXPENSE' ? acc + item.amount : acc - item.amount;
+    }, 0);
+
+    // 2. PAR PAYEUR (Owner) - Sert pour les comptes
+    const byPayer: Record<string, { total: number, remaining: number }> = {};
+    
+    // 3. PAR BÉNÉFICIAIRE (DÉPENSES) - Qui dépense ?
+    const expenseByBeneficiary: Record<string, { total: number }> = {};
+    
+    // 4. PAR BÉNÉFICIAIRE (REVENUS) - Qui rapporte ?
+    const incomeByBeneficiary: Record<string, { total: number }> = {};
+
+    items.forEach(item => {
+        // Init Payers
+        if (!byPayer[item.ownerId]) byPayer[item.ownerId] = { total: 0, remaining: 0 };
+        
+        const amount = item.amount;
+        
+        // Update Payer Logic (Expense = +, Income = -)
+        if (item.type === 'EXPENSE') {
+            byPayer[item.ownerId].total += amount;
+            if(!item.isPaid) byPayer[item.ownerId].remaining += amount;
+
+            // Stats Bénéficiaire Dépense
+            if (!expenseByBeneficiary[item.beneficiaryId]) expenseByBeneficiary[item.beneficiaryId] = { total: 0 };
+            expenseByBeneficiary[item.beneficiaryId].total += amount;
+
+        } else {
+            // Income reduces the payer's "cost" (trésorerie)
+            byPayer[item.ownerId].total -= amount;
+            if(!item.isPaid) byPayer[item.ownerId].remaining -= amount;
+
+            // Stats Bénéficiaire Revenu
+            if (!incomeByBeneficiary[item.beneficiaryId]) incomeByBeneficiary[item.beneficiaryId] = { total: 0 };
+            incomeByBeneficiary[item.beneficiaryId].total += amount;
+        }
+    });
+
+    return { totalPlanned, remainingToPay, byPayer, expenseByBeneficiary, incomeByBeneficiary };
+
+  }, [currentWeekDisplayData]);
+
 
   // --- HANDLERS ---
 
@@ -230,7 +241,8 @@ export const BudgetPlanner: React.FC<BudgetPlannerProps> = ({ configs, incomeCon
         defaultAccountId = targetAccount?.id || '';
 
         if (!defaultAccountId) {
-             defaultAccountId = jointAccount?.id || accounts.find(a => a.type === AccountType.CHECKING)?.id || '';
+            // Fallback au compte joint ou premier compte courant trouvé
+             defaultAccountId = accounts.find(a => a.name.toLowerCase().includes('joint') && a.type === AccountType.CHECKING)?.id || accounts.find(a => a.type === AccountType.CHECKING)?.id || '';
         }
 
         setConfirmModal({
@@ -590,69 +602,117 @@ export const BudgetPlanner: React.FC<BudgetPlannerProps> = ({ configs, incomeCon
             </div>
         </CardContent>
       </Card>
+      
+      {/* --- WEEKLY SUMMARY / BILAN HEBDO --- */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          
+          {/* 1. Global Summary */}
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 flex flex-col justify-between relative overflow-hidden">
+              <div className="absolute top-0 right-0 p-4 opacity-5">
+                  <Calculator size={64} />
+              </div>
+              <div>
+                  <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-4">Bilan Hebdomadaire</h3>
+                  <div className="space-y-4">
+                      <div>
+                          <p className="text-xs text-slate-400 mb-1">Mouvements Prévus (Total)</p>
+                          <p className="text-xl font-bold text-slate-900">
+                             {weeklyStats.totalPlanned.toFixed(2)} €
+                          </p>
+                      </div>
+                      <div className="pt-4 border-t border-slate-100">
+                           <p className="text-xs text-slate-400 mb-1">Reste à Payer / Encaisser</p>
+                           <p className={`text-2xl font-bold ${weeklyStats.remainingToPay < 0 ? 'text-emerald-600' : 'text-indigo-600'}`}>
+                                {weeklyStats.remainingToPay.toFixed(2)} €
+                           </p>
+                           <p className="text-[10px] text-slate-400 mt-1 italic">
+                               {weeklyStats.remainingToPay > 0 ? "Sortie d'argent restante" : "Entrée d'argent restante"}
+                           </p>
+                      </div>
+                  </div>
+              </div>
+          </div>
 
-      <div className={`rounded-xl p-6 border ${needTransfer ? 'bg-amber-50 border-amber-200' : 'bg-emerald-50 border-emerald-200'}`}>
-         <div className="flex items-start justify-between mb-4">
-             <h3 className="font-semibold text-slate-900 flex items-center gap-2">
-                Simulation Trésorerie ({jointPerson?.name || 'Joint'})
-             </h3>
-         </div>
-         
-         <div className="flex flex-col md:flex-row gap-8 justify-between">
-             <div className="space-y-1">
-                 <p className="text-sm text-slate-600">Solde Actuel</p>
-                 <p className="text-xl font-bold text-slate-900">{jointBalance.toFixed(2)} €</p>
-             </div>
-             
-             {/* Bloc Mouvements Cumulés */}
-             <div className="space-y-1">
-                 <p className="text-sm text-slate-600">
-                    Mouvements à venir (Fin sem. {activeWeek})
-                 </p>
-                 <div className="flex flex-col">
-                    {cumulativeJointExpensesUnpaid > 0 && (
-                        <span className="text-sm font-medium text-red-600">- {cumulativeJointExpensesUnpaid.toFixed(2)} € (Dépenses)</span>
-                    )}
-                    {cumulativeJointIncomesPending > 0 && (
-                        <span className="text-sm font-medium text-emerald-600">+ {cumulativeJointIncomesPending.toFixed(2)} € (Revenus)</span>
-                    )}
-                    {cumulativeJointExpensesUnpaid === 0 && cumulativeJointIncomesPending === 0 && (
-                        <span className="text-sm text-slate-400 italic">Aucun mouvement en attente</span>
-                    )}
-                 </div>
-             </div>
-
-             <div className="h-px md:h-auto md:w-px bg-slate-300 my-2 md:my-0"></div>
-
-             <div className="space-y-1">
-                 <p className="text-sm text-slate-600">Solde Prévisionnel Fin de Semaine</p>
-                 <p className={`text-xl font-bold ${projectedBalance < 0 ? 'text-red-600' : 'text-emerald-600'}`}>
-                    {projectedBalance.toFixed(2)} €
-                 </p>
-             </div>
-         </div>
-
-         {needTransfer && (
-             <div className="mt-6 bg-white rounded-lg p-4 border border-amber-200 flex items-start gap-3 shadow-sm">
-                <AlertTriangle className="text-amber-500 shrink-0 mt-0.5" />
-                <div className="flex-1">
-                    <h4 className="font-semibold text-amber-800 text-sm">Action Requise : Virement nécessaire</h4>
-                    <p className="text-sm text-slate-600 mt-1">
-                        Le compte {jointAccount?.name || 'Joint'} sera débiteur de <strong>{Math.abs(projectedBalance).toFixed(2)} €</strong> cette semaine.
-                    </p>
-                    {lddsAccount && (
-                        <div className="mt-3 flex items-center gap-2 text-sm">
-                            <span className="text-slate-500">Disponible sur LDDS : <strong>{(lddsAccount.currentBalance ?? 0).toFixed(2)} €</strong></span>
-                            <button className="bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded text-xs font-medium flex items-center gap-1 transition-colors">
-                                <ArrowRightLeft size={12} />
-                                Simuler Virement
-                            </button>
-                        </div>
-                    )}
+          {/* 2. By Payer (Owner) */}
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-4 opacity-5">
+                  <Wallet size={64} />
                 </div>
-             </div>
-         )}
+                <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-4">Par Payeur / Compte</h3>
+                <div className="space-y-3">
+                    {Object.keys(weeklyStats.byPayer).length === 0 && (
+                        <p className="text-xs text-slate-400 italic">Aucune donnée.</p>
+                    )}
+                    {Object.entries(weeklyStats.byPayer).map(([ownerId, stats]) => {
+                         const personName = people.find(p => p.id === ownerId)?.name || 'Inconnu';
+                         return (
+                             <div key={ownerId} className="flex justify-between items-center text-sm">
+                                 <span className="font-medium text-slate-700">{personName}</span>
+                                 <div className="text-right">
+                                     <span className="block font-bold text-slate-900">{stats.total.toFixed(2)} €</span>
+                                     {stats.remaining !== 0 && (
+                                         <span className="text-[10px] text-slate-500">Reste: {stats.remaining.toFixed(2)} €</span>
+                                     )}
+                                     {stats.remaining === 0 && stats.total !== 0 && (
+                                         <span className="text-[10px] text-emerald-600 font-medium flex justify-end items-center gap-1"><Check size={10}/> Soldé</span>
+                                     )}
+                                 </div>
+                             </div>
+                         )
+                    })}
+                </div>
+          </div>
+
+          {/* 3. By Beneficiary (Expenses) */}
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-4 opacity-5">
+                  <PieChart size={64} />
+                </div>
+                <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-4">Dépenses par Bénéf.</h3>
+                <div className="space-y-3 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
+                    {Object.keys(weeklyStats.expenseByBeneficiary).length === 0 && (
+                        <p className="text-xs text-slate-400 italic">Aucune dépense planifiée.</p>
+                    )}
+                    {Object.entries(weeklyStats.expenseByBeneficiary).sort((a,b) => b[1].total - a[1].total).map(([beneficiaryId, stats]) => {
+                         const personName = people.find(p => p.id === beneficiaryId)?.name || 'Inconnu';
+                         return (
+                             <div key={beneficiaryId} className="flex justify-between items-center text-sm border-b border-slate-50 pb-2 last:border-0 last:pb-0">
+                                 <span className="text-slate-600">{personName}</span>
+                                 <div className="text-right">
+                                     <span className="block font-semibold text-slate-800">{stats.total.toFixed(2)} €</span>
+                                 </div>
+                             </div>
+                         )
+                    })}
+                </div>
+          </div>
+
+          {/* 4. By Beneficiary (Incomes) */}
+          <div className="bg-white rounded-xl border border-emerald-100 shadow-sm p-5 relative overflow-hidden bg-emerald-50/30">
+                <div className="absolute top-0 right-0 p-4 opacity-5 text-emerald-600">
+                  <Banknote size={64} />
+                </div>
+                <h3 className="text-sm font-semibold text-emerald-700 uppercase tracking-wider mb-4">Revenus par Bénéf.</h3>
+                <div className="space-y-3 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
+                    {Object.keys(weeklyStats.incomeByBeneficiary).length === 0 && (
+                        <p className="text-xs text-slate-400 italic">Aucun revenu planifié.</p>
+                    )}
+                    {Object.entries(weeklyStats.incomeByBeneficiary).sort((a,b) => b[1].total - a[1].total).map(([beneficiaryId, stats]) => {
+                         const personName = people.find(p => p.id === beneficiaryId)?.name || 'Inconnu';
+                         return (
+                             <div key={beneficiaryId} className="flex justify-between items-center text-sm border-b border-emerald-100/50 pb-2 last:border-0 last:pb-0">
+                                 <span className="text-emerald-800">{personName}</span>
+                                 <div className="text-right">
+                                     <span className="block font-bold text-emerald-600">+{stats.total.toFixed(2)} €</span>
+                                 </div>
+                             </div>
+                         )
+                    })}
+                </div>
+          </div>
+
       </div>
+
     </div>
   );
 };

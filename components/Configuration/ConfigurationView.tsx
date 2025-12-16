@@ -320,12 +320,19 @@ const IncomeEditor: React.FC<{
     const defaultIncomeCat = incomeCategories[0]?.name || 'Salaire';
 
     const [formData, setFormData] = useState<Partial<IncomeConfig>>({
-        label: '', amount: 0, dayOfMonth: 1, ownerId: people[0]?.id, 
+        label: '', amount: 0, dayOfMonth: 1, 
+        ownerId: people[0]?.id, // Default Account/Person receiving
+        beneficiaryId: people[0]?.id, // Default Beneficiary
         category: defaultIncomeCat
     });
 
     const resetForm = () => {
-        setFormData({ label: '', amount: 0, dayOfMonth: 1, ownerId: people[0]?.id, category: incomeCategories[0]?.name || 'Salaire' });
+        setFormData({ 
+            label: '', amount: 0, dayOfMonth: 1, 
+            ownerId: people[0]?.id, 
+            beneficiaryId: people[0]?.id,
+            category: incomeCategories[0]?.name || 'Salaire' 
+        });
         setEditingId(null);
         setIsFormOpen(false);
     };
@@ -403,6 +410,12 @@ const IncomeEditor: React.FC<{
                                 <label className="text-xs font-medium text-slate-500 uppercase">Jour de réception</label>
                                 <input type="number" min="1" max="31" required value={formData.dayOfMonth} onChange={e => setFormData({...formData, dayOfMonth: parseInt(e.target.value)})} className="w-full p-2 rounded border border-slate-300" />
                             </div>
+                            <div>
+                                <label className="text-xs font-medium text-slate-500 uppercase">Bénéficiaire</label>
+                                <select value={formData.beneficiaryId} onChange={e => setFormData({...formData, beneficiaryId: e.target.value})} className="w-full p-2 rounded border border-slate-300">
+                                    {people.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                </select>
+                            </div>
                              <div>
                                 <label className="text-xs font-medium text-slate-500 uppercase">Compte de réception</label>
                                 <select value={formData.ownerId} onChange={e => setFormData({...formData, ownerId: e.target.value})} className="w-full p-2 rounded border border-slate-300">
@@ -430,6 +443,7 @@ const IncomeEditor: React.FC<{
             <div className="grid gap-3">
                 {sortedIncomes.map(inc => {
                     const ownerName = people.find(p => p.id === inc.ownerId)?.name || '?';
+                    const beneficiaryName = people.find(p => p.id === inc.beneficiaryId)?.name || '?';
                     return (
                         <div key={inc.id} className="bg-white p-4 rounded-lg border border-emerald-100 shadow-sm hover:shadow-md transition-shadow flex items-center justify-between">
                             <div className="flex items-center gap-4">
@@ -443,7 +457,9 @@ const IncomeEditor: React.FC<{
                                         <span>•</span>
                                         <span>{inc.category}</span>
                                         <span>•</span>
-                                        <span className="text-emerald-600">Versé sur : {ownerName}</span>
+                                        <span className="text-indigo-600">Bénéf.: {beneficiaryName}</span>
+                                        <span>•</span>
+                                        <span className="text-emerald-600">Sur: {ownerName}</span>
                                     </div>
                                 </div>
                             </div>

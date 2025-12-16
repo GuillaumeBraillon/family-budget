@@ -71,6 +71,7 @@ export interface IncomeConfig {
   label: string;
   amount: number;
   ownerId: string; // Le compte qui REÇOIT l'argent (ex: Compte Joint pour la CAF)
+  beneficiaryId: string; // La personne concernée par ce revenu (ex: Guillaume pour son salaire)
   dayOfMonth: number;
   category: string; // Ex: 'Salaire', 'CAF', 'Rente'
 }

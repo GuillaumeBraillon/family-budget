@@ -19,9 +19,9 @@ export const MOCK_ACCOUNTS: Account[] = [
 
 // --- REVENUS RÉCURRENTS (NOUVEAU) ---
 export const MOCK_INCOME_CONFIGS: IncomeConfig[] = [
-  { id: 'inc_1', label: 'Salaire Guillaume', amount: 3200, dayOfMonth: 28, ownerId: 'p_guillaume', category: 'Salaire' },
-  { id: 'inc_2', label: 'Salaire Nelly', amount: 2100, dayOfMonth: 27, ownerId: 'p_nelly', category: 'Salaire' },
-  { id: 'inc_3', label: 'Allocations Familiales', amount: 142.50, dayOfMonth: 5, ownerId: 'p_joint', category: 'CAF' },
+  { id: 'inc_1', label: 'Salaire Guillaume', amount: 3200, dayOfMonth: 28, ownerId: 'p_guillaume', beneficiaryId: 'p_guillaume', category: 'Salaire' },
+  { id: 'inc_2', label: 'Salaire Nelly', amount: 2100, dayOfMonth: 27, ownerId: 'p_nelly', beneficiaryId: 'p_nelly', category: 'Salaire' },
+  { id: 'inc_3', label: 'Allocations Familiales', amount: 142.50, dayOfMonth: 5, ownerId: 'p_joint', beneficiaryId: 'p_joint', category: 'CAF' },
 ];
 
 // --- NOUVELLES CATÉGORIES ---

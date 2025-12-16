@@ -18,12 +18,20 @@ CREATE TABLE IF NOT EXISTS income_configs (
   label text,
   amount numeric,
   owner_id text,
+  beneficiary_id text,
   day_of_month integer,
   category text
 );
 ALTER TABLE income_configs DISABLE ROW LEVEL SECURITY;
+-- Ajout colonne si existe déjà (Migration)
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='income_configs' AND column_name='beneficiary_id') THEN
+        ALTER TABLE income_configs ADD COLUMN beneficiary_id text;
+    END IF;
+END $$;
 
--- 2. Table des dépenses récurrents
+-- 2. Table des dépenses récurrentes
 CREATE TABLE IF NOT EXISTS expense_configs (
   id text PRIMARY KEY,
   label text,
@@ -285,7 +293,7 @@ const App: React.FC = () => {
               <div className="bg-indigo-600 p-2 rounded-lg">
                 <WalletCards className="text-white h-6 w-6" />
               </div>
-              <h1 className="text-xl font-bold text-slate-900 tracking-tight hidden sm:block">Budget<span className="text-indigo-600">Famille</span></h1>
+              <h1 className="text-xl font-bold text-slate-900 tracking-tight hidden sm:block">Budget <span className="text-indigo-600">Famille</span></h1>
             </div>
             
             <nav className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg">

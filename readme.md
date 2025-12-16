@@ -61,6 +61,7 @@ CREATE TABLE IF NOT EXISTS income_configs (
   label text,
   amount numeric,
   owner_id text,
+  beneficiary_id text,
   day_of_month integer,
   category text
 );

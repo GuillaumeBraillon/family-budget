@@ -39,6 +39,7 @@ L'application ne se base pas uniquement sur des transactions passées, mais sur 
 ### Logique Métier
 - **Compte Joint :** L'application gère une logique de "Compte Joint" vs "Comptes Perso". Les calculs de trésorerie dans le Planner doivent souvent isoler les mouvements du compte joint.
 - **Catégories Unifiées :** La table `categories` contient un champ `type` ('EXPENSE' | 'INCOME'). Toujours filtrer par type avant d'afficher un sélecteur.
+- **Revenus :** Les revenus ont un `ownerId` (Compte de réception) et un `beneficiaryId` (Personne associée au revenu, ex: celui qui gagne le salaire).
 
 ### Code Quality
 - **Types :** Pas de `any`. Définir les interfaces dans `types.ts`.
