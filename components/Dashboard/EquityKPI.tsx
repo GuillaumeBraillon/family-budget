@@ -1,23 +1,32 @@
 import React from 'react';
-import { MOCK_INCOMES } from '../../services/mockData';
-import { Person } from '../../types';
+import { IncomeConfig, Person } from '../../types';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { Scale } from 'lucide-react';
 
 interface EquityKPIProps {
     people: Person[];
+    incomeConfigs: IncomeConfig[];
 }
 
-export const EquityKPI: React.FC<EquityKPIProps> = ({ people }) => {
-  // On ne prend que les revenus des personnes "adultes" (pas isChild) et qui ont des revenus définis
-  const incomes = MOCK_INCOMES.map(inc => {
-      const person = people.find(p => p.id === inc.ownerId);
+export const EquityKPI: React.FC<EquityKPIProps> = ({ people, incomeConfigs }) => {
+  // Agrégation des revenus par personne
+  const incomeByPerson: Record<string, number> = {};
+
+  incomeConfigs.forEach(inc => {
+      if (!incomeByPerson[inc.ownerId]) {
+          incomeByPerson[inc.ownerId] = 0;
+      }
+      incomeByPerson[inc.ownerId] += inc.amount;
+  });
+
+  const incomes = Object.entries(incomeByPerson).map(([ownerId, amount]) => {
+      const person = people.find(p => p.id === ownerId);
       return {
           name: person?.name || 'Inconnu',
-          value: inc.monthlyNetIncome
+          value: amount
       };
-  }).filter(i => i.name !== 'Inconnu');
+  }).filter(i => i.name !== 'Inconnu' && i.value > 0);
 
   const totalIncome = incomes.reduce((acc, curr) => acc + curr.value, 0);
   
@@ -48,7 +57,7 @@ export const EquityKPI: React.FC<EquityKPIProps> = ({ people }) => {
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(value: number) => `${value} €`} />
+                <Tooltip formatter={(value: number) => `${value.toFixed(2)} €`} />
               </PieChart>
             </ResponsiveContainer>
           </div>
@@ -57,7 +66,7 @@ export const EquityKPI: React.FC<EquityKPIProps> = ({ people }) => {
           <div className="w-full md:w-1/2 space-y-4">
             <div className="text-center md:text-left">
               <p className="text-sm text-slate-500">Revenus Cumulés</p>
-              <p className="text-2xl font-bold text-slate-900">{totalIncome} € <span className="text-sm font-normal text-slate-500">/ mois</span></p>
+              <p className="text-2xl font-bold text-slate-900">{totalIncome.toFixed(2)} € <span className="text-sm font-normal text-slate-500">/ mois</span></p>
             </div>
 
             <div className="space-y-2">

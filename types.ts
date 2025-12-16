@@ -1,3 +1,4 @@
+
 export enum AccountType {
   CHECKING = 'COURANT',
   SAVINGS = 'EPARGNE'
@@ -19,10 +20,11 @@ export interface Account {
   bankName?: string;
 }
 
-// Structure pour la gestion des catégories dynamiques
+// Structure pour la gestion des catégories dynamiques (UNIFIÉE)
 export interface CategoryDef {
-  id: string; // Ajout d'un ID pour faciliter le renommage
+  id: string; 
   name: string;
+  type: 'EXPENSE' | 'INCOME'; // Nouveau champ de distinction
   subCategories: string[];
 }
 
@@ -63,18 +65,45 @@ export interface ExpenseConfig {
   isExtra?: boolean;
 }
 
+// NOUVEAU : Configuration des revenus récurrents
+export interface IncomeConfig {
+  id: string;
+  label: string;
+  amount: number;
+  ownerId: string; // Le compte qui REÇOIT l'argent (ex: Compte Joint pour la CAF)
+  dayOfMonth: number;
+  category: string; // Ex: 'Salaire', 'CAF', 'Rente'
+}
+
+// NOUVEAU : Détails complets d'un paiement effectué (Table paid_items)
+export interface PaidItemDetails {
+  instanceId: string;
+  amount: number;
+  paymentDate: string;
+  accountId: string; // Compte réellement débité
+  beneficiaryId: string;
+  label: string;
+  category: string;
+  subCategory?: string;
+}
+
+export type PlannedItemType = 'EXPENSE' | 'INCOME';
+
 export interface PlannedItem {
+  type: PlannedItemType; // Pour distinguer Dépense vs Revenu dans le Planner
   configId: string;
   instanceId: string;
   day: number;
   label: string;
   amount: number;
-  isPaid: boolean;
+  // isPaid est dérivé de la présence ou non dans paidItems
+  paidDetails?: PaidItemDetails; 
+  isPaid?: boolean; // Propriété ajoutée pour le statut de paiement
   category: string;
   subCategory?: string;
   beneficiaryId: string;
   isExtra?: boolean;
-  ownerId: string;
+  ownerId: string; // Propriétaire théorique (celui de la config)
   startMonth?: string;
   endMonth?: string;
 }

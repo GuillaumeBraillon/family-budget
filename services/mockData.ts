@@ -1,4 +1,4 @@
-import { Account, AccountType, Transaction, TransactionType, ExpenseConfig, CategoryDef, Person, IncomeProfile } from '../types';
+import { Account, AccountType, Transaction, TransactionType, ExpenseConfig, CategoryDef, Person, IncomeConfig } from '../types';
 
 // --- PERSONNES (FAMILLE) ---
 export const INITIAL_PEOPLE: Person[] = [
@@ -17,27 +17,35 @@ export const MOCK_ACCOUNTS: Account[] = [
   { id: '5', name: 'Livret A', type: AccountType.SAVINGS, ownerId: 'p_joint', currentBalance: 15400.00, bankName: "Caisse d'Epargne" }
 ];
 
-export const MOCK_INCOMES: IncomeProfile[] = [
-  { ownerId: 'p_guillaume', monthlyNetIncome: 3200 },
-  { ownerId: 'p_nelly', monthlyNetIncome: 2100 },
+// --- REVENUS RÉCURRENTS (NOUVEAU) ---
+export const MOCK_INCOME_CONFIGS: IncomeConfig[] = [
+  { id: 'inc_1', label: 'Salaire Guillaume', amount: 3200, dayOfMonth: 28, ownerId: 'p_guillaume', category: 'Salaire' },
+  { id: 'inc_2', label: 'Salaire Nelly', amount: 2100, dayOfMonth: 27, ownerId: 'p_nelly', category: 'Salaire' },
+  { id: 'inc_3', label: 'Allocations Familiales', amount: 142.50, dayOfMonth: 5, ownerId: 'p_joint', category: 'CAF' },
 ];
 
 // --- NOUVELLES CATÉGORIES ---
 export const INITIAL_CATEGORIES: CategoryDef[] = [
-    { id: 'cat_logement', name: 'Logement', subCategories: ['Loyer', 'Electricité', 'Assurance habitation', 'Logement - Autres'] },
-    { id: 'cat_alim', name: 'Alimentation & Restaurants', subCategories: ['Supermarché / Epicerie', 'Restaurants', 'Alimentation - Autres'] },
-    { id: 'cat_scol', name: 'Scolarité & Enfants', subCategories: ['Ecole', 'Scolarité & Enfants - Autres'] },
-    { id: 'cat_auto', name: 'Auto & Transports', subCategories: ['Location de véhicule', 'Péage', 'Transports en commun', 'Stationnement', 'Entretien véhicule', 'Auto & Transports - Autres'] },
-    { id: 'cat_sante', name: 'Santé', subCategories: ['Dentiste', 'Médecin', 'Pharmacie', 'Mutuelle', 'Opticien / Ophtalmo.', 'Santé - Autres'] },
-    { id: 'cat_shopping', name: 'Achats & Shopping', subCategories: ['Vêtements/Chaussures', 'Achats & Shopping - Autres'] },
-    { id: 'cat_virement', name: 'Retraits, Chq. et Vir.', subCategories: [] },
-    { id: 'cat_divers', name: 'Divers', subCategories: ['Tabac', 'Autres dépenses'] },
-    { id: 'cat_abo', name: 'Abonnements', subCategories: ['Internet', 'Téléphonie mobile', 'Abonnements - Autres'] },
-    { id: 'cat_loisirs', name: 'Loisirs & Sorties', subCategories: [] },
-    { id: 'cat_banque', name: 'Banque', subCategories: ['Frais bancaires', 'Services Bancaires', 'Banque - Autres'] },
-    { id: 'cat_vacances', name: 'Vacances', subCategories: ['Logement', 'Transport', 'Vacances - Autres'] },
-    { id: 'cat_soins', name: 'Esthétique & Soins', subCategories: ['Coiffeur', 'Esthétique', 'Esthétique & Soins - Autres'] },
-    { id: 'cat_impots', name: 'Impôts & Taxes', subCategories: ['Amendes', 'Impôts sur le revenu', 'Impôts & Taxes - Autres'] }
+    { id: 'cat_logement', name: 'Logement', type: 'EXPENSE', subCategories: ['Loyer', 'Electricité', 'Assurance habitation', 'Logement - Autres'] },
+    { id: 'cat_alim', name: 'Alimentation & Restaurants', type: 'EXPENSE', subCategories: ['Supermarché / Epicerie', 'Restaurants', 'Alimentation - Autres'] },
+    { id: 'cat_scol', name: 'Scolarité & Enfants', type: 'EXPENSE', subCategories: ['Ecole', 'Scolarité & Enfants - Autres'] },
+    { id: 'cat_auto', name: 'Auto & Transports', type: 'EXPENSE', subCategories: ['Location de véhicule', 'Péage', 'Transports en commun', 'Stationnement', 'Entretien véhicule', 'Auto & Transports - Autres'] },
+    { id: 'cat_sante', name: 'Santé', type: 'EXPENSE', subCategories: ['Dentiste', 'Médecin', 'Pharmacie', 'Mutuelle', 'Opticien / Ophtalmo.', 'Santé - Autres'] },
+    { id: 'cat_shopping', name: 'Achats & Shopping', type: 'EXPENSE', subCategories: ['Vêtements/Chaussures', 'Achats & Shopping - Autres'] },
+    { id: 'cat_virement', name: 'Retraits, Chq. et Vir.', type: 'EXPENSE', subCategories: [] },
+    { id: 'cat_divers', name: 'Divers', type: 'EXPENSE', subCategories: ['Tabac', 'Autres dépenses'] },
+    { id: 'cat_abo', name: 'Abonnements', type: 'EXPENSE', subCategories: ['Internet', 'Téléphonie mobile', 'Abonnements - Autres'] },
+    { id: 'cat_loisirs', name: 'Loisirs & Sorties', type: 'EXPENSE', subCategories: [] },
+    { id: 'cat_banque', name: 'Banque', type: 'EXPENSE', subCategories: ['Frais bancaires', 'Services Bancaires', 'Banque - Autres'] },
+    { id: 'cat_vacances', name: 'Vacances', type: 'EXPENSE', subCategories: ['Logement', 'Transport', 'Vacances - Autres'] },
+    { id: 'cat_soins', name: 'Esthétique & Soins', type: 'EXPENSE', subCategories: ['Coiffeur', 'Esthétique', 'Esthétique & Soins - Autres'] },
+    { id: 'cat_impots', name: 'Impôts & Taxes', type: 'EXPENSE', subCategories: ['Amendes', 'Impôts sur le revenu', 'Impôts & Taxes - Autres'] },
+    
+    // REVENUS
+    { id: 'inc_salaire', name: 'Salaire', type: 'INCOME', subCategories: [] },
+    { id: 'inc_caf', name: 'CAF', type: 'INCOME', subCategories: [] },
+    { id: 'inc_rente', name: 'Rente', type: 'INCOME', subCategories: [] },
+    { id: 'inc_remb', name: 'Remboursement', type: 'INCOME', subCategories: [] }
 ];
 
 // Helper dates
