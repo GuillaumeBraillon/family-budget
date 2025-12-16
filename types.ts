@@ -15,7 +15,7 @@ export interface Account {
   id: string;
   name: string;
   type: AccountType;
-  ownerId: string; // Lien vers Person.id
+  ownerId: string; // Lien vers Person.id (Propriétaire légal du compte)
   currentBalance: number;
   bankName?: string;
 }
@@ -40,10 +40,10 @@ export interface Transaction {
   amount: number;
   category: string;
   subCategory?: string;
-  beneficiaryId: string; // Lien vers Person.id (anciennement Beneficiary string)
-  accountId: string;
+  beneficiaryId: string; // Lien vers Person.id
+  accountId: string;     // Compte débité
   type: TransactionType;
-  initiatedBy: string; // Lien vers Person.id (Celui qui a fait la CB)
+  initiatedBy: string;   // Lien vers Person.id (Celui qui a fait la CB)
 }
 
 export interface IncomeProfile {
@@ -57,8 +57,8 @@ export interface ExpenseConfig {
   amount: number;
   category: string;
   subCategory?: string;
-  beneficiaryId: string; // Lien vers Person.id
-  ownerId: string;       // Lien vers Person.id (Celui qui paye)
+  beneficiaryId: string; // Lien vers Person.id (Qui profite de la dépense ?)
+  ownerId: string;       // Lien vers Account.id (Quel compte est débité ?)
   dayOfMonth: number;
   startMonth?: string;
   endMonth?: string;
@@ -70,10 +70,10 @@ export interface IncomeConfig {
   id: string;
   label: string;
   amount: number;
-  ownerId: string; // Le compte qui REÇOIT l'argent (ex: Compte Joint pour la CAF)
-  beneficiaryId: string; // La personne concernée par ce revenu (ex: Guillaume pour son salaire)
+  ownerId: string;       // Lien vers Account.id (Quel compte reçoit l'argent ?)
+  beneficiaryId: string; // Lien vers Person.id (Qui a gagné cet argent ?)
   dayOfMonth: number;
-  category: string; // Ex: 'Salaire', 'CAF', 'Rente'
+  category: string; 
 }
 
 // NOUVEAU : Détails complets d'un paiement effectué (Table paid_items)
@@ -96,7 +96,8 @@ export interface PlannedItem {
   instanceId: string;
   day: number;
   label: string;
-  amount: number;
+  amount: number;         // Montant Effectif (Réel si payé, sinon Prévu)
+  originalAmount: number; // Montant Initial (Configuration) pour calcul d'écart
   // isPaid est dérivé de la présence ou non dans paidItems
   paidDetails?: PaidItemDetails; 
   isPaid?: boolean; // Propriété ajoutée pour le statut de paiement
@@ -104,7 +105,7 @@ export interface PlannedItem {
   subCategory?: string;
   beneficiaryId: string;
   isExtra?: boolean;
-  ownerId: string; // Propriétaire théorique (celui de la config)
+  ownerId: string; // ID du compte prévu (ExpenseConfig.ownerId)
   startMonth?: string;
   endMonth?: string;
 }

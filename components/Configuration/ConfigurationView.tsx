@@ -49,7 +49,7 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({ isOpen, title, message, onC
             <div className="flex gap-3 justify-end">
                 <button 
                     onClick={onCancel} 
-                    className="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 font-medium hover:bg-slate-50 text-sm"
+                    className="px-4 py-2 rounded-lg border border-slate-300 bg-white text-slate-700 font-medium hover:bg-slate-50 text-sm"
                 >
                     Annuler
                 </button>
@@ -73,10 +73,11 @@ const ExpenseRulesEditor: React.FC<{
     configs: ExpenseConfig[];
     categories: CategoryDef[];
     people: Person[];
+    accounts: Account[];
     onAddConfig: (c: ExpenseConfig) => void;
     onUpdateConfig: (c: ExpenseConfig) => void;
     onDeleteConfig: (id: string) => void;
-}> = ({ configs, categories, people, onAddConfig, onUpdateConfig, onDeleteConfig }) => {
+}> = ({ configs, categories, people, accounts, onAddConfig, onUpdateConfig, onDeleteConfig }) => {
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
     
@@ -85,9 +86,12 @@ const ExpenseRulesEditor: React.FC<{
 
     const expenseCategories = categories.filter(c => c.type === 'EXPENSE');
     const defaultCat = expenseCategories[0]?.name || '';
+    const defaultAccount = accounts[0]?.id || '';
 
     const [formData, setFormData] = useState<Partial<ExpenseConfig>>({
-        label: '', amount: 0, dayOfMonth: 1, ownerId: people[0]?.id, beneficiaryId: people[0]?.id, 
+        label: '', amount: 0, dayOfMonth: 1, 
+        ownerId: defaultAccount, 
+        beneficiaryId: people[0]?.id, 
         category: defaultCat, subCategory: '', isExtra: false, startMonth: '', endMonth: ''
     });
 
@@ -110,7 +114,8 @@ const ExpenseRulesEditor: React.FC<{
     const resetForm = () => {
         setFormData({ 
             label: '', amount: 0, dayOfMonth: 1, 
-            ownerId: people[0]?.id, beneficiaryId: people[0]?.id, 
+            ownerId: accounts[0]?.id || '', 
+            beneficiaryId: people[0]?.id, 
             category: expenseCategories[0]?.name || '', subCategory: '', 
             isExtra: false, startMonth: '', endMonth: '' 
         });
@@ -187,37 +192,37 @@ const ExpenseRulesEditor: React.FC<{
                         <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="md:col-span-2">
                                 <label className="text-xs font-medium text-slate-500 uppercase">Libellé</label>
-                                <input type="text" required value={formData.label} onChange={e => setFormData({...formData, label: e.target.value})} className="w-full p-2 rounded border border-slate-300" />
+                                <input type="text" required value={formData.label} onChange={e => setFormData({...formData, label: e.target.value})} className="w-full p-2 rounded border border-slate-300 bg-white text-slate-900" />
                             </div>
                             <div>
                                 <label className="text-xs font-medium text-slate-500 uppercase">Montant (€)</label>
-                                <input type="number" step="0.01" required value={formData.amount} onChange={e => setFormData({...formData, amount: parseFloat(e.target.value)})} className="w-full p-2 rounded border border-slate-300" />
+                                <input type="number" step="0.01" required value={formData.amount} onChange={e => setFormData({...formData, amount: parseFloat(e.target.value)})} className="w-full p-2 rounded border border-slate-300 bg-white text-slate-900" />
                             </div>
                             <div>
                                 <label className="text-xs font-medium text-slate-500 uppercase">Jour du mois</label>
-                                <input type="number" min="1" max="31" required value={formData.dayOfMonth} onChange={e => setFormData({...formData, dayOfMonth: parseInt(e.target.value)})} className="w-full p-2 rounded border border-slate-300" />
+                                <input type="number" min="1" max="31" required value={formData.dayOfMonth} onChange={e => setFormData({...formData, dayOfMonth: parseInt(e.target.value)})} className="w-full p-2 rounded border border-slate-300 bg-white text-slate-900" />
                             </div>
                              <div>
-                                <label className="text-xs font-medium text-slate-500 uppercase">Compte Payeur</label>
-                                <select value={formData.ownerId} onChange={e => setFormData({...formData, ownerId: e.target.value})} className="w-full p-2 rounded border border-slate-300">
-                                    {people.filter(p => !p.isChild).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                <label className="text-xs font-medium text-slate-500 uppercase">Compte à débiter</label>
+                                <select value={formData.ownerId} onChange={e => setFormData({...formData, ownerId: e.target.value})} className="w-full p-2 rounded border border-slate-300 bg-white text-slate-900">
+                                    {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
                                 </select>
                             </div>
                             <div>
-                                <label className="text-xs font-medium text-slate-500 uppercase">Bénéficiaire</label>
-                                <select value={formData.beneficiaryId} onChange={e => setFormData({...formData, beneficiaryId: e.target.value})} className="w-full p-2 rounded border border-slate-300">
+                                <label className="text-xs font-medium text-slate-500 uppercase">Bénéficiaire (Qui profite ?)</label>
+                                <select value={formData.beneficiaryId} onChange={e => setFormData({...formData, beneficiaryId: e.target.value})} className="w-full p-2 rounded border border-slate-300 bg-white text-slate-900">
                                     {people.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                                 </select>
                             </div>
                              <div>
                                 <label className="text-xs font-medium text-slate-500 uppercase">Catégorie</label>
-                                <select value={formData.category} onChange={e => setFormData({...formData, category: e.target.value, subCategory: ''})} className="w-full p-2 rounded border border-slate-300">
+                                <select value={formData.category} onChange={e => setFormData({...formData, category: e.target.value, subCategory: ''})} className="w-full p-2 rounded border border-slate-300 bg-white text-slate-900">
                                     {expenseCategories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
                                 </select>
                             </div>
                             <div>
                                 <label className="text-xs font-medium text-slate-500 uppercase">Sous-Catégorie</label>
-                                <select value={formData.subCategory} onChange={e => setFormData({...formData, subCategory: e.target.value})} className="w-full p-2 rounded border border-slate-300" disabled={activeSubCats.length === 0}>
+                                <select value={formData.subCategory} onChange={e => setFormData({...formData, subCategory: e.target.value})} className="w-full p-2 rounded border border-slate-300 bg-white text-slate-900" disabled={activeSubCats.length === 0}>
                                     <option value="">-- Aucune --</option>
                                     {activeSubCats.map(sc => <option key={sc} value={sc}>{sc}</option>)}
                                 </select>
@@ -225,14 +230,14 @@ const ExpenseRulesEditor: React.FC<{
                             
                             <div className="md:col-span-2 bg-white/50 p-3 rounded-lg border border-slate-200 mt-2">
                                 <div className="flex items-center gap-2 mb-3">
-                                    <input type="checkbox" id="extra" checked={formData.isExtra} onChange={e => setFormData({...formData, isExtra: e.target.checked})} className="h-4 w-4 text-indigo-600 rounded" />
+                                    <input type="checkbox" id="extra" checked={formData.isExtra} onChange={e => setFormData({...formData, isExtra: e.target.checked})} className="h-4 w-4 text-indigo-600 rounded bg-white" />
                                     <label htmlFor="extra" className="text-sm font-semibold text-slate-700">Dépense temporaire / Exceptionnelle</label>
                                 </div>
                                 {formData.isExtra && (
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2">
                                         <div>
                                             <label className="text-xs font-medium text-slate-500 uppercase">Mois de début</label>
-                                            <input type="month" required={formData.isExtra} value={formData.startMonth} onChange={e => setFormData({...formData, startMonth: e.target.value})} className="w-full p-2 rounded border border-slate-300" />
+                                            <input type="month" required={formData.isExtra} value={formData.startMonth} onChange={e => setFormData({...formData, startMonth: e.target.value})} className="w-full p-2 rounded border border-slate-300 bg-white text-slate-900" />
                                         </div>
                                         <div className="flex flex-col gap-2">
                                             <div className="flex gap-2 text-xs">
@@ -243,14 +248,14 @@ const ExpenseRulesEditor: React.FC<{
                                                 <div>
                                                      <label className="text-xs font-medium text-slate-500 uppercase">Durée (Mois)</label>
                                                      <div className="flex items-center gap-2">
-                                                        <input type="number" min="1" value={durationMonths} onChange={e => setDurationMonths(parseInt(e.target.value) || 1)} className="w-full p-2 rounded border border-slate-300" />
+                                                        <input type="number" min="1" value={durationMonths} onChange={e => setDurationMonths(parseInt(e.target.value) || 1)} className="w-full p-2 rounded border border-slate-300 bg-white text-slate-900" />
                                                         <span className="text-xs text-slate-500 whitespace-nowrap">Fin : {formData.endMonth || '...'}</span>
                                                      </div>
                                                 </div>
                                             ) : (
                                                 <div>
                                                     <label className="text-xs font-medium text-slate-500 uppercase">Mois de fin</label>
-                                                    <input type="month" required={formData.isExtra} value={formData.endMonth} onChange={e => setFormData({...formData, endMonth: e.target.value})} className="w-full p-2 rounded border border-slate-300" />
+                                                    <input type="month" required={formData.isExtra} value={formData.endMonth} onChange={e => setFormData({...formData, endMonth: e.target.value})} className="w-full p-2 rounded border border-slate-300 bg-white text-slate-900" />
                                                 </div>
                                             )}
                                         </div>
@@ -265,7 +270,7 @@ const ExpenseRulesEditor: React.FC<{
 
             <div className="grid gap-3">
                 {sortedConfigs.map(config => {
-                    const ownerName = people.find(p => p.id === config.ownerId)?.name || '?';
+                    const accountName = accounts.find(a => a.id === config.ownerId)?.name || 'Compte inconnu';
                     const beneficiaryName = people.find(p => p.id === config.beneficiaryId)?.name || '?';
                     return (
                         <div key={config.id} className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm hover:shadow-md transition-shadow flex items-center justify-between">
@@ -282,7 +287,7 @@ const ExpenseRulesEditor: React.FC<{
                                         <span>•</span>
                                         <span className="text-indigo-600">Pour {beneficiaryName}</span>
                                         <span>•</span>
-                                        <span className="text-slate-600">Par {ownerName}</span>
+                                        <span className="text-slate-600 flex items-center gap-1"><CreditCard size={10}/> {accountName}</span>
                                     </div>
                                 </div>
                             </div>
@@ -306,10 +311,11 @@ const IncomeEditor: React.FC<{
     incomeConfigs: IncomeConfig[];
     people: Person[];
     categories: CategoryDef[];
+    accounts: Account[];
     onAddIncome: (i: IncomeConfig) => void;
     onUpdateIncome: (i: IncomeConfig) => void;
     onDeleteIncome: (id: string) => void;
-}> = ({ incomeConfigs, people, categories, onAddIncome, onUpdateIncome, onDeleteIncome }) => {
+}> = ({ incomeConfigs, people, categories, accounts, onAddIncome, onUpdateIncome, onDeleteIncome }) => {
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -318,10 +324,11 @@ const IncomeEditor: React.FC<{
 
     const incomeCategories = categories.filter(c => c.type === 'INCOME');
     const defaultIncomeCat = incomeCategories[0]?.name || 'Salaire';
+    const defaultAccount = accounts[0]?.id || '';
 
     const [formData, setFormData] = useState<Partial<IncomeConfig>>({
         label: '', amount: 0, dayOfMonth: 1, 
-        ownerId: people[0]?.id, // Default Account/Person receiving
+        ownerId: defaultAccount, 
         beneficiaryId: people[0]?.id, // Default Beneficiary
         category: defaultIncomeCat
     });
@@ -329,7 +336,7 @@ const IncomeEditor: React.FC<{
     const resetForm = () => {
         setFormData({ 
             label: '', amount: 0, dayOfMonth: 1, 
-            ownerId: people[0]?.id, 
+            ownerId: accounts[0]?.id || '', 
             beneficiaryId: people[0]?.id,
             category: incomeCategories[0]?.name || 'Salaire' 
         });
@@ -400,31 +407,31 @@ const IncomeEditor: React.FC<{
                         <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="md:col-span-2">
                                 <label className="text-xs font-medium text-slate-500 uppercase">Libellé</label>
-                                <input type="text" required value={formData.label} onChange={e => setFormData({...formData, label: e.target.value})} className="w-full p-2 rounded border border-slate-300" placeholder="Ex: Salaire Guillaume, CAF..." />
+                                <input type="text" required value={formData.label} onChange={e => setFormData({...formData, label: e.target.value})} className="w-full p-2 rounded border border-slate-300 bg-white text-slate-900" placeholder="Ex: Salaire Guillaume, CAF..." />
                             </div>
                             <div>
                                 <label className="text-xs font-medium text-slate-500 uppercase">Montant (€)</label>
-                                <input type="number" step="0.01" required value={formData.amount} onChange={e => setFormData({...formData, amount: parseFloat(e.target.value)})} className="w-full p-2 rounded border border-slate-300" />
+                                <input type="number" step="0.01" required value={formData.amount} onChange={e => setFormData({...formData, amount: parseFloat(e.target.value)})} className="w-full p-2 rounded border border-slate-300 bg-white text-slate-900" />
                             </div>
                             <div>
                                 <label className="text-xs font-medium text-slate-500 uppercase">Jour de réception</label>
-                                <input type="number" min="1" max="31" required value={formData.dayOfMonth} onChange={e => setFormData({...formData, dayOfMonth: parseInt(e.target.value)})} className="w-full p-2 rounded border border-slate-300" />
+                                <input type="number" min="1" max="31" required value={formData.dayOfMonth} onChange={e => setFormData({...formData, dayOfMonth: parseInt(e.target.value)})} className="w-full p-2 rounded border border-slate-300 bg-white text-slate-900" />
                             </div>
                             <div>
-                                <label className="text-xs font-medium text-slate-500 uppercase">Bénéficiaire</label>
-                                <select value={formData.beneficiaryId} onChange={e => setFormData({...formData, beneficiaryId: e.target.value})} className="w-full p-2 rounded border border-slate-300">
+                                <label className="text-xs font-medium text-slate-500 uppercase">Bénéficiaire (Qui a gagné ?)</label>
+                                <select value={formData.beneficiaryId} onChange={e => setFormData({...formData, beneficiaryId: e.target.value})} className="w-full p-2 rounded border border-slate-300 bg-white text-slate-900">
                                     {people.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                                 </select>
                             </div>
                              <div>
                                 <label className="text-xs font-medium text-slate-500 uppercase">Compte de réception</label>
-                                <select value={formData.ownerId} onChange={e => setFormData({...formData, ownerId: e.target.value})} className="w-full p-2 rounded border border-slate-300">
-                                    {people.filter(p => !p.isChild).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                <select value={formData.ownerId} onChange={e => setFormData({...formData, ownerId: e.target.value})} className="w-full p-2 rounded border border-slate-300 bg-white text-slate-900">
+                                    {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
                                 </select>
                             </div>
                             <div>
                                 <label className="text-xs font-medium text-slate-500 uppercase">Type</label>
-                                <select value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})} className="w-full p-2 rounded border border-slate-300">
+                                <select value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})} className="w-full p-2 rounded border border-slate-300 bg-white text-slate-900">
                                     {incomeCategories.length > 0 ? (
                                         incomeCategories.map(cat => (
                                             <option key={cat.id} value={cat.name}>{cat.name}</option>
@@ -442,7 +449,7 @@ const IncomeEditor: React.FC<{
 
             <div className="grid gap-3">
                 {sortedIncomes.map(inc => {
-                    const ownerName = people.find(p => p.id === inc.ownerId)?.name || '?';
+                    const accountName = accounts.find(a => a.id === inc.ownerId)?.name || 'Compte Inconnu';
                     const beneficiaryName = people.find(p => p.id === inc.beneficiaryId)?.name || '?';
                     return (
                         <div key={inc.id} className="bg-white p-4 rounded-lg border border-emerald-100 shadow-sm hover:shadow-md transition-shadow flex items-center justify-between">
@@ -459,7 +466,7 @@ const IncomeEditor: React.FC<{
                                         <span>•</span>
                                         <span className="text-indigo-600">Bénéf.: {beneficiaryName}</span>
                                         <span>•</span>
-                                        <span className="text-emerald-600">Sur: {ownerName}</span>
+                                        <span className="text-emerald-600 flex items-center gap-1"><CreditCard size={10}/> {accountName}</span>
                                     </div>
                                 </div>
                             </div>
@@ -611,7 +618,7 @@ const CategoryManager: React.FC<{
                                 </button>
                                 {editingCatId === cat.id ? (
                                     <div className="flex items-center gap-2">
-                                        <input autoFocus value={tempName} onChange={e => setTempName(e.target.value)} className="p-1 text-sm border rounded" />
+                                        <input autoFocus value={tempName} onChange={e => setTempName(e.target.value)} className="p-1 text-sm border rounded bg-white text-slate-900" />
                                         <button onClick={() => saveCatName(cat.id)} className="text-green-600"><Save size={16} /></button>
                                     </div>
                                 ) : (
@@ -634,7 +641,7 @@ const CategoryManager: React.FC<{
                                                         autoFocus 
                                                         value={tempSubName} 
                                                         onChange={e => setTempSubName(e.target.value)} 
-                                                        className="p-1 text-sm border rounded w-full"
+                                                        className="p-1 text-sm border rounded w-full bg-white text-slate-900"
                                                         onKeyDown={e => e.key === 'Enter' && saveSubCat()} 
                                                     />
                                                      <button onClick={saveSubCat} className="text-green-600"><Save size={14} /></button>
@@ -653,7 +660,7 @@ const CategoryManager: React.FC<{
                                     <div className="flex items-center gap-2 pl-8 mt-2 border-t border-dashed border-slate-200 pt-2">
                                         <input 
                                             placeholder="Nouvelle sous-catégorie..." 
-                                            className="text-sm p-1.5 border border-slate-300 rounded flex-1"
+                                            className="text-sm p-1.5 border border-slate-300 rounded flex-1 bg-white text-slate-900"
                                             value={newSubCat}
                                             onChange={e => setNewSubCat(e.target.value)}
                                             onKeyDown={e => e.key === 'Enter' && addSubCat(cat.id)}
@@ -729,11 +736,11 @@ const PeopleManager: React.FC<{
              <div className="bg-white p-4 rounded-lg border border-slate-200 flex flex-col gap-3 shadow-sm">
                 <div className="flex-1 w-full">
                     <label className="text-xs text-slate-500 uppercase font-medium">Ajouter une personne / Entité</label>
-                    <input value={newName} onChange={e => setNewName(e.target.value)} className="w-full p-2 border border-slate-300 rounded" placeholder="Prénom..." />
+                    <input value={newName} onChange={e => setNewName(e.target.value)} className="w-full p-2 border border-slate-300 rounded bg-white text-slate-900" placeholder="Prénom..." />
                 </div>
                 <div className="flex items-center gap-6">
                     <div className="flex items-center gap-2">
-                        <input type="checkbox" id="child" checked={isChild} onChange={e => setIsChild(e.target.checked)} className="h-4 w-4 text-indigo-600" />
+                        <input type="checkbox" id="child" checked={isChild} onChange={e => setIsChild(e.target.checked)} className="h-4 w-4 text-indigo-600 bg-white" />
                         <label htmlFor="child" className="text-sm text-slate-700">Enfant (Non payeur)</label>
                     </div>
                 </div>
@@ -746,10 +753,10 @@ const PeopleManager: React.FC<{
                         {editingPersonId === p.id ? (
                             <div className="flex flex-col gap-2 w-full">
                                 <div className="flex-1 space-y-2">
-                                    <input value={tempName} onChange={e => setTempName(e.target.value)} className="w-full p-1 border rounded text-sm" />
+                                    <input value={tempName} onChange={e => setTempName(e.target.value)} className="w-full p-1 border rounded text-sm bg-white text-slate-900" />
                                     <div className="flex items-center gap-4">
                                         <div className="flex items-center gap-2">
-                                            <input type="checkbox" checked={tempIsChild} onChange={e => setTempIsChild(e.target.checked)} className="h-4 w-4" />
+                                            <input type="checkbox" checked={tempIsChild} onChange={e => setTempIsChild(e.target.checked)} className="h-4 w-4 bg-white" />
                                             <span className="text-xs text-slate-600">Enfant</span>
                                         </div>
                                     </div>
@@ -851,11 +858,11 @@ const AccountManager: React.FC<{
             <div className="bg-white p-4 rounded-lg border border-slate-200 flex flex-col md:flex-row gap-3 items-end md:items-center shadow-sm">
                 <div className="flex-1 w-full">
                     <label className="text-xs text-slate-500 uppercase font-medium">Nom du Compte</label>
-                    <input value={newAccName} onChange={e => setNewAccName(e.target.value)} className="w-full p-2 border border-slate-300 rounded" placeholder="Ex: Compte Joint..." />
+                    <input value={newAccName} onChange={e => setNewAccName(e.target.value)} className="w-full p-2 border border-slate-300 rounded bg-white text-slate-900" placeholder="Ex: Compte Joint..." />
                 </div>
                  <div className="w-full md:w-48">
                     <label className="text-xs text-slate-500 uppercase font-medium">Titulaire</label>
-                    <select value={ownerId} onChange={e => setOwnerId(e.target.value)} className="w-full p-2 border border-slate-300 rounded">
+                    <select value={ownerId} onChange={e => setOwnerId(e.target.value)} className="w-full p-2 border border-slate-300 rounded bg-white text-slate-900">
                         {people.filter(p => !p.isChild).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                     </select>
                 </div>
@@ -870,8 +877,8 @@ const AccountManager: React.FC<{
                                 <div className="bg-blue-50 text-blue-600 p-2 rounded-lg"><CreditCard size={20} /></div>
                                 {editingAccId === acc.id ? (
                                     <div className="flex flex-col sm:flex-row gap-2 w-full mr-4">
-                                        <input value={tempAccName} onChange={e => setTempAccName(e.target.value)} className="p-1 border rounded text-sm flex-1" />
-                                        <select value={tempOwnerId} onChange={e => setTempOwnerId(e.target.value)} className="p-1 border rounded text-sm">
+                                        <input value={tempAccName} onChange={e => setTempAccName(e.target.value)} className="p-1 border rounded text-sm flex-1 bg-white text-slate-900" />
+                                        <select value={tempOwnerId} onChange={e => setTempOwnerId(e.target.value)} className="p-1 border rounded text-sm bg-white text-slate-900">
                                             {people.filter(p => !p.isChild).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                                         </select>
                                     </div>
@@ -947,6 +954,7 @@ export const ConfigurationView: React.FC<ConfigurationViewProps> = ({
                 configs={configs} 
                 categories={categories} 
                 people={people} 
+                accounts={accounts}
                 onAddConfig={onAddConfig} 
                 onUpdateConfig={onUpdateConfig} 
                 onDeleteConfig={onDeleteConfig} 
@@ -957,6 +965,7 @@ export const ConfigurationView: React.FC<ConfigurationViewProps> = ({
                 incomeConfigs={incomeConfigs} 
                 people={people} 
                 categories={categories} 
+                accounts={accounts}
                 onAddIncome={onAddIncome!} 
                 onUpdateIncome={onUpdateIncome!} 
                 onDeleteIncome={onDeleteIncome!} 
