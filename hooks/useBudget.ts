@@ -1,10 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Account, ExpenseConfig, IncomeConfig, CategoryDef, Person, PaidItemDetails } from '../types';
-import { fetchInitialData, apiUpsertConfig, apiDeleteConfig, apiUpsertIncome, apiDeleteIncome, apiUpsertCategory, apiDeleteCategory, apiUpsertPerson, apiDeletePerson, apiUpsertAccount, apiDeleteAccount, apiSetPaidStatus, seedDatabase } from '../services/api';
 
-/**
- * Hook principal gérant l'état financier et les synchronisations API.
- */
+import { useState, useEffect, useCallback } from 'react';
+import { Account, ExpenseConfig, IncomeConfig, CategoryDef, Person, PaidItemDetails, AppSettings } from '../types';
+import { fetchInitialData, apiUpsertConfig, apiDeleteConfig, apiUpsertIncome, apiDeleteIncome, apiUpsertCategory, apiDeleteCategory, apiUpsertPerson, apiDeletePerson, apiUpsertAccount, apiDeleteAccount, apiSetPaidStatus, apiUpdateSettings, seedDatabase } from '../services/api';
+
 export const useBudget = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -18,6 +16,7 @@ export const useBudget = () => {
     categories: [] as CategoryDef[],
     people: [] as Person[],
     paidItems: {} as Record<string, PaidItemDetails>,
+    settings: { weekly_envelope: 500 } as AppSettings
   });
 
   const loadData = useCallback(async () => {
@@ -40,6 +39,7 @@ export const useBudget = () => {
         categories: res.categories,
         people: res.people,
         paidItems: res.paidItems,
+        settings: res.settings
       });
     } catch (err: any) {
       if (err.message === 'TABLE_MISSING') {
@@ -74,7 +74,18 @@ export const useBudget = () => {
       const { error: apiErr } = await apiSetPaidStatus(details, instanceId);
       if (apiErr) throw apiErr;
     } catch (err) {
-      loadData(); // Re-sync en cas d'échec
+      loadData();
+      throw err;
+    }
+  };
+
+  const updateSettings = async (settings: AppSettings) => {
+    setData(prev => ({ ...prev, settings }));
+    try {
+      const { error: apiErr } = await apiUpdateSettings(settings);
+      if (apiErr) throw apiErr;
+    } catch (err) {
+      loadData();
       throw err;
     }
   };
@@ -89,6 +100,7 @@ export const useBudget = () => {
       loadData,
       handleSeed,
       setPaidStatus,
+      updateSettings,
       upsertConfig: apiUpsertConfig,
       deleteConfig: apiDeleteConfig,
       upsertIncome: apiUpsertIncome,

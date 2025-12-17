@@ -1,7 +1,9 @@
+
 import React from 'react';
 import { usePlanner } from '../../hooks/usePlanner';
 import { usePlannerUI } from '../../hooks/usePlannerUI';
 import { ExpenseConfig, IncomeConfig, Account, Person, PaidItemDetails, PlannedItem } from '../../types';
+import { ConfigTab } from '../../hooks/useConfigurationUI';
 import { DetailedAnalysis } from './organisms/DetailedAnalysis';
 import { StatsSummary } from './organisms/StatsSummary';
 import { OperationsList } from './organisms/OperationsList';
@@ -9,6 +11,7 @@ import { PlannerModals } from './organisms/PlannerModals';
 import { MonthNavigator } from './molecules/MonthNavigator';
 import { SearchBar } from './atoms/SearchBar';
 import { WeekSelector } from './molecules/WeekSelector';
+import { Settings2, TrendingUp, Wallet } from 'lucide-react';
 
 interface BudgetPlannerProps {
   configs: ExpenseConfig[];
@@ -17,14 +20,11 @@ interface BudgetPlannerProps {
   people: Person[]; 
   paidItems: Record<string, PaidItemDetails>; 
   onTogglePaid: (details: PaidItemDetails | null, instanceId: string) => void;
+  onNavigateToConfig: (tab: ConfigTab) => void;
 }
 
-/**
- * Composant principal du Planner Budgétaire.
- * Organise la vue en utilisant des composants spécialisés pour chaque section.
- */
 export const BudgetPlanner: React.FC<BudgetPlannerProps> = ({ 
-  configs, incomeConfigs, accounts, people, paidItems, onTogglePaid 
+  configs, incomeConfigs, accounts, people, paidItems, onTogglePaid, onNavigateToConfig
 }) => {
   const ui = usePlannerUI();
   const { filteredWeeks, getStats } = usePlanner(configs, incomeConfigs, paidItems, ui.currentDate, ui.searchQuery);
@@ -66,13 +66,32 @@ export const BudgetPlanner: React.FC<BudgetPlannerProps> = ({
         onSelect={ui.setActiveWeek} 
       />
 
+      {/* RACCOURCIS DE GESTION DES MODÈLES */}
+      <div className="flex flex-wrap items-center gap-3 py-1 px-2">
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mr-1 flex items-center gap-1">
+              <Settings2 size={12}/> Modèles :
+          </span>
+          <button 
+            onClick={() => onNavigateToConfig('operations')}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-emerald-100 text-emerald-700 text-xs font-semibold hover:bg-emerald-50 transition-colors shadow-sm"
+          >
+              <TrendingUp size={14}/> Revenus récurrents
+          </button>
+          <button 
+            onClick={() => onNavigateToConfig('operations')}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-indigo-100 text-indigo-700 text-xs font-semibold hover:bg-indigo-50 transition-colors shadow-sm"
+          >
+              <Wallet size={14}/> Dépenses récurrentes
+          </button>
+      </div>
+
       {/* RÉSUMÉ DES STATS (KPIs) */}
       <StatsSummary stats={stats} accounts={accounts} />
 
-      {/* ANALYSE DÉTAILLÉE (Bénéficiaires et Comptes) */}
+      {/* ANALYSE DÉTAILLÉE */}
       <DetailedAnalysis stats={stats} people={people} accounts={accounts} />
 
-      {/* LISTE DES OPÉRATIONS DÉTAILLÉES */}
+      {/* LISTE DES OPÉRATIONS */}
       <OperationsList 
         items={currentWeekData?.items || []}
         monthShort={monthShort}
@@ -82,7 +101,7 @@ export const BudgetPlanner: React.FC<BudgetPlannerProps> = ({
         onItemClick={handleItemClick}
       />
 
-      {/* MODALES DE GESTION (Confirmation / Annulation) */}
+      {/* MODALES */}
       <PlannerModals 
         confirmModal={ui.confirmModal}
         uncheckModal={ui.uncheckModal}

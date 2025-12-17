@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { Plus, Trash2, CalendarRange, Wallet, Pencil, X, CreditCard, Save, ArrowUp, ArrowDown } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../ui/Card';
@@ -107,17 +108,17 @@ export const ExpenseRulesEditor: React.FC<ExpenseRulesEditorProps> = ({
     const activeSubCats = categories.find(c => c.name === formData.category)?.subCategories || [];
 
     return (
-        <div className="space-y-4">
+        <div className="space-y-4 animate-in fade-in duration-300">
              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div className="flex items-center gap-2 bg-white p-1.5 rounded-lg border border-slate-200 shadow-sm">
-                    <span className="text-xs font-medium text-slate-500 px-2 uppercase">Trier par :</span>
+                    <span className="text-xs font-medium text-slate-500 px-2 uppercase">Trier :</span>
                     <button onClick={() => toggleSort('dayOfMonth')} className={`px-3 py-1.5 rounded text-xs font-medium flex items-center gap-1 transition-colors ${sortKey === 'dayOfMonth' ? 'bg-indigo-100 text-indigo-700' : 'hover:bg-slate-100 text-slate-600'}`}>Date {sortKey === 'dayOfMonth' && (sortOrder === 'asc' ? <ArrowUp size={12}/> : <ArrowDown size={12}/>)}</button>
                     <button onClick={() => toggleSort('label')} className={`px-3 py-1.5 rounded text-xs font-medium flex items-center gap-1 transition-colors ${sortKey === 'label' ? 'bg-indigo-100 text-indigo-700' : 'hover:bg-slate-100 text-slate-600'}`}>Libellé {sortKey === 'label' && (sortOrder === 'asc' ? <ArrowUp size={12}/> : <ArrowDown size={12}/>)}</button>
                     <button onClick={() => toggleSort('amount')} className={`px-3 py-1.5 rounded text-xs font-medium flex items-center gap-1 transition-colors ${sortKey === 'amount' ? 'bg-indigo-100 text-indigo-700' : 'hover:bg-slate-100 text-slate-600'}`}>Montant {sortKey === 'amount' && (sortOrder === 'asc' ? <ArrowUp size={12}/> : <ArrowDown size={12}/>)}</button>
                 </div>
                 {!isFormOpen && (
-                    <button onClick={() => setIsFormOpen(true)} className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 hover:bg-indigo-700">
-                        <Plus size={16} /> Ajouter une règle
+                    <button onClick={() => setIsFormOpen(true)} className="bg-indigo-600 text-white px-5 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-indigo-700 shadow-sm active:scale-95 transition-all">
+                        <Plus size={18} /> Ajouter
                     </button>
                 )}
             </div>
@@ -194,7 +195,16 @@ export const ExpenseRulesEditor: React.FC<ExpenseRulesEditorProps> = ({
                                             ) : (
                                                 <div>
                                                     <label className="text-xs font-medium text-slate-500 uppercase">Mois de fin</label>
-                                                    <input type="month" required={formData.isExtra} value={formData.endMonth} onChange={e => setFormData({...formData, endMonth: e.target.value})} className="w-full p-2 rounded border border-slate-300 bg-white text-slate-900" />
+                                                    <input 
+                                                        type="month" 
+                                                        required={formData.isExtra} 
+                                                        value={formData.endMonth} 
+                                                        onChange={e => {
+                                                            setDurationMonths(0);
+                                                            setFormData({...formData, endMonth: e.target.value});
+                                                        }} 
+                                                        className="w-full p-2 rounded border border-slate-300 bg-white text-slate-900" 
+                                                    />
                                                 </div>
                                             )}
                                         </div>

@@ -1,16 +1,14 @@
+
 import React from 'react';
 import { Transaction, TransactionType, Person } from '../../types';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
-import { Info } from 'lucide-react';
 
 interface BudgetEnvelopesProps {
   transactions: Transaction[];
   people: Person[];
+  weeklyLimit: number;
 }
 
-const GLOBAL_WEEKLY_LIMIT = 500;
-
-// Catégories variables
 const VARIABLE_CATEGORIES = [
     'Alimentation & Restaurants',
     'Achats & Shopping',
@@ -20,7 +18,7 @@ const VARIABLE_CATEGORIES = [
     'Auto & Transports' 
 ];
 
-export const BudgetEnvelopes: React.FC<BudgetEnvelopesProps> = ({ transactions, people }) => {
+export const BudgetEnvelopes: React.FC<BudgetEnvelopesProps> = ({ transactions, people, weeklyLimit }) => {
   
   const isThisWeek = (dateString: string) => {
     const d = new Date(dateString);
@@ -38,14 +36,12 @@ export const BudgetEnvelopes: React.FC<BudgetEnvelopesProps> = ({ transactions, 
     VARIABLE_CATEGORIES.includes(t.category)
   );
 
-  // Filter only 'Adults'/Payers for the breakdown
   const payers = people.filter(p => !p.isChild && p.name !== 'Commun' && p.name !== 'Joint');
   
-  // Calculate spent per payer
   const spendingByPayer = payers.map(p => ({
       name: p.name,
       spent: weeklyExpenses.filter(t => t.initiatedBy === p.id).reduce((acc, curr) => acc + curr.amount, 0),
-      color: p.name === 'Guillaume' ? 'bg-blue-500' : 'bg-purple-500' // Simple fallback, ideally dynamic
+      color: p.name === 'Guillaume' ? 'bg-blue-500' : 'bg-purple-500'
   }));
 
   const spentJoint = weeklyExpenses
@@ -56,19 +52,17 @@ export const BudgetEnvelopes: React.FC<BudgetEnvelopesProps> = ({ transactions, 
       .reduce((acc, curr) => acc + curr.amount, 0);
 
   const totalSpent = spendingByPayer.reduce((acc, curr) => acc + curr.spent, 0) + spentJoint;
-  const remainingGlobal = GLOBAL_WEEKLY_LIMIT - totalSpent;
+  const remainingGlobal = weeklyLimit - totalSpent;
 
   return (
     <Card className="bg-gradient-to-br from-indigo-50 to-white">
       <CardHeader className="pb-2">
         <CardTitle className="flex justify-between items-center">
             <span>Enveloppe Couple Hebdo</span>
-            <span className="text-2xl font-bold text-indigo-600">{GLOBAL_WEEKLY_LIMIT} €</span>
+            <span className="text-2xl font-bold text-indigo-600">{weeklyLimit} €</span>
         </CardTitle>
       </CardHeader>
       <CardContent>
-        
-        {/* GLOBAL PROGRESS */}
         <div className="mb-6">
             <div className="flex justify-between text-sm mb-2">
                 <span className="text-slate-500">Consommation totale</span>
@@ -78,8 +72,8 @@ export const BudgetEnvelopes: React.FC<BudgetEnvelopesProps> = ({ transactions, 
             </div>
             <div className="h-4 w-full bg-slate-200 rounded-full overflow-hidden">
                 <div 
-                    className={`h-full rounded-full transition-all duration-500 ${totalSpent > GLOBAL_WEEKLY_LIMIT ? 'bg-red-500' : 'bg-indigo-500'}`}
-                    style={{ width: `${Math.min((totalSpent / GLOBAL_WEEKLY_LIMIT) * 100, 100)}%` }}
+                    className={`h-full rounded-full transition-all duration-500 ${totalSpent > weeklyLimit ? 'bg-red-500' : 'bg-indigo-500'}`}
+                    style={{ width: `${Math.min((totalSpent / weeklyLimit) * 100, 100)}%` }}
                 />
             </div>
             <p className="text-right text-xs text-slate-500 mt-1">

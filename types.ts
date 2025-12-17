@@ -4,27 +4,25 @@ export enum AccountType {
   SAVINGS = 'EPARGNE'
 }
 
-// "Owner" n'est plus un enum, c'est une référence d'ID vers une Personne
 export interface Person {
   id: string;
   name: string;
-  isChild?: boolean; // Pour savoir si c'est un payeur potentiel ou juste un bénéficiaire (ex: enfant mineur)
+  isChild?: boolean;
 }
 
 export interface Account {
   id: string;
   name: string;
   type: AccountType;
-  ownerId: string; // Lien vers Person.id (Propriétaire légal du compte)
+  ownerId: string;
   currentBalance: number;
   bankName?: string;
 }
 
-// Structure pour la gestion des catégories dynamiques (UNIFIÉE)
 export interface CategoryDef {
   id: string; 
   name: string;
-  type: 'EXPENSE' | 'INCOME'; // Nouveau champ de distinction
+  type: 'EXPENSE' | 'INCOME';
   subCategories: string[];
 }
 
@@ -40,15 +38,14 @@ export interface Transaction {
   amount: number;
   category: string;
   subCategory?: string;
-  beneficiaryId: string; // Lien vers Person.id
-  accountId: string;     // Compte débité
+  beneficiaryId: string;
+  accountId: string;
   type: TransactionType;
-  initiatedBy: string;   // Lien vers Person.id (Celui qui a fait la CB)
+  initiatedBy: string;
 }
 
-export interface IncomeProfile {
-  ownerId: string;
-  monthlyNetIncome: number;
+export interface AppSettings {
+  weekly_envelope: number;
 }
 
 export interface ExpenseConfig {
@@ -57,32 +54,30 @@ export interface ExpenseConfig {
   amount: number;
   category: string;
   subCategory?: string;
-  beneficiaryId: string; // Lien vers Person.id (Qui profite de la dépense ?)
-  accountId: string;     // Lien vers Account.id (Quel compte est débité ?)
+  beneficiaryId: string;
+  accountId: string;
   dayOfMonth: number;
   startMonth?: string;
   endMonth?: string;
   isExtra?: boolean;
 }
 
-// NOUVEAU : Configuration des revenus récurrents
 export interface IncomeConfig {
   id: string;
   label: string;
   amount: number;
-  accountId: string;     // Lien vers Account.id (Quel compte reçoit l'argent ?)
-  beneficiaryId: string; // Lien vers Person.id (Qui a gagné cet argent ?)
+  accountId: string;
+  beneficiaryId: string;
   dayOfMonth: number;
   category: string; 
-  subCategory?: string; // Ajout pour harmonisation
+  subCategory?: string;
 }
 
-// NOUVEAU : Détails complets d'un paiement effectué (Table paid_items)
 export interface PaidItemDetails {
   instanceId: string;
   amount: number;
   paymentDate: string;
-  accountId: string; // Compte réellement débité
+  accountId: string;
   beneficiaryId: string;
   label: string;
   category: string;
@@ -92,21 +87,20 @@ export interface PaidItemDetails {
 export type PlannedItemType = 'EXPENSE' | 'INCOME';
 
 export interface PlannedItem {
-  type: PlannedItemType; // Pour distinguer Dépense vs Revenu dans le Planner
+  type: PlannedItemType;
   configId: string;
   instanceId: string;
   day: number;
   label: string;
-  amount: number;         // Montant Effectif (Réel si payé, sinon Prévu)
-  originalAmount: number; // Montant Initial (Configuration) pour calcul d'écart
-  // isPaid est dérivé de la présence ou non dans paidItems
+  amount: number;
+  originalAmount: number;
   paidDetails?: PaidItemDetails; 
-  isPaid?: boolean; // Propriété ajoutée pour le statut de paiement
+  isPaid?: boolean;
   category: string;
   subCategory?: string;
   beneficiaryId: string;
   isExtra?: boolean;
-  accountId: string; // ID du compte prévu (ExpenseConfig.accountId)
+  accountId: string;
   startMonth?: string;
   endMonth?: string;
 }

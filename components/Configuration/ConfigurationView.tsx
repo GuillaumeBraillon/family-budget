@@ -1,15 +1,15 @@
+
 import React from 'react';
 import { Settings } from 'lucide-react';
-import { useConfigurationUI } from '../../hooks/useConfigurationUI';
-import { ExpenseConfig, IncomeConfig, CategoryDef, Person, Account } from '../../types';
+import { ConfigTab } from '../../hooks/useConfigurationUI';
+import { ExpenseConfig, IncomeConfig, CategoryDef, Person, Account, AppSettings } from '../../types';
 
-// Import des molécules et organismes
 import { ConfigurationTabs } from './molecules/ConfigurationTabs';
-import { ExpenseRulesEditor } from './organisms/ExpenseRulesEditor';
-import { IncomeEditor } from './organisms/IncomeEditor';
+import { OperationsManager } from './organisms/OperationsManager';
 import { CategoryManager } from './organisms/CategoryManager';
 import { PeopleManager } from './organisms/PeopleManager';
 import { AccountManager } from './organisms/AccountManager';
+import { GlobalSettings } from './organisms/GlobalSettings';
 
 interface ConfigurationViewProps {
   configs: ExpenseConfig[];
@@ -17,6 +17,9 @@ interface ConfigurationViewProps {
   categories: CategoryDef[];
   people: Person[];
   accounts: Account[];
+  settings: AppSettings;
+  activeTab: ConfigTab;
+  setActiveTab: (tab: ConfigTab) => void;
   onAddConfig: (config: ExpenseConfig) => void;
   onUpdateConfig: (config: ExpenseConfig) => void;
   onDeleteConfig: (id: string) => void;
@@ -26,21 +29,17 @@ interface ConfigurationViewProps {
   onUpdateCategories: (newCategories: CategoryDef[]) => void;
   onUpdatePeople: (newPeople: Person[]) => void;
   onUpdateAccounts: (newAccounts: Account[]) => void;
+  onUpdateSettings: (newSettings: AppSettings) => void;
 }
 
-/**
- * Vue principale des paramètres de l'application.
- * Orchestre les différents gestionnaires de données via une navigation par onglets.
- */
 export const ConfigurationView: React.FC<ConfigurationViewProps> = ({ 
-  configs, incomeConfigs = [], categories, people, accounts,
+  configs, incomeConfigs = [], categories, people, accounts, settings,
+  activeTab, setActiveTab,
   onAddConfig, onUpdateConfig, onDeleteConfig, 
   onAddIncome, onUpdateIncome, onDeleteIncome,
   onUpdateCategories,
-  onUpdatePeople, onUpdateAccounts 
+  onUpdatePeople, onUpdateAccounts, onUpdateSettings
 }) => {
-  const { activeTab, setActiveTab } = useConfigurationUI();
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -50,30 +49,25 @@ export const ConfigurationView: React.FC<ConfigurationViewProps> = ({
         </h2>
       </div>
 
-      {/* NAVIGATION PAR ONGLETS */}
       <ConfigurationTabs activeTab={activeTab} onTabChange={setActiveTab} />
 
       <div className="pt-2">
-        {activeTab === 'rules' && (
-            <ExpenseRulesEditor 
-                configs={configs} 
-                categories={categories} 
-                people={people} 
-                accounts={accounts}
-                onAddConfig={onAddConfig} 
-                onUpdateConfig={onUpdateConfig} 
-                onDeleteConfig={onDeleteConfig} 
-            />
+        {activeTab === 'general' && (
+            <GlobalSettings settings={settings} onUpdate={onUpdateSettings} />
         )}
-        {activeTab === 'incomes' && (
-            <IncomeEditor 
-                incomeConfigs={incomeConfigs} 
-                people={people} 
-                categories={categories} 
+        {activeTab === 'operations' && (
+            <OperationsManager 
+                configs={configs} 
+                incomeConfigs={incomeConfigs}
+                categories={categories}
+                people={people}
                 accounts={accounts}
-                onAddIncome={onAddIncome!} 
-                onUpdateIncome={onUpdateIncome!} 
-                onDeleteIncome={onDeleteIncome!} 
+                onAddConfig={onAddConfig}
+                onUpdateConfig={onUpdateConfig}
+                onDeleteConfig={onDeleteConfig}
+                onAddIncome={onAddIncome!}
+                onUpdateIncome={onUpdateIncome!}
+                onDeleteIncome={onDeleteIncome!}
             />
         )}
         {activeTab === 'categories' && (

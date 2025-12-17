@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Plus, Trash2, Pencil, X, ChevronDown, ChevronRight, Save } from 'lucide-react';
 import { CategoryDef } from '../../../types';
@@ -41,20 +42,20 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({ categories, on
              <div className="flex justify-end">
                 <button 
                     onClick={addCategory} 
-                    className={`${isIncome ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-indigo-600 hover:bg-indigo-700'} text-white px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors`}
+                    className={`${isIncome ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-indigo-600 hover:bg-indigo-700'} text-white px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 transition-all shadow-sm active:scale-95`}
                 >
-                    <Plus size={16} /> {isIncome ? 'Nouveau Type de Revenu' : 'Nouvelle Catégorie'}
+                    <Plus size={18} /> Nouveau
                 </button>
             </div>
 
             <div className="grid gap-2">
                 {currentList.map(cat => (
-                    <div key={cat.id} className={`bg-white border rounded-lg overflow-hidden transition-all ${isIncome ? 'border-emerald-100' : 'border-slate-200 shadow-sm'}`}>
+                    <div key={cat.id} className={`bg-white border rounded-lg overflow-hidden transition-all ${isIncome ? 'border-emerald-100 shadow-sm hover:border-emerald-200' : 'border-slate-200 shadow-sm hover:border-slate-300'}`}>
                         <div className="flex items-center justify-between p-3 bg-slate-50/50">
                             <div className="flex items-center gap-2 flex-1">
                                 <button 
                                     onClick={() => setExpandedCat(expandedCat === cat.id ? null : cat.id)} 
-                                    className="text-slate-400 hover:text-slate-600"
+                                    className="text-slate-400 hover:text-slate-600 transition-colors"
                                 >
                                     {expandedCat === cat.id ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
                                 </button>
@@ -156,6 +157,11 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({ categories, on
                         )}
                     </div>
                 ))}
+                {currentList.length === 0 && (
+                    <div className="p-8 text-center text-slate-400 italic text-sm">
+                        Aucune catégorie définie.
+                    </div>
+                )}
             </div>
         </div>
     );
