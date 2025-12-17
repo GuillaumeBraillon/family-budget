@@ -7,10 +7,11 @@ import { EquityKPI } from './components/Dashboard/EquityKPI';
 import { BudgetPlanner } from './components/BudgetPlanner/BudgetPlanner';
 import { ConfigurationView } from './components/Configuration/ConfigurationView';
 import { ConfigTab } from './hooks/useConfigurationUI';
-import { LayoutDashboard, WalletCards, CalendarCheck, Settings, Loader2, AlertTriangle, Database } from 'lucide-react';
+import { InfoBox } from './components/ui/InfoBox';
+import { LayoutDashboard, WalletCards, CalendarCheck, Settings, Loader2, AlertTriangle, Database, Sparkles } from 'lucide-react';
 
 const SQL_SETUP_SCRIPT = `
--- Script de création des tables (identique au précédent)
+-- Script de création des tables
 CREATE TABLE IF NOT EXISTS people (id text PRIMARY KEY, name text, is_child boolean DEFAULT false);
 CREATE TABLE IF NOT EXISTS accounts (id text PRIMARY KEY, name text, type text, owner_id text, current_balance numeric, bank_name text);
 CREATE TABLE IF NOT EXISTS categories (id text PRIMARY KEY, name text, type text DEFAULT 'EXPENSE', sub_categories text[]);
@@ -31,11 +32,6 @@ const App: React.FC = () => {
     accounts, configs, incomeConfigs, categories, people, paidItems, settings,
     loading, error, missingTables, isDbEmpty, actions 
   } = useBudget();
-
-  const navigateToConfig = (tab: ConfigTab) => {
-    setActiveConfigTab(tab);
-    setCurrentView('config');
-  };
 
   if (loading) {
     return (
@@ -112,11 +108,18 @@ const App: React.FC = () => {
         )}
 
         {currentView === 'dashboard' && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 space-y-6"><AccountsOverview accounts={accounts} people={people} /></div>
-            <div className="space-y-6">
-              <BudgetEnvelopes transactions={[]} people={people} weeklyLimit={settings.weekly_envelope} />
-              <EquityKPI people={people} incomeConfigs={incomeConfigs} />
+          <div className="space-y-6">
+            <InfoBox 
+              title="Bienvenue sur votre tableau de bord"
+              description="Cette vue synthétise votre santé financière globale. Vous y trouverez le total de vos comptes, le suivi de vos enveloppes variables et la répartition d'équité basée sur les revenus déclarés."
+              icon={<Sparkles size={18} />}
+            />
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2 space-y-6"><AccountsOverview accounts={accounts} people={people} /></div>
+              <div className="space-y-6">
+                <BudgetEnvelopes transactions={[]} people={people} weeklyLimit={settings.weekly_envelope} />
+                <EquityKPI people={people} incomeConfigs={incomeConfigs} />
+              </div>
             </div>
           </div>
         )}
@@ -125,11 +128,13 @@ const App: React.FC = () => {
           <BudgetPlanner 
             configs={configs} 
             incomeConfigs={incomeConfigs} 
+            categories={categories}
             accounts={accounts} 
             people={people} 
             paidItems={paidItems} 
             onTogglePaid={actions.setPaidStatus}
-            onNavigateToConfig={navigateToConfig}
+            onAddConfig={actions.upsertConfig} onUpdateConfig={actions.upsertConfig} onDeleteConfig={actions.deleteConfig}
+            onAddIncome={actions.upsertIncome} onUpdateIncome={actions.upsertIncome} onDeleteIncome={actions.deleteIncome}
           />
         )}
 
@@ -143,8 +148,6 @@ const App: React.FC = () => {
             settings={settings}
             activeTab={activeConfigTab}
             setActiveTab={setActiveConfigTab}
-            onAddConfig={actions.upsertConfig} onUpdateConfig={actions.upsertConfig} onDeleteConfig={actions.deleteConfig}
-            onAddIncome={actions.upsertIncome} onUpdateIncome={actions.upsertIncome} onDeleteIncome={actions.deleteIncome}
             onUpdateCategories={actions.upsertCategory as any} onUpdatePeople={actions.upsertPerson as any} onUpdateAccounts={actions.upsertAccount as any}
             onUpdateSettings={actions.updateSettings}
           />

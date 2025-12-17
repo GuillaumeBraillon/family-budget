@@ -1,9 +1,8 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { usePlanner } from '../../hooks/usePlanner';
 import { usePlannerUI } from '../../hooks/usePlannerUI';
-import { ExpenseConfig, IncomeConfig, Account, Person, PaidItemDetails, PlannedItem } from '../../types';
-import { ConfigTab } from '../../hooks/useConfigurationUI';
+import { ExpenseConfig, IncomeConfig, Account, Person, PaidItemDetails, PlannedItem, CategoryDef } from '../../types';
 import { DetailedAnalysis } from './organisms/DetailedAnalysis';
 import { StatsSummary } from './organisms/StatsSummary';
 import { OperationsList } from './organisms/OperationsList';
@@ -11,22 +10,36 @@ import { PlannerModals } from './organisms/PlannerModals';
 import { MonthNavigator } from './molecules/MonthNavigator';
 import { SearchBar } from './atoms/SearchBar';
 import { WeekSelector } from './molecules/WeekSelector';
-import { Settings2, TrendingUp, Wallet } from 'lucide-react';
+import { OperationsManager } from '../Configuration/organisms/OperationsManager';
+import { InfoBox } from '../ui/InfoBox';
+import { CalendarRange, ListChecks, Settings2, Target } from 'lucide-react';
 
 interface BudgetPlannerProps {
   configs: ExpenseConfig[];
-  incomeConfigs: IncomeConfig[];
+  incomeConfigs: IncomeConfig[]; 
+  categories: CategoryDef[];
   accounts: Account[];
   people: Person[]; 
   paidItems: Record<string, PaidItemDetails>; 
   onTogglePaid: (details: PaidItemDetails | null, instanceId: string) => void;
-  onNavigateToConfig: (tab: ConfigTab) => void;
+  onAddConfig: (c: ExpenseConfig) => void;
+  onUpdateConfig: (c: ExpenseConfig) => void;
+  onDeleteConfig: (id: string) => void;
+  onAddIncome: (i: IncomeConfig) => void;
+  onUpdateIncome: (i: IncomeConfig) => void;
+  onDeleteIncome: (id: string) => void;
 }
 
+type PlannerViewMode = 'calendar' | 'models';
+
 export const BudgetPlanner: React.FC<BudgetPlannerProps> = ({ 
-  configs, incomeConfigs, accounts, people, paidItems, onTogglePaid, onNavigateToConfig
+  configs, incomeConfigs, categories, accounts, people, paidItems, 
+  onTogglePaid, onAddConfig, onUpdateConfig, onDeleteConfig,
+  onAddIncome, onUpdateIncome, onDeleteIncome
 }) => {
   const ui = usePlannerUI();
+  const [viewMode, setViewMode] = useState<PlannerViewMode>('calendar');
+  
   const { filteredWeeks, getStats } = usePlanner(configs, incomeConfigs, paidItems, ui.currentDate, ui.searchQuery);
   const stats = getStats(ui.activeWeek);
   const currentWeekData = filteredWeeks.find(w => w.weekNumber === ui.activeWeek);
@@ -44,64 +57,104 @@ export const BudgetPlanner: React.FC<BudgetPlannerProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* BARRE D'OUTILS : NAVIGATION ET RECHERCHE */}
-      <div className="flex flex-col md:flex-row justify-between gap-4">
-        <MonthNavigator 
-          date={ui.currentDate} 
-          onPrev={ui.handlePrevMonth} 
-          onNext={ui.handleNextMonth} 
-        />
-        
-        <SearchBar 
-          value={ui.searchQuery} 
-          onChange={ui.setSearchQuery} 
-          placeholder="Rechercher une opération..." 
-        />
-      </div>
-
-      {/* SÉLECTEUR DE SEMAINE */}
-      <WeekSelector 
-        weeks={filteredWeeks} 
-        activeWeek={ui.activeWeek} 
-        onSelect={ui.setActiveWeek} 
-      />
-
-      {/* RACCOURCIS DE GESTION DES MODÈLES */}
-      <div className="flex flex-wrap items-center gap-3 py-1 px-2">
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mr-1 flex items-center gap-1">
-              <Settings2 size={12}/> Modèles :
-          </span>
+      {/* SÉLECTEUR DE MODE DU PLANNER */}
+      <div className="flex justify-center mb-2">
+        <div className="flex bg-slate-200/50 p-1 rounded-xl w-full max-w-sm">
           <button 
-            onClick={() => onNavigateToConfig('operations')}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-emerald-100 text-emerald-700 text-xs font-semibold hover:bg-emerald-50 transition-colors shadow-sm"
+            onClick={() => setViewMode('calendar')}
+            className={`flex-1 flex items-center justify-center gap-2 py-2 text-xs font-bold rounded-lg transition-all ${
+              viewMode === 'calendar' 
+                ? 'bg-white text-indigo-600 shadow-sm' 
+                : 'text-slate-500 hover:text-slate-700'
+            }`}
           >
-              <TrendingUp size={14}/> Revenus récurrents
+            <ListChecks size={16} /> Suivi Mensuel
           </button>
           <button 
-            onClick={() => onNavigateToConfig('operations')}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-indigo-100 text-indigo-700 text-xs font-semibold hover:bg-indigo-50 transition-colors shadow-sm"
+            onClick={() => setViewMode('models')}
+            className={`flex-1 flex items-center justify-center gap-2 py-2 text-xs font-bold rounded-lg transition-all ${
+              viewMode === 'models' 
+                ? 'bg-white text-indigo-600 shadow-sm' 
+                : 'text-slate-500 hover:text-slate-700'
+            }`}
           >
-              <Wallet size={14}/> Dépenses récurrentes
+            <CalendarRange size={16} /> Modèles Récurrents
           </button>
+        </div>
       </div>
 
-      {/* RÉSUMÉ DES STATS (KPIs) */}
-      <StatsSummary stats={stats} accounts={accounts} />
+      {viewMode === 'calendar' ? (
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <InfoBox 
+            title="Suivi & Pointage"
+            description="Cochez les opérations au fur et à mesure qu'elles apparaissent sur vos comptes bancaires réels. Le 'Reste à payer' s'ajuste automatiquement pour vous donner une vision claire de votre fin de mois."
+            icon={<Target size={18} />}
+          />
 
-      {/* ANALYSE DÉTAILLÉE */}
-      <DetailedAnalysis stats={stats} people={people} accounts={accounts} />
+          {/* BARRE D'OUTILS : NAVIGATION ET RECHERCHE */}
+          <div className="flex flex-col md:flex-row justify-between gap-4">
+            <MonthNavigator 
+              date={ui.currentDate} 
+              onPrev={ui.handlePrevMonth} 
+              onNext={ui.handleNextMonth} 
+            />
+            
+            <SearchBar 
+              value={ui.searchQuery} 
+              onChange={ui.setSearchQuery} 
+              placeholder="Rechercher une opération..." 
+            />
+          </div>
 
-      {/* LISTE DES OPÉRATIONS */}
-      <OperationsList 
-        items={currentWeekData?.items || []}
-        monthShort={monthShort}
-        people={people}
-        accounts={accounts}
-        currentDate={ui.currentDate}
-        onItemClick={handleItemClick}
-      />
+          {/* SÉLECTEUR DE SEMAINE */}
+          <WeekSelector 
+            weeks={filteredWeeks} 
+            activeWeek={ui.activeWeek} 
+            onSelect={ui.setActiveWeek} 
+          />
 
-      {/* MODALES */}
+          {/* RÉSUMÉ DES STATS (KPIs) */}
+          <StatsSummary stats={stats} accounts={accounts} />
+
+          {/* ANALYSE DÉTAILLÉE */}
+          <DetailedAnalysis stats={stats} people={people} accounts={accounts} />
+
+          {/* LISTE DES OPÉRATIONS */}
+          <OperationsList 
+            items={currentWeekData?.items || []}
+            monthShort={monthShort}
+            people={people}
+            accounts={accounts}
+            currentDate={ui.currentDate}
+            onItemClick={handleItemClick}
+          />
+        </div>
+      ) : (
+        <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+           <InfoBox 
+              title="Gestion des Modèles"
+              description="Ici, configurez vos revenus et dépenses qui se répètent chaque mois. Ces règles génèrent automatiquement votre échéancier dans l'onglet 'Suivi Mensuel'."
+              icon={<Settings2 size={18} />}
+              className="mb-6"
+           />
+
+           <OperationsManager 
+                configs={configs} 
+                incomeConfigs={incomeConfigs}
+                categories={categories}
+                people={people}
+                accounts={accounts}
+                onAddConfig={onAddConfig}
+                onUpdateConfig={onUpdateConfig}
+                onDeleteConfig={onDeleteConfig}
+                onAddIncome={onAddIncome}
+                onUpdateIncome={onUpdateIncome}
+                onDeleteIncome={onDeleteIncome}
+            />
+        </div>
+      )}
+
+      {/* MODALES (Uniquement pour le mode calendrier) */}
       <PlannerModals 
         confirmModal={ui.confirmModal}
         uncheckModal={ui.uncheckModal}

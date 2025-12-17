@@ -1,11 +1,11 @@
 
 import React from 'react';
-import { Settings } from 'lucide-react';
+import { Settings, UserCircle, CreditCard, Tag, Sliders } from 'lucide-react';
 import { ConfigTab } from '../../hooks/useConfigurationUI';
 import { ExpenseConfig, IncomeConfig, CategoryDef, Person, Account, AppSettings } from '../../types';
+import { InfoBox } from '../ui/InfoBox';
 
 import { ConfigurationTabs } from './molecules/ConfigurationTabs';
-import { OperationsManager } from './organisms/OperationsManager';
 import { CategoryManager } from './organisms/CategoryManager';
 import { PeopleManager } from './organisms/PeopleManager';
 import { AccountManager } from './organisms/AccountManager';
@@ -20,12 +20,6 @@ interface ConfigurationViewProps {
   settings: AppSettings;
   activeTab: ConfigTab;
   setActiveTab: (tab: ConfigTab) => void;
-  onAddConfig: (config: ExpenseConfig) => void;
-  onUpdateConfig: (config: ExpenseConfig) => void;
-  onDeleteConfig: (id: string) => void;
-  onAddIncome?: (config: IncomeConfig) => void;
-  onUpdateIncome?: (config: IncomeConfig) => void;
-  onDeleteIncome?: (id: string) => void;
   onUpdateCategories: (newCategories: CategoryDef[]) => void;
   onUpdatePeople: (newPeople: Person[]) => void;
   onUpdateAccounts: (newAccounts: Account[]) => void;
@@ -33,10 +27,8 @@ interface ConfigurationViewProps {
 }
 
 export const ConfigurationView: React.FC<ConfigurationViewProps> = ({ 
-  configs, incomeConfigs = [], categories, people, accounts, settings,
+  categories, people, accounts, settings,
   activeTab, setActiveTab,
-  onAddConfig, onUpdateConfig, onDeleteConfig, 
-  onAddIncome, onUpdateIncome, onDeleteIncome,
   onUpdateCategories,
   onUpdatePeople, onUpdateAccounts, onUpdateSettings
 }) => {
@@ -51,43 +43,56 @@ export const ConfigurationView: React.FC<ConfigurationViewProps> = ({
 
       <ConfigurationTabs activeTab={activeTab} onTabChange={setActiveTab} />
 
-      <div className="pt-2">
+      <div className="pt-2 space-y-6">
         {activeTab === 'general' && (
-            <GlobalSettings settings={settings} onUpdate={onUpdateSettings} />
-        )}
-        {activeTab === 'operations' && (
-            <OperationsManager 
-                configs={configs} 
-                incomeConfigs={incomeConfigs}
-                categories={categories}
-                people={people}
-                accounts={accounts}
-                onAddConfig={onAddConfig}
-                onUpdateConfig={onUpdateConfig}
-                onDeleteConfig={onDeleteConfig}
-                onAddIncome={onAddIncome!}
-                onUpdateIncome={onUpdateIncome!}
-                onDeleteIncome={onDeleteIncome!}
-            />
+            <>
+              <InfoBox 
+                title="Paramètres Globaux"
+                description="Configurez ici les options de base de l'application, comme le montant de l'enveloppe hebdomadaire qui définit votre budget variable par défaut."
+                icon={<Sliders size={18} />}
+              />
+              <GlobalSettings settings={settings} onUpdate={onUpdateSettings} />
+            </>
         )}
         {activeTab === 'categories' && (
-            <CategoryManager 
-                categories={categories} 
-                onUpdateCategories={onUpdateCategories} 
-            />
+            <>
+              <InfoBox 
+                title="Classification des flux"
+                description="Personnalisez vos catégories et sous-catégories pour organiser vos dépenses et revenus. Une bonne classification permet une analyse plus fine de vos habitudes de consommation."
+                icon={<Tag size={18} />}
+              />
+              <CategoryManager 
+                  categories={categories} 
+                  onUpdateCategories={onUpdateCategories} 
+              />
+            </>
         )}
         {activeTab === 'family' && (
-            <PeopleManager 
-                people={people} 
-                onUpdatePeople={onUpdatePeople} 
-            />
+            <>
+              <InfoBox 
+                title="Gestion du Foyer"
+                description="Définissez les membres de votre famille. Marquer un membre comme 'Enfant' permet de le distinguer dans les KPIs d'équité (ils ne sont pas considérés comme contributeurs financiers)."
+                icon={<UserCircle size={18} />}
+              />
+              <PeopleManager 
+                  people={people} 
+                  onUpdatePeople={onUpdatePeople} 
+              />
+            </>
         )}
         {activeTab === 'accounts' && (
-            <AccountManager 
-                accounts={accounts} 
-                people={people} 
-                onUpdateAccounts={onUpdateAccounts} 
-            />
+            <>
+              <InfoBox 
+                title="Comptes Bancaires"
+                description="Gérez la liste de vos comptes. Chaque opération de l'échéancier doit être reliée à un compte pour calculer précisément les soldes prévisionnels."
+                icon={<CreditCard size={18} />}
+              />
+              <AccountManager 
+                  accounts={accounts} 
+                  people={people} 
+                  onUpdateAccounts={onUpdateAccounts} 
+              />
+            </>
         )}
       </div>
     </div>
