@@ -1,4 +1,3 @@
-
 import { Account, AccountType, Transaction, TransactionType, ExpenseConfig, CategoryDef, Person, IncomeConfig } from '../types';
 
 // --- PERSONNES (FAMILLE) ---
@@ -19,11 +18,11 @@ export const MOCK_ACCOUNTS: Account[] = [
 ];
 
 // --- REVENUS RÉCURRENTS (NOUVEAU) ---
-// ownerId correspond maintenant aux IDs des comptes (1, 2, 3)
+// accountId correspond maintenant aux IDs des comptes (1, 2, 3)
 export const MOCK_INCOME_CONFIGS: IncomeConfig[] = [
-  { id: 'inc_1', label: 'Salaire Guillaume', amount: 3200, dayOfMonth: 28, ownerId: '1', beneficiaryId: 'p_guillaume', category: 'Salaire' },
-  { id: 'inc_2', label: 'Salaire Nelly', amount: 2100, dayOfMonth: 27, ownerId: '2', beneficiaryId: 'p_nelly', category: 'Salaire' },
-  { id: 'inc_3', label: 'Allocations Familiales', amount: 142.50, dayOfMonth: 5, ownerId: '3', beneficiaryId: 'p_joint', category: 'CAF' },
+  { id: 'inc_1', label: 'Salaire Guillaume', amount: 3200, dayOfMonth: 28, accountId: '1', beneficiaryId: 'p_guillaume', category: 'Salaire' },
+  { id: 'inc_2', label: 'Salaire Nelly', amount: 2100, dayOfMonth: 27, accountId: '2', beneficiaryId: 'p_nelly', category: 'Salaire' },
+  { id: 'inc_3', label: 'Allocations Familiales', amount: 142.50, dayOfMonth: 5, accountId: '3', beneficiaryId: 'p_joint', category: 'CAF' },
 ];
 
 // --- NOUVELLES CATÉGORIES ---
@@ -59,34 +58,34 @@ const getDaysAgo = (days: number) => {
 };
 
 // --- CONFIGURATION DES DÉPENSES ---
-// ownerId pointe maintenant vers des Account IDs (1, 2, 3...)
+// accountId pointe maintenant vers des Account IDs (1, 2, 3...)
 export const MOCK_EXPENSE_CONFIGS: ExpenseConfig[] = [
   // SEMAINE 1
-  { id: 'c1', label: 'Orange : Guillaume', amount: 20.99, dayOfMonth: 1, category: 'Abonnements', subCategory: 'Téléphonie mobile', beneficiaryId: 'p_guillaume', ownerId: '1' },
-  { id: 'c2', label: 'Argent de poche Oscar', amount: 10.00, dayOfMonth: 1, category: 'Scolarité & Enfants', subCategory: 'Scolarité & Enfants - Autres', beneficiaryId: 'p_oscar', ownerId: '1' },
-  { id: 'c3', label: 'Drivalia Lease (Voiture)', amount: 423.18, dayOfMonth: 1, category: 'Auto & Transports', subCategory: 'Location de véhicule', beneficiaryId: 'p_joint', ownerId: '3' },
-  { id: 'c4', label: 'EDF Particuliers', amount: 112.35, dayOfMonth: 3, category: 'Logement', subCategory: 'Electricité', beneficiaryId: 'p_joint', ownerId: '3' },
-  { id: 'c5', label: 'Acadomia (Cours)', amount: 130.00, dayOfMonth: 3, category: 'Scolarité & Enfants', subCategory: 'Ecole', beneficiaryId: 'p_eliott', ownerId: '3' },
-  { id: 'c5b', label: 'Assoc St Marc (Cantine)', amount: 50.00, dayOfMonth: 3, category: 'Scolarité & Enfants', subCategory: 'Ecole', beneficiaryId: 'p_eliott', ownerId: '3' },
-  { id: 'c_bouygues', label: 'Bouygues : Oscar', amount: 6.99, dayOfMonth: 4, category: 'Abonnements', subCategory: 'Téléphonie mobile', beneficiaryId: 'p_oscar', ownerId: '1' },
-  { id: 'c_free', label: 'Free Telecom', amount: 55.98, dayOfMonth: 4, category: 'Abonnements', subCategory: 'Internet', beneficiaryId: 'p_joint', ownerId: '3' },
-  { id: 'c_stmarc_cours', label: 'Assoc St Marc (Cours)', amount: 318.00, dayOfMonth: 7, category: 'Scolarité & Enfants', subCategory: 'Ecole', beneficiaryId: 'p_oscar', ownerId: '3' },
-  { id: 'c_maif', label: 'Maif Niort (Assurance)', amount: 156.53, dayOfMonth: 7, category: 'Logement', subCategory: 'Assurance habitation', beneficiaryId: 'p_joint', ownerId: '3' },
-  { id: 'c6', label: 'Faubourg Gestion (Loyer)', amount: 1204.88, dayOfMonth: 7, category: 'Logement', subCategory: 'Loyer', beneficiaryId: 'p_joint', ownerId: '3' },
+  { id: 'c1', label: 'Orange : Guillaume', amount: 20.99, dayOfMonth: 1, category: 'Abonnements', subCategory: 'Téléphonie mobile', beneficiaryId: 'p_guillaume', accountId: '1' },
+  { id: 'c2', label: 'Argent de poche Oscar', amount: 10.00, dayOfMonth: 1, category: 'Scolarité & Enfants', subCategory: 'Scolarité & Enfants - Autres', beneficiaryId: 'p_oscar', accountId: '1' },
+  { id: 'c3', label: 'Drivalia Lease (Voiture)', amount: 423.18, dayOfMonth: 1, category: 'Auto & Transports', subCategory: 'Location de véhicule', beneficiaryId: 'p_joint', accountId: '3' },
+  { id: 'c4', label: 'EDF Particuliers', amount: 112.35, dayOfMonth: 3, category: 'Logement', subCategory: 'Electricité', beneficiaryId: 'p_joint', accountId: '3' },
+  { id: 'c5', label: 'Acadomia (Cours)', amount: 130.00, dayOfMonth: 3, category: 'Scolarité & Enfants', subCategory: 'Ecole', beneficiaryId: 'p_eliott', accountId: '3' },
+  { id: 'c5b', label: 'Assoc St Marc (Cantine)', amount: 50.00, dayOfMonth: 3, category: 'Scolarité & Enfants', subCategory: 'Ecole', beneficiaryId: 'p_eliott', accountId: '3' },
+  { id: 'c_bouygues', label: 'Bouygues : Oscar', amount: 6.99, dayOfMonth: 4, category: 'Abonnements', subCategory: 'Téléphonie mobile', beneficiaryId: 'p_oscar', accountId: '1' },
+  { id: 'c_free', label: 'Free Telecom', amount: 55.98, dayOfMonth: 4, category: 'Abonnements', subCategory: 'Internet', beneficiaryId: 'p_joint', accountId: '3' },
+  { id: 'c_stmarc_cours', label: 'Assoc St Marc (Cours)', amount: 318.00, dayOfMonth: 7, category: 'Scolarité & Enfants', subCategory: 'Ecole', beneficiaryId: 'p_oscar', accountId: '3' },
+  { id: 'c_maif', label: 'Maif Niort (Assurance)', amount: 156.53, dayOfMonth: 7, category: 'Logement', subCategory: 'Assurance habitation', beneficiaryId: 'p_joint', accountId: '3' },
+  { id: 'c6', label: 'Faubourg Gestion (Loyer)', amount: 1204.88, dayOfMonth: 7, category: 'Logement', subCategory: 'Loyer', beneficiaryId: 'p_joint', accountId: '3' },
   
   // SEMAINE 2
-  { id: 'c_artis', label: 'ARTIS (Musique)', amount: 82.00, dayOfMonth: 9, category: 'Loisirs & Sorties', beneficiaryId: 'p_oscar', ownerId: '3' },
-  { id: 'c_plug', label: 'Plug N Play', amount: 75.00, dayOfMonth: 9, category: 'Loisirs & Sorties', beneficiaryId: 'p_eliott', ownerId: '3' },
-  { id: 'c_noveo', label: 'Noveocare', amount: 10.20, dayOfMonth: 10, category: 'Santé', subCategory: 'Mutuelle', beneficiaryId: 'p_joint', ownerId: '3' },
-  { id: 'c_hp', label: 'HP (Imprimante)', amount: 1.49, dayOfMonth: 10, category: 'Abonnements', subCategory: 'Abonnements - Autres', beneficiaryId: 'p_joint', ownerId: '3' },
-  { id: 'c7', label: 'Orange : Nelly', amount: 17.99, dayOfMonth: 10, category: 'Abonnements', subCategory: 'Téléphonie mobile', beneficiaryId: 'p_nelly', ownerId: '2' },
+  { id: 'c_artis', label: 'ARTIS (Musique)', amount: 82.00, dayOfMonth: 9, category: 'Loisirs & Sorties', beneficiaryId: 'p_oscar', accountId: '3' },
+  { id: 'c_plug', label: 'Plug N Play', amount: 75.00, dayOfMonth: 9, category: 'Loisirs & Sorties', beneficiaryId: 'p_eliott', accountId: '3' },
+  { id: 'c_noveo', label: 'Noveocare', amount: 10.20, dayOfMonth: 10, category: 'Santé', subCategory: 'Mutuelle', beneficiaryId: 'p_joint', accountId: '3' },
+  { id: 'c_hp', label: 'HP (Imprimante)', amount: 1.49, dayOfMonth: 10, category: 'Abonnements', subCategory: 'Abonnements - Autres', beneficiaryId: 'p_joint', accountId: '3' },
+  { id: 'c7', label: 'Orange : Nelly', amount: 17.99, dayOfMonth: 10, category: 'Abonnements', subCategory: 'Téléphonie mobile', beneficiaryId: 'p_nelly', accountId: '2' },
   
   // SEMAINE 3
-  { id: 'c_rest_scol', label: 'Rest Scol Eliott', amount: 60.00, dayOfMonth: 16, category: 'Scolarité & Enfants', subCategory: 'Ecole', beneficiaryId: 'p_eliott', ownerId: '3' },
-  { id: 'c_youtube', label: 'Google Youtube', amount: 16.99, dayOfMonth: 21, category: 'Abonnements', subCategory: 'Abonnements - Autres', beneficiaryId: 'p_joint', ownerId: '3' },
+  { id: 'c_rest_scol', label: 'Rest Scol Eliott', amount: 60.00, dayOfMonth: 16, category: 'Scolarité & Enfants', subCategory: 'Ecole', beneficiaryId: 'p_eliott', accountId: '3' },
+  { id: 'c_youtube', label: 'Google Youtube', amount: 16.99, dayOfMonth: 21, category: 'Abonnements', subCategory: 'Abonnements - Autres', beneficiaryId: 'p_joint', accountId: '3' },
 
   // SEMAINE 4
-  { id: 'c_ww_nelly', label: 'Weight Watcher Nelly', amount: 25.00, dayOfMonth: 23, category: 'Loisirs & Sorties', beneficiaryId: 'p_nelly', ownerId: '2' },
+  { id: 'c_ww_nelly', label: 'Weight Watcher Nelly', amount: 25.00, dayOfMonth: 23, category: 'Loisirs & Sorties', beneficiaryId: 'p_nelly', accountId: '2' },
   
   // EXTRA
   { 
@@ -97,7 +96,7 @@ export const MOCK_EXPENSE_CONFIGS: ExpenseConfig[] = [
     category: 'Impôts & Taxes', 
     subCategory: 'Impôts sur le revenu',
     beneficiaryId: 'p_joint',
-    ownerId: '3', 
+    accountId: '3', 
     isExtra: true,
     startMonth: '2025-10',
     endMonth: '2025-12'
@@ -109,7 +108,7 @@ export const MOCK_EXPENSE_CONFIGS: ExpenseConfig[] = [
     dayOfMonth: 15,
     category: 'Loisirs & Sorties',
     beneficiaryId: 'p_joint',
-    ownerId: '3',
+    accountId: '3',
     startMonth: '2025-06',
     endMonth: '2025-09'
   }

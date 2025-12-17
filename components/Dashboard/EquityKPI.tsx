@@ -10,18 +10,20 @@ interface EquityKPIProps {
 }
 
 export const EquityKPI: React.FC<EquityKPIProps> = ({ people, incomeConfigs }) => {
-  // Agrégation des revenus par personne
+  // Agrégation des revenus par BÉNÉFICIAIRE (Personne)
   const incomeByPerson: Record<string, number> = {};
 
   incomeConfigs.forEach(inc => {
-      if (!incomeByPerson[inc.ownerId]) {
-          incomeByPerson[inc.ownerId] = 0;
+      // On utilise beneficiaryId car c'est lui qui "gagne" l'argent pour le calcul d'équité
+      // ownerId est le compte de réception (technique)
+      if (!incomeByPerson[inc.beneficiaryId]) {
+          incomeByPerson[inc.beneficiaryId] = 0;
       }
-      incomeByPerson[inc.ownerId] += inc.amount;
+      incomeByPerson[inc.beneficiaryId] += inc.amount;
   });
 
-  const incomes = Object.entries(incomeByPerson).map(([ownerId, amount]) => {
-      const person = people.find(p => p.id === ownerId);
+  const incomes = Object.entries(incomeByPerson).map(([personId, amount]) => {
+      const person = people.find(p => p.id === personId);
       return {
           name: person?.name || 'Inconnu',
           value: amount
@@ -76,7 +78,7 @@ export const EquityKPI: React.FC<EquityKPIProps> = ({ people, incomeConfigs }) =
                             <span className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[idx % COLORS.length] }}></span>
                             {inc.name}
                         </span>
-                        <span className="font-semibold">{((inc.value / totalIncome) * 100).toFixed(1)}%</span>
+                        <span className="font-semibold">{totalIncome > 0 ? ((inc.value / totalIncome) * 100).toFixed(1) : 0}%</span>
                     </div>
                 ))}
             </div>

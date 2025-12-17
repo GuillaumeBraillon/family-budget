@@ -90,7 +90,7 @@ const ExpenseRulesEditor: React.FC<{
 
     const [formData, setFormData] = useState<Partial<ExpenseConfig>>({
         label: '', amount: 0, dayOfMonth: 1, 
-        ownerId: defaultAccount, 
+        accountId: defaultAccount, 
         beneficiaryId: people[0]?.id, 
         category: defaultCat, subCategory: '', isExtra: false, startMonth: '', endMonth: ''
     });
@@ -114,7 +114,7 @@ const ExpenseRulesEditor: React.FC<{
     const resetForm = () => {
         setFormData({ 
             label: '', amount: 0, dayOfMonth: 1, 
-            ownerId: accounts[0]?.id || '', 
+            accountId: accounts[0]?.id || '', 
             beneficiaryId: people[0]?.id, 
             category: expenseCategories[0]?.name || '', subCategory: '', 
             isExtra: false, startMonth: '', endMonth: '' 
@@ -204,7 +204,7 @@ const ExpenseRulesEditor: React.FC<{
                             </div>
                              <div>
                                 <label className="text-xs font-medium text-slate-500 uppercase">Compte à débiter</label>
-                                <select value={formData.ownerId} onChange={e => setFormData({...formData, ownerId: e.target.value})} className="w-full p-2 rounded border border-slate-300 bg-white text-slate-900">
+                                <select value={formData.accountId} onChange={e => setFormData({...formData, accountId: e.target.value})} className="w-full p-2 rounded border border-slate-300 bg-white text-slate-900">
                                     {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
                                 </select>
                             </div>
@@ -270,7 +270,7 @@ const ExpenseRulesEditor: React.FC<{
 
             <div className="grid gap-3">
                 {sortedConfigs.map(config => {
-                    const accountName = accounts.find(a => a.id === config.ownerId)?.name || 'Compte inconnu';
+                    const accountName = accounts.find(a => a.id === config.accountId)?.name || 'Compte inconnu';
                     const beneficiaryName = people.find(p => p.id === config.beneficiaryId)?.name || '?';
                     return (
                         <div key={config.id} className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm hover:shadow-md transition-shadow flex items-center justify-between">
@@ -328,7 +328,7 @@ const IncomeEditor: React.FC<{
 
     const [formData, setFormData] = useState<Partial<IncomeConfig>>({
         label: '', amount: 0, dayOfMonth: 1, 
-        ownerId: defaultAccount, 
+        accountId: defaultAccount, 
         beneficiaryId: people[0]?.id, // Default Beneficiary
         category: defaultIncomeCat
     });
@@ -336,7 +336,7 @@ const IncomeEditor: React.FC<{
     const resetForm = () => {
         setFormData({ 
             label: '', amount: 0, dayOfMonth: 1, 
-            ownerId: accounts[0]?.id || '', 
+            accountId: accounts[0]?.id || '', 
             beneficiaryId: people[0]?.id,
             category: incomeCategories[0]?.name || 'Salaire' 
         });
@@ -425,7 +425,7 @@ const IncomeEditor: React.FC<{
                             </div>
                              <div>
                                 <label className="text-xs font-medium text-slate-500 uppercase">Compte de réception</label>
-                                <select value={formData.ownerId} onChange={e => setFormData({...formData, ownerId: e.target.value})} className="w-full p-2 rounded border border-slate-300 bg-white text-slate-900">
+                                <select value={formData.accountId} onChange={e => setFormData({...formData, accountId: e.target.value})} className="w-full p-2 rounded border border-slate-300 bg-white text-slate-900">
                                     {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
                                 </select>
                             </div>
@@ -449,7 +449,7 @@ const IncomeEditor: React.FC<{
 
             <div className="grid gap-3">
                 {sortedIncomes.map(inc => {
-                    const accountName = accounts.find(a => a.id === inc.ownerId)?.name || 'Compte Inconnu';
+                    const accountName = accounts.find(a => a.id === inc.accountId)?.name || 'Compte Inconnu';
                     const beneficiaryName = people.find(p => p.id === inc.beneficiaryId)?.name || '?';
                     return (
                         <div key={inc.id} className="bg-white p-4 rounded-lg border border-emerald-100 shadow-sm hover:shadow-md transition-shadow flex items-center justify-between">

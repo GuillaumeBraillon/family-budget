@@ -58,7 +58,7 @@ export interface ExpenseConfig {
   category: string;
   subCategory?: string;
   beneficiaryId: string; // Lien vers Person.id (Qui profite de la dépense ?)
-  ownerId: string;       // Lien vers Account.id (Quel compte est débité ?)
+  accountId: string;     // Lien vers Account.id (Quel compte est débité ?)
   dayOfMonth: number;
   startMonth?: string;
   endMonth?: string;
@@ -70,7 +70,7 @@ export interface IncomeConfig {
   id: string;
   label: string;
   amount: number;
-  ownerId: string;       // Lien vers Account.id (Quel compte reçoit l'argent ?)
+  accountId: string;     // Lien vers Account.id (Quel compte reçoit l'argent ?)
   beneficiaryId: string; // Lien vers Person.id (Qui a gagné cet argent ?)
   dayOfMonth: number;
   category: string; 
@@ -105,7 +105,7 @@ export interface PlannedItem {
   subCategory?: string;
   beneficiaryId: string;
   isExtra?: boolean;
-  ownerId: string; // ID du compte prévu (ExpenseConfig.ownerId)
+  accountId: string; // ID du compte prévu (ExpenseConfig.accountId)
   startMonth?: string;
   endMonth?: string;
 }

@@ -52,56 +52,14 @@ L'application nécessite une instance Supabase.
 
 1. Créez un projet sur [Supabase](https://supabase.com).
 2. Allez dans l'éditeur SQL de Supabase.
-3. Exécutez le script suivant pour créer les tables nécessaires :
+3. Exécutez le script suivant pour créer les tables nécessaires (c'est le même que celui disponible dans l'application via le bouton "Copier" si les tables sont manquantes) :
 
 ```sql
--- 1. Table des revenus récurrents
-CREATE TABLE IF NOT EXISTS income_configs (
-  id text PRIMARY KEY,
-  label text,
-  amount numeric,
-  owner_id text,
-  beneficiary_id text,
-  day_of_month integer,
-  category text
-);
-ALTER TABLE income_configs DISABLE ROW LEVEL SECURITY;
-
--- 2. Table des dépenses récurrentes
-CREATE TABLE IF NOT EXISTS expense_configs (
-  id text PRIMARY KEY,
-  label text,
-  amount numeric,
-  category text,
-  sub_category text,
-  beneficiary_id text,
-  owner_id text,
-  day_of_month integer,
-  start_month text,
-  end_month text,
-  is_extra boolean
-);
-ALTER TABLE expense_configs DISABLE ROW LEVEL SECURITY;
-
--- 3. Table des paiements effectués
-CREATE TABLE IF NOT EXISTS paid_items (
-  instance_id text PRIMARY KEY,
-  is_paid boolean DEFAULT true,
-  amount numeric,
-  payment_date date,
-  account_id text,
-  beneficiary_id text,
-  label text,
-  category text,
-  sub_category text
-);
-ALTER TABLE paid_items DISABLE ROW LEVEL SECURITY;
-
--- 4. Tables référentielles (si non gérées par l'app via apiUpsert)
+-- 1. Tables Référentielles
 CREATE TABLE IF NOT EXISTS people (
     id text PRIMARY KEY,
     name text,
-    is_child boolean
+    is_child boolean DEFAULT false
 );
 ALTER TABLE people DISABLE ROW LEVEL SECURITY;
 
@@ -118,10 +76,52 @@ ALTER TABLE accounts DISABLE ROW LEVEL SECURITY;
 CREATE TABLE IF NOT EXISTS categories (
     id text PRIMARY KEY,
     name text,
-    type text,
+    type text DEFAULT 'EXPENSE',
     sub_categories text[]
 );
 ALTER TABLE categories DISABLE ROW LEVEL SECURITY;
+
+-- 2. Table des revenus récurrents
+CREATE TABLE IF NOT EXISTS income_configs (
+  id text PRIMARY KEY,
+  label text,
+  amount numeric,
+  account_id text REFERENCES accounts(id) ON DELETE SET NULL, -- Lien vers le compte de réception
+  beneficiary_id text,
+  day_of_month integer,
+  category text
+);
+ALTER TABLE income_configs DISABLE ROW LEVEL SECURITY;
+
+-- 3. Table des dépenses récurrentes
+CREATE TABLE IF NOT EXISTS expense_configs (
+  id text PRIMARY KEY,
+  label text,
+  amount numeric,
+  category text,
+  sub_category text,
+  beneficiary_id text,
+  account_id text REFERENCES accounts(id) ON DELETE SET NULL, -- Lien vers le compte débité
+  day_of_month integer,
+  start_month text,
+  end_month text,
+  is_extra boolean
+);
+ALTER TABLE expense_configs DISABLE ROW LEVEL SECURITY;
+
+-- 4. Table des paiements effectués
+CREATE TABLE IF NOT EXISTS paid_items (
+  instance_id text PRIMARY KEY,
+  is_paid boolean DEFAULT true,
+  amount numeric,
+  payment_date date,
+  account_id text,
+  beneficiary_id text,
+  label text,
+  category text,
+  sub_category text
+);
+ALTER TABLE paid_items DISABLE ROW LEVEL SECURITY;
 ```
 
 4. **Connexion API :**
@@ -133,7 +133,7 @@ ALTER TABLE categories DISABLE ROW LEVEL SECURITY;
 
 ## 📁 Structure du Projet
 
-- `App.tsx` : Point d'entrée, gestion du routing (vues) et chargement global des données.
+- `App.tsx` : Point d'entrée, gestion du routing (vues) et chargement global des données. Contient le script SQL de secours (`SQL_SETUP_SCRIPT`).
 - `types.ts` : Définitions TypeScript partagées (Interfaces BDD et UI).
 - `services/` :
     - `api.ts` : Fonctions CRUD vers Supabase.

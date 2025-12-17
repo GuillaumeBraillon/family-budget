@@ -22,7 +22,8 @@ L'application ne se base pas uniquement sur des transactions passées, mais sur 
 ### B. Gestion de l'État et API
 - Les appels API se trouvent dans `services/api.ts`.
 - **Important :** Supabase utilise le `snake_case` pour la BDD, mais l'application utilise le `camelCase`. Le mapping est fait manuellement dans `services/api.ts`.
-- Lors de modifications structurelles (ex: ajout d'une colonne), toujours vérifier le script SQL de migration dans `App.tsx` (`SQL_SETUP_SCRIPT`).
+  - Exemple critique : `expense_configs.account_id` (BDD) -> `ExpenseConfig.accountId` (App).
+- Lors de modifications structurelles (ex: ajout d'une colonne), toujours vérifier et mettre à jour le script SQL de migration dans `App.tsx` (`SQL_SETUP_SCRIPT`).
 
 ### C. Composants (`components/`)
 - **ConfigurationView :** Gère les règles CRUD. **Règle d'or :** Ne jamais définir de sous-composants (ex: `CategoryManager`) à l'intérieur du composant parent pour éviter les problèmes de re-rendu et de perte de focus. Ils doivent être définis à l'extérieur.
@@ -39,7 +40,7 @@ L'application ne se base pas uniquement sur des transactions passées, mais sur 
 ### Logique Métier
 - **Compte Joint :** L'application gère une logique de "Compte Joint" vs "Comptes Perso". Les calculs de trésorerie dans le Planner doivent souvent isoler les mouvements du compte joint.
 - **Catégories Unifiées :** La table `categories` contient un champ `type` ('EXPENSE' | 'INCOME'). Toujours filtrer par type avant d'afficher un sélecteur.
-- **Revenus :** Les revenus ont un `ownerId` (Compte de réception) et un `beneficiaryId` (Personne associée au revenu, ex: celui qui gagne le salaire).
+- **Revenus :** Les revenus ont un `accountId` (Compte de réception) et un `beneficiaryId` (Personne associée au revenu, ex: celui qui gagne le salaire).
 
 ### Code Quality
 - **Types :** Pas de `any`. Définir les interfaces dans `types.ts`.

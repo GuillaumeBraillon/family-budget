@@ -90,7 +90,7 @@ export const BudgetPlanner: React.FC<BudgetPlannerProps> = ({ configs, incomeCon
         category: conf.category,
         subCategory: conf.subCategory,
         beneficiaryId: conf.beneficiaryId,
-        ownerId: conf.ownerId, 
+        accountId: conf.accountId, 
         isExtra: conf.isExtra,
         startMonth: conf.startMonth,
         endMonth: conf.endMonth,
@@ -124,7 +124,7 @@ export const BudgetPlanner: React.FC<BudgetPlannerProps> = ({ configs, incomeCon
         category: inc.category,
         subCategory: '',
         beneficiaryId: inc.beneficiaryId, // La personne qui gagne l'argent (le bénéficiaire du revenu)
-        ownerId: inc.ownerId, // Le compte de réception
+        accountId: inc.accountId, // Le compte de réception
         isExtra: false,
         isPaid: !!paidInfo,
         paidDetails: paidInfo
@@ -190,7 +190,7 @@ export const BudgetPlanner: React.FC<BudgetPlannerProps> = ({ configs, incomeCon
         return item.type === 'EXPENSE' ? acc + item.amount : acc - item.amount;
     }, 0);
 
-    // 2. PAR PAYEUR (Owner = Account ID)
+    // 2. PAR PAYEUR (Account ID)
     const byPayer: Record<string, { total: number, remaining: number }> = {};
     
     // 3. PAR BÉNÉFICIAIRE (DÉPENSES) - Qui dépense ?
@@ -201,14 +201,14 @@ export const BudgetPlanner: React.FC<BudgetPlannerProps> = ({ configs, incomeCon
 
     items.forEach(item => {
         // Init Payers (using Account ID)
-        if (!byPayer[item.ownerId]) byPayer[item.ownerId] = { total: 0, remaining: 0 };
+        if (!byPayer[item.accountId]) byPayer[item.accountId] = { total: 0, remaining: 0 };
         
         const amount = item.amount;
         
         // Update Payer Logic (Expense = +, Income = -)
         if (item.type === 'EXPENSE') {
-            byPayer[item.ownerId].total += amount;
-            if(!item.isPaid) byPayer[item.ownerId].remaining += amount;
+            byPayer[item.accountId].total += amount;
+            if(!item.isPaid) byPayer[item.accountId].remaining += amount;
 
             // Stats Bénéficiaire Dépense
             if (!expenseByBeneficiary[item.beneficiaryId]) expenseByBeneficiary[item.beneficiaryId] = { total: 0 };
@@ -216,8 +216,8 @@ export const BudgetPlanner: React.FC<BudgetPlannerProps> = ({ configs, incomeCon
 
         } else {
             // Income reduces the payer's "cost" (trésorerie)
-            byPayer[item.ownerId].total -= amount;
-            if(!item.isPaid) byPayer[item.ownerId].remaining -= amount;
+            byPayer[item.accountId].total -= amount;
+            if(!item.isPaid) byPayer[item.accountId].remaining -= amount;
 
             // Stats Bénéficiaire Revenu
             if (!incomeByBeneficiary[item.beneficiaryId]) incomeByBeneficiary[item.beneficiaryId] = { total: 0 };
@@ -241,7 +241,7 @@ export const BudgetPlanner: React.FC<BudgetPlannerProps> = ({ configs, incomeCon
         setUncheckModal({ isOpen: true, item: item });
     } else {
         // --- CORRECTION DE LA SÉLECTION DU COMPTE ---
-        let targetAccountId = item.ownerId;
+        let targetAccountId = item.accountId;
         
         // Sécurité : on vérifie que l'ID du compte existe bien dans la liste actuelle.
         // Si l'ID est invalide (compte supprimé ou ancienne donnée), on fallback sur le premier compte disponible
@@ -514,10 +514,10 @@ export const BudgetPlanner: React.FC<BudgetPlannerProps> = ({ configs, incomeCon
         <CardContent className="p-0">
             <div className="divide-y divide-slate-100">
                 {currentWeekDisplayData?.items.map((item) => {
-                    const ownerAccount = accounts.find(a => a.id === item.ownerId);
+                    const ownerAccount = accounts.find(a => a.id === item.accountId);
                     
                     // FALLBACK: Si le compte n'est pas trouvé, on regarde si c'est une Personne (cas des anciennes données ou erreur)
-                    const ownerPerson = !ownerAccount ? people.find(p => p.id === item.ownerId) : null;
+                    const ownerPerson = !ownerAccount ? people.find(p => p.id === item.accountId) : null;
                     const ownerName = ownerAccount ? ownerAccount.name : (ownerPerson ? `Compte de ${ownerPerson.name}` : 'Compte Inconnu');
                     
                     const beneficiaryName = people.find(p => p.id === item.beneficiaryId)?.name || 'Inconnu';
@@ -687,7 +687,7 @@ export const BudgetPlanner: React.FC<BudgetPlannerProps> = ({ configs, incomeCon
               </div>
           </div>
 
-          {/* 2. By Payer (Owner = Account) */}
+          {/* 2. By Payer (Account) */}
           <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 relative overflow-hidden">
                 <div className="absolute top-0 right-0 p-4 opacity-5">
                   <Wallet size={64} />
@@ -697,14 +697,13 @@ export const BudgetPlanner: React.FC<BudgetPlannerProps> = ({ configs, incomeCon
                     {Object.keys(weeklyStats.byPayer).length === 0 && (
                         <p className="text-xs text-slate-400 italic">Aucune donnée.</p>
                     )}
-                    {Object.entries(weeklyStats.byPayer).map(([ownerId, uncastStats]) => {
+                    {Object.entries(weeklyStats.byPayer).map(([accountId, uncastStats]) => {
                          const stats = uncastStats as { total: number, remaining: number };
-                         // ownerId est maintenant directement un Account ID
-                         const account = accounts.find(a => a.id === ownerId);
+                         const account = accounts.find(a => a.id === accountId);
                          const displayName = account ? account.name : 'Compte Inconnu';
 
                          return (
-                             <div key={ownerId} className="flex justify-between items-center text-sm">
+                             <div key={accountId} className="flex justify-between items-center text-sm">
                                  <span className="font-medium text-slate-700 truncate pr-2" title={displayName}>{displayName}</span>
                                  <div className="text-right whitespace-nowrap">
                                      <span className="block font-bold text-slate-900">{stats.total.toFixed(2)} €</span>

@@ -12,26 +12,49 @@ import { LayoutDashboard, WalletCards, CalendarCheck, Settings, Loader2, Databas
 type ViewState = 'dashboard' | 'planner' | 'config';
 
 const SQL_SETUP_SCRIPT = `
--- 1. Table des revenus récurrents
+-- ============================================================
+-- SCRIPT D'INITIALISATION PROPRE (BUDGET FAMILIAL)
+-- ============================================================
+
+-- 1. Tables Référentielles
+CREATE TABLE IF NOT EXISTS people (
+    id text PRIMARY KEY,
+    name text,
+    is_child boolean DEFAULT false
+);
+ALTER TABLE people DISABLE ROW LEVEL SECURITY;
+
+CREATE TABLE IF NOT EXISTS accounts (
+    id text PRIMARY KEY,
+    name text,
+    type text,
+    owner_id text,
+    current_balance numeric,
+    bank_name text
+);
+ALTER TABLE accounts DISABLE ROW LEVEL SECURITY;
+
+CREATE TABLE IF NOT EXISTS categories (
+    id text PRIMARY KEY,
+    name text,
+    type text DEFAULT 'EXPENSE',
+    sub_categories text[]
+);
+ALTER TABLE categories DISABLE ROW LEVEL SECURITY;
+
+-- 2. Table des revenus récurrents
 CREATE TABLE IF NOT EXISTS income_configs (
   id text PRIMARY KEY,
   label text,
   amount numeric,
-  owner_id text,
+  account_id text REFERENCES accounts(id) ON DELETE SET NULL, -- Lien direct vers le compte
   beneficiary_id text,
   day_of_month integer,
   category text
 );
 ALTER TABLE income_configs DISABLE ROW LEVEL SECURITY;
--- Ajout colonne si existe déjà (Migration)
-DO $$
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='income_configs' AND column_name='beneficiary_id') THEN
-        ALTER TABLE income_configs ADD COLUMN beneficiary_id text;
-    END IF;
-END $$;
 
--- 2. Table des dépenses récurrentes
+-- 3. Table des dépenses récurrentes
 CREATE TABLE IF NOT EXISTS expense_configs (
   id text PRIMARY KEY,
   label text,
@@ -39,7 +62,7 @@ CREATE TABLE IF NOT EXISTS expense_configs (
   category text,
   sub_category text,
   beneficiary_id text,
-  owner_id text,
+  account_id text REFERENCES accounts(id) ON DELETE SET NULL, -- Lien direct vers le compte
   day_of_month integer,
   start_month text,
   end_month text,
@@ -47,7 +70,7 @@ CREATE TABLE IF NOT EXISTS expense_configs (
 );
 ALTER TABLE expense_configs DISABLE ROW LEVEL SECURITY;
 
--- 3. Table des paiements effectués
+-- 4. Table des paiements effectués
 CREATE TABLE IF NOT EXISTS paid_items (
   instance_id text PRIMARY KEY,
   is_paid boolean DEFAULT true,
@@ -60,15 +83,13 @@ CREATE TABLE IF NOT EXISTS paid_items (
   sub_category text
 );
 ALTER TABLE paid_items DISABLE ROW LEVEL SECURITY;
-
--- 4. Mise à jour Categories
-ALTER TABLE categories ADD COLUMN IF NOT EXISTS type text DEFAULT 'EXPENSE';
 `;
 
 const App: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [dbError, setDbError] = useState<string | null>(null);
   const [missingTables, setMissingTables] = useState(false);
+  const [isDbEmpty, setIsDbEmpty] = useState(false);
   const [copied, setCopied] = useState(false);
 
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -88,11 +109,12 @@ const App: React.FC = () => {
         setLoading(true);
         setDbError(null);
         setMissingTables(false);
+        setIsDbEmpty(false);
         const data = await fetchInitialData();
         
-        // Si la base est vide, on garde l'erreur pour afficher le bouton de Seed
+        // Si la base est vide (mais tables existantes)
         if (data.people.length === 0 && data.accounts.length === 0) {
-            setDbError("La base de données est vide.");
+            setIsDbEmpty(true);
         }
 
         setPeople(data.people);
@@ -129,7 +151,6 @@ const App: React.FC = () => {
           setDbError(null); // Clear error if successful
       } catch (e: any) {
           alert("Erreur lors de l'injection : " + e.message);
-      } finally {
           setLoading(false);
       }
   };
@@ -140,9 +161,10 @@ const App: React.FC = () => {
       setTimeout(() => setCopied(false), 2000);
   };
 
-  // --- HANDLERS ---
+  // --- HANDLERS AVEC GESTION D'ERREUR ---
 
   const handleTogglePaid = async (details: PaidItemDetails | null, instanceId: string) => {
+    // Optimistic UI update
     setPaidItems(prev => {
         if (!details) {
             const newState = { ...prev };
@@ -151,69 +173,163 @@ const App: React.FC = () => {
         }
         return { ...prev, [instanceId]: details };
     });
-    await apiSetPaidStatus(details, instanceId);
+    
+    try {
+        const { error } = await apiSetPaidStatus(details, instanceId);
+        if (error) throw error;
+    } catch (e: any) {
+        console.error("DB Error", e);
+        alert("Erreur sauvegarde statut payé: " + e.message);
+        loadData(); // Reload to sync
+    }
   };
 
   const handleAddConfig = async (newConfig: ExpenseConfig) => {
+    const prev = [...configs];
     setConfigs([...configs, newConfig]);
-    await apiUpsertConfig(newConfig);
+    try {
+        const { error } = await apiUpsertConfig(newConfig);
+        if (error) throw error;
+    } catch (e: any) {
+        console.error(e);
+        alert("Erreur création dépense: " + e.message);
+        setConfigs(prev);
+    }
   };
+
   const handleUpdateConfig = async (updatedConfig: ExpenseConfig) => {
+    const prev = [...configs];
     setConfigs(configs.map(c => c.id === updatedConfig.id ? updatedConfig : c));
-    await apiUpsertConfig(updatedConfig);
+    try {
+        const { error } = await apiUpsertConfig(updatedConfig);
+        if (error) throw error;
+    } catch (e: any) {
+        console.error(e);
+        alert("Erreur mise à jour dépense: " + e.message);
+        setConfigs(prev); // Rollback
+    }
   };
+
   const handleDeleteConfig = async (id: string) => {
+    const prev = [...configs];
     setConfigs(configs.filter(c => c.id !== id));
-    await apiDeleteConfig(id);
+    try {
+        const { error } = await apiDeleteConfig(id);
+        if (error) throw error;
+    } catch (e: any) {
+        console.error(e);
+        alert("Erreur suppression: " + e.message);
+        setConfigs(prev);
+    }
   };
 
   const handleAddIncome = async (newIncome: IncomeConfig) => {
+    const prev = [...incomeConfigs];
     setIncomeConfigs([...incomeConfigs, newIncome]);
-    await apiUpsertIncome(newIncome);
+    try {
+        const { error } = await apiUpsertIncome(newIncome);
+        if (error) throw error;
+    } catch (e: any) {
+        console.error(e);
+        alert("Erreur création revenu: " + e.message);
+        setIncomeConfigs(prev);
+    }
   };
+
   const handleUpdateIncome = async (updatedIncome: IncomeConfig) => {
+    const prev = [...incomeConfigs];
     setIncomeConfigs(incomeConfigs.map(c => c.id === updatedIncome.id ? updatedIncome : c));
-    await apiUpsertIncome(updatedIncome);
+    try {
+        const { error } = await apiUpsertIncome(updatedIncome);
+        if (error) throw error;
+    } catch (e: any) {
+        console.error(e);
+        alert("Erreur mise à jour revenu: " + e.message);
+        setIncomeConfigs(prev);
+    }
   };
+
   const handleDeleteIncome = async (id: string) => {
+    const prev = [...incomeConfigs];
     setIncomeConfigs(incomeConfigs.filter(c => c.id !== id));
-    await apiDeleteIncome(id);
+    try {
+        const { error } = await apiDeleteIncome(id);
+        if (error) throw error;
+    } catch (e: any) {
+        console.error(e);
+        alert("Erreur suppression revenu: " + e.message);
+        setIncomeConfigs(prev);
+    }
   };
 
   const handleUpdateCategories = async (newCategories: CategoryDef[]) => {
-    // Calcul basique des suppressions
+    const prev = [...categories];
     const oldIds = categories.map(c => c.id);
     const newIds = newCategories.map(c => c.id);
     const toDelete = oldIds.filter(id => !newIds.includes(id));
 
     setCategories(newCategories);
 
-    for (const cat of newCategories) {
-       await apiUpsertCategory(cat);
-    }
-    for (const id of toDelete) {
-        await apiDeleteCategory(id);
+    try {
+        for (const cat of newCategories) {
+           const { error } = await apiUpsertCategory(cat);
+           if (error) throw error;
+        }
+        for (const id of toDelete) {
+            const { error } = await apiDeleteCategory(id);
+            if (error) throw error;
+        }
+    } catch (e: any) {
+        console.error(e);
+        alert("Erreur sauvegarde catégories: " + e.message);
+        setCategories(prev);
     }
   };
 
   const handleUpdatePeople = async (newPeople: Person[]) => {
+    const prev = [...people];
     const oldIds = people.map(p => p.id);
     const newIds = newPeople.map(p => p.id);
     const toDelete = oldIds.filter(id => !newIds.includes(id));
 
     setPeople(newPeople);
-    for(const p of newPeople) await apiUpsertPerson(p);
-    for(const id of toDelete) await apiDeletePerson(id);
+    try {
+        for(const p of newPeople) {
+            const { error } = await apiUpsertPerson(p);
+            if(error) throw error;
+        }
+        for(const id of toDelete) {
+            const { error } = await apiDeletePerson(id);
+            if(error) throw error;
+        }
+    } catch (e: any) {
+        console.error(e);
+        alert("Erreur sauvegarde personnes: " + e.message);
+        setPeople(prev);
+    }
   };
 
   const handleUpdateAccounts = async (newAccounts: Account[]) => {
+    const prev = [...accounts];
     const oldIds = accounts.map(a => a.id);
     const newIds = newAccounts.map(a => a.id);
     const toDelete = oldIds.filter(id => !newIds.includes(id));
 
     setAccounts(newAccounts);
-    for(const a of newAccounts) await apiUpsertAccount(a);
-    for(const id of toDelete) await apiDeleteAccount(id);
+    try {
+        for(const a of newAccounts) {
+            const { error } = await apiUpsertAccount(a);
+            if (error) throw error;
+        }
+        for(const id of toDelete) {
+            const { error } = await apiDeleteAccount(id);
+            if (error) throw error;
+        }
+    } catch (e: any) {
+        console.error(e);
+        alert("Erreur sauvegarde comptes: " + e.message);
+        setAccounts(prev);
+    }
   };
 
   if (loading) {
@@ -239,7 +355,7 @@ const App: React.FC = () => {
                 </div>
                 
                 <p className="text-slate-600 mb-6">
-                    Certaines tables (comme <code>income_configs</code>) n'existent pas encore dans votre projet Supabase. 
+                    Certaines tables n'existent pas encore ou sont incomplètes dans votre projet Supabase. 
                     Veuillez exécuter le script suivant dans l'éditeur SQL de Supabase.
                 </p>
 
@@ -334,6 +450,7 @@ const App: React.FC = () => {
         </div>
       </header>
       
+      {/* ERROR DISPLAY */}
       {dbError && (
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
             <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
@@ -342,24 +459,37 @@ const App: React.FC = () => {
                     <div>
                         <h3 className="text-amber-800 font-semibold text-sm">{dbError}</h3>
                         <p className="text-amber-700 text-sm mt-1">
-                            L'application est connectée mais aucune donnée n'a été trouvée.
+                            Une erreur est survenue lors de la connexion à la base de données.
                         </p>
                     </div>
                 </div>
-                {/* Seed Button */}
-                {dbError === "La base de données est vide." && (
-                    <button 
-                        onClick={handleSeedDatabase}
-                        className="bg-amber-100 hover:bg-amber-200 text-amber-800 px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors whitespace-nowrap"
-                    >
-                        <UploadCloud size={16} />
-                        Injecter les données de démo
-                    </button>
-                )}
             </div>
         </div>
       )}
 
+      {/* EMPTY STATE / WELCOME SCREEN */}
+      {isDbEmpty && !dbError && (
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
+            <div className="bg-white border border-indigo-100 rounded-xl p-8 text-center shadow-sm">
+                <div className="bg-indigo-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Database className="text-indigo-600" size={32} />
+                </div>
+                <h2 className="text-2xl font-bold text-slate-900 mb-2">Bienvenue sur Budget Familial</h2>
+                <p className="text-slate-600 max-w-lg mx-auto mb-8">
+                    Votre base de données est actuellement vide. Pour commencer, nous pouvons injecter un jeu de données de démonstration (Comptes, Catégories, Règles).
+                </p>
+                <button 
+                    onClick={handleSeedDatabase}
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors mx-auto shadow-indigo-200 shadow-lg"
+                >
+                    <UploadCloud size={20} />
+                    Initialiser les données de démo
+                </button>
+            </div>
+        </div>
+      )}
+
+      {!isDbEmpty && !dbError && (
       <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         
         {currentView === 'dashboard' && (
@@ -372,11 +502,9 @@ const App: React.FC = () => {
                         </h2>
                         <p className="text-slate-500 mt-1">Suivi en temps réel des comptes et des enveloppes.</p>
                     </div>
-                    {!dbError && (
-                        <span className="flex items-center gap-1 text-[10px] text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full border border-emerald-100">
-                            <Database size={10} /> Supabase Connecté
-                        </span>
-                    )}
+                    <span className="flex items-center gap-1 text-[10px] text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full border border-emerald-100">
+                        <Database size={10} /> Supabase Connecté
+                    </span>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -426,13 +554,7 @@ const App: React.FC = () => {
             <ConfigurationView 
               configs={configs} 
               incomeConfigs={incomeConfigs}
-              
-              // On passe la liste globale et les listes filtrées si besoin, 
-              // mais ConfigurationView a été conçu pour gérer "allCategories" 
-              // ou des listes séparées. On va passer la liste globale et laisser le composant filtrer ou passer les filtrées.
-              // Le composant précédent attendait "categories" et "incomeCategories".
-              categories={categories} // On passe TOUT ici, le composant fera le tri ou on adaptera
-              
+              categories={categories}
               people={people}
               accounts={accounts}
               onAddConfig={handleAddConfig}
@@ -441,16 +563,14 @@ const App: React.FC = () => {
               onAddIncome={handleAddIncome}
               onUpdateIncome={handleUpdateIncome}
               onDeleteIncome={handleDeleteIncome}
-              
-              // Une seule fonction d'update pour les catégories
               onUpdateCategories={handleUpdateCategories}
-              
               onUpdatePeople={handleUpdatePeople}
               onUpdateAccounts={handleUpdateAccounts}
             />
         )}
 
       </main>
+      )}
     </div>
   );
 };

@@ -4,7 +4,7 @@ import { INITIAL_PEOPLE, MOCK_ACCOUNTS, INITIAL_CATEGORIES, MOCK_EXPENSE_CONFIGS
 
 /* 
    ⚠️ MIGRATION SQL REQUISE ⚠️
-   Voir le script dans la constante SQL_SETUP_SCRIPT dans App.tsx ou ci-dessous
+   Voir le script dans la constante SQL_SETUP_SCRIPT dans App.tsx
 */
 
 // --- READ OPERATIONS ---
@@ -62,7 +62,7 @@ export const fetchInitialData = async () => {
     subCategory: c.sub_category,
     beneficiary_id: c.beneficiary_id, 
     beneficiaryId: c.beneficiary_id,
-    ownerId: c.owner_id,
+    accountId: c.account_id ?? c.owner_id, // Support pour migration owner_id -> account_id
     dayOfMonth: c.day_of_month,
     startMonth: c.start_month,
     endMonth: c.end_month,
@@ -73,7 +73,7 @@ export const fetchInitialData = async () => {
     id: i.id,
     label: i.label,
     amount: i.amount ?? 0,
-    ownerId: i.owner_id,
+    accountId: i.account_id ?? i.owner_id, // Support pour migration owner_id -> account_id
     beneficiaryId: i.beneficiary_id || i.owner_id, // Fallback si pas encore défini
     dayOfMonth: i.day_of_month,
     category: i.category
@@ -116,14 +116,14 @@ export const seedDatabase = async () => {
     for(const c of MOCK_EXPENSE_CONFIGS) {
         await supabase.from('expense_configs').upsert({
             id: c.id, label: c.label, amount: c.amount, category: c.category, sub_category: c.subCategory,
-            beneficiary_id: c.beneficiaryId, owner_id: c.ownerId, day_of_month: c.dayOfMonth,
+            beneficiary_id: c.beneficiaryId, account_id: c.accountId, day_of_month: c.dayOfMonth,
             start_month: c.startMonth, end_month: c.endMonth, is_extra: c.isExtra
         });
     }
     // 5. Income Configs
     for(const i of MOCK_INCOME_CONFIGS) {
         await supabase.from('income_configs').upsert({
-            id: i.id, label: i.label, amount: i.amount, owner_id: i.ownerId, beneficiary_id: i.beneficiaryId, day_of_month: i.dayOfMonth, category: i.category
+            id: i.id, label: i.label, amount: i.amount, account_id: i.accountId, beneficiary_id: i.beneficiaryId, day_of_month: i.dayOfMonth, category: i.category
         });
     }
 };
@@ -172,7 +172,7 @@ export const apiUpsertConfig = async (config: ExpenseConfig) => {
     category: config.category,
     sub_category: config.subCategory,
     beneficiary_id: config.beneficiaryId,
-    owner_id: config.ownerId,
+    account_id: config.accountId, // owner_id -> account_id
     day_of_month: config.dayOfMonth,
     start_month: config.startMonth,
     end_month: config.endMonth,
@@ -189,7 +189,7 @@ export const apiUpsertIncome = async (income: IncomeConfig) => {
     id: income.id,
     label: income.label,
     amount: income.amount,
-    owner_id: income.ownerId,
+    account_id: income.accountId, // owner_id -> account_id
     beneficiary_id: income.beneficiaryId,
     day_of_month: income.dayOfMonth,
     category: income.category
