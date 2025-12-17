@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Users, Banknote, Wallet, Check } from 'lucide-react';
 import { Card } from '../../ui/Card';
@@ -11,9 +12,12 @@ interface DetailedAnalysisProps {
 
 /**
  * Section d'analyse détaillée affichant les dépenses/revenus par bénéficiaire et par compte.
- * Affiche désormais les montants prévus vs réels (payés).
+ * Affiche désormais les montants prévus seulement s'ils diffèrent des montants réels (payés).
  */
 export const DetailedAnalysis: React.FC<DetailedAnalysisProps> = ({ stats, people, accounts }) => {
+  
+  const hasDiff = (paid: number, planned: number) => Math.abs(paid - planned) > 0.01;
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
       {/* DÉPENSES / BÉNÉF. */}
@@ -30,8 +34,16 @@ export const DetailedAnalysis: React.FC<DetailedAnalysisProps> = ({ stats, peopl
                   {people.find(p => p.id === id)?.name || 'Inconnu'}
                 </span>
                 <div className="text-right">
-                    <span className="block font-bold text-slate-900">{s.paid.toFixed(2)} € <span className="text-[10px] font-normal text-slate-400">Réel</span></span>
-                    <span className="text-[10px] text-slate-400">Prévu: {s.planned.toFixed(2)} €</span>
+                    <div className="flex items-center justify-end gap-1.5">
+                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Réel :</span>
+                        <span className="font-bold text-slate-900">{s.paid.toFixed(2)} €</span>
+                    </div>
+                    {hasDiff(s.paid, s.planned) && (
+                        <div className="flex items-center justify-end gap-1.5 mt-0.5">
+                            <span className="text-[9px] font-bold text-slate-300 uppercase tracking-tighter">Prévu :</span>
+                            <span className="text-[10px] font-medium text-slate-400">{s.planned.toFixed(2)} €</span>
+                        </div>
+                    )}
                 </div>
               </div>
           ))}
@@ -55,8 +67,16 @@ export const DetailedAnalysis: React.FC<DetailedAnalysisProps> = ({ stats, peopl
                   {people.find(p => p.id === id)?.name || 'Inconnu'}
                 </span>
                 <div className="text-right">
-                    <span className="block font-bold text-emerald-600">+{s.paid.toFixed(2)} € <span className="text-[10px] font-normal text-emerald-600/50">Réel</span></span>
-                    <span className="text-[10px] text-slate-400">Prévu: {s.planned.toFixed(2)} €</span>
+                    <div className="flex items-center justify-end gap-1.5">
+                        <span className="text-[9px] font-bold text-emerald-600/50 uppercase tracking-tighter">Réel :</span>
+                        <span className="font-bold text-emerald-600">{s.paid.toFixed(2)} €</span>
+                    </div>
+                    {hasDiff(s.paid, s.planned) && (
+                        <div className="flex items-center justify-end gap-1.5 mt-0.5">
+                            <span className="text-[9px] font-bold text-emerald-600/30 uppercase tracking-tighter">Prévu :</span>
+                            <span className="text-[10px] font-medium text-emerald-600/60">{s.planned.toFixed(2)} €</span>
+                        </div>
+                    )}
                 </div>
               </div>
           ))}
@@ -87,19 +107,29 @@ export const DetailedAnalysis: React.FC<DetailedAnalysisProps> = ({ stats, peopl
                   {displayName}
                 </span>
                 <div className="text-right whitespace-nowrap">
-                  <span className="block font-bold text-slate-900">{s.paid.toFixed(2)} € <span className="text-[10px] font-normal text-slate-400">Réel</span></span>
-                  <div className="flex flex-col items-end">
-                      <span className="text-[10px] text-slate-400">Prévu: {s.planned.toFixed(2)} €</span>
+                    <div className="flex items-center justify-end gap-1.5">
+                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Réel :</span>
+                        <span className="font-bold text-slate-900">{s.paid.toFixed(2)} €</span>
+                    </div>
+                    {hasDiff(s.paid, s.planned) && (
+                        <div className="flex items-center justify-end gap-1.5 mt-0.5">
+                            <span className="text-[9px] font-bold text-slate-300 uppercase tracking-tighter">Prévu :</span>
+                            <span className="text-[10px] font-medium text-slate-400">{s.planned.toFixed(2)} €</span>
+                        </div>
+                    )}
+                    <div className="mt-1 flex flex-col items-end">
                       {s.remaining !== 0 ? (
-                        <span className="text-[10px] text-amber-600 font-medium">Reste: {s.remaining.toFixed(2)} €</span>
+                        <span className="text-[10px] text-amber-600 font-bold bg-amber-50 px-1 rounded border border-amber-100/50">
+                          RESTE : {s.remaining.toFixed(2)} €
+                        </span>
                       ) : (
                         s.planned !== 0 && (
-                            <span className="text-[10px] text-emerald-600 font-medium flex items-center gap-1">
-                                <Check size={10}/> Soldé
+                            <span className="text-[10px] text-emerald-600 font-bold flex items-center gap-1">
+                                <Check size={10} strokeWidth={3}/> SOLDÉ
                             </span>
                         )
                       )}
-                  </div>
+                    </div>
                 </div>
               </div>
             );

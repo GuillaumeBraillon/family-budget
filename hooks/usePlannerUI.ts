@@ -1,9 +1,23 @@
+
 import { useState } from 'react';
 import { PlannedItem } from '../types';
 
+/**
+ * Calcule le numéro de semaine (1 à 4) utilisé par le Planner
+ * en fonction du jour du mois.
+ */
+const getWeekFromDate = (date: Date): number => {
+  const day = date.getDate();
+  if (day <= 7) return 1;
+  if (day <= 14) return 2;
+  if (day <= 21) return 3;
+  return 4;
+};
+
 export const usePlannerUI = (initialDate: Date = new Date()) => {
   const [currentDate, setCurrentDate] = useState(initialDate);
-  const [activeWeek, setActiveWeek] = useState(1);
+  // On initialise la semaine active en fonction de la date du jour
+  const [activeWeek, setActiveWeek] = useState(() => getWeekFromDate(initialDate));
   const [searchQuery, setSearchQuery] = useState('');
 
   // États des modales
@@ -31,8 +45,17 @@ export const usePlannerUI = (initialDate: Date = new Date()) => {
     item: null
   });
 
-  const handlePrevMonth = () => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() - 1)));
-  const handleNextMonth = () => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() + 1)));
+  const handlePrevMonth = () => {
+    const newDate = new Date(currentDate);
+    newDate.setMonth(newDate.getMonth() - 1);
+    setCurrentDate(newDate);
+  };
+
+  const handleNextMonth = () => {
+    const newDate = new Date(currentDate);
+    newDate.setMonth(newDate.getMonth() + 1);
+    setCurrentDate(newDate);
+  };
 
   const openConfirmModal = (item: PlannedItem, defaultAccountId: string) => {
     setConfirmModal({
