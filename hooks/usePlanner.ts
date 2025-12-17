@@ -75,22 +75,36 @@ export const usePlanner = (
 
     const calcRemaining = (items: PlannedItem[]) => items.reduce((acc, i) => i.type === 'EXPENSE' ? acc + i.amount : acc - i.amount, 0);
 
-    const byAccount: Record<string, { total: number, remaining: number }> = {};
-    const expByBeneficiary: Record<string, { total: number }> = {};
-    const incByBeneficiary: Record<string, { total: number }> = {};
+    const byAccount: Record<string, { total: number, remaining: number, planned: number, paid: number }> = {};
+    const expByBeneficiary: Record<string, { planned: number, paid: number }> = {};
+    const incByBeneficiary: Record<string, { planned: number, paid: number }> = {};
 
     [...currentItems, ...previousUnpaid].forEach(item => {
-      if (!byAccount[item.accountId]) byAccount[item.accountId] = { total: 0, remaining: 0 };
-      const impact = item.type === 'EXPENSE' ? item.amount : -item.amount;
+      if (!byAccount[item.accountId]) byAccount[item.accountId] = { total: 0, remaining: 0, planned: 0, paid: 0 };
       
       const isCurrent = currentItems.some(ci => ci.instanceId === item.instanceId);
+      
       if (isCurrent) {
-        byAccount[item.accountId].total += impact;
         const targetBeneficiary = item.type === 'EXPENSE' ? expByBeneficiary : incByBeneficiary;
-        if (!targetBeneficiary[item.beneficiaryId]) targetBeneficiary[item.beneficiaryId] = { total: 0 };
-        targetBeneficiary[item.beneficiaryId].total += item.amount;
+        if (!targetBeneficiary[item.beneficiaryId]) targetBeneficiary[item.beneficiaryId] = { planned: 0, paid: 0 };
+        
+        targetBeneficiary[item.beneficiaryId].planned += item.originalAmount;
+        byAccount[item.accountId].planned += (item.type === 'EXPENSE' ? item.originalAmount : -item.originalAmount);
+        
+        if (item.isPaid) {
+          targetBeneficiary[item.beneficiaryId].paid += item.amount;
+          byAccount[item.accountId].paid += (item.type === 'EXPENSE' ? item.amount : -item.amount);
+        }
+
+        // Ancienne logique de 'total' maintenue pour compatibilité si nécessaire
+        const impact = item.type === 'EXPENSE' ? item.amount : -item.amount;
+        byAccount[item.accountId].total += impact;
       }
-      if (!item.isPaid) byAccount[item.accountId].remaining += impact;
+      
+      if (!item.isPaid) {
+        const impact = item.type === 'EXPENSE' ? item.amount : -item.amount;
+        byAccount[item.accountId].remaining += impact;
+      }
     });
 
     return {
