@@ -13,7 +13,7 @@ type ViewState = 'dashboard' | 'planner' | 'config';
 
 const SQL_SETUP_SCRIPT = `
 -- ============================================================
--- SCRIPT D'INITIALISATION PROPRE (BUDGET FAMILIAL)
+-- SCRIPT D'INITIALISATION & MIGRATION (BUDGET FAMILIAL)
 -- ============================================================
 
 -- 1. Tables Référentielles
@@ -47,10 +47,11 @@ CREATE TABLE IF NOT EXISTS income_configs (
   id text PRIMARY KEY,
   label text,
   amount numeric,
-  account_id text REFERENCES accounts(id) ON DELETE SET NULL, -- Lien direct vers le compte
+  account_id text REFERENCES accounts(id) ON DELETE SET NULL,
   beneficiary_id text,
   day_of_month integer,
-  category text
+  category text,
+  sub_category text
 );
 ALTER TABLE income_configs DISABLE ROW LEVEL SECURITY;
 
@@ -62,7 +63,7 @@ CREATE TABLE IF NOT EXISTS expense_configs (
   category text,
   sub_category text,
   beneficiary_id text,
-  account_id text REFERENCES accounts(id) ON DELETE SET NULL, -- Lien direct vers le compte
+  account_id text REFERENCES accounts(id) ON DELETE SET NULL,
   day_of_month integer,
   start_month text,
   end_month text,
@@ -83,6 +84,12 @@ CREATE TABLE IF NOT EXISTS paid_items (
   sub_category text
 );
 ALTER TABLE paid_items DISABLE ROW LEVEL SECURITY;
+
+-- 5. MIGRATIONS AUTOMATIQUES (Pour les bases existantes)
+-- Ajout de la colonne sub_category si elle manque
+ALTER TABLE income_configs ADD COLUMN IF NOT EXISTS sub_category text;
+ALTER TABLE expense_configs ADD COLUMN IF NOT EXISTS sub_category text;
+ALTER TABLE paid_items ADD COLUMN IF NOT EXISTS sub_category text;
 `;
 
 const App: React.FC = () => {
@@ -97,7 +104,6 @@ const App: React.FC = () => {
   const [configs, setConfigs] = useState<ExpenseConfig[]>([]);
   const [incomeConfigs, setIncomeConfigs] = useState<IncomeConfig[]>([]);
   
-  // Une seule liste pour toutes les catégories (Expenses + Incomes)
   const [categories, setCategories] = useState<CategoryDef[]>([]);
   
   const [people, setPeople] = useState<Person[]>([]);
@@ -112,7 +118,6 @@ const App: React.FC = () => {
         setIsDbEmpty(false);
         const data = await fetchInitialData();
         
-        // Si la base est vide (mais tables existantes)
         if (data.people.length === 0 && data.accounts.length === 0) {
             setIsDbEmpty(true);
         }
@@ -131,7 +136,8 @@ const App: React.FC = () => {
             setMissingTables(true);
             setDbError("Tables manquantes dans Supabase");
         } else {
-            setDbError(error.message || "Erreur de connexion");
+            const msg = error.message || (typeof error === 'object' ? JSON.stringify(error) : String(error));
+            setDbError(msg || "Erreur de connexion");
         }
       } finally {
         setLoading(false);
@@ -146,11 +152,11 @@ const App: React.FC = () => {
       setLoading(true);
       try {
           await seedDatabase();
-          // Recharger après injection
           await loadData();
-          setDbError(null); // Clear error if successful
+          setDbError(null); 
       } catch (e: any) {
-          alert("Erreur lors de l'injection : " + e.message);
+          const msg = e.message || JSON.stringify(e);
+          alert("Erreur lors de l'injection : " + msg);
           setLoading(false);
       }
   };
@@ -162,9 +168,23 @@ const App: React.FC = () => {
   };
 
   // --- HANDLERS AVEC GESTION D'ERREUR ---
+  
+  const formatError = (e: any) => {
+      return e.message || (typeof e === 'object' ? JSON.stringify(e) : String(e));
+  };
+
+  const handleApiError = (e: any) => {
+    console.error(e);
+    // Detection d'une colonne manquante (Schema drift) - PGRST204 = Column not found
+    if (e?.code === 'PGRST204' || (e?.message && (e.message.includes('Could not find the') || e.message.includes('column')))) {
+        setMissingTables(true);
+        setDbError("Votre base de données n'est pas à jour (colonne manquante). Veuillez exécuter le script SQL ci-dessous dans Supabase.");
+    } else {
+        alert("Erreur : " + formatError(e));
+    }
+  };
 
   const handleTogglePaid = async (details: PaidItemDetails | null, instanceId: string) => {
-    // Optimistic UI update
     setPaidItems(prev => {
         if (!details) {
             const newState = { ...prev };
@@ -178,8 +198,7 @@ const App: React.FC = () => {
         const { error } = await apiSetPaidStatus(details, instanceId);
         if (error) throw error;
     } catch (e: any) {
-        console.error("DB Error", e);
-        alert("Erreur sauvegarde statut payé: " + e.message);
+        handleApiError(e);
         loadData(); // Reload to sync
     }
   };
@@ -191,8 +210,7 @@ const App: React.FC = () => {
         const { error } = await apiUpsertConfig(newConfig);
         if (error) throw error;
     } catch (e: any) {
-        console.error(e);
-        alert("Erreur création dépense: " + e.message);
+        handleApiError(e);
         setConfigs(prev);
     }
   };
@@ -204,9 +222,8 @@ const App: React.FC = () => {
         const { error } = await apiUpsertConfig(updatedConfig);
         if (error) throw error;
     } catch (e: any) {
-        console.error(e);
-        alert("Erreur mise à jour dépense: " + e.message);
-        setConfigs(prev); // Rollback
+        handleApiError(e);
+        setConfigs(prev);
     }
   };
 
@@ -217,8 +234,7 @@ const App: React.FC = () => {
         const { error } = await apiDeleteConfig(id);
         if (error) throw error;
     } catch (e: any) {
-        console.error(e);
-        alert("Erreur suppression: " + e.message);
+        handleApiError(e);
         setConfigs(prev);
     }
   };
@@ -230,8 +246,7 @@ const App: React.FC = () => {
         const { error } = await apiUpsertIncome(newIncome);
         if (error) throw error;
     } catch (e: any) {
-        console.error(e);
-        alert("Erreur création revenu: " + e.message);
+        handleApiError(e);
         setIncomeConfigs(prev);
     }
   };
@@ -243,8 +258,7 @@ const App: React.FC = () => {
         const { error } = await apiUpsertIncome(updatedIncome);
         if (error) throw error;
     } catch (e: any) {
-        console.error(e);
-        alert("Erreur mise à jour revenu: " + e.message);
+        handleApiError(e);
         setIncomeConfigs(prev);
     }
   };
@@ -256,8 +270,7 @@ const App: React.FC = () => {
         const { error } = await apiDeleteIncome(id);
         if (error) throw error;
     } catch (e: any) {
-        console.error(e);
-        alert("Erreur suppression revenu: " + e.message);
+        handleApiError(e);
         setIncomeConfigs(prev);
     }
   };
@@ -280,8 +293,7 @@ const App: React.FC = () => {
             if (error) throw error;
         }
     } catch (e: any) {
-        console.error(e);
-        alert("Erreur sauvegarde catégories: " + e.message);
+        handleApiError(e);
         setCategories(prev);
     }
   };
@@ -303,8 +315,7 @@ const App: React.FC = () => {
             if(error) throw error;
         }
     } catch (e: any) {
-        console.error(e);
-        alert("Erreur sauvegarde personnes: " + e.message);
+        handleApiError(e);
         setPeople(prev);
     }
   };
@@ -326,8 +337,7 @@ const App: React.FC = () => {
             if (error) throw error;
         }
     } catch (e: any) {
-        console.error(e);
-        alert("Erreur sauvegarde comptes: " + e.message);
+        handleApiError(e);
         setAccounts(prev);
     }
   };
@@ -344,19 +354,21 @@ const App: React.FC = () => {
       );
   }
 
-  // --- MISSING TABLES UI ---
+  // --- MISSING TABLES / SCHEMA ERROR UI ---
   if (missingTables) {
       return (
         <div className="min-h-screen bg-slate-50 p-6 flex items-center justify-center">
              <div className="max-w-2xl w-full bg-white rounded-xl shadow-lg border border-slate-200 p-8">
-                <div className="flex items-center gap-3 mb-6 text-red-600">
+                <div className="flex items-center gap-3 mb-6 text-amber-600">
                     <Database size={32} />
-                    <h1 className="text-2xl font-bold">Base de données incomplète</h1>
+                    <h1 className="text-2xl font-bold">Mise à jour Base de Données requise</h1>
                 </div>
                 
-                <p className="text-slate-600 mb-6">
-                    Certaines tables n'existent pas encore ou sont incomplètes dans votre projet Supabase. 
-                    Veuillez exécuter le script suivant dans l'éditeur SQL de Supabase.
+                <p className="text-slate-600 mb-6 font-medium">
+                    {dbError || "Le schéma de votre base de données doit être mis à jour pour supporter les nouvelles fonctionnalités (sous-catégories)."}
+                </p>
+                <p className="text-sm text-slate-500 mb-4">
+                    Veuillez copier le script SQL ci-dessous et l'exécuter dans l'éditeur SQL de votre projet Supabase.
                 </p>
 
                 <div className="bg-slate-900 rounded-lg overflow-hidden border border-slate-800 mb-6 relative group">
@@ -369,7 +381,7 @@ const App: React.FC = () => {
                             {copied ? 'Copié !' : 'Copier'}
                         </button>
                     </div>
-                    <pre className="p-4 text-xs text-green-400 font-mono overflow-x-auto">
+                    <pre className="p-4 text-xs text-green-400 font-mono overflow-x-auto h-64">
                         {SQL_SETUP_SCRIPT}
                     </pre>
                 </div>
@@ -384,11 +396,11 @@ const App: React.FC = () => {
                         Ouvrir Supabase SQL Editor
                      </a>
                      <button 
-                        onClick={loadData}
+                        onClick={() => { setMissingTables(false); loadData(); }}
                         className="px-4 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors flex items-center gap-2"
                      >
                         <Loader2 size={16} className={loading ? "animate-spin" : "hidden"} />
-                        Réessayer
+                        J'ai exécuté le script
                      </button>
                 </div>
              </div>
@@ -503,7 +515,7 @@ const App: React.FC = () => {
                         <p className="text-slate-500 mt-1">Suivi en temps réel des comptes et des enveloppes.</p>
                     </div>
                     <span className="flex items-center gap-1 text-[10px] text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full border border-emerald-100">
-                        <Database size={10} /> Supabase Connecté
+                        <Database size={10} />Connecté
                     </span>
                 </div>
 

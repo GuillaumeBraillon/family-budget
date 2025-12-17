@@ -76,7 +76,8 @@ export const fetchInitialData = async () => {
     accountId: i.account_id ?? i.owner_id, // Support pour migration owner_id -> account_id
     beneficiaryId: i.beneficiary_id || i.owner_id, // Fallback si pas encore défini
     dayOfMonth: i.day_of_month,
-    category: i.category
+    category: i.category,
+    subCategory: i.sub_category // Mapping du nouveau champ
   }));
 
   const paidItems: Record<string, PaidItemDetails> = {};
@@ -123,7 +124,7 @@ export const seedDatabase = async () => {
     // 5. Income Configs
     for(const i of MOCK_INCOME_CONFIGS) {
         await supabase.from('income_configs').upsert({
-            id: i.id, label: i.label, amount: i.amount, account_id: i.accountId, beneficiary_id: i.beneficiaryId, day_of_month: i.dayOfMonth, category: i.category
+            id: i.id, label: i.label, amount: i.amount, account_id: i.accountId, beneficiary_id: i.beneficiaryId, day_of_month: i.dayOfMonth, category: i.category, sub_category: i.subCategory
         });
     }
 };
@@ -192,7 +193,8 @@ export const apiUpsertIncome = async (income: IncomeConfig) => {
     account_id: income.accountId, // owner_id -> account_id
     beneficiary_id: income.beneficiaryId,
     day_of_month: income.dayOfMonth,
-    category: income.category
+    category: income.category,
+    sub_category: income.subCategory // Sauvegarde du nouveau champ
   });
 };
 export const apiDeleteIncome = async (id: string) => {

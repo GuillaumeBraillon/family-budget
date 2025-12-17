@@ -190,10 +190,13 @@ const ExpenseRulesEditor: React.FC<{
                     </CardHeader>
                     <CardContent>
                         <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {/* ROW 1 */}
                             <div className="md:col-span-2">
                                 <label className="text-xs font-medium text-slate-500 uppercase">Libellé</label>
                                 <input type="text" required value={formData.label} onChange={e => setFormData({...formData, label: e.target.value})} className="w-full p-2 rounded border border-slate-300 bg-white text-slate-900" />
                             </div>
+
+                            {/* ROW 2 */}
                             <div>
                                 <label className="text-xs font-medium text-slate-500 uppercase">Montant (€)</label>
                                 <input type="number" step="0.01" required value={formData.amount} onChange={e => setFormData({...formData, amount: parseFloat(e.target.value)})} className="w-full p-2 rounded border border-slate-300 bg-white text-slate-900" />
@@ -202,18 +205,22 @@ const ExpenseRulesEditor: React.FC<{
                                 <label className="text-xs font-medium text-slate-500 uppercase">Jour du mois</label>
                                 <input type="number" min="1" max="31" required value={formData.dayOfMonth} onChange={e => setFormData({...formData, dayOfMonth: parseInt(e.target.value)})} className="w-full p-2 rounded border border-slate-300 bg-white text-slate-900" />
                             </div>
+
+                            {/* ROW 3 - COMPTE & BENEFICIAIRE */}
                              <div>
-                                <label className="text-xs font-medium text-slate-500 uppercase">Compte à débiter</label>
+                                <label className="text-xs font-medium text-slate-500 uppercase">Compte</label>
                                 <select value={formData.accountId} onChange={e => setFormData({...formData, accountId: e.target.value})} className="w-full p-2 rounded border border-slate-300 bg-white text-slate-900">
                                     {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
                                 </select>
                             </div>
                             <div>
-                                <label className="text-xs font-medium text-slate-500 uppercase">Bénéficiaire (Qui profite ?)</label>
+                                <label className="text-xs font-medium text-slate-500 uppercase">Bénéficiaire</label>
                                 <select value={formData.beneficiaryId} onChange={e => setFormData({...formData, beneficiaryId: e.target.value})} className="w-full p-2 rounded border border-slate-300 bg-white text-slate-900">
                                     {people.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                                 </select>
                             </div>
+
+                            {/* ROW 4 */}
                              <div>
                                 <label className="text-xs font-medium text-slate-500 uppercase">Catégorie</label>
                                 <select value={formData.category} onChange={e => setFormData({...formData, category: e.target.value, subCategory: ''})} className="w-full p-2 rounded border border-slate-300 bg-white text-slate-900">
@@ -222,12 +229,13 @@ const ExpenseRulesEditor: React.FC<{
                             </div>
                             <div>
                                 <label className="text-xs font-medium text-slate-500 uppercase">Sous-Catégorie</label>
-                                <select value={formData.subCategory} onChange={e => setFormData({...formData, subCategory: e.target.value})} className="w-full p-2 rounded border border-slate-300 bg-white text-slate-900" disabled={activeSubCats.length === 0}>
+                                <select value={formData.subCategory || ''} onChange={e => setFormData({...formData, subCategory: e.target.value})} className="w-full p-2 rounded border border-slate-300 bg-white text-slate-900" disabled={activeSubCats.length === 0}>
                                     <option value="">-- Aucune --</option>
                                     {activeSubCats.map(sc => <option key={sc} value={sc}>{sc}</option>)}
                                 </select>
                             </div>
                             
+                            {/* EXTRA OPTIONS */}
                             <div className="md:col-span-2 bg-white/50 p-3 rounded-lg border border-slate-200 mt-2">
                                 <div className="flex items-center gap-2 mb-3">
                                     <input type="checkbox" id="extra" checked={formData.isExtra} onChange={e => setFormData({...formData, isExtra: e.target.checked})} className="h-4 w-4 text-indigo-600 rounded bg-white" />
@@ -330,7 +338,8 @@ const IncomeEditor: React.FC<{
         label: '', amount: 0, dayOfMonth: 1, 
         accountId: defaultAccount, 
         beneficiaryId: people[0]?.id, // Default Beneficiary
-        category: defaultIncomeCat
+        category: defaultIncomeCat,
+        subCategory: ''
     });
 
     const resetForm = () => {
@@ -338,7 +347,8 @@ const IncomeEditor: React.FC<{
             label: '', amount: 0, dayOfMonth: 1, 
             accountId: accounts[0]?.id || '', 
             beneficiaryId: people[0]?.id,
-            category: incomeCategories[0]?.name || 'Salaire' 
+            category: incomeCategories[0]?.name || 'Salaire',
+            subCategory: ''
         });
         setEditingId(null);
         setIsFormOpen(false);
@@ -381,6 +391,8 @@ const IncomeEditor: React.FC<{
         });
     }, [incomeConfigs, sortKey, sortOrder]);
 
+    const activeSubCats = categories.find(c => c.name === formData.category)?.subCategories || [];
+
     return (
         <div className="space-y-4">
              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -405,33 +417,40 @@ const IncomeEditor: React.FC<{
                     </CardHeader>
                     <CardContent>
                         <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {/* ROW 1 */}
                             <div className="md:col-span-2">
                                 <label className="text-xs font-medium text-slate-500 uppercase">Libellé</label>
                                 <input type="text" required value={formData.label} onChange={e => setFormData({...formData, label: e.target.value})} className="w-full p-2 rounded border border-slate-300 bg-white text-slate-900" placeholder="Ex: Salaire Guillaume, CAF..." />
                             </div>
+                            
+                            {/* ROW 2 */}
                             <div>
                                 <label className="text-xs font-medium text-slate-500 uppercase">Montant (€)</label>
                                 <input type="number" step="0.01" required value={formData.amount} onChange={e => setFormData({...formData, amount: parseFloat(e.target.value)})} className="w-full p-2 rounded border border-slate-300 bg-white text-slate-900" />
                             </div>
                             <div>
-                                <label className="text-xs font-medium text-slate-500 uppercase">Jour de réception</label>
+                                <label className="text-xs font-medium text-slate-500 uppercase">Jour du mois</label>
                                 <input type="number" min="1" max="31" required value={formData.dayOfMonth} onChange={e => setFormData({...formData, dayOfMonth: parseInt(e.target.value)})} className="w-full p-2 rounded border border-slate-300 bg-white text-slate-900" />
                             </div>
-                            <div>
-                                <label className="text-xs font-medium text-slate-500 uppercase">Bénéficiaire (Qui a gagné ?)</label>
-                                <select value={formData.beneficiaryId} onChange={e => setFormData({...formData, beneficiaryId: e.target.value})} className="w-full p-2 rounded border border-slate-300 bg-white text-slate-900">
-                                    {people.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                                </select>
-                            </div>
+
+                            {/* ROW 3 - COMPTE & BENEFICIAIRE (Harmonized) */}
                              <div>
-                                <label className="text-xs font-medium text-slate-500 uppercase">Compte de réception</label>
+                                <label className="text-xs font-medium text-slate-500 uppercase">Compte</label>
                                 <select value={formData.accountId} onChange={e => setFormData({...formData, accountId: e.target.value})} className="w-full p-2 rounded border border-slate-300 bg-white text-slate-900">
                                     {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
                                 </select>
                             </div>
                             <div>
-                                <label className="text-xs font-medium text-slate-500 uppercase">Type</label>
-                                <select value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})} className="w-full p-2 rounded border border-slate-300 bg-white text-slate-900">
+                                <label className="text-xs font-medium text-slate-500 uppercase">Bénéficiaire</label>
+                                <select value={formData.beneficiaryId} onChange={e => setFormData({...formData, beneficiaryId: e.target.value})} className="w-full p-2 rounded border border-slate-300 bg-white text-slate-900">
+                                    {people.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                </select>
+                            </div>
+
+                            {/* ROW 4 */}
+                            <div>
+                                <label className="text-xs font-medium text-slate-500 uppercase">Catégorie</label>
+                                <select value={formData.category} onChange={e => setFormData({...formData, category: e.target.value, subCategory: ''})} className="w-full p-2 rounded border border-slate-300 bg-white text-slate-900">
                                     {incomeCategories.length > 0 ? (
                                         incomeCategories.map(cat => (
                                             <option key={cat.id} value={cat.name}>{cat.name}</option>
@@ -441,6 +460,14 @@ const IncomeEditor: React.FC<{
                                     )}
                                 </select>
                             </div>
+                            <div>
+                                <label className="text-xs font-medium text-slate-500 uppercase">Sous-Catégorie</label>
+                                <select value={formData.subCategory || ''} onChange={e => setFormData({...formData, subCategory: e.target.value})} className="w-full p-2 rounded border border-slate-300 bg-white text-slate-900" disabled={activeSubCats.length === 0}>
+                                    <option value="">-- Aucune --</option>
+                                    {activeSubCats.map(sc => <option key={sc} value={sc}>{sc}</option>)}
+                                </select>
+                            </div>
+
                             <button type="submit" className="md:col-span-2 bg-slate-900 text-white py-2 rounded-lg font-medium hover:bg-slate-800">Sauvegarder</button>
                         </form>
                     </CardContent>
@@ -462,7 +489,7 @@ const IncomeEditor: React.FC<{
                                     <div className="text-xs text-slate-500 flex flex-wrap items-center gap-2 mt-0.5">
                                         <span className="bg-slate-100 px-1.5 rounded">Le {inc.dayOfMonth}</span>
                                         <span>•</span>
-                                        <span>{inc.category}</span>
+                                        <span>{inc.category} {inc.subCategory && `> ${inc.subCategory}`}</span>
                                         <span>•</span>
                                         <span className="text-indigo-600">Bénéf.: {beneficiaryName}</span>
                                         <span>•</span>

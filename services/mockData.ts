@@ -20,9 +20,9 @@ export const MOCK_ACCOUNTS: Account[] = [
 // --- REVENUS RÉCURRENTS (NOUVEAU) ---
 // accountId correspond maintenant aux IDs des comptes (1, 2, 3)
 export const MOCK_INCOME_CONFIGS: IncomeConfig[] = [
-  { id: 'inc_1', label: 'Salaire Guillaume', amount: 3200, dayOfMonth: 28, accountId: '1', beneficiaryId: 'p_guillaume', category: 'Salaire' },
-  { id: 'inc_2', label: 'Salaire Nelly', amount: 2100, dayOfMonth: 27, accountId: '2', beneficiaryId: 'p_nelly', category: 'Salaire' },
-  { id: 'inc_3', label: 'Allocations Familiales', amount: 142.50, dayOfMonth: 5, accountId: '3', beneficiaryId: 'p_joint', category: 'CAF' },
+  { id: 'inc_1', label: 'Salaire Guillaume', amount: 3200, dayOfMonth: 28, accountId: '1', beneficiaryId: 'p_guillaume', category: 'Salaire', subCategory: 'Fixe' },
+  { id: 'inc_2', label: 'Salaire Nelly', amount: 2100, dayOfMonth: 27, accountId: '2', beneficiaryId: 'p_nelly', category: 'Salaire', subCategory: 'Fixe' },
+  { id: 'inc_3', label: 'Allocations Familiales', amount: 142.50, dayOfMonth: 5, accountId: '3', beneficiaryId: 'p_joint', category: 'CAF', subCategory: 'Allocations' },
 ];
 
 // --- NOUVELLES CATÉGORIES ---
@@ -43,10 +43,10 @@ export const INITIAL_CATEGORIES: CategoryDef[] = [
     { id: 'cat_impots', name: 'Impôts & Taxes', type: 'EXPENSE', subCategories: ['Amendes', 'Impôts sur le revenu', 'Impôts & Taxes - Autres'] },
     
     // REVENUS
-    { id: 'inc_salaire', name: 'Salaire', type: 'INCOME', subCategories: [] },
-    { id: 'inc_caf', name: 'CAF', type: 'INCOME', subCategories: [] },
-    { id: 'inc_rente', name: 'Rente', type: 'INCOME', subCategories: [] },
-    { id: 'inc_remb', name: 'Remboursement', type: 'INCOME', subCategories: [] }
+    { id: 'inc_salaire', name: 'Salaire', type: 'INCOME', subCategories: ['Fixe', 'Variable / Primes', '13ème mois'] },
+    { id: 'inc_caf', name: 'CAF', type: 'INCOME', subCategories: ['Allocations', 'PAJE', 'Prime activité'] },
+    { id: 'inc_rente', name: 'Rente', type: 'INCOME', subCategories: ['Immobilier', 'Financier'] },
+    { id: 'inc_remb', name: 'Remboursement', type: 'INCOME', subCategories: ['Sécu', 'Mutuelle', 'Amis'] }
 ];
 
 // Helper dates

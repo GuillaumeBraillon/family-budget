@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { ExpenseConfig, IncomeConfig, WeeklyBudget, Account, AccountType, PlannedItem, Person, PaidItemDetails } from '../../types';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
-import { Check, AlertTriangle, ArrowRightLeft, Calendar, ChevronLeft, ChevronRight, User, Users, Clock, Search, X, CreditCard, RotateCcw, TrendingUp, Calculator, Wallet, PieChart, Banknote, TrendingDown, PiggyBank } from 'lucide-react';
+import { Check, AlertTriangle, ArrowRightLeft, Calendar, ChevronLeft, ChevronRight, User, Users, Clock, Search, X, CreditCard, RotateCcw, TrendingUp, Calculator, Wallet, PieChart, Banknote, TrendingDown, PiggyBank, Tag } from 'lucide-react';
 
 interface BudgetPlannerProps {
   configs: ExpenseConfig[];
@@ -15,7 +15,17 @@ interface BudgetPlannerProps {
 
 export const BudgetPlanner: React.FC<BudgetPlannerProps> = ({ configs, incomeConfigs, accounts, people, paidItems, onTogglePaid }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [activeWeek, setActiveWeek] = useState<number>(1);
+  
+  // Initialisation intelligente de la semaine active basée sur le jour du mois actuel
+  const [activeWeek, setActiveWeek] = useState<number>(() => {
+    const today = new Date();
+    const day = today.getDate();
+    if (day <= 7) return 1;
+    if (day <= 14) return 2;
+    if (day <= 21) return 3;
+    return 4;
+  });
+
   const [searchQuery, setSearchQuery] = useState('');
 
   // --- PAYMENT MODAL STATE ---
@@ -43,7 +53,7 @@ export const BudgetPlanner: React.FC<BudgetPlannerProps> = ({ configs, incomeCon
     const newDate = new Date(currentDate);
     newDate.setMonth(newDate.getMonth() + delta);
     setCurrentDate(newDate);
-    setActiveWeek(1); 
+    setActiveWeek(1); // Retour à la semaine 1 quand on change de mois manuellement
   };
 
   const monthLabel = new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' }).format(currentDate);
@@ -122,7 +132,7 @@ export const BudgetPlanner: React.FC<BudgetPlannerProps> = ({ configs, incomeCon
         amount: effectiveAmount,
         originalAmount: inc.amount, // Montant Config
         category: inc.category,
-        subCategory: '',
+        subCategory: inc.subCategory,
         beneficiaryId: inc.beneficiaryId, // La personne qui gagne l'argent (le bénéficiaire du revenu)
         accountId: inc.accountId, // Le compte de réception
         isExtra: false,
@@ -169,65 +179,104 @@ export const BudgetPlanner: React.FC<BudgetPlannerProps> = ({ configs, incomeCon
 
   // --- CALCUL DES STATISTIQUES HEBDOMADAIRES ---
   const weeklyStats = useMemo(() => {
-    const items = currentWeekDisplayData?.items || [];
+    const currentItems = currentWeekDisplayData?.items || [];
+
+    // 1. CALCUL DU REPORT (Semaines Précédentes non payées)
+    // On prend toutes les semaines avant la semaine active et on cherche les items non payés
+    const previousUnpaidItems = filteredWeeks
+        .filter(w => w.weekNumber < activeWeek)
+        .flatMap(w => w.items)
+        .filter(item => !item.isPaid);
+
+    const previousRemaining = previousUnpaidItems.reduce((acc, item) => {
+        return item.type === 'EXPENSE' ? acc + item.amount : acc - item.amount;
+    }, 0);
     
-    // 1. GLOBAL (Théorique vs Réel)
-    // Logique : (Dépenses - Revenus). 
-    // Positif = Sortie d'argent. Négatif = Entrée d'argent.
-    
-    const totalOriginal = items.reduce((acc, item) => {
+    // 2. STATS SEMAINE COURANTE
+    const totalOriginal = currentItems.reduce((acc, item) => {
         return item.type === 'EXPENSE' ? acc + item.originalAmount : acc - item.originalAmount;
     }, 0);
 
-    const totalRealized = items.reduce((acc, item) => {
+    const totalRealized = currentItems.reduce((acc, item) => {
         return item.type === 'EXPENSE' ? acc + item.amount : acc - item.amount;
     }, 0);
 
-    const variance = totalRealized - totalOriginal; // > 0 signifie qu'on dépense plus (ou gagne moins) que prévu.
+    const variance = totalRealized - totalOriginal; 
 
-    const remainingToPay = items.reduce((acc, item) => {
+    const currentRemaining = currentItems.reduce((acc, item) => {
         if(item.isPaid) return acc;
         return item.type === 'EXPENSE' ? acc + item.amount : acc - item.amount;
     }, 0);
 
-    // 2. PAR PAYEUR (Account ID)
+    // Dépenses réglées (pour l'affichage "Déjà réglé")
+    const currentPaidExpenses = currentItems
+        .filter(item => item.type === 'EXPENSE' && item.isPaid)
+        .reduce((acc, item) => acc + item.amount, 0);
+
+    const totalRemaining = currentRemaining + previousRemaining;
+
+    // 3. AGREGATIONS (Par Payer / Beneficiary)
     const byPayer: Record<string, { total: number, remaining: number }> = {};
-    
-    // 3. PAR BÉNÉFICIAIRE (DÉPENSES) - Qui dépense ?
     const expenseByBeneficiary: Record<string, { total: number }> = {};
-    
-    // 4. PAR BÉNÉFICIAIRE (REVENUS) - Qui rapporte ?
     const incomeByBeneficiary: Record<string, { total: number }> = {};
 
-    items.forEach(item => {
+    // Helper pour traiter les items dans les stats
+    const processItem = (item: PlannedItem, isCurrentWeek: boolean) => {
         // Init Payers (using Account ID)
         if (!byPayer[item.accountId]) byPayer[item.accountId] = { total: 0, remaining: 0 };
         
         const amount = item.amount;
         
-        // Update Payer Logic (Expense = +, Income = -)
         if (item.type === 'EXPENSE') {
-            byPayer[item.accountId].total += amount;
-            if(!item.isPaid) byPayer[item.accountId].remaining += amount;
+            if (isCurrentWeek) {
+                // Le "Total" ne compte que l'activité de la semaine affichée
+                byPayer[item.accountId].total += amount;
 
-            // Stats Bénéficiaire Dépense
-            if (!expenseByBeneficiary[item.beneficiaryId]) expenseByBeneficiary[item.beneficiaryId] = { total: 0 };
-            expenseByBeneficiary[item.beneficiaryId].total += amount;
+                // Stats Bénéficiaire Dépense (Uniquement semaine courante pour la visibilité)
+                if (!expenseByBeneficiary[item.beneficiaryId]) expenseByBeneficiary[item.beneficiaryId] = { total: 0 };
+                expenseByBeneficiary[item.beneficiaryId].total += amount;
+            }
+            
+            // Le "Reste" prend tout ce qui n'est pas payé (courant + passé)
+            if(!item.isPaid) {
+                 byPayer[item.accountId].remaining += amount;
+            }
 
         } else {
-            // Income reduces the payer's "cost" (trésorerie)
-            byPayer[item.accountId].total -= amount;
-            if(!item.isPaid) byPayer[item.accountId].remaining -= amount;
+            if (isCurrentWeek) {
+                byPayer[item.accountId].total -= amount;
 
-            // Stats Bénéficiaire Revenu
-            if (!incomeByBeneficiary[item.beneficiaryId]) incomeByBeneficiary[item.beneficiaryId] = { total: 0 };
-            incomeByBeneficiary[item.beneficiaryId].total += amount;
+                // Stats Bénéficiaire Revenu
+                if (!incomeByBeneficiary[item.beneficiaryId]) incomeByBeneficiary[item.beneficiaryId] = { total: 0 };
+                incomeByBeneficiary[item.beneficiaryId].total += amount;
+            }
+
+            if(!item.isPaid) {
+                byPayer[item.accountId].remaining -= amount;
+            }
         }
-    });
+    };
 
-    return { totalOriginal, totalRealized, variance, remainingToPay, byPayer, expenseByBeneficiary, incomeByBeneficiary };
+    // Traitement Semaine Courante (Total + Reste)
+    currentItems.forEach(item => processItem(item, true));
 
-  }, [currentWeekDisplayData]);
+    // Traitement Semaines Précédentes (Reste UNIQUEMENT)
+    previousUnpaidItems.forEach(item => processItem(item, false));
+
+    return { 
+        totalOriginal, 
+        totalRealized, 
+        variance, 
+        remainingToPay: totalRemaining, 
+        currentRemaining, 
+        previousRemaining,
+        currentPaidExpenses,
+        byPayer, 
+        expenseByBeneficiary, 
+        incomeByBeneficiary 
+    };
+
+  }, [currentWeekDisplayData, activeWeek, filteredWeeks]);
 
 
   // --- HANDLERS ---
@@ -242,12 +291,7 @@ export const BudgetPlanner: React.FC<BudgetPlannerProps> = ({ configs, incomeCon
     } else {
         // --- CORRECTION DE LA SÉLECTION DU COMPTE ---
         let targetAccountId = item.accountId;
-        
-        // Sécurité : on vérifie que l'ID du compte existe bien dans la liste actuelle.
-        // Si l'ID est invalide (compte supprimé ou ancienne donnée), on fallback sur le premier compte disponible
-        // pour éviter un décalage entre l'affichage (Select par défaut) et la valeur réelle (State).
         const accountExists = accounts.some(a => a.id === targetAccountId);
-        
         if (!accountExists && accounts.length > 0) {
             targetAccountId = accounts[0].id;
         }
@@ -347,77 +391,58 @@ export const BudgetPlanner: React.FC<BudgetPlannerProps> = ({ configs, incomeCon
                         <input 
                             type="text" 
                             value={confirmModal.label}
-                            onChange={(e) => setConfirmModal({ ...confirmModal, label: e.target.value })}
-                            className="w-full p-2 border border-slate-300 rounded font-medium text-slate-700 bg-white"
+                            onChange={(e) => setConfirmModal({...confirmModal, label: e.target.value})}
+                            className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-slate-900 font-medium"
                         />
                     </div>
 
-                    {/* Montant */}
-                    <div>
-                        <label className="text-xs font-medium text-slate-500 uppercase mb-1 block">Montant Réel (€)</label>
-                        <div className="relative">
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="text-xs font-medium text-slate-500 uppercase mb-1 block">Montant (€)</label>
                             <input 
                                 type="number" 
-                                step="0.01" 
+                                step="0.01"
                                 value={confirmModal.amount}
-                                onChange={(e) => setConfirmModal({ ...confirmModal, amount: parseFloat(e.target.value) })}
-                                className={`w-full text-2xl font-bold border-b-2 outline-none py-2 px-1 bg-transparent ${
-                                    confirmModal.item?.type === 'INCOME' ? 'text-emerald-600 border-emerald-200 focus:border-emerald-600' : 'text-slate-900 border-indigo-200 focus:border-indigo-600'
-                                }`}
+                                onChange={(e) => setConfirmModal({...confirmModal, amount: parseFloat(e.target.value)})}
+                                className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-slate-900 font-bold"
                             />
-                            <span className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 font-medium">EUR</span>
                         </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                        {/* Date */}
                         <div>
-                            <label className="text-xs font-medium text-slate-500 uppercase mb-1 block">Date</label>
-                            <input 
+                             <label className="text-xs font-medium text-slate-500 uppercase mb-1 block">Date</label>
+                             <input 
                                 type="date"
                                 value={confirmModal.paymentDate}
-                                onChange={(e) => setConfirmModal({ ...confirmModal, paymentDate: e.target.value })}
-                                className="w-full p-2 border border-slate-300 rounded text-slate-700 bg-white"
+                                onChange={(e) => setConfirmModal({...confirmModal, paymentDate: e.target.value})}
+                                className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-slate-900"
                             />
-                        </div>
-                        
-                        {/* Compte */}
-                        <div>
-                             <label className="text-xs font-medium text-slate-500 uppercase mb-1 block">
-                                {confirmModal.item?.type === 'INCOME' ? 'Compte Crédité' : 'Compte Débité'}
-                             </label>
-                             <select 
-                                value={confirmModal.accountId} 
-                                onChange={(e) => setConfirmModal({ ...confirmModal, accountId: e.target.value })}
-                                className="w-full p-2 border border-slate-300 rounded text-slate-700 text-sm bg-white"
-                             >
-                                {accounts.map(acc => {
-                                    const owner = people.find(p => p.id === acc.ownerId)?.name || '?';
-                                    const isDefault = acc.id === confirmModal.accountId; 
-                                    return (
-                                        <option key={acc.id} value={acc.id}>
-                                            {acc.name} ({owner}) {isDefault ? '✨' : ''}
-                                        </option>
-                                    );
-                                })}
-                             </select>
                         </div>
                     </div>
 
-                    <div className="flex gap-3 pt-2">
-                        <button 
-                            onClick={() => setConfirmModal({ ...confirmModal, isOpen: false })}
-                            className="flex-1 py-2.5 rounded-lg border border-slate-300 text-slate-700 font-medium hover:bg-slate-50"
+                    <div>
+                        <label className="text-xs font-medium text-slate-500 uppercase mb-1 block">Compte impacté</label>
+                        <select 
+                            value={confirmModal.accountId} 
+                            onChange={(e) => setConfirmModal({...confirmModal, accountId: e.target.value})}
+                            className="w-full p-2 border border-slate-300 rounded-lg bg-white text-slate-900 focus:ring-2 focus:ring-indigo-500 outline-none"
                         >
-                            Annuler
-                        </button>
+                            {accounts.map(acc => (
+                                <option key={acc.id} value={acc.id}>{acc.name} ({acc.type})</option>
+                            ))}
+                        </select>
+                        <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
+                            <CreditCard size={12} /> Ce compte sera mis à jour.
+                        </p>
+                    </div>
+
+                    <div className="pt-2">
                         <button 
                             onClick={handleConfirmPayment}
-                            className={`flex-1 py-2.5 rounded-lg text-white font-medium shadow-sm ${
-                                confirmModal.item?.type === 'INCOME' ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-200' : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-200'
+                            className={`w-full py-3 rounded-lg text-white font-medium shadow-sm hover:opacity-90 transition-opacity flex items-center justify-center gap-2 ${
+                                confirmModal.item?.type === 'INCOME' ? 'bg-emerald-600' : 'bg-slate-900'
                             }`}
                         >
-                            Valider
+                           <Check size={20} />
+                           {confirmModal.item?.type === 'INCOME' ? 'Valider le revenu' : 'Valider le paiement'}
                         </button>
                     </div>
                 </div>
@@ -425,357 +450,238 @@ export const BudgetPlanner: React.FC<BudgetPlannerProps> = ({ configs, incomeCon
         </div>
       )}
 
-
-      {/* Header Controls */}
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-                <Calendar className="text-indigo-600" />
-                Budget Mensuel
-            </h2>
-            
-            <div className="flex flex-col sm:flex-row gap-3">
-                {/* Search Bar */}
-                <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                    <input 
-                        type="text" 
-                        placeholder="Rechercher..." 
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-9 pr-8 py-2 border border-slate-300 rounded-lg text-sm w-full sm:w-64 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none shadow-sm bg-white text-slate-900"
-                    />
-                    {searchQuery && (
-                        <button 
-                            onClick={() => setSearchQuery('')}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                        >
-                            <X size={14} />
-                        </button>
-                    )}
-                </div>
-
-                {/* Month Navigation */}
-                <div className="flex items-center bg-white rounded-lg shadow-sm border border-slate-200 p-1">
-                    <button onClick={() => changeMonth(-1)} className="p-2 hover:bg-slate-100 rounded-md text-slate-600">
-                        <ChevronLeft size={20} />
-                    </button>
-                    <span className="px-4 font-semibold text-slate-800 min-w-[140px] text-center capitalize">
-                        {monthLabel}
-                    </span>
-                    <button onClick={() => changeMonth(1)} className="p-2 hover:bg-slate-100 rounded-md text-slate-600">
-                        <ChevronRight size={20} />
-                    </button>
-                </div>
+      {/* HEADER & CONTROLS */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div className="flex items-center gap-4 bg-white p-2 rounded-xl border border-slate-200 shadow-sm">
+            <button onClick={() => changeMonth(-1)} className="p-2 hover:bg-slate-100 rounded-lg text-slate-600">
+                <ChevronLeft size={20} />
+            </button>
+            <div className="flex items-center gap-2 w-40 justify-center">
+                <Calendar size={18} className="text-indigo-600" />
+                <span className="font-bold text-slate-800 capitalize">{monthLabel}</span>
             </div>
-        </div>
+            <button onClick={() => changeMonth(1)} className="p-2 hover:bg-slate-100 rounded-lg text-slate-600">
+                <ChevronRight size={20} />
+            </button>
+          </div>
 
-        {/* Week Tabs */}
-        <div className="flex overflow-x-auto gap-2 pb-2 scrollbar-hide">
-            {filteredWeeks.map((week) => {
-                const hasSearch = searchQuery.length > 0;
-                const matchCount = week.items.length;
-                const unpaidCount = hasSearch ? 0 : week.items.filter(i => !i.isPaid).length;
-
-                return (
-                    <button
-                        key={week.weekNumber}
-                        onClick={() => setActiveWeek(week.weekNumber)}
-                        className={`px-4 py-2 rounded-full whitespace-nowrap text-sm font-medium transition-colors flex items-center gap-2 ${
-                        activeWeek === week.weekNumber
-                            ? 'bg-slate-900 text-white'
-                            : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
-                        }`}
-                    >
-                        <span>{week.label}</span>
-                        {!hasSearch && unpaidCount > 0 && (
-                            <span className="bg-indigo-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">
-                                {unpaidCount}
-                            </span>
-                        )}
-                        {hasSearch && matchCount > 0 && (
-                             <span className="bg-emerald-500 text-white text-[10px] px-1.5 py-0.5 rounded-full flex items-center gap-1">
-                                <Search size={8} /> {matchCount}
-                            </span>
-                        )}
-                    </button>
-                );
-            })}
-        </div>
+          <div className="relative w-full md:w-64">
+             <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+             <input 
+                type="text" 
+                placeholder="Rechercher une dépense..." 
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+             />
+          </div>
       </div>
 
-      <Card>
-        <CardHeader className="flex flex-row justify-between items-center bg-slate-50/50">
-            <CardTitle>{currentWeekDisplayData?.label}</CardTitle>
-            <div className="text-sm text-slate-500 hidden sm:block">
-                {/* On n'affiche plus qu'un simple résumé, le détail est en bas */}
-            </div>
-        </CardHeader>
-        <CardContent className="p-0">
-            <div className="divide-y divide-slate-100">
-                {currentWeekDisplayData?.items.map((item) => {
-                    const ownerAccount = accounts.find(a => a.id === item.accountId);
-                    
-                    // FALLBACK: Si le compte n'est pas trouvé, on regarde si c'est une Personne (cas des anciennes données ou erreur)
-                    const ownerPerson = !ownerAccount ? people.find(p => p.id === item.accountId) : null;
-                    const ownerName = ownerAccount ? ownerAccount.name : (ownerPerson ? `Compte de ${ownerPerson.name}` : 'Compte Inconnu');
-                    
-                    const beneficiaryName = people.find(p => p.id === item.beneficiaryId)?.name || 'Inconnu';
-                    const extraInfo = getExtraInfo(item);
-                    
-                    // Logic similaire pour le paiement effectué
-                    let paidAccountName = null;
-                    if (item.isPaid && item.paidDetails) {
-                         const paidAcc = accounts.find(a => a.id === item.paidDetails?.accountId);
-                         if (paidAcc) {
-                             paidAccountName = paidAcc.name;
-                         } else {
-                             const paidPer = people.find(p => p.id === item.paidDetails?.accountId);
-                             paidAccountName = paidPer ? `Compte de ${paidPer.name}` : '?';
-                         }
-                    }
+      {/* TABS SEMAINES */}
+      <div className="grid grid-cols-4 gap-2 bg-slate-200 p-1 rounded-xl">
+          {filteredWeeks.map((week) => (
+             <button
+                key={week.weekNumber}
+                onClick={() => setActiveWeek(week.weekNumber)}
+                className={`py-2 px-1 rounded-lg text-xs sm:text-sm font-medium transition-all ${
+                    activeWeek === week.weekNumber 
+                    ? 'bg-white text-indigo-600 shadow-sm' 
+                    : 'text-slate-500 hover:text-slate-700'
+                }`}
+             >
+                <span className="hidden sm:inline">{week.label}</span>
+                <span className="sm:hidden">Sem. {week.weekNumber}</span>
+             </button>
+          ))}
+      </div>
 
-                    const isIncome = item.type === 'INCOME';
-                    const isDiff = item.isPaid && Math.abs(item.amount - item.originalAmount) > 0.01;
+      {/* STATS DE LA SEMAINE */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+           {/* RESTE A PAYER (BACKLOG + CURRENT) */}
+           <Card className={`border-l-4 ${weeklyStats.remainingToPay > 0 ? 'border-l-amber-500' : 'border-l-emerald-500'}`}>
+               <CardContent className="p-5 flex flex-col justify-between h-full">
+                  <div>
+                    <p className="text-xs text-slate-500 font-semibold uppercase tracking-wide flex items-center gap-1">
+                        {weeklyStats.remainingToPay > 0 ? <Clock size={14}/> : <Check size={14}/>}
+                        Reste à payer
+                    </p>
+                    <h3 className="text-2xl font-bold text-slate-900 mt-1">{weeklyStats.remainingToPay.toFixed(2)} €</h3>
+                  </div>
+                  
+                  {/* DETAIL RESTE A PAYER */}
+                  <div className="mt-3 space-y-1">
+                     <div className="flex justify-between text-xs text-slate-500 border-t border-slate-100 pt-2">
+                        <span>Semaine en cours</span>
+                        <span className="font-medium text-slate-700">{weeklyStats.currentRemaining.toFixed(2)} €</span>
+                     </div>
+                     {weeklyStats.previousRemaining > 0 && (
+                        <div className="flex justify-between text-xs text-amber-600">
+                           <span className="flex items-center gap-1"><AlertTriangle size={10} /> Retard</span>
+                           <span className="font-medium">{weeklyStats.previousRemaining.toFixed(2)} €</span>
+                        </div>
+                     )}
+                  </div>
 
-                    return (
+                  {weeklyStats.remainingToPay === 0 && (
+                      <p className="text-xs text-emerald-600 font-medium mt-2">Tout est à jour !</p>
+                  )}
+               </CardContent>
+           </Card>
+
+           {/* BUDGET SEMAINE */}
+           <Card>
+               <CardContent className="p-5">
+                   <p className="text-xs text-slate-500 font-semibold uppercase tracking-wide flex items-center gap-1">
+                       <Wallet size={14}/>
+                       Budget Semaine
+                   </p>
+                   <div className="mt-2 flex items-end gap-2">
+                       <h3 className="text-2xl font-bold text-slate-900">{weeklyStats.totalOriginal.toFixed(2)} €</h3>
+                       <span className="text-xs text-slate-400 mb-1">prévu (Net)</span>
+                   </div>
+                   
+                   {/* BARRE DE PROGRESSION & DETAIL DEJA REGLE */}
+                   <div className="mt-4 pt-3 border-t border-slate-100">
+                       <div className="flex justify-between items-center text-xs mb-1.5">
+                           <span className="text-slate-500">Dépenses réglées</span>
+                           <span className="font-bold text-indigo-600">{weeklyStats.currentPaidExpenses.toFixed(2)} €</span>
+                       </div>
+                       
+                       <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                           <div 
+                                className="bg-indigo-600 h-1.5 rounded-full" 
+                                style={{ width: `${Math.min(((weeklyStats.totalOriginal - weeklyStats.currentRemaining) / weeklyStats.totalOriginal) * 100, 100)}%`}}
+                           ></div>
+                       </div>
+                   </div>
+               </CardContent>
+           </Card>
+
+           {/* ALERTES SOLDE (SIMULATION RAPIDE) */}
+           <Card className="bg-slate-900 text-white border-slate-800">
+                <CardContent className="p-5">
+                    <p className="text-xs text-slate-400 font-semibold uppercase tracking-wide flex items-center gap-1">
+                        <ArrowRightLeft size={14}/>
+                        Flux prévisionnel
+                    </p>
+                    <div className="mt-3 space-y-2">
+                        {Object.entries(weeklyStats.byPayer).slice(0, 2).map(([accountId, stats]) => {
+                            const acc = accounts.find(a => a.id === accountId);
+                            if (!acc || stats.remaining === 0) return null;
+                            return (
+                                <div key={accountId} className="flex justify-between items-center text-sm">
+                                    <span className="text-slate-300 truncate w-24">{acc.name}</span>
+                                    <span className="font-mono text-amber-400">- {stats.remaining.toFixed(2)} €</span>
+                                </div>
+                            );
+                        })}
+                        {Object.keys(weeklyStats.byPayer).length === 0 && (
+                            <p className="text-sm text-slate-500 italic">Aucun mouvement prévu.</p>
+                        )}
+                    </div>
+                </CardContent>
+           </Card>
+      </div>
+
+      {/* LISTE DES OPERATIONS */}
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="px-6 py-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+              <h3 className="font-semibold text-slate-900">Opérations {currentWeekDisplayData?.label}</h3>
+              <span className="text-xs bg-white border border-slate-200 px-2 py-1 rounded text-slate-500">
+                  {currentWeekDisplayData?.items.length} éléments
+              </span>
+          </div>
+
+          <div className="divide-y divide-slate-100">
+              {currentWeekDisplayData?.items.length === 0 ? (
+                  <div className="p-12 text-center text-slate-400 flex flex-col items-center">
+                      <Calendar size={48} className="mb-4 text-slate-200" />
+                      <p>Aucune opération prévue pour cette semaine.</p>
+                  </div>
+              ) : (
+                  currentWeekDisplayData?.items.map((item) => {
+                      const person = people.find(p => p.id === item.beneficiaryId);
+                      const account = accounts.find(a => a.id === item.accountId);
+                      const extraInfo = getExtraInfo(item);
+                      const isIncome = item.type === 'INCOME';
+
+                      return (
                         <div 
                             key={item.instanceId} 
                             onClick={(e) => handleItemClick(item, e)}
-                            className={`p-4 flex items-center justify-between transition-colors cursor-pointer ${
-                                item.isPaid 
-                                ? 'bg-slate-50/80 opacity-60' 
-                                : isIncome ? 'hover:bg-emerald-50' : 'hover:bg-slate-50'
-                            }`}
+                            className={`p-4 flex items-center gap-4 transition-colors cursor-pointer group ${item.isPaid ? 'bg-slate-50/50' : 'hover:bg-slate-50'}`}
                         >
-                            <div className="flex items-center gap-3">
-                                <button 
-                                    onClick={(e) => handleItemClick(item, e)}
-                                    title={item.isPaid ? "Décocher" : "Pointer"}
-                                    className={`w-6 h-6 rounded border flex items-center justify-center transition-all ${
-                                        item.isPaid 
-                                        ? 'bg-emerald-500 border-emerald-500 text-white hover:bg-red-500 hover:border-red-500' 
-                                        : 'border-slate-300 hover:border-indigo-500 text-transparent'
-                                    }`}
-                                >
-                                    <Check size={14} strokeWidth={3} className={item.isPaid ? "" : "text-indigo-200"} />
-                                </button>
-                                <div>
-                                    <div className="flex items-center gap-2">
-                                        <p className={`font-medium text-sm ${item.isPaid ? 'text-slate-500 line-through' : 'text-slate-900'}`}>
-                                            {item.label}
-                                        </p>
-                                        {isIncome && (
-                                            <span className="text-[10px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded font-bold">REVENU</span>
-                                        )}
-                                        {item.isExtra && (
-                                            <div className="flex items-center gap-1.5 bg-amber-50 border border-amber-200 text-amber-800 text-[10px] px-1.5 py-0.5 rounded font-medium">
-                                                {extraInfo ? (
-                                                  <>
-                                                    <span className="font-bold">{extraInfo.progress}</span>
-                                                    <span className="text-amber-400">•</span>
-                                                    <span className="flex items-center gap-0.5"><Clock size={10} /> Fin {extraInfo.endDate}</span>
-                                                  </>
-                                                ) : (
-                                                  <span>EXTRA</span>
-                                                )}
-                                            </div>
-                                        )}
-                                    </div>
-                                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1">
-                                        <span className="text-xs text-slate-500">Le {item.day}</span>
-                                        <span className="text-[10px] bg-slate-100 px-1.5 rounded text-slate-600">{item.category}</span>
-                                        
-                                        {item.isPaid ? (
-                                            <span className="text-[10px] flex items-center gap-1 text-emerald-600 font-medium">
-                                                <CreditCard size={10}/> {isIncome ? 'Reçu sur' : 'Payé par'} : {paidAccountName}
-                                            </span>
-                                        ) : (
-                                            <span className="text-[10px] flex items-center gap-1 text-slate-500">
-                                                {isIncome ? <TrendingUp size={10} /> : <User size={10}/>} 
-                                                {isIncome ? 'Sur compte' : 'Payeur'} : {ownerName}
-                                            </span>
-                                        )}
+                            {/* CHECKBOX AREA */}
+                            <div className={`
+                                flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all
+                                ${item.isPaid 
+                                    ? (isIncome ? 'bg-emerald-500 border-emerald-500 text-white' : 'bg-slate-900 border-slate-900 text-white') 
+                                    : 'border-slate-300 bg-white group-hover:border-indigo-400'
+                                }
+                            `}>
+                                {item.isPaid && <Check size={14} strokeWidth={3} />}
+                            </div>
 
-                                        {!isIncome && (
-                                            <span className="text-[10px] flex items-center gap-1 text-indigo-600"><Users size={10}/> Pour {beneficiaryName}</span>
-                                        )}
-                                    </div>
+                            {/* DATE */}
+                            <div className="flex-shrink-0 w-12 text-center">
+                                <span className={`text-sm font-bold block ${item.isPaid ? 'text-slate-400' : 'text-slate-900'}`}>{item.day}</span>
+                                <span className="text-[10px] text-slate-400 uppercase">{monthLabel.slice(0,3)}</span>
+                            </div>
+
+                            {/* CONTENT */}
+                            <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-0.5">
+                                    <span className={`font-medium truncate ${item.isPaid ? 'text-slate-500 line-through' : 'text-slate-900'}`}>
+                                        {item.label}
+                                    </span>
+                                    {item.isExtra && (
+                                        <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 rounded flex items-center gap-1" title={extraInfo?.endDate ? `Fin : ${extraInfo.endDate}` : ''}>
+                                            Temp. {extraInfo?.progress && `(${extraInfo.progress})`}
+                                        </span>
+                                    )}
+                                </div>
+                                <div className="flex items-center gap-3 text-xs text-slate-500">
+                                    <span className="flex items-center gap-1">
+                                        <Tag size={12}/> 
+                                        {item.category}
+                                        {item.subCategory && <span className="opacity-75"> &gt; {item.subCategory}</span>}
+                                    </span>
+                                    {person && (
+                                        <span className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-slate-100">
+                                            {person.isChild ? <User size={10} /> : <Users size={10} />}
+                                            {person.name}
+                                        </span>
+                                    )}
+                                    {account && (
+                                        <span className="flex items-center gap-1 text-slate-400">
+                                            <CreditCard size={10} /> {account.name}
+                                        </span>
+                                    )}
                                 </div>
                             </div>
+
+                            {/* AMOUNT */}
                             <div className="text-right">
-                                <p className={`font-mono font-medium ${item.isPaid ? 'text-slate-400' : isIncome ? 'text-emerald-600' : 'text-slate-900'}`}>
-                                    {isIncome ? '+' : ''}{(item.amount || 0).toFixed(2)} €
-                                </p>
-                                {isDiff && (
-                                    <p className="text-[10px] text-slate-400 line-through">
-                                        {item.originalAmount.toFixed(2)} €
-                                    </p>
+                                <div className={`font-mono font-bold ${
+                                    item.isPaid 
+                                        ? 'text-slate-400' 
+                                        : (isIncome ? 'text-emerald-600' : 'text-slate-900')
+                                }`}>
+                                    {isIncome ? '+' : '-'} {item.amount.toFixed(2)} €
+                                </div>
+                                {Math.abs(item.amount - item.originalAmount) > 0.01 && (
+                                    <div className="text-[10px] text-amber-600 flex items-center justify-end gap-1">
+                                        <ArrowRightLeft size={10} />
+                                        Prévu: {item.originalAmount.toFixed(0)}
+                                    </div>
                                 )}
                             </div>
                         </div>
-                    );
-                })}
-                {currentWeekDisplayData?.items.length === 0 && (
-                    <div className="p-8 text-center text-slate-400">
-                        {searchQuery 
-                            ? "Aucun résultat pour cette semaine." 
-                            : "Aucune opération planifiée pour cette semaine."
-                        }
-                    </div>
-                )}
-            </div>
-        </CardContent>
-      </Card>
-      
-      {/* --- WEEKLY SUMMARY / BILAN HEBDO --- */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          
-          {/* 1. Global Summary */}
-          <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 flex flex-col justify-between relative overflow-hidden">
-              <div className="absolute top-0 right-0 p-4 opacity-5">
-                  <Calculator size={64} />
-              </div>
-              <div>
-                  <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-4">Bilan Hebdomadaire</h3>
-                  <div className="space-y-3">
-                      
-                      {/* LIGNE 1 : Prévisionnel Initial */}
-                      <div className="flex justify-between items-end">
-                          <p className="text-xs text-slate-400 mb-0.5">Budget Initial</p>
-                          <p className="text-sm font-medium text-slate-500">
-                             {weeklyStats.totalOriginal.toFixed(2)} €
-                          </p>
-                      </div>
-
-                      {/* LIGNE 2 : Réel / Projeté + Variance */}
-                      <div className="flex justify-between items-center">
-                          <p className="text-xs text-slate-900 font-medium">Réel</p>
-                          <div className="text-right">
-                              <p className="text-xl font-bold text-slate-900">
-                                 {weeklyStats.totalRealized.toFixed(2)} €
-                              </p>
-                          </div>
-                      </div>
-                      
-                      {/* VARIANCE BADGE */}
-                      {Math.abs(weeklyStats.variance) > 0.01 && (
-                          <div className={`text-xs font-medium px-2 py-1 rounded flex items-center justify-end gap-1 ${
-                              weeklyStats.variance > 0 ? 'bg-red-50 text-red-700' : 'bg-emerald-50 text-emerald-700'
-                          }`}>
-                              {weeklyStats.variance > 0 ? <TrendingUp size={12}/> : <PiggyBank size={12}/>}
-                              <span>
-                                  {weeklyStats.variance > 0 ? '+' : ''}
-                                  {Math.abs(weeklyStats.variance).toFixed(2)} €
-                              </span>
-                              <span className="opacity-75 font-normal ml-1">
-                                  {weeklyStats.variance > 0 ? '(Dépassement)' : '(Économie)'}
-                              </span>
-                          </div>
-                      )}
-
-                      <div className="pt-3 border-t border-slate-100 mt-1">
-                           <p className="text-xs text-slate-400 mb-1">Reste à Payer / Encaisser</p>
-                           <p className={`text-2xl font-bold ${weeklyStats.remainingToPay < 0 ? 'text-emerald-600' : 'text-indigo-600'}`}>
-                                {weeklyStats.remainingToPay.toFixed(2)} €
-                           </p>
-                           <p className="text-[10px] text-slate-400 mt-1 italic">
-                               {weeklyStats.remainingToPay > 0 ? "Sortie d'argent restante" : "Entrée d'argent restante"}
-                           </p>
-                      </div>
-                  </div>
-              </div>
+                      );
+                  })
+              )}
           </div>
-
-          {/* 2. By Payer (Account) */}
-          <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 relative overflow-hidden">
-                <div className="absolute top-0 right-0 p-4 opacity-5">
-                  <Wallet size={64} />
-                </div>
-                <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-4">Par Payeur / Compte</h3>
-                <div className="space-y-3">
-                    {Object.keys(weeklyStats.byPayer).length === 0 && (
-                        <p className="text-xs text-slate-400 italic">Aucune donnée.</p>
-                    )}
-                    {Object.entries(weeklyStats.byPayer).map(([accountId, uncastStats]) => {
-                         const stats = uncastStats as { total: number, remaining: number };
-                         const account = accounts.find(a => a.id === accountId);
-                         const displayName = account ? account.name : 'Compte Inconnu';
-
-                         return (
-                             <div key={accountId} className="flex justify-between items-center text-sm">
-                                 <span className="font-medium text-slate-700 truncate pr-2" title={displayName}>{displayName}</span>
-                                 <div className="text-right whitespace-nowrap">
-                                     <span className="block font-bold text-slate-900">{stats.total.toFixed(2)} €</span>
-                                     {stats.remaining !== 0 && (
-                                         <span className="text-[10px] text-slate-500">Reste: {stats.remaining.toFixed(2)} €</span>
-                                     )}
-                                     {stats.remaining === 0 && stats.total !== 0 && (
-                                         <span className="text-[10px] text-emerald-600 font-medium flex justify-end items-center gap-1"><Check size={10}/> Soldé</span>
-                                     )}
-                                 </div>
-                             </div>
-                         )
-                    })}
-                </div>
-          </div>
-
-          {/* 3. By Beneficiary (Expenses) */}
-          <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 relative overflow-hidden">
-                <div className="absolute top-0 right-0 p-4 opacity-5">
-                  <PieChart size={64} />
-                </div>
-                <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-4">Dépenses par Bénéf.</h3>
-                <div className="space-y-3 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
-                    {Object.keys(weeklyStats.expenseByBeneficiary).length === 0 && (
-                        <p className="text-xs text-slate-400 italic">Aucune dépense planifiée.</p>
-                    )}
-                    {Object.entries(weeklyStats.expenseByBeneficiary)
-                        .sort((a, b) => (b[1] as { total: number }).total - (a[1] as { total: number }).total)
-                        .map(([beneficiaryId, uncastStats]) => {
-                         const stats = uncastStats as { total: number };
-                         const personName = people.find(p => p.id === beneficiaryId)?.name || 'Inconnu';
-                         return (
-                             <div key={beneficiaryId} className="flex justify-between items-center text-sm border-b border-slate-50 pb-2 last:border-0 last:pb-0">
-                                 <span className="text-slate-600">{personName}</span>
-                                 <div className="text-right">
-                                     <span className="block font-semibold text-slate-800">{stats.total.toFixed(2)} €</span>
-                                 </div>
-                             </div>
-                         )
-                    })}
-                </div>
-          </div>
-
-          {/* 4. By Beneficiary (Incomes) */}
-          <div className="bg-white rounded-xl border border-emerald-100 shadow-sm p-5 relative overflow-hidden bg-emerald-50/30">
-                <div className="absolute top-0 right-0 p-4 opacity-5 text-emerald-600">
-                  <Banknote size={64} />
-                </div>
-                <h3 className="text-sm font-semibold text-emerald-700 uppercase tracking-wider mb-4">Revenus par Bénéf.</h3>
-                <div className="space-y-3 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
-                    {Object.keys(weeklyStats.incomeByBeneficiary).length === 0 && (
-                        <p className="text-xs text-slate-400 italic">Aucun revenu planifié.</p>
-                    )}
-                    {Object.entries(weeklyStats.incomeByBeneficiary)
-                        .sort((a, b) => (b[1] as { total: number }).total - (a[1] as { total: number }).total)
-                        .map(([beneficiaryId, uncastStats]) => {
-                         const stats = uncastStats as { total: number };
-                         const personName = people.find(p => p.id === beneficiaryId)?.name || 'Inconnu';
-                         return (
-                             <div key={beneficiaryId} className="flex justify-between items-center text-sm border-b border-emerald-100/50 pb-2 last:border-0 last:pb-0">
-                                 <span className="text-emerald-800">{personName}</span>
-                                 <div className="text-right">
-                                     <span className="block font-bold text-emerald-600">+{stats.total.toFixed(2)} €</span>
-                                 </div>
-                             </div>
-                         )
-                    })}
-                </div>
-          </div>
-
       </div>
-
     </div>
   );
 };

@@ -74,6 +74,7 @@ export interface IncomeConfig {
   beneficiaryId: string; // Lien vers Person.id (Qui a gagné cet argent ?)
   dayOfMonth: number;
   category: string; 
+  subCategory?: string; // Ajout pour harmonisation
 }
 
 // NOUVEAU : Détails complets d'un paiement effectué (Table paid_items)
