@@ -558,9 +558,9 @@ export const BudgetPlanner: React.FC<BudgetPlannerProps> = ({ configs, incomeCon
            </Card>
 
            {/* ALERTES SOLDE (SIMULATION RAPIDE) */}
-           <Card className="bg-slate-900 text-white border-slate-800">
+           <Card className={`border-r-4 ${weeklyStats.remainingToPay > 0 ? 'border-r-amber-500' : 'border-r-emerald-500'}`}>
                 <CardContent className="p-5">
-                    <p className="text-xs text-slate-400 font-semibold uppercase tracking-wide flex items-center gap-1">
+                    <p className="text-xs text-slate-500 font-semibold uppercase tracking-wide flex items-center gap-1">
                         <ArrowRightLeft size={14}/>
                         Flux prévisionnel
                     </p>
@@ -570,8 +570,8 @@ export const BudgetPlanner: React.FC<BudgetPlannerProps> = ({ configs, incomeCon
                             if (!acc || stats.remaining === 0) return null;
                             return (
                                 <div key={accountId} className="flex justify-between items-center text-sm">
-                                    <span className="text-slate-300 truncate w-24">{acc.name}</span>
-                                    <span className="font-mono text-amber-400">- {stats.remaining.toFixed(2)} €</span>
+                                    <span className="text-slate-500 truncate w-24">{acc.name}</span>
+                                    <span className="font-mono text-amber-600">{stats.remaining < 0 ? '+ ' : '- '}{Math.abs(stats.remaining).toFixed(2)} €</span>
                                 </div>
                             );
                         })}
