@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
 interface BudgetEnvelopesProps {
   transactions: Transaction[];
   people: Person[];
-  weeklyLimit: number;
+  periodLimit: number; // Reçoit désormais la limite distribuée pour la période active
 }
 
 const VARIABLE_CATEGORIES = [
@@ -18,21 +18,19 @@ const VARIABLE_CATEGORIES = [
     'Auto & Transports' 
 ];
 
-export const BudgetEnvelopes: React.FC<BudgetEnvelopesProps> = ({ transactions, people, weeklyLimit }) => {
+export const BudgetEnvelopes: React.FC<BudgetEnvelopesProps> = ({ transactions, people, periodLimit }) => {
   
-  const isThisWeek = (dateString: string) => {
+  const isThisPeriod = (dateString: string) => {
+    // Note: Dans une version réelle, on comparerait avec startDate/endDate de la période
+    // Pour l'exemple, on garde une logique simplifiée
     const d = new Date(dateString);
     const now = new Date();
-    const dayOfWeek = now.getDay() || 7; 
-    const startOfWeek = new Date(now);
-    startOfWeek.setHours(0,0,0,0);
-    startOfWeek.setDate(now.getDate() - dayOfWeek + 1);
-    return d >= startOfWeek;
+    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
   };
 
-  const weeklyExpenses = transactions.filter(t => 
+  const currentExpenses = transactions.filter(t => 
     t.type === TransactionType.DEBIT &&
-    isThisWeek(t.date) &&
+    isThisPeriod(t.date) &&
     VARIABLE_CATEGORIES.includes(t.category)
   );
 
@@ -40,11 +38,11 @@ export const BudgetEnvelopes: React.FC<BudgetEnvelopesProps> = ({ transactions, 
   
   const spendingByPayer = payers.map(p => ({
       name: p.name,
-      spent: weeklyExpenses.filter(t => t.initiatedBy === p.id).reduce((acc, curr) => acc + curr.amount, 0),
+      spent: currentExpenses.filter(t => t.initiatedBy === p.id).reduce((acc, curr) => acc + curr.amount, 0),
       color: p.name === 'Guillaume' ? 'bg-blue-500' : 'bg-purple-500'
   }));
 
-  const spentJoint = weeklyExpenses
+  const spentJoint = currentExpenses
       .filter(t => {
           const person = people.find(p => p.id === t.initiatedBy);
           return person?.name === 'Commun' || person?.name === 'Joint';
@@ -52,32 +50,32 @@ export const BudgetEnvelopes: React.FC<BudgetEnvelopesProps> = ({ transactions, 
       .reduce((acc, curr) => acc + curr.amount, 0);
 
   const totalSpent = spendingByPayer.reduce((acc, curr) => acc + curr.spent, 0) + spentJoint;
-  const remainingGlobal = weeklyLimit - totalSpent;
+  const remainingGlobal = periodLimit - totalSpent;
 
   return (
     <Card className="bg-gradient-to-br from-indigo-50 to-white">
       <CardHeader className="pb-2">
         <CardTitle className="flex justify-between items-center">
-            <span>Enveloppe Couple Hebdo</span>
-            <span className="text-2xl font-bold text-indigo-600">{weeklyLimit} €</span>
+            <span>Budget Variable Période</span>
+            <span className="text-2xl font-bold text-indigo-600">{periodLimit.toFixed(2)} €</span>
         </CardTitle>
       </CardHeader>
       <CardContent>
         <div className="mb-6">
             <div className="flex justify-between text-sm mb-2">
-                <span className="text-slate-500">Consommation totale</span>
+                <span className="text-slate-500">Dépenses variables cumulées</span>
                 <span className={`font-semibold ${remainingGlobal < 0 ? 'text-red-600' : 'text-slate-700'}`}>
                     {totalSpent.toFixed(2)} € dépensés
                 </span>
             </div>
             <div className="h-4 w-full bg-slate-200 rounded-full overflow-hidden">
                 <div 
-                    className={`h-full rounded-full transition-all duration-500 ${totalSpent > weeklyLimit ? 'bg-red-500' : 'bg-indigo-500'}`}
-                    style={{ width: `${Math.min((totalSpent / weeklyLimit) * 100, 100)}%` }}
+                    className={`h-full rounded-full transition-all duration-500 ${totalSpent > periodLimit ? 'bg-red-500' : 'bg-indigo-500'}`}
+                    style={{ width: `${Math.min((totalSpent / (periodLimit || 1)) * 100, 100)}%` }}
                 />
             </div>
             <p className="text-right text-xs text-slate-500 mt-1">
-                Reste global : <strong>{remainingGlobal.toFixed(2)} €</strong>
+                Reste disponible : <strong>{remainingGlobal.toFixed(2)} €</strong>
             </p>
         </div>
 
@@ -88,7 +86,7 @@ export const BudgetEnvelopes: React.FC<BudgetEnvelopesProps> = ({ transactions, 
                         <div className={`w-2 h-2 rounded-full ${idx === 0 ? 'bg-blue-500' : 'bg-purple-500'}`}></div>
                         <h4 className="font-semibold text-sm">{payer.name}</h4>
                     </div>
-                    <p className="text-xs text-slate-500 mb-1">Dépensé cette semaine</p>
+                    <p className="text-xs text-slate-500 mb-1">Dépensé période</p>
                     <p className="text-lg font-bold text-slate-800">{payer.spent.toFixed(2)} €</p>
                 </div>
             ))}

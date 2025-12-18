@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { AppSettings } from '../../../types';
-import { WeeklyEnvelopeCard } from '../molecules/WeeklyEnvelopeCard';
+import { MonthlyEnvelopeCard } from '../molecules/WeeklyEnvelopeCard';
 import { PeriodSettingsCard } from '../molecules/PeriodSettingsCard';
 import { DatabaseConnectionCard } from '../molecules/DatabaseConnectionCard';
 
@@ -17,7 +17,7 @@ interface GlobalSettingsProps {
 export const GlobalSettings: React.FC<GlobalSettingsProps> = ({ settings, onUpdate, onResetConnection }) => {
   
   const updateEnvelope = (newEnv: number) => {
-    onUpdate({ ...settings, weekly_envelope: newEnv });
+    onUpdate({ ...settings, monthly_envelope: newEnv });
   };
 
   const updatePeriod = (type: any, value: number) => {
@@ -27,7 +27,7 @@ export const GlobalSettings: React.FC<GlobalSettingsProps> = ({ settings, onUpda
   return (
     <div className="max-w-5xl mx-auto space-y-6 pb-12 animate-in fade-in duration-500">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
-        <WeeklyEnvelopeCard 
+        <MonthlyEnvelopeCard 
           settings={settings} 
           onUpdate={updateEnvelope} 
         />

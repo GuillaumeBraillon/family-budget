@@ -81,9 +81,10 @@ export const mapDbPaidItem = (item: any): PaidItemDetails => ({
  * Mappe un enregistrement de la table 'app_settings' vers le type AppSettings.
  */
 export const mapDbSettings = (data: any): AppSettings => {
-  if (!data) return { weekly_envelope: 500, period_type: 'FIXED_DAYS', period_value: 7 };
+  if (!data) return { monthly_envelope: 2000, period_type: 'FIXED_DAYS', period_value: 7 };
   return {
-    weekly_envelope: Number(data.weekly_envelope || 500),
+    // Modification ici : On lit 'monthly_envelope' directement depuis la DB
+    monthly_envelope: Number(data.monthly_envelope || 2000),
     period_type: (data.period_type || 'FIXED_DAYS') as any,
     period_value: Number(data.period_value || 7)
   };

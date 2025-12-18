@@ -47,7 +47,7 @@ export interface Transaction {
 export type PeriodType = 'FIXED_DAYS' | 'CALENDAR_WEEKS' | 'CUSTOM_SPLIT';
 
 export interface AppSettings {
-  weekly_envelope: number;
+  monthly_envelope: number;
   period_type: PeriodType;
   period_value: number;
 }
@@ -115,4 +115,5 @@ export interface WeeklyBudget {
   items: PlannedItem[];
   startDate: number;
   endDate: number;
+  periodLimit?: number;
 }

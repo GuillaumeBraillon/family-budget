@@ -1,5 +1,4 @@
 
-
 import { supabase } from './supabase';
 import { Person, Account, CategoryDef, ExpenseConfig, IncomeConfig, PaidItemDetails, AppSettings } from '../types';
 
@@ -48,7 +47,8 @@ export const apiDeleteCategory = async (id: string) =>
 export const apiUpdateSettings = async (settings: AppSettings) => 
   supabase.from('app_settings').upsert({ 
     id: 'global', 
-    weekly_envelope: Number(settings.weekly_envelope),
+    // Modification ici : On écrit dans 'monthly_envelope' au lieu de 'weekly_envelope'
+    monthly_envelope: Number(settings.monthly_envelope), 
     period_type: settings.period_type,
     period_value: Math.floor(Number(settings.period_value))
   });
@@ -66,7 +66,6 @@ export const apiUpsertConfig = async (config: ExpenseConfig) =>
     beneficiary_id: config.beneficiaryId, 
     account_id: config.accountId, 
     day_of_month: config.dayOfMonth, 
-    // Fix: Using correct camelCase property names from ExpenseConfig type (was start_month/end_month)
     start_month: config.startMonth, 
     end_month: config.endMonth, 
     is_extra: config.isExtra 

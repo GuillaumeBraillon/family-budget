@@ -27,7 +27,7 @@ export const useBudget = () => {
     people: [] as Person[],
     paidItems: {} as Record<string, PaidItemDetails>,
     settings: { 
-      weekly_envelope: 500,
+      monthly_envelope: 2000,
       period_type: 'FIXED_DAYS',
       period_value: 7
     } as AppSettings
@@ -39,7 +39,6 @@ export const useBudget = () => {
       setError(null);
       const res = await fetchInitialData();
       
-      // On considère la base comme vide s'il n'y a ni personnes ni comptes configurés
       setIsDbEmpty(res.people.length === 0 && res.accounts.length === 0);
 
       setData({
@@ -62,10 +61,6 @@ export const useBudget = () => {
     loadData();
   }, [loadData]);
 
-  /**
-   * Action de pointage (Check) d'une opération.
-   * Met à jour l'état local immédiatement puis synchronise avec le serveur.
-   */
   const setPaidStatus = async (details: PaidItemDetails | null, instanceId: string) => {
     setData(prev => {
       const nextPaid = { ...prev.paidItems };
@@ -79,13 +74,10 @@ export const useBudget = () => {
       if (apiErr) throw apiErr;
     } catch (err: any) {
       setError(err.message || "Erreur lors de la mise à jour du statut");
-      loadData(); // Rechargement en cas d'échec pour resynchroniser l'état
+      loadData();
     }
   };
 
-  /**
-   * Met à jour les paramètres de l'application.
-   */
   const updateSettings = async (settings: AppSettings) => {
     try {
       const { error: apiErr } = await apiUpdateSettings(settings);
@@ -97,9 +89,6 @@ export const useBudget = () => {
     }
   };
 
-  /**
-   * Wrapper générique pour les actions CRUD afin de rafraîchir les données après modification.
-   */
   const wrapCrud = (fn: (...args: any[]) => Promise<any>) => async (...args: any[]) => {
     try {
       const { error: apiErr } = await fn(...args);

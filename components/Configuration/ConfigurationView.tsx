@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Settings, UserCircle, CreditCard, Tag, Sliders } from 'lucide-react';
 import { ConfigTab } from '../../hooks/useConfigurationUI';
@@ -50,7 +49,7 @@ export const ConfigurationView: React.FC<ConfigurationViewProps> = ({
             <>
               <InfoBox 
                 title="Paramètres Globaux"
-                description="Configurez ici les options de base de l'application, comme le montant de l'enveloppe hebdomadaire qui définit votre budget variable par défaut."
+                description="Configurez ici les options de base de l'application, comme le montant du budget mensuel qui sera réparti entre vos périodes d'échéancier."
                 icon={<Sliders size={18} />}
               />
               <GlobalSettings 
@@ -64,7 +63,7 @@ export const ConfigurationView: React.FC<ConfigurationViewProps> = ({
             <>
               <InfoBox 
                 title="Classification des flux"
-                description="Personnalisez vos catégories et sous-catégories pour organiser vos dépenses et revenus. Une bonne classification permet une analyse plus fine de vos habitudes de consommation."
+                description="Personnalisez vos catégories et sous-catégories pour organiser vos d'épenses et revenus. Une bonne classification permet une analyse plus fine de vos habitudes de consommation."
                 icon={<Tag size={18} />}
               />
               <CategoryManager 

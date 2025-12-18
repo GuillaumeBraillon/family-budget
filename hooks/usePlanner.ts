@@ -5,6 +5,7 @@ import { ExpenseConfig, IncomeConfig, PaidItemDetails, PlannedItem, WeeklyBudget
 
 /**
  * Gère la génération dynamique des périodes, le filtrage et les statistiques du Planner.
+ * Ajoute désormais la distribution du budget mensuel par période.
  */
 export const usePlanner = (
   configs: ExpenseConfig[],
@@ -15,25 +16,32 @@ export const usePlanner = (
   settings: AppSettings
 ) => {
   const currentMonthKey = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
+  const daysInMonth = getDaysInMonth(currentDate);
+  const monthlyBudget = settings.monthly_envelope || 0;
 
   const weeks = useMemo(() => {
     const res: WeeklyBudget[] = [];
-    const daysInMonth = getDaysInMonth(currentDate);
     const type = settings.period_type || 'FIXED_DAYS';
     const val = settings.period_value || 7;
 
-    // --- 1. GÉNÉRATION DES DÉCOUPAGES (PERIODES) ---
+    const createPeriod = (start: number, end: number, num: number) => {
+      const periodDays = end - start + 1;
+      const distributedLimit = (monthlyBudget / daysInMonth) * periodDays;
+      return {
+        weekNumber: num,
+        label: `Période ${num} (${start} au ${end})`,
+        items: [],
+        startDate: start,
+        endDate: end,
+        periodLimit: distributedLimit
+      };
+    };
+
     if (type === 'FIXED_DAYS') {
       for (let start = 1; start <= daysInMonth; start += val) {
         const isLast = (start + val - 1) >= daysInMonth;
         const end = isLast ? daysInMonth : (start + val - 1);
-        res.push({
-          weekNumber: res.length + 1,
-          label: `Période ${res.length + 1} (${start} au ${end})`,
-          items: [],
-          startDate: start,
-          endDate: end
-        });
+        res.push(createPeriod(start, end, res.length + 1));
         if (isLast) break;
       }
     } else if (type === 'CALENDAR_WEEKS') {
@@ -46,14 +54,7 @@ export const usePlanner = (
         const nextWeek = new Date(weekDate);
         nextWeek.setDate(nextWeek.getDate() + 6);
         const end = getDate(nextWeek > monthEnd ? monthEnd : nextWeek);
-        
-        res.push({
-          weekNumber: idx + 1,
-          label: `Semaine ${idx + 1} (${start} au ${end})`,
-          items: [],
-          startDate: start,
-          endDate: end
-        });
+        res.push(createPeriod(start, end, idx + 1));
       });
     } else if (type === 'CUSTOM_SPLIT') {
       const parts = Math.max(1, Math.min(daysInMonth, val));
@@ -62,23 +63,15 @@ export const usePlanner = (
       for (let i = 0; i < parts; i++) {
         const start = i * daysPerPart + 1;
         const end = (i === parts - 1) ? daysInMonth : (i + 1) * daysPerPart;
-        res.push({
-          weekNumber: i + 1,
-          label: `Période ${i + 1} (${start} au ${end})`,
-          items: [],
-          startDate: start,
-          endDate: end
-        });
+        res.push(createPeriod(start, end, i + 1));
       }
     }
 
-    // --- 2. RÉPARTITION DES ITEMS DANS LES PÉRIODES ---
     const assignToPeriod = (item: PlannedItem) => {
       const period = res.find(p => item.day >= p.startDate && item.day <= p.endDate);
       if (period) period.items.push(item);
     };
 
-    // Dépenses
     configs.filter(conf => {
       if (!conf.startMonth) return true;
       if (currentMonthKey < conf.startMonth) return false;
@@ -97,7 +90,6 @@ export const usePlanner = (
       });
     });
 
-    // Revenus
     incomeConfigs.forEach(inc => {
       const instanceId = `${inc.id}-${currentMonthKey}`;
       const paid = paidItems[instanceId];
@@ -112,7 +104,7 @@ export const usePlanner = (
 
     res.forEach(w => w.items.sort((a, b) => a.day - b.day));
     return res;
-  }, [configs, incomeConfigs, paidItems, currentMonthKey, settings, currentDate]);
+  }, [configs, incomeConfigs, paidItems, currentMonthKey, settings, currentDate, daysInMonth, monthlyBudget]);
 
   const filteredWeeks = useMemo(() => {
     if (!searchQuery.trim()) return weeks;
@@ -124,7 +116,6 @@ export const usePlanner = (
   }, [weeks, searchQuery]);
 
   const getStats = (activeWeek: number) => {
-    // S'assurer que activeWeek est toujours valide si le découpage change
     const safeActiveWeek = weeks.some(w => w.weekNumber === activeWeek) ? activeWeek : 1;
     const currentWeek = filteredWeeks.find(w => w.weekNumber === safeActiveWeek);
     const currentItems = currentWeek?.items || [];
@@ -171,7 +162,8 @@ export const usePlanner = (
       currentPaidExpenses: currentItems.reduce((acc, i) => i.isPaid && i.type === 'EXPENSE' ? acc + i.amount : acc, 0),
       byAccount,
       expByBeneficiary,
-      incByBeneficiary
+      incByBeneficiary,
+      periodLimit: currentWeek?.periodLimit || 0
     };
   };
 
