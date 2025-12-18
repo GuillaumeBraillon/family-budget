@@ -3,10 +3,6 @@ import { useMemo } from 'react';
 import { startOfMonth, endOfMonth, eachWeekOfInterval, getDate, getDaysInMonth } from 'date-fns';
 import { ExpenseConfig, IncomeConfig, PaidItemDetails, PlannedItem, WeeklyBudget, AppSettings } from '../types';
 
-/**
- * Gère la génération dynamique des périodes, le filtrage et les statistiques du Planner.
- * Ajoute désormais la distribution du budget mensuel par période.
- */
 export const usePlanner = (
   configs: ExpenseConfig[],
   incomeConfigs: IncomeConfig[],
@@ -121,54 +117,49 @@ export const usePlanner = (
     const currentItems = currentWeek?.items || [];
     const previousUnpaid = filteredWeeks.filter(w => w.weekNumber < safeActiveWeek).flatMap(w => w.items).filter(i => !i.isPaid);
 
-    const calcRemaining = (items: PlannedItem[]) => items.reduce((acc, i) => i.type === 'EXPENSE' ? acc + i.amount : acc - i.amount, 0);
+    const calcNet = (items: PlannedItem[], useOriginal = false) => 
+      items.reduce((acc, i) => {
+        const val = useOriginal ? i.originalAmount : i.amount;
+        return i.type === 'EXPENSE' ? acc + val : acc - val;
+      }, 0);
 
-    const byAccount: Record<string, { total: number, remaining: number, planned: number, paid: number }> = {};
-    const expByBeneficiary: Record<string, { planned: number, paid: number }> = {};
-    const incByBeneficiary: Record<string, { planned: number, paid: number }> = {};
+    const itemsPaidInPeriod = currentItems.filter(i => i.isPaid);
+
+    // Calcul par bénéficiaire et compte pour DetailedAnalysis
+    const byAccount: Record<string, any> = {};
+    const expByBeneficiary: Record<string, any> = {};
+    const incByBeneficiary: Record<string, any> = {};
 
     [...currentItems, ...previousUnpaid].forEach(item => {
       if (!byAccount[item.accountId]) byAccount[item.accountId] = { total: 0, remaining: 0, planned: 0, paid: 0 };
-      
       const isCurrent = currentItems.some(ci => ci.instanceId === item.instanceId);
-      
       if (isCurrent) {
-        const targetBeneficiary = item.type === 'EXPENSE' ? expByBeneficiary : incByBeneficiary;
-        if (!targetBeneficiary[item.beneficiaryId]) targetBeneficiary[item.beneficiaryId] = { planned: 0, paid: 0 };
-        
-        targetBeneficiary[item.beneficiaryId].planned += item.originalAmount;
+        const targetB = item.type === 'EXPENSE' ? expByBeneficiary : incByBeneficiary;
+        if (!targetB[item.beneficiaryId]) targetB[item.beneficiaryId] = { planned: 0, paid: 0 };
+        targetB[item.beneficiaryId].planned += item.originalAmount;
         byAccount[item.accountId].planned += (item.type === 'EXPENSE' ? item.originalAmount : -item.originalAmount);
-        
         if (item.isPaid) {
-          targetBeneficiary[item.beneficiaryId].paid += item.amount;
+          targetB[item.beneficiaryId].paid += item.amount;
           byAccount[item.accountId].paid += (item.type === 'EXPENSE' ? item.amount : -item.amount);
         }
-
-        const impact = item.type === 'EXPENSE' ? item.amount : -item.amount;
-        byAccount[item.accountId].total += impact;
+        byAccount[item.accountId].total += (item.type === 'EXPENSE' ? item.amount : -item.amount);
       }
-      
       if (!item.isPaid) {
-        const impact = item.type === 'EXPENSE' ? item.amount : -item.amount;
-        byAccount[item.accountId].remaining += impact;
+        byAccount[item.accountId].remaining += (item.type === 'EXPENSE' ? item.amount : -item.amount);
       }
     });
 
     return {
-      totalOriginal: currentItems.reduce((acc, i) => i.type === 'EXPENSE' ? acc + i.originalAmount : acc - i.originalAmount, 0),
-      currentRemaining: calcRemaining(currentItems.filter(i => !i.isPaid)),
-      previousRemaining: calcRemaining(previousUnpaid),
-      remainingToPay: calcRemaining(currentItems.filter(i => !i.isPaid)) + calcRemaining(previousUnpaid),
-      // Net payé : Dépenses - Revenus
-      currentPaidExpenses: currentItems.reduce((acc, i) => {
-        if (!i.isPaid) return acc;
-        return i.type === 'EXPENSE' ? acc + i.amount : acc - i.amount;
-      }, 0),
-      // Net prévu des éléments payés : Dépenses prévues - Revenus prévus (seulement pour ce qui est payé)
-      currentPaidPlanned: currentItems.reduce((acc, i) => {
-        if (!i.isPaid) return acc;
-        return i.type === 'EXPENSE' ? acc + i.originalAmount : acc - i.originalAmount;
-      }, 0),
+      // RÉEL (Carte 1)
+      paidRealPeriod: calcNet(itemsPaidInPeriod, false), 
+      remainingRealPeriod: calcNet(currentItems.filter(i => !i.isPaid), false), 
+      delaysRealPrevious: calcNet(previousUnpaid, false),
+      totalToRegularizeActual: calcNet(currentItems.filter(i => !i.isPaid), false) + calcNet(previousUnpaid, false),
+      
+      // PRÉVU (Carte 2)
+      totalPlannedPeriod: calcNet(currentItems, true),
+      paidOriginalValue: calcNet(itemsPaidInPeriod, true),
+      
       byAccount,
       expByBeneficiary,
       incByBeneficiary,

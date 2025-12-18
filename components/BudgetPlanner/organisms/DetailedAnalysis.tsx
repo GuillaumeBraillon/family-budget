@@ -1,6 +1,5 @@
 
 import React from 'react';
-// Fix: Removed non-existent 'Sum' icon and unused icons from lucide-react
 import { Users, Wallet, Check, TrendingUp } from 'lucide-react';
 import { Card } from '../../ui/Card';
 import { Person, Account } from '../../../types';
@@ -11,29 +10,15 @@ interface DetailedAnalysisProps {
   accounts: Account[];
 }
 
-/**
- * Section d'analyse détaillée.
- * Affiche le bilan financier par personne et le total global de la période.
- */
 export const DetailedAnalysis: React.FC<DetailedAnalysisProps> = ({ stats, people, accounts }) => {
-  
   const hasDiff = (paid: number, planned: number) => Math.abs(paid - planned) > 0.01;
 
-  /**
-   * Calcule et affiche l'écart de manière intuitive.
-   * Pour une dépense : payer MOINS est positif (Vert).
-   * Pour un revenu : gagner PLUS est positif (Vert).
-   */
   const renderVariance = (paid: number, planned: number, isExpense: boolean) => {
     const rawDiff = paid - planned;
     if (Math.abs(rawDiff) <= 0.01) return null;
-
-    // Pour une dépense, si paid > planned, c'est un dépassement (négatif pour le budget)
-    // Pour un revenu, si paid > planned, c'est un gain (positif pour le budget)
     const budgetImpact = isExpense ? -rawDiff : rawDiff;
     const isGood = budgetImpact > 0;
     const sign = isGood ? '+' : '';
-
     return (
       <span className={`text-[9px] font-bold px-1 rounded ${isGood ? 'text-emerald-600 bg-emerald-50' : 'text-rose-600 bg-rose-50'}`}>
         {sign}{budgetImpact.toFixed(2)}
@@ -41,7 +26,6 @@ export const DetailedAnalysis: React.FC<DetailedAnalysisProps> = ({ stats, peopl
     );
   };
 
-  // Préparation des données par personne
   const beneficiaryIds = Array.from(new Set([
     ...Object.keys(stats.expByBeneficiary || {}),
     ...Object.keys(stats.incByBeneficiary || {})
@@ -51,7 +35,6 @@ export const DetailedAnalysis: React.FC<DetailedAnalysisProps> = ({ stats, peopl
     const exp = stats.expByBeneficiary?.[id] || { planned: 0, paid: 0 };
     const inc = stats.incByBeneficiary?.[id] || { planned: 0, paid: 0 };
     const person = people.find(p => p.id === id);
-    
     return {
         id,
         name: person?.name || 'Inconnu',
@@ -63,7 +46,6 @@ export const DetailedAnalysis: React.FC<DetailedAnalysisProps> = ({ stats, peopl
     };
   }).sort((a, b) => b.netPaid - a.netPaid);
 
-  // Totaux globaux
   const totals = personSummary.reduce((acc, p) => ({
     income: acc.income + p.income.paid,
     expense: acc.expense + p.expense.paid,
@@ -72,14 +54,10 @@ export const DetailedAnalysis: React.FC<DetailedAnalysisProps> = ({ stats, peopl
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-      {/* BILAN PAR PERSONNE */}
       <Card className="p-4 shadow-sm lg:col-span-2">
-        <div className="flex justify-between items-center mb-4">
-            <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
-                <Users size={12}/> Flux de la Période
-            </h3>
-        </div>
-        
+        <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-1.5">
+          <Users size={12}/> Flux de la Période
+        </h3>
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead>
@@ -126,7 +104,6 @@ export const DetailedAnalysis: React.FC<DetailedAnalysisProps> = ({ stats, peopl
                 );
               })}
             </tbody>
-            {/* LIGNE DE TOTAL GLOBAL */}
             <tfoot>
               <tr className="bg-slate-900 text-white border-t-2 border-indigo-500">
                 <td className="py-3 px-3 rounded-l-lg font-black uppercase text-[10px] flex items-center gap-2">
@@ -144,8 +121,6 @@ export const DetailedAnalysis: React.FC<DetailedAnalysisProps> = ({ stats, peopl
           </table>
         </div>
       </Card>
-
-      {/* PAR COMPTE */}
       <Card className="p-4 shadow-sm relative overflow-hidden">
         <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-1.5">
           <Wallet size={12}/> État des Comptes
@@ -160,9 +135,7 @@ export const DetailedAnalysis: React.FC<DetailedAnalysisProps> = ({ stats, peopl
             return (
               <div key={account_id} className="border-b border-slate-50 pb-3 last:border-0 last:pb-0">
                 <div className="flex justify-between items-start mb-1">
-                    <span className="font-semibold text-slate-700 truncate pr-2 text-xs">
-                        {displayName}
-                    </span>
+                    <span className="font-semibold text-slate-700 truncate pr-2 text-xs">{displayName}</span>
                     <div className="text-right">
                         <span className="font-bold text-slate-900 text-xs">{s.paid.toFixed(2)} €</span>
                         {hasDiff(s.paid, s.planned) && (
@@ -173,7 +146,6 @@ export const DetailedAnalysis: React.FC<DetailedAnalysisProps> = ({ stats, peopl
                         )}
                     </div>
                 </div>
-                
                 <div className="flex justify-between items-center mt-2">
                     {s.remaining !== 0 ? (
                         <span className="text-[9px] text-amber-600 font-bold bg-amber-50 px-1.5 py-0.5 rounded border border-amber-100/50">
