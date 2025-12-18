@@ -102,7 +102,7 @@ export const StatsSummary: React.FC<StatsSummaryProps> = ({ stats, accounts }) =
               : (isOverBudget ? 'bg-rose-50 border-rose-200' : 'bg-emerald-50 border-emerald-200')
           }`}>
             <div className={`p-2 rounded-lg ${isOverBudget ? 'bg-rose-100 text-rose-600' : 'bg-emerald-100 text-emerald-600'}`}>
-                {/* Inversion des icônes : Économie = Positif = Flèche Haut (Gain de performance) */}
+                {/* LOGIQUE : Économie = Positif = Flèche Haut. Dépassement = Négatif = Flèche Bas. */}
                 {isOverBudget ? <TrendingDown size={18} /> : <TrendingUp size={18} />}
             </div>
             <div className="flex-1 flex items-center justify-between">
