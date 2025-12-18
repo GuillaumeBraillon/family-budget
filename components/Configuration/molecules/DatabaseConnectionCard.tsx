@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Database, LogOut, RefreshCw, Hash, Key, AlertTriangle, X, Check, ShieldCheck } from 'lucide-react';
+import { Database, LogOut, RefreshCw, Hash, Key, AlertTriangle, X, Check, ShieldCheck, HardDrive } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../ui/Card';
 import { getSupabaseConfig } from '../../../services/supabase';
 
@@ -21,12 +21,16 @@ export const DatabaseConnectionCard: React.FC<DatabaseConnectionCardProps> = ({ 
         </CardTitle>
         {!showConfirm && (
           <div className="flex items-center gap-2">
-            {isFromEnv && (
-              <span className="text-[10px] font-bold bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full flex items-center gap-1">
-                <ShieldCheck size={10} /> SYSTEME (.env)
+            {isFromEnv ? (
+              <span className="text-[10px] font-bold bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full flex items-center gap-1 border border-indigo-200">
+                <ShieldCheck size={10} /> SOURCE : SYSTÈME (.env)
+              </span>
+            ) : (
+              <span className="text-[10px] font-bold bg-slate-100 text-slate-600 px-2 py-1 rounded-full flex items-center gap-1 border border-slate-200">
+                <HardDrive size={10} /> SOURCE : NAVIGATEUR
               </span>
             )}
-            <span className="text-[10px] font-bold bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full flex items-center gap-1">
+            <span className="text-[10px] font-bold bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full flex items-center gap-1 border border-emerald-200">
               <RefreshCw size={10} className="animate-spin-slow" /> CONNECTÉ
             </span>
           </div>
@@ -83,11 +87,11 @@ export const DatabaseConnectionCard: React.FC<DatabaseConnectionCardProps> = ({ 
             </div>
 
             <div className="flex flex-col justify-center bg-indigo-50/30 rounded-xl p-4 border border-indigo-100/50">
-              <h4 className="text-xs font-bold text-indigo-900 mb-2">Source des paramètres</h4>
+              <h4 className="text-xs font-bold text-indigo-900 mb-2">Origine de la configuration</h4>
               <p className="text-[11px] text-indigo-700 leading-relaxed mb-4">
                 {isFromEnv 
-                  ? "Les réglages sont verrouillés par le fichier de configuration système (.env). Pour les modifier, éditez vos variables d'environnement."
-                  : "Les réglages sont stockés dans votre navigateur. Vous pouvez les réinitialiser pour changer de projet Supabase."}
+                  ? "Les réglages sont verrouillés par le fichier de configuration système (.env). Pour les modifier, éditez vos variables d'environnement sur votre serveur ou fichier local."
+                  : "Les réglages sont stockés localement dans votre navigateur (LocalStorage). Vous pouvez les réinitialiser pour changer de projet Supabase via l'écran d'accueil."}
               </p>
               {!isFromEnv && (
                 <button 
