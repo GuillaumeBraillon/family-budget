@@ -1,8 +1,19 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Account, ExpenseConfig, IncomeConfig, CategoryDef, Person, PaidItemDetails, AppSettings } from '../types';
-import { fetchInitialData, apiUpsertConfig, apiDeleteConfig, apiUpsertIncome, apiDeleteIncome, apiUpsertCategory, apiDeleteCategory, apiUpsertPerson, apiDeletePerson, apiUpsertAccount, apiDeleteAccount, apiSetPaidStatus, apiUpdateSettings, seedDatabase } from '../services/api';
+import { 
+  fetchInitialData, 
+  apiUpsertConfig, apiDeleteConfig, 
+  apiUpsertIncome, apiDeleteIncome, 
+  apiUpsertCategory, apiDeleteCategory, 
+  apiUpsertPerson, apiDeletePerson, 
+  apiUpsertAccount, apiDeleteAccount, 
+  apiSetPaidStatus, apiUpdateSettings 
+} from '../services/api';
 
+/**
+ * Hook central gérant l'état global des finances et les actions CRUD synchronisées avec Supabase.
+ */
 export const useBudget = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -28,11 +39,8 @@ export const useBudget = () => {
       setError(null);
       const res = await fetchInitialData();
       
-      if (res.people.length === 0 && res.accounts.length === 0) {
-        setIsDbEmpty(true);
-      } else {
-        setIsDbEmpty(false);
-      }
+      // On considère la base comme vide s'il n'y a ni personnes ni comptes configurés
+      setIsDbEmpty(res.people.length === 0 && res.accounts.length === 0);
 
       setData({
         accounts: res.accounts,
@@ -54,17 +62,10 @@ export const useBudget = () => {
     loadData();
   }, [loadData]);
 
-  const handleSeed = async () => {
-    setLoading(true);
-    try {
-      await seedDatabase();
-      await loadData();
-    } catch (err: any) {
-      setError(err.message || "Erreur lors de l'injection des données");
-      setLoading(false);
-    }
-  };
-
+  /**
+   * Action de pointage (Check) d'une opération.
+   * Met à jour l'état local immédiatement puis synchronise avec le serveur.
+   */
   const setPaidStatus = async (details: PaidItemDetails | null, instanceId: string) => {
     setData(prev => {
       const nextPaid = { ...prev.paidItems };
@@ -78,21 +79,34 @@ export const useBudget = () => {
       if (apiErr) throw apiErr;
     } catch (err: any) {
       setError(err.message || "Erreur lors de la mise à jour du statut");
+      loadData(); // Rechargement en cas d'échec pour resynchroniser l'état
+    }
+  };
+
+  /**
+   * Met à jour les paramètres de l'application.
+   */
+  const updateSettings = async (settings: AppSettings) => {
+    try {
+      const { error: apiErr } = await apiUpdateSettings(settings);
+      if (apiErr) throw apiErr;
+      setData(prev => ({ ...prev, settings }));
+    } catch (err: any) {
+      setError(err.message || "Erreur lors de la mise à jour des paramètres");
       loadData();
     }
   };
 
-  const updateSettings = async (settings: AppSettings) => {
+  /**
+   * Wrapper générique pour les actions CRUD afin de rafraîchir les données après modification.
+   */
+  const wrapCrud = (fn: (...args: any[]) => Promise<any>) => async (...args: any[]) => {
     try {
-      const { error: apiErr } = await apiUpdateSettings(settings);
-      if (apiErr) {
-          throw apiErr;
-      } else {
-          setData(prev => ({ ...prev, settings }));
-      }
+      const { error: apiErr } = await fn(...args);
+      if (apiErr) throw apiErr;
+      await loadData();
     } catch (err: any) {
-      setError(err.message || "Erreur lors de la mise à jour des paramètres");
-      loadData();
+      setError(err.message || "Erreur lors de l'opération");
     }
   };
 
@@ -103,19 +117,18 @@ export const useBudget = () => {
     isDbEmpty,
     actions: {
       loadData,
-      handleSeed,
       setPaidStatus,
       updateSettings,
-      upsertConfig: apiUpsertConfig,
-      deleteConfig: apiDeleteConfig,
-      upsertIncome: apiUpsertIncome,
-      deleteIncome: apiDeleteIncome,
-      upsertCategory: apiUpsertCategory,
-      deleteCategory: apiDeleteCategory,
-      upsertPerson: apiUpsertPerson,
-      deletePerson: apiDeletePerson,
-      upsertAccount: apiUpsertAccount,
-      deleteAccount: apiDeleteAccount,
+      upsertConfig: wrapCrud(apiUpsertConfig),
+      deleteConfig: wrapCrud(apiDeleteConfig),
+      upsertIncome: wrapCrud(apiUpsertIncome),
+      deleteIncome: wrapCrud(apiDeleteIncome),
+      upsertCategory: wrapCrud(apiUpsertCategory),
+      deleteCategory: wrapCrud(apiDeleteCategory),
+      upsertPerson: wrapCrud(apiUpsertPerson),
+      deletePerson: wrapCrud(apiDeletePerson),
+      upsertAccount: wrapCrud(apiUpsertAccount),
+      deleteAccount: wrapCrud(apiDeleteAccount),
     }
   };
 };
