@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { CalendarClock, Split, TableProperties, Info, Save } from 'lucide-react';
+import { CalendarClock, Split, TableProperties, Save } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../ui/Card';
 import { AppSettings, PeriodType } from '../../../types';
 
@@ -23,7 +23,7 @@ export const PeriodSettingsCard: React.FC<PeriodSettingsCardProps> = ({ settings
   const hasChanges = type !== settings.period_type || val !== settings.period_value;
 
   return (
-    <Card className="shadow-sm border-slate-200">
+    <Card className="shadow-sm border-slate-200 h-full">
       <CardHeader className="bg-slate-50/50">
         <CardTitle className="text-base flex items-center gap-2">
           <CalendarClock size={18} className="text-indigo-600" />
@@ -64,15 +64,15 @@ export const PeriodSettingsCard: React.FC<PeriodSettingsCardProps> = ({ settings
                 min="1" max="31"
                 value={val} 
                 onChange={e => setVal(parseInt(e.target.value) || 7)}
-                className="w-full p-2 border border-slate-300 rounded-lg text-sm bg-white outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full p-2.5 border border-slate-300 rounded-lg text-sm bg-white outline-none focus:ring-2 focus:ring-indigo-500"
               />
               <p className="text-[10px] text-slate-500 italic">Exemple : 7 jours = 4 périodes (le reste au dernier bloc).</p>
             </div>
           )}
 
           {type === 'CALENDAR_WEEKS' && (
-            <p className="text-sm text-slate-600 leading-relaxed">
-              L'échéancier suit les semaines du calendrier (lundi au dimanche). Pratique si vous payez vos courses hebdomadairement.
+            <p className="text-sm text-slate-600 leading-relaxed py-2">
+              L'échéancier suit les semaines du calendrier (lundi au dimanche). Idéal pour un suivi hebdomadaire classique.
             </p>
           )}
 
@@ -84,7 +84,7 @@ export const PeriodSettingsCard: React.FC<PeriodSettingsCardProps> = ({ settings
                 min="1" max="10"
                 value={val} 
                 onChange={e => setVal(parseInt(e.target.value) || 2)}
-                className="w-full p-2 border border-slate-300 rounded-lg text-sm bg-white outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full p-2.5 border border-slate-300 rounded-lg text-sm bg-white outline-none focus:ring-2 focus:ring-indigo-500"
               />
               <p className="text-[10px] text-slate-500 italic">Exemple : 2 parts = Le mois divisé en deux (quatorzaine).</p>
             </div>
@@ -94,8 +94,8 @@ export const PeriodSettingsCard: React.FC<PeriodSettingsCardProps> = ({ settings
         <button 
           onClick={handleSave}
           disabled={!hasChanges && !isSaved}
-          className={`w-full py-2.5 rounded-xl font-bold transition-all flex items-center justify-center gap-2 text-sm ${
-            isSaved ? 'bg-emerald-500 text-white' : 'bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed'
+          className={`w-full py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2 text-sm ${
+            isSaved ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-100' : 'bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-slate-100'
           }`}
         >
           {isSaved ? 'Découpage mis à jour !' : <><Save size={16} /> Enregistrer le découpage</>}

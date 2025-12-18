@@ -10,8 +10,8 @@ interface GlobalSettingsProps {
 }
 
 /**
- * Organisme orchestrant les réglages globaux de l'application.
- * Affiche les cartes de configuration horizontalement sur desktop et verticalement sur mobile.
+ * Organisme orchestrant les réglages globaux.
+ * Organisé horizontalement pour maximiser la visibilité sur desktop.
  */
 export const GlobalSettings: React.FC<GlobalSettingsProps> = ({ settings, onUpdate }) => {
   
@@ -24,22 +24,16 @@ export const GlobalSettings: React.FC<GlobalSettingsProps> = ({ settings, onUpda
   };
 
   return (
-    <div className="max-w-4xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-6 pb-12 animate-in fade-in duration-500 items-start">
-      {/* Carte 1 : Enveloppe Hebdomadaire */}
-      <div className="h-full">
-        <WeeklyEnvelopeCard 
-          settings={settings} 
-          onUpdate={updateEnvelope} 
-        />
-      </div>
+    <div className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-6 pb-12 animate-in fade-in duration-500 items-stretch">
+      <WeeklyEnvelopeCard 
+        settings={settings} 
+        onUpdate={updateEnvelope} 
+      />
 
-      {/* Carte 2 : Découpage de l'Échéancier */}
-      <div className="h-full">
-        <PeriodSettingsCard 
-          settings={settings} 
-          onUpdate={updatePeriod} 
-        />
-      </div>
+      <PeriodSettingsCard 
+        settings={settings} 
+        onUpdate={updatePeriod} 
+      />
     </div>
   );
 };
