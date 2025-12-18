@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useBudget } from './hooks/useBudget';
 import { WelcomeEmptyState } from './components/Dashboard/WelcomeEmptyState';
 import { DashboardPlaceholder } from './components/Dashboard/DashboardPlaceholder';
@@ -7,41 +7,49 @@ import { BudgetPlanner } from './components/BudgetPlanner/BudgetPlanner';
 import { ConfigurationView } from './components/Configuration/ConfigurationView';
 import { Header } from './components/Layout/Header';
 import { ConfigTab } from './hooks/useConfigurationUI';
+import { SupabaseSetup } from './components/Configuration/SupabaseSetup';
+import { isSupabaseConfigured, resetSupabaseConfig } from './services/supabase';
 import { Loader2, AlertTriangle } from 'lucide-react';
 
-/** 
- * Les vues possibles de l'application 
- */
 type ViewState = 'dashboard' | 'planner' | 'config';
 
-/**
- * Composant Racine de l'Application "Budget Familial".
- * 
- * Orchestre l'état global et la navigation. Le Dashboard est actuellement en 
- * mode "Placeholder" en attendant l'implémentation des calculs réels.
- * 
- * @returns {React.ReactElement}
- */
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<ViewState>('dashboard');
   const [activeConfigTab, setActiveConfigTab] = useState<ConfigTab>('general');
+  const [configured, setConfigured] = useState(isSupabaseConfigured());
   
   const { 
     accounts, configs, incomeConfigs, categories, people, paidItems, settings,
     loading, error, isDbEmpty, actions 
   } = useBudget();
 
-  /**
-   * Navigation assistée vers la configuration
-   */
+  // Déclenche le chargement initial si on vient d'être configuré
+  useEffect(() => {
+    if (configured) {
+      actions.loadData();
+    }
+  }, [configured, actions.loadData]);
+
+  const handleConfigured = () => {
+    setConfigured(true);
+    setCurrentView('dashboard');
+  };
+
+  const handleResetConnection = () => {
+    resetSupabaseConfig();
+    setConfigured(false);
+    setCurrentView('dashboard'); // Reset de la vue par défaut
+  };
+
   const navigateToConfig = (tab: ConfigTab) => {
     setCurrentView('config');
     setActiveConfigTab(tab);
   };
 
-  /**
-   * Rendu de l'état de chargement initial
-   */
+  if (!configured) {
+    return <SupabaseSetup onConfigured={handleConfigured} />;
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
@@ -58,9 +66,8 @@ const App: React.FC = () => {
       <Header currentView={currentView} onViewChange={setCurrentView} />
 
       <main className="max-w-5xl mx-auto px-4 py-8">
-        {/* Barre de notification d'erreur */}
         {error !== null && (
-          <div className="mb-6 p-4 bg-red-50 text-red-700 border border-red-200 rounded-xl flex gap-3 items-center shadow-sm">
+          <div className="mb-6 p-4 bg-red-50 text-red-700 border border-red-200 rounded-xl flex gap-3 items-center shadow-sm animate-in slide-in-from-top-2">
             <AlertTriangle size={20} className="flex-shrink-0" />
             <div className="flex flex-col">
               <span className="text-[10px] font-bold uppercase opacity-60">Erreur de synchronisation</span>
@@ -75,12 +82,9 @@ const App: React.FC = () => {
           </div>
         )}
 
-        {/* État initial : L'utilisateur n'a rien configuré */}
         {isDbEmpty && !loading && !error && (
           <WelcomeEmptyState onStartConfig={() => navigateToConfig('family')} />
         )}
-
-        {/* --- ROUTAGE DES VUES --- */}
 
         {currentView === 'dashboard' && (
           <DashboardPlaceholder 
@@ -120,12 +124,13 @@ const App: React.FC = () => {
               accounts={accounts} 
               settings={settings}
               activeTab={activeConfigTab}
-              // Correcting the setter name from setActiveTab to setActiveConfigTab to fix the "Cannot find name 'setActiveTab'" error
+              // Fix: Use the correct state setter name 'setActiveConfigTab' instead of 'setActiveTab'
               setActiveTab={setActiveConfigTab}
               onUpdateCategories={actions.upsertCategory as any} 
               onUpdatePeople={actions.upsertPerson as any} 
               onUpdateAccounts={actions.upsertAccount as any}
               onUpdateSettings={actions.updateSettings}
+              onResetConnection={handleResetConnection}
             />
           </div>
         )}

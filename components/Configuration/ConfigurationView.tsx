@@ -24,13 +24,15 @@ interface ConfigurationViewProps {
   onUpdatePeople: (newPeople: Person[]) => void;
   onUpdateAccounts: (newAccounts: Account[]) => void;
   onUpdateSettings: (newSettings: AppSettings) => void;
+  onResetConnection: () => void;
 }
 
 export const ConfigurationView: React.FC<ConfigurationViewProps> = ({ 
   categories, people, accounts, settings,
   activeTab, setActiveTab,
   onUpdateCategories,
-  onUpdatePeople, onUpdateAccounts, onUpdateSettings
+  onUpdatePeople, onUpdateAccounts, onUpdateSettings,
+  onResetConnection
 }) => {
   return (
     <div className="space-y-6">
@@ -51,7 +53,11 @@ export const ConfigurationView: React.FC<ConfigurationViewProps> = ({
                 description="Configurez ici les options de base de l'application, comme le montant de l'enveloppe hebdomadaire qui définit votre budget variable par défaut."
                 icon={<Sliders size={18} />}
               />
-              <GlobalSettings settings={settings} onUpdate={onUpdateSettings} />
+              <GlobalSettings 
+                settings={settings} 
+                onUpdate={onUpdateSettings} 
+                onResetConnection={onResetConnection}
+              />
             </>
         )}
         {activeTab === 'categories' && (
