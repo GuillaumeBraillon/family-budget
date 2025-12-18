@@ -69,8 +69,8 @@ export const SupabaseSetup: React.FC<SupabaseSetupProps> = ({ onConfigured }) =>
                 </h4>
                 <p className="text-xs text-slate-600 leading-relaxed">
                   Dans Supabase :<br/>
-                  1. <strong>Project Settings > General</strong> pour le <strong>Project ID</strong>.<br/>
-                  2. <strong>Project Settings > API</strong> pour la <strong>Publishable key</strong> (anon public).
+                  1. <strong>Project Settings {'>'} General</strong> pour le <strong>Project ID</strong>.<br/>
+                  2. <strong>Project Settings {'>'} API</strong> pour la <strong>Publishable key</strong> (anon public).
                 </p>
               </div>
 
