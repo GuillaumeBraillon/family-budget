@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { usePlanner } from '../../hooks/usePlanner';
 import { usePlannerUI } from '../../hooks/usePlannerUI';
-import { ExpenseConfig, IncomeConfig, Account, Person, PaidItemDetails, PlannedItem, CategoryDef } from '../../types';
+import { ExpenseConfig, IncomeConfig, Account, Person, PaidItemDetails, PlannedItem, CategoryDef, AppSettings } from '../../types';
 import { DetailedAnalysis } from './organisms/DetailedAnalysis';
 import { StatsSummary } from './organisms/StatsSummary';
 import { OperationsList } from './organisms/OperationsList';
@@ -21,6 +21,7 @@ interface BudgetPlannerProps {
   accounts: Account[];
   people: Person[]; 
   paidItems: Record<string, PaidItemDetails>; 
+  settings: AppSettings;
   onTogglePaid: (details: PaidItemDetails | null, instanceId: string) => void;
   onAddConfig: (c: ExpenseConfig) => void;
   onUpdateConfig: (c: ExpenseConfig) => void;
@@ -33,16 +34,19 @@ interface BudgetPlannerProps {
 type PlannerViewMode = 'calendar' | 'models';
 
 export const BudgetPlanner: React.FC<BudgetPlannerProps> = ({ 
-  configs, incomeConfigs, categories, accounts, people, paidItems, 
+  configs, incomeConfigs, categories, accounts, people, paidItems, settings,
   onTogglePaid, onAddConfig, onUpdateConfig, onDeleteConfig,
   onAddIncome, onUpdateIncome, onDeleteIncome
 }) => {
   const ui = usePlannerUI();
   const [viewMode, setViewMode] = useState<PlannerViewMode>('calendar');
   
-  const { filteredWeeks, getStats } = usePlanner(configs, incomeConfigs, paidItems, ui.currentDate, ui.searchQuery);
-  const stats = getStats(ui.activeWeek);
-  const currentWeekData = filteredWeeks.find(w => w.weekNumber === ui.activeWeek);
+  const { filteredWeeks, getStats } = usePlanner(configs, incomeConfigs, paidItems, ui.currentDate, ui.searchQuery, settings);
+  
+  // Correction de l'index de semaine active si le découpage change
+  const currentWeekIndex = filteredWeeks.some(w => w.weekNumber === ui.activeWeek) ? ui.activeWeek : 1;
+  const stats = getStats(currentWeekIndex);
+  const currentWeekData = filteredWeeks.find(w => w.weekNumber === currentWeekIndex);
 
   const monthShort = new Intl.DateTimeFormat('fr-FR', { month: 'short' }).format(ui.currentDate);
 
@@ -57,7 +61,6 @@ export const BudgetPlanner: React.FC<BudgetPlannerProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* SÉLECTEUR DE MODE DU PLANNER */}
       <div className="flex justify-center mb-2">
         <div className="flex bg-slate-200/50 p-1 rounded-xl w-full max-w-sm">
           <button 
@@ -91,7 +94,6 @@ export const BudgetPlanner: React.FC<BudgetPlannerProps> = ({
             icon={<Target size={18} />}
           />
 
-          {/* BARRE D'OUTILS : NAVIGATION ET RECHERCHE */}
           <div className="flex flex-col md:flex-row justify-between gap-4">
             <MonthNavigator 
               date={ui.currentDate} 
@@ -106,20 +108,16 @@ export const BudgetPlanner: React.FC<BudgetPlannerProps> = ({
             />
           </div>
 
-          {/* SÉLECTEUR DE SEMAINE */}
           <WeekSelector 
             weeks={filteredWeeks} 
-            activeWeek={ui.activeWeek} 
+            activeWeek={currentWeekIndex} 
             onSelect={ui.setActiveWeek} 
           />
 
-          {/* RÉSUMÉ DES STATS (KPIs) */}
           <StatsSummary stats={stats} accounts={accounts} />
 
-          {/* ANALYSE DÉTAILLÉE */}
           <DetailedAnalysis stats={stats} people={people} accounts={accounts} />
 
-          {/* LISTE DES OPÉRATIONS */}
           <OperationsList 
             items={currentWeekData?.items || []}
             monthShort={monthShort}
@@ -154,7 +152,6 @@ export const BudgetPlanner: React.FC<BudgetPlannerProps> = ({
         </div>
       )}
 
-      {/* MODALES (Uniquement pour le mode calendrier) */}
       <PlannerModals 
         confirmModal={ui.confirmModal}
         uncheckModal={ui.uncheckModal}

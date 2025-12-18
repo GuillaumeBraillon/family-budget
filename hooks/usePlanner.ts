@@ -1,25 +1,82 @@
-import { useMemo, useState } from 'react';
-import { ExpenseConfig, IncomeConfig, Account, Person, PaidItemDetails, PlannedItem, WeeklyBudget } from '../types';
+
+import { useMemo } from 'react';
+import { startOfMonth, endOfMonth, eachWeekOfInterval, getDate, getDaysInMonth } from 'date-fns';
+import { ExpenseConfig, IncomeConfig, PaidItemDetails, PlannedItem, WeeklyBudget, AppSettings } from '../types';
 
 /**
- * Gère la génération des semaines, le filtrage et les statistiques du Planner.
+ * Gère la génération dynamique des périodes, le filtrage et les statistiques du Planner.
  */
 export const usePlanner = (
   configs: ExpenseConfig[],
   incomeConfigs: IncomeConfig[],
   paidItems: Record<string, PaidItemDetails>,
   currentDate: Date,
-  searchQuery: string
+  searchQuery: string,
+  settings: AppSettings
 ) => {
   const currentMonthKey = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
 
   const weeks = useMemo(() => {
-    const res: WeeklyBudget[] = [
-      { weekNumber: 1, label: "Semaine 1 (1 au 7)", items: [] },
-      { weekNumber: 2, label: "Semaine 2 (8 au 14)", items: [] },
-      { weekNumber: 3, label: "Semaine 3 (15 au 21)", items: [] },
-      { weekNumber: 4, label: "Semaine 4 (22 à fin)", items: [] },
-    ];
+    const res: WeeklyBudget[] = [];
+    const daysInMonth = getDaysInMonth(currentDate);
+    const type = settings.period_type || 'FIXED_DAYS';
+    const val = settings.period_value || 7;
+
+    // --- 1. GÉNÉRATION DES DÉCOUPAGES (PERIODES) ---
+    if (type === 'FIXED_DAYS') {
+      for (let start = 1; start <= daysInMonth; start += val) {
+        const isLast = (start + val - 1) >= daysInMonth;
+        const end = isLast ? daysInMonth : (start + val - 1);
+        res.push({
+          weekNumber: res.length + 1,
+          label: `Période ${res.length + 1} (${start} au ${end})`,
+          items: [],
+          startDate: start,
+          endDate: end
+        });
+        if (isLast) break;
+      }
+    } else if (type === 'CALENDAR_WEEKS') {
+      const monthStart = startOfMonth(currentDate);
+      const monthEnd = endOfMonth(currentDate);
+      const calendarWeeks = eachWeekOfInterval({ start: monthStart, end: monthEnd }, { weekStartsOn: 1 });
+      
+      calendarWeeks.forEach((weekDate, idx) => {
+        const start = getDate(weekDate < monthStart ? monthStart : weekDate);
+        const nextWeek = new Date(weekDate);
+        nextWeek.setDate(nextWeek.getDate() + 6);
+        const end = getDate(nextWeek > monthEnd ? monthEnd : nextWeek);
+        
+        res.push({
+          weekNumber: idx + 1,
+          label: `Semaine ${idx + 1} (${start} au ${end})`,
+          items: [],
+          startDate: start,
+          endDate: end
+        });
+      });
+    } else if (type === 'CUSTOM_SPLIT') {
+      const parts = Math.max(1, Math.min(daysInMonth, val));
+      const daysPerPart = Math.floor(daysInMonth / parts);
+      
+      for (let i = 0; i < parts; i++) {
+        const start = i * daysPerPart + 1;
+        const end = (i === parts - 1) ? daysInMonth : (i + 1) * daysPerPart;
+        res.push({
+          weekNumber: i + 1,
+          label: `Période ${i + 1} (${start} au ${end})`,
+          items: [],
+          startDate: start,
+          endDate: end
+        });
+      }
+    }
+
+    // --- 2. RÉPARTITION DES ITEMS DANS LES PÉRIODES ---
+    const assignToPeriod = (item: PlannedItem) => {
+      const period = res.find(p => item.day >= p.startDate && item.day <= p.endDate);
+      if (period) period.items.push(item);
+    };
 
     // Dépenses
     configs.filter(conf => {
@@ -28,10 +85,9 @@ export const usePlanner = (
       if (conf.endMonth && currentMonthKey > conf.endMonth) return false;
       return true;
     }).forEach(conf => {
-      const target = conf.dayOfMonth <= 7 ? 0 : conf.dayOfMonth <= 14 ? 1 : conf.dayOfMonth <= 21 ? 2 : 3;
       const instanceId = `${conf.id}-${currentMonthKey}`;
       const paid = paidItems[instanceId];
-      res[target].items.push({
+      assignToPeriod({
         type: 'EXPENSE', configId: conf.id, instanceId, day: conf.dayOfMonth,
         label: paid ? paid.label : conf.label,
         amount: paid ? paid.amount : conf.amount,
@@ -43,10 +99,9 @@ export const usePlanner = (
 
     // Revenus
     incomeConfigs.forEach(inc => {
-      const target = inc.dayOfMonth <= 7 ? 0 : inc.dayOfMonth <= 14 ? 1 : inc.dayOfMonth <= 21 ? 2 : 3;
       const instanceId = `${inc.id}-${currentMonthKey}`;
       const paid = paidItems[instanceId];
-      res[target].items.push({
+      assignToPeriod({
         type: 'INCOME', configId: inc.id, instanceId, day: inc.dayOfMonth,
         label: paid ? paid.label : inc.label,
         amount: paid ? paid.amount : inc.amount,
@@ -57,7 +112,7 @@ export const usePlanner = (
 
     res.forEach(w => w.items.sort((a, b) => a.day - b.day));
     return res;
-  }, [configs, incomeConfigs, paidItems, currentMonthKey]);
+  }, [configs, incomeConfigs, paidItems, currentMonthKey, settings, currentDate]);
 
   const filteredWeeks = useMemo(() => {
     if (!searchQuery.trim()) return weeks;
@@ -69,9 +124,11 @@ export const usePlanner = (
   }, [weeks, searchQuery]);
 
   const getStats = (activeWeek: number) => {
-    const currentWeek = filteredWeeks.find(w => w.weekNumber === activeWeek);
+    // S'assurer que activeWeek est toujours valide si le découpage change
+    const safeActiveWeek = weeks.some(w => w.weekNumber === activeWeek) ? activeWeek : 1;
+    const currentWeek = filteredWeeks.find(w => w.weekNumber === safeActiveWeek);
     const currentItems = currentWeek?.items || [];
-    const previousUnpaid = filteredWeeks.filter(w => w.weekNumber < activeWeek).flatMap(w => w.items).filter(i => !i.isPaid);
+    const previousUnpaid = filteredWeeks.filter(w => w.weekNumber < safeActiveWeek).flatMap(w => w.items).filter(i => !i.isPaid);
 
     const calcRemaining = (items: PlannedItem[]) => items.reduce((acc, i) => i.type === 'EXPENSE' ? acc + i.amount : acc - i.amount, 0);
 
@@ -96,7 +153,6 @@ export const usePlanner = (
           byAccount[item.accountId].paid += (item.type === 'EXPENSE' ? item.amount : -item.amount);
         }
 
-        // Ancienne logique de 'total' maintenue pour compatibilité si nécessaire
         const impact = item.type === 'EXPENSE' ? item.amount : -item.amount;
         byAccount[item.accountId].total += impact;
       }

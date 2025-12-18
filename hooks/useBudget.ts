@@ -16,7 +16,11 @@ export const useBudget = () => {
     categories: [] as CategoryDef[],
     people: [] as Person[],
     paidItems: {} as Record<string, PaidItemDetails>,
-    settings: { weekly_envelope: 500 } as AppSettings
+    settings: { 
+      weekly_envelope: 500,
+      period_type: 'FIXED_DAYS',
+      period_value: 7
+    } as AppSettings
   });
 
   const loadData = useCallback(async () => {
@@ -58,8 +62,13 @@ export const useBudget = () => {
 
   const handleSeed = async () => {
     setLoading(true);
-    await seedDatabase();
-    await loadData();
+    try {
+      await seedDatabase();
+      await loadData();
+    } catch (err: any) {
+      setError(err.message || "Erreur lors de l'injection des données");
+      setLoading(false);
+    }
   };
 
   const setPaidStatus = async (details: PaidItemDetails | null, instanceId: string) => {
@@ -73,20 +82,31 @@ export const useBudget = () => {
     try {
       const { error: apiErr } = await apiSetPaidStatus(details, instanceId);
       if (apiErr) throw apiErr;
-    } catch (err) {
+    } catch (err: any) {
+      setError(err.message || "Erreur lors de la mise à jour du statut");
       loadData();
-      throw err;
     }
   };
 
   const updateSettings = async (settings: AppSettings) => {
-    setData(prev => ({ ...prev, settings }));
     try {
       const { error: apiErr } = await apiUpdateSettings(settings);
-      if (apiErr) throw apiErr;
-    } catch (err) {
-      loadData();
-      throw err;
+      if (apiErr) {
+          if (apiErr.code === '42703') {
+              setMissingTables(true);
+          } else {
+              throw apiErr;
+          }
+      } else {
+          setData(prev => ({ ...prev, settings }));
+      }
+    } catch (err: any) {
+      if (err.message === 'TABLE_MISSING') {
+          setMissingTables(true);
+      } else {
+          setError(err.message || "Erreur lors de la mise à jour des paramètres");
+          loadData();
+      }
     }
   };
 

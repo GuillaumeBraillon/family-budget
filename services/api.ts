@@ -18,10 +18,18 @@ export const fetchInitialData = async () => {
   const errors = responses.map(r => r.error).filter(e => e !== null);
   
   if (errors.length > 0) {
-      const missingTableError = errors.find(e => e?.code === '42P01');
-      if (missingTableError) {
+      // 42703 = Undefined Column (Postgres)
+      // 42P01 = Undefined Table (Postgres)
+      const isCriticalError = errors.some(e => 
+        e?.code === '42703' || 
+        e?.code === '42P01' || 
+        e?.message?.toLowerCase().includes('column') ||
+        e?.message?.toLowerCase().includes('table')
+      );
+      if (isCriticalError) {
           throw new Error("TABLE_MISSING");
       }
+      throw new Error(errors[0]?.message || "Erreur lors du chargement des données");
   }
 
   const people: Person[] = (peopleRes.data || []).map((p: any) => ({
@@ -55,7 +63,6 @@ export const fetchInitialData = async () => {
     isExtra: c.is_extra
   }));
 
-  // Fix: Removed reference to non-existent 'incomeConfigsRes'
   const incomeConfigs: IncomeConfig[] = (incomesRes.data || []).map((i: any) => ({
     id: i.id,
     label: i.label,
@@ -82,10 +89,27 @@ export const fetchInitialData = async () => {
   });
 
   const settings: AppSettings = settingsRes.data ? {
-    weekly_envelope: Number(settingsRes.data.weekly_envelope)
-  } : { weekly_envelope: 500 };
+    weekly_envelope: Number(settingsRes.data.weekly_envelope || 500),
+    period_type: (settingsRes.data.period_type || 'FIXED_DAYS') as any,
+    period_value: Number(settingsRes.data.period_value || 7)
+  } : { weekly_envelope: 500, period_type: 'FIXED_DAYS', period_value: 7 };
 
   return { people, accounts, categories, configs, incomeConfigs, paidItems, settings };
+};
+
+export const apiUpdateSettings = async (settings: AppSettings) => {
+  const result = await supabase.from('app_settings').upsert({ 
+    id: 'global', 
+    weekly_envelope: Number(settings.weekly_envelope),
+    period_type: settings.period_type,
+    period_value: Math.floor(Number(settings.period_value))
+  });
+  
+  if (result.error?.code === '42703' || result.error?.message?.toLowerCase().includes('column')) {
+    throw new Error("TABLE_MISSING");
+  }
+  
+  return result;
 };
 
 export const seedDatabase = async () => {
@@ -106,17 +130,16 @@ export const seedDatabase = async () => {
         });
     }
     for(const i of MOCK_INCOME_CONFIGS) {
-        // Fix: Changed 'day_of_month: i.day_of_month' to 'day_of_month: i.dayOfMonth'
         await supabase.from('income_configs').upsert({
             id: i.id, label: i.label, amount: i.amount, account_id: i.accountId, beneficiary_id: i.beneficiaryId, day_of_month: i.dayOfMonth, category: i.category, sub_category: i.subCategory
         });
     }
-    // Initialisation des paramètres par défaut
-    await supabase.from('app_settings').upsert({ id: 'global', weekly_envelope: 500 });
-};
-
-export const apiUpdateSettings = async (settings: AppSettings) => {
-  return await supabase.from('app_settings').upsert({ id: 'global', weekly_envelope: settings.weekly_envelope });
+    await supabase.from('app_settings').upsert({ 
+      id: 'global', 
+      weekly_envelope: 500,
+      period_type: 'FIXED_DAYS',
+      period_value: 7
+    });
 };
 
 export const apiUpsertPerson = async (person: Person) => {
@@ -138,7 +161,6 @@ export const apiDeleteCategory = async (id: string) => {
   return await supabase.from('categories').delete().eq('id', id);
 };
 export const apiUpsertConfig = async (config: ExpenseConfig) => {
-  // Fix: Mapped camelCase ExpenseConfig properties to snake_case database columns
   return await supabase.from('expense_configs').upsert({ 
     id: config.id, 
     label: config.label, 
@@ -157,7 +179,6 @@ export const apiDeleteConfig = async (id: string) => {
   return await supabase.from('expense_configs').delete().eq('id', id);
 };
 export const apiUpsertIncome = async (income: IncomeConfig) => {
-  // Fix: Mapped camelCase IncomeConfig properties to snake_case database columns
   return await supabase.from('income_configs').upsert({ 
     id: income.id, 
     label: income.label, 
