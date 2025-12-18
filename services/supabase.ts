@@ -9,8 +9,8 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 export const getSupabaseConfig = () => {
   // Tentative de récupération via process.env (Standard pour .env)
   // Note : Dans certains environnements web, on utilise import.meta.env
-  const envProjectId = (window as any).process?.env?.SUPABASE_PROJECT_ID || '';
-  const envKey = (window as any).process?.env?.SUPABASE_ANON_KEY || '';
+  const envProjectId = (process as any).env?.SUPABASE_PROJECT_ID || '';
+  const envKey = (process as any).env?.SUPABASE_ANON_KEY || '';
 
   let projectId = envProjectId || localStorage.getItem('supabase_project_id') || '';
   let key = envKey || localStorage.getItem('supabase_key') || '';
