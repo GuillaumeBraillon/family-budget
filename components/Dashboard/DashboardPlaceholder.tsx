@@ -1,47 +1,79 @@
 
-import React from 'react';
-import { Construction } from 'lucide-react';
+import React, { useMemo } from 'react';
+import { LayoutDashboard, ArrowRight } from 'lucide-react';
+import { usePlanner } from '../../hooks/usePlanner';
+import { StatsSummary } from '../BudgetPlanner/organisms/StatsSummary';
+import { DetailedAnalysis } from '../BudgetPlanner/organisms/DetailedAnalysis';
+import { Account, Person, ExpenseConfig, IncomeConfig, PaidItemDetails, AppSettings } from '../../types';
 
-interface DashboardPlaceholderProps {
+interface DashboardViewProps {
+  accounts: Account[];
+  people: Person[];
+  configs: ExpenseConfig[];
+  incomeConfigs: IncomeConfig[];
+  paidItems: Record<string, PaidItemDetails>;
+  settings: AppSettings;
   onNavigateToPlanner: () => void;
   onNavigateToConfig: () => void;
 }
 
 /**
- * Composant affiché lorsque le tableau de bord est en maintenance ou en cours de développement.
- * Fournit des points d'entrée rapides vers les fonctionnalités actives.
+ * Tableau de bord principal.
+ * Affiche une vue synthétique du MOIS EN COURS (sans découpage par période).
  */
-export const DashboardPlaceholder: React.FC<DashboardPlaceholderProps> = ({ 
+export const DashboardPlaceholder: React.FC<DashboardViewProps> = ({ 
+  accounts, people, configs, incomeConfigs, paidItems, settings,
   onNavigateToPlanner, 
   onNavigateToConfig 
 }) => {
+  const currentDate = new Date();
+  
+  // ASTUCE : On force une configuration "Période unique" pour le dashboard
+  // afin que usePlanner calcule les stats sur l'intégralité du mois (Jours 1 à 31)
+  // sans découpage hebdomadaire.
+  const monthlySettings: AppSettings = useMemo(() => ({
+    ...settings,
+    period_type: 'FIXED_DAYS',
+    period_value: 32 // Force une période plus longue que n'importe quel mois
+  }), [settings]);
+
+  const { getStats } = usePlanner(configs, incomeConfigs, paidItems, currentDate, '', monthlySettings);
+  
+  // On récupère les stats de la "Période 1" qui correspond ici à tout le mois
+  const currentMonthStats = getStats(1);
+
+  const monthLabel = new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' }).format(currentDate);
+
   return (
-    <div className="flex flex-col items-center justify-center min-h-[400px] space-y-6 animate-in fade-in duration-500">
-      <div className="bg-white p-12 rounded-3xl border border-slate-200 shadow-sm flex flex-col items-center text-center max-w-lg">
-        <div className="bg-indigo-50 p-5 rounded-full text-indigo-600 mb-6">
-          <Construction size={48} />
+    <div className="space-y-6 animate-in fade-in duration-500">
+      
+      {/* En-tête du Dashboard */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+           <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2 capitalize">
+             <LayoutDashboard className="text-indigo-600" />
+             Situation : {monthLabel}
+           </h2>
+           <p className="text-sm text-slate-500 mt-1">
+             Vue consolidée de l'ensemble du mois en cours.
+           </p>
         </div>
-        <h3 className="text-2xl font-bold text-slate-900">Tableau de Bord</h3>
-        <p className="text-slate-500 mt-4 leading-relaxed">
-          Cette section est actuellement en cours de refonte pour vous offrir des indicateurs de synthèse plus précis basés sur vos données réelles.
-          <br />
-          <span className="font-bold text-indigo-600">Le calcul des soldes et de l'équité sera bientôt disponible.</span>
-        </p>
-        <div className="mt-8 flex flex-col sm:flex-row gap-3 w-full">
-          <button 
-            onClick={onNavigateToPlanner}
-            className="flex-1 px-6 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 active:scale-95"
-          >
-            Échéancier
-          </button>
-          <button 
-            onClick={onNavigateToConfig}
-            className="flex-1 px-6 py-3 bg-white border border-slate-200 text-slate-700 rounded-xl font-bold hover:bg-slate-50 transition-all active:scale-95"
-          >
-            Paramètres
-          </button>
+        <div className="flex gap-2">
+            <button 
+                onClick={onNavigateToPlanner}
+                className="text-xs font-bold px-4 py-2 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-700 flex items-center gap-2 transition-colors"
+            >
+                Voir l'échéancier détaillé <ArrowRight size={14} />
+            </button>
         </div>
       </div>
+
+      {/* Cartes de Synthèse (Reste à payer, Budget Période/Mois) */}
+      <StatsSummary stats={currentMonthStats} accounts={accounts} />
+
+      {/* Analyse Détaillée (Flux période, Flux par compte) */}
+      <DetailedAnalysis stats={currentMonthStats} people={people} accounts={accounts} />
+
     </div>
   );
 };

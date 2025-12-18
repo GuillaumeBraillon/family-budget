@@ -115,7 +115,7 @@ export const DetailedAnalysis: React.FC<DetailedAnalysisProps> = ({ stats, peopl
       {/* TABLEAU DES FLUX PAR PERSONNE */}
       <Card className="p-4 shadow-sm lg:col-span-2">
         <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-1.5">
-          <Users size={12}/> Flux de la Période
+          <Users size={12}/> Bénéficiaires
         </h3>
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
@@ -201,7 +201,19 @@ export const DetailedAnalysis: React.FC<DetailedAnalysisProps> = ({ stats, peopl
           {Object.entries(stats.byAccount || {}).map(([account_id, s]: [string, any]) => {
             const account = accounts.find(a => a.id === account_id);
             const displayName = account ? account.name : 'Compte Inconnu';
-            const variance = s.paid - s.planned;
+            
+            // Sécurisation des valeurs
+            const paid = s.paid || 0;
+            const planned = s.planned || 0;
+            const remaining = s.remaining || 0;
+            const pendingCount = s.pendingCount || 0;
+
+            // NOUVEAU : On calcule le TOTAL PROJETÉ (Ce qui a été payé + Ce qui reste à payer)
+            const projectedTotal = paid + remaining;
+
+            // L'écart se calcule désormais entre le Total Projeté et le Prévu Initial
+            // Ainsi, si j'ai un impayé, il compte dans le "Projected" et révèle un éventuel dépassement
+            const variance = projectedTotal - planned;
             const hasVariance = Math.abs(variance) > 0.01;
             const isBad = variance > 0.01;
 
@@ -211,8 +223,8 @@ export const DetailedAnalysis: React.FC<DetailedAnalysisProps> = ({ stats, peopl
                     <span className="font-semibold text-slate-700 truncate pr-2 text-xs">{displayName}</span>
                     <div className="text-right">
                         <div className="flex items-center justify-end gap-1.5">
-                            <span className="text-[9px] text-slate-400 uppercase font-medium">Réel</span>
-                            <span className="font-bold text-slate-900 text-xs">{s.paid.toFixed(2)} €</span>
+                            <span className="text-[9px] text-slate-400 uppercase font-medium">Flux Total</span>
+                            <span className="font-bold text-slate-900 text-xs">{projectedTotal.toFixed(2)} €</span>
                         </div>
                     </div>
                 </div>
@@ -228,7 +240,7 @@ export const DetailedAnalysis: React.FC<DetailedAnalysisProps> = ({ stats, peopl
                            <div className="flex flex-col">
                                <span className="text-[9px] text-slate-500 font-medium">Prévu initial</span>
                                <span className="text-[10px] font-bold text-slate-700 line-through decoration-slate-400/50">
-                                  {s.planned.toFixed(2)} €
+                                  {planned.toFixed(2)} €
                                </span>
                            </div>
                       </div>
@@ -237,22 +249,22 @@ export const DetailedAnalysis: React.FC<DetailedAnalysisProps> = ({ stats, peopl
                               {isBad ? 'Dépassement' : 'Économie'}
                           </span>
                           <span className="text-xs font-bold block">
-                              {isBad ? '+' : ''}{variance.toFixed(2)} €
+                              {isBad ? '+' : ''}{Math.abs(variance).toFixed(2)} €
                           </span>
                       </div>
                   </div>
                 )}
                 
                 <div className="flex justify-between items-center mt-2 pl-1">
-                    {s.remaining !== 0 ? (
+                    {pendingCount > 0 ? (
                         <div className="flex items-center gap-1">
                            <span className="text-[9px] text-amber-600 font-bold bg-amber-50 px-1.5 py-0.5 rounded border border-amber-100/50">
-                             EN ATTENTE : {s.remaining.toFixed(2)} €
+                             DONT EN ATTENTE : {remaining.toFixed(2)} € <span className="text-amber-800">({pendingCount})</span>
                            </span>
-                           <MobileTooltip text="Somme des opérations planifiées sur ce compte mais non encore pointées." />
+                           <MobileTooltip text={`${pendingCount} opération(s) non pointée(s) incluse(s) dans le total.`} />
                         </div>
                     ) : (
-                        s.planned !== 0 && (
+                        planned !== 0 && (
                             <span className="text-[9px] text-emerald-600 font-bold flex items-center gap-1">
                                 <Check size={10} strokeWidth={3}/> POINTAGE TERMINÉ
                             </span>

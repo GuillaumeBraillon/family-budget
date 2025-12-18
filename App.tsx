@@ -88,6 +88,12 @@ const App: React.FC = () => {
 
         {currentView === 'dashboard' && (
           <DashboardPlaceholder 
+            accounts={accounts}
+            people={people}
+            configs={configs}
+            incomeConfigs={incomeConfigs}
+            paidItems={paidItems}
+            settings={settings}
             onNavigateToPlanner={() => setCurrentView('planner')}
             onNavigateToConfig={() => navigateToConfig('general')}
           />
@@ -124,7 +130,6 @@ const App: React.FC = () => {
               accounts={accounts} 
               settings={settings}
               activeTab={activeConfigTab}
-              // Fix: Use the correct state setter name 'setActiveConfigTab' instead of 'setActiveTab'
               setActiveTab={setActiveConfigTab}
               onUpdateCategories={actions.upsertCategory as any} 
               onUpdatePeople={actions.upsertPerson as any} 
