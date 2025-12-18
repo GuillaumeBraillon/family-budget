@@ -7,7 +7,6 @@ export const useBudget = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isDbEmpty, setIsDbEmpty] = useState(false);
-  const [missingTables, setMissingTables] = useState(false);
 
   const [data, setData] = useState({
     accounts: [] as Account[],
@@ -27,7 +26,6 @@ export const useBudget = () => {
     try {
       setLoading(true);
       setError(null);
-      setMissingTables(false);
       const res = await fetchInitialData();
       
       if (res.people.length === 0 && res.accounts.length === 0) {
@@ -46,11 +44,7 @@ export const useBudget = () => {
         settings: res.settings
       });
     } catch (err: any) {
-      if (err.message === 'TABLE_MISSING') {
-        setMissingTables(true);
-      } else {
-        setError(err.message || "Erreur de connexion");
-      }
+      setError(err.message || "Erreur lors du chargement des données");
     } finally {
       setLoading(false);
     }
@@ -92,21 +86,13 @@ export const useBudget = () => {
     try {
       const { error: apiErr } = await apiUpdateSettings(settings);
       if (apiErr) {
-          if (apiErr.code === '42703') {
-              setMissingTables(true);
-          } else {
-              throw apiErr;
-          }
+          throw apiErr;
       } else {
           setData(prev => ({ ...prev, settings }));
       }
     } catch (err: any) {
-      if (err.message === 'TABLE_MISSING') {
-          setMissingTables(true);
-      } else {
-          setError(err.message || "Erreur lors de la mise à jour des paramètres");
-          loadData();
-      }
+      setError(err.message || "Erreur lors de la mise à jour des paramètres");
+      loadData();
     }
   };
 
@@ -115,7 +101,6 @@ export const useBudget = () => {
     loading,
     error,
     isDbEmpty,
-    missingTables,
     actions: {
       loadData,
       handleSeed,

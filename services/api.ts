@@ -18,18 +18,7 @@ export const fetchInitialData = async () => {
   const errors = responses.map(r => r.error).filter(e => e !== null);
   
   if (errors.length > 0) {
-      // 42703 = Undefined Column (Postgres)
-      // 42P01 = Undefined Table (Postgres)
-      const isCriticalError = errors.some(e => 
-        e?.code === '42703' || 
-        e?.code === '42P01' || 
-        e?.message?.toLowerCase().includes('column') ||
-        e?.message?.toLowerCase().includes('table')
-      );
-      if (isCriticalError) {
-          throw new Error("TABLE_MISSING");
-      }
-      throw new Error(errors[0]?.message || "Erreur lors du chargement des données");
+      throw new Error(errors[0]?.message || "Erreur lors du chargement des données. Vérifiez votre schéma SQL.");
   }
 
   const people: Person[] = (peopleRes.data || []).map((p: any) => ({
@@ -98,18 +87,12 @@ export const fetchInitialData = async () => {
 };
 
 export const apiUpdateSettings = async (settings: AppSettings) => {
-  const result = await supabase.from('app_settings').upsert({ 
+  return await supabase.from('app_settings').upsert({ 
     id: 'global', 
     weekly_envelope: Number(settings.weekly_envelope),
     period_type: settings.period_type,
     period_value: Math.floor(Number(settings.period_value))
   });
-  
-  if (result.error?.code === '42703' || result.error?.message?.toLowerCase().includes('column')) {
-    throw new Error("TABLE_MISSING");
-  }
-  
-  return result;
 };
 
 export const seedDatabase = async () => {

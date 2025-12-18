@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useBudget } from './hooks/useBudget';
 import { AccountsOverview } from './components/Dashboard/AccountsOverview';
@@ -7,27 +8,7 @@ import { BudgetPlanner } from './components/BudgetPlanner/BudgetPlanner';
 import { ConfigurationView } from './components/Configuration/ConfigurationView';
 import { ConfigTab } from './hooks/useConfigurationUI';
 import { InfoBox } from './components/ui/InfoBox';
-import { LayoutDashboard, WalletCards, CalendarCheck, Settings, Loader2, AlertTriangle, Database, Sparkles } from 'lucide-react';
-
-const SQL_SETUP_SCRIPT = `
--- MIGRATION POUR TABLE EXISTANTE app_settings
-ALTER TABLE public.app_settings 
-ADD COLUMN IF NOT EXISTS period_type text DEFAULT 'FIXED_DAYS',
-ADD COLUMN IF NOT EXISTS period_value integer DEFAULT 7;
-
--- CREATION DES AUTRES TABLES SI NECESSAIRE
-CREATE TABLE IF NOT EXISTS people (id text PRIMARY KEY, name text, is_child boolean DEFAULT false);
-CREATE TABLE IF NOT EXISTS accounts (id text PRIMARY KEY, name text, type text, owner_id text, current_balance numeric, bank_name text);
-CREATE TABLE IF NOT EXISTS categories (id text PRIMARY KEY, name text, type text DEFAULT 'EXPENSE', sub_categories text[]);
-CREATE TABLE IF NOT EXISTS income_configs (id text PRIMARY KEY, label text, amount numeric, account_id text REFERENCES accounts(id) ON DELETE SET NULL, beneficiary_id text, day_of_month integer, category text, sub_category text);
-CREATE TABLE IF NOT EXISTS expense_configs (id text PRIMARY KEY, label text, amount numeric, category text, sub_category text, beneficiary_id text, account_id text REFERENCES accounts(id) ON DELETE SET NULL, day_of_month integer, start_month text, end_month text, is_extra boolean);
-CREATE TABLE IF NOT EXISTS paid_items (instance_id text PRIMARY KEY, is_paid boolean DEFAULT true, amount numeric, payment_date date, account_id text, beneficiary_id text, label text, category text, sub_category text);
-
--- INITIALISATION
-INSERT INTO app_settings (id, weekly_envelope, period_type, period_value) 
-VALUES ('global', 500, 'FIXED_DAYS', 7) 
-ON CONFLICT (id) DO NOTHING;
-`;
+import { LayoutDashboard, WalletCards, CalendarCheck, Settings, Loader2, AlertTriangle, Sparkles } from 'lucide-react';
 
 type ViewState = 'dashboard' | 'planner' | 'config';
 
@@ -37,7 +18,7 @@ const App: React.FC = () => {
   
   const { 
     accounts, configs, incomeConfigs, categories, people, paidItems, settings,
-    loading, error, missingTables, isDbEmpty, actions 
+    loading, error, isDbEmpty, actions 
   } = useBudget();
 
   if (loading) {
@@ -46,40 +27,6 @@ const App: React.FC = () => {
         <div className="flex flex-col items-center gap-4 text-slate-500">
           <Loader2 className="animate-spin h-8 w-8 text-indigo-600" />
           <p>Chargement de vos finances...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (missingTables) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
-        <div className="max-w-xl w-full bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
-          <div className="bg-indigo-600 p-6 text-white">
-            <h2 className="text-xl font-bold flex items-center gap-2"><Database /> Mise à jour nécessaire</h2>
-            <p className="text-indigo-100 text-sm mt-1">Des colonnes manquent dans votre base de données Supabase.</p>
-          </div>
-          <div className="p-6 space-y-4">
-            <div className="bg-slate-900 rounded-lg p-4 font-mono text-[10px] text-emerald-400 overflow-x-auto h-48">
-              <pre>{SQL_SETUP_SCRIPT}</pre>
-            </div>
-            <button 
-              onClick={() => {
-                navigator.clipboard.writeText(SQL_SETUP_SCRIPT);
-                alert("Script de migration copié !");
-              }}
-              className="w-full py-2 bg-slate-100 text-slate-700 rounded-lg text-sm font-semibold hover:bg-slate-200 transition-colors"
-            >
-              Copier le script SQL
-            </button>
-            <p className="text-[11px] text-slate-400 italic text-center">Exécutez ce script dans l'éditeur SQL de Supabase pour débloquer les réglages de période.</p>
-            <button 
-              onClick={() => actions.loadData()}
-              className="w-full py-3 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700 transition-colors"
-            >
-              J'ai exécuté le script, actualiser
-            </button>
-          </div>
         </div>
       </div>
     );
@@ -103,7 +50,6 @@ const App: React.FC = () => {
       </header>
 
       <main className="max-w-5xl mx-auto px-4 py-8">
-        {/* Fix: Ensuring error is properly narrowed by using an explicit non-null check and simplified rendering logic */}
         {error !== null && (
           <div className="mb-6 p-4 bg-red-50 text-red-700 border border-red-200 rounded-lg flex gap-3 items-center shadow-sm">
             <AlertTriangle size={20} className="flex-shrink-0" />
@@ -115,7 +61,7 @@ const App: React.FC = () => {
           </div>
         )}
 
-        {isDbEmpty && !loading && (
+        {isDbEmpty && !loading && !error && (
             <div className="mb-8 p-6 bg-indigo-50 border border-indigo-100 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-4">
                 <div className="text-center md:text-left">
                     <h3 className="text-indigo-900 font-bold text-lg">Prêt à commencer ?</h3>
