@@ -159,7 +159,16 @@ export const usePlanner = (
       currentRemaining: calcRemaining(currentItems.filter(i => !i.isPaid)),
       previousRemaining: calcRemaining(previousUnpaid),
       remainingToPay: calcRemaining(currentItems.filter(i => !i.isPaid)) + calcRemaining(previousUnpaid),
-      currentPaidExpenses: currentItems.reduce((acc, i) => i.isPaid && i.type === 'EXPENSE' ? acc + i.amount : acc, 0),
+      // Net payé : Dépenses - Revenus
+      currentPaidExpenses: currentItems.reduce((acc, i) => {
+        if (!i.isPaid) return acc;
+        return i.type === 'EXPENSE' ? acc + i.amount : acc - i.amount;
+      }, 0),
+      // Net prévu des éléments payés : Dépenses prévues - Revenus prévus (seulement pour ce qui est payé)
+      currentPaidPlanned: currentItems.reduce((acc, i) => {
+        if (!i.isPaid) return acc;
+        return i.type === 'EXPENSE' ? acc + i.originalAmount : acc - i.originalAmount;
+      }, 0),
       byAccount,
       expByBeneficiary,
       incByBeneficiary,

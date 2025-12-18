@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Clock, Wallet } from 'lucide-react';
 import { StatCard } from '../atoms/StatCard';
@@ -9,6 +10,12 @@ interface StatsSummaryProps {
 }
 
 export const StatsSummary: React.FC<StatsSummaryProps> = ({ stats, accounts }) => {
+  const diff = stats.currentPaidExpenses - (stats.currentPaidPlanned || 0);
+  const hasDiff = Math.abs(diff) > 0.01;
+  // Une différence positive signifie qu'on a dépensé plus que prévu (net) ou reçu moins que prévu (si le net est négatif mais moins négatif que prévu).
+  // Bref, plus le chiffre monte, plus c'est "mauvais" pour le budget.
+  const isBad = diff > 0;
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       {/* KPI 1 : Reste à payer - Bordure à GAUCHE (Ambre) */}
@@ -42,7 +49,14 @@ export const StatsSummary: React.FC<StatsSummaryProps> = ({ stats, accounts }) =
         <div className="mt-3 space-y-1 text-xs">
           <div className="flex justify-between border-t border-slate-100 pt-2 text-slate-500">
             <span className="text-slate-500">Déjà réglé</span>
-            <span className="font-bold text-indigo-600">{stats.currentPaidExpenses.toFixed(2)} €</span>
+            <div className="flex items-center gap-1">
+                <span className="font-bold text-indigo-600">{stats.currentPaidExpenses.toFixed(2)} €</span>
+                {hasDiff && (
+                    <span className={`text-[10px] font-bold ${isBad ? 'text-rose-500' : 'text-emerald-500'}`}>
+                        ({isBad ? '+' : ''}{diff.toFixed(2)})
+                    </span>
+                )}
+            </div>
           </div>
           <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
             <div 

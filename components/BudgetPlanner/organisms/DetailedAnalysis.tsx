@@ -18,6 +18,32 @@ export const DetailedAnalysis: React.FC<DetailedAnalysisProps> = ({ stats, peopl
   
   const hasDiff = (paid: number, planned: number) => Math.abs(paid - planned) > 0.01;
 
+  // Helper pour afficher la différence colorée
+  const renderDiff = (paid: number, planned: number, type: 'EXPENSE' | 'INCOME' | 'ACCOUNT') => {
+    const diff = paid - planned;
+    const isPositive = diff > 0;
+    const sign = isPositive ? '+' : '';
+    
+    let colorClass = 'text-slate-400';
+    
+    if (type === 'EXPENSE') {
+      // Dépense : Si diff > 0 (Payé plus que prévu) => Rouge, sinon Vert
+      colorClass = isPositive ? 'text-rose-500' : 'text-emerald-500';
+    } else if (type === 'INCOME') {
+      // Revenu : Si diff > 0 (Gagné plus que prévu) => Vert, sinon Rouge
+      colorClass = isPositive ? 'text-emerald-500' : 'text-rose-500';
+    } else {
+        // Compte : Neutre ou selon la logique (ici neutre/slate pour l'écart simple)
+        colorClass = 'text-slate-400';
+    }
+
+    return (
+        <span className={`text-[9px] font-bold ${colorClass} ml-1`}>
+            ({sign}{diff.toFixed(2)})
+        </span>
+    );
+  };
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
       {/* DÉPENSES / BÉNÉF. */}
@@ -42,6 +68,7 @@ export const DetailedAnalysis: React.FC<DetailedAnalysisProps> = ({ stats, peopl
                         <div className="flex items-center justify-end gap-1.5 mt-0.5">
                             <span className="text-[9px] font-bold text-slate-300 uppercase tracking-tighter">Prévu :</span>
                             <span className="text-[10px] font-medium text-slate-400">{s.planned.toFixed(2)} €</span>
+                            {renderDiff(s.paid, s.planned, 'EXPENSE')}
                         </div>
                     )}
                 </div>
@@ -75,6 +102,7 @@ export const DetailedAnalysis: React.FC<DetailedAnalysisProps> = ({ stats, peopl
                         <div className="flex items-center justify-end gap-1.5 mt-0.5">
                             <span className="text-[9px] font-bold text-emerald-600/30 uppercase tracking-tighter">Prévu :</span>
                             <span className="text-[10px] font-medium text-emerald-600/60">{s.planned.toFixed(2)} €</span>
+                            {renderDiff(s.paid, s.planned, 'INCOME')}
                         </div>
                     )}
                 </div>
@@ -115,6 +143,7 @@ export const DetailedAnalysis: React.FC<DetailedAnalysisProps> = ({ stats, peopl
                         <div className="flex items-center justify-end gap-1.5 mt-0.5">
                             <span className="text-[9px] font-bold text-slate-300 uppercase tracking-tighter">Prévu :</span>
                             <span className="text-[10px] font-medium text-slate-400">{s.planned.toFixed(2)} €</span>
+                            {renderDiff(s.paid, s.planned, 'ACCOUNT')}
                         </div>
                     )}
                     <div className="mt-1 flex flex-col items-end">

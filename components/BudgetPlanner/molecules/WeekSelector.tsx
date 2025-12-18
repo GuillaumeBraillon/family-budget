@@ -31,7 +31,7 @@ export const WeekSelector: React.FC<WeekSelectorProps> = ({ weeks, activeWeek, o
                 : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
             }`}
           >
-            <span className="truncate max-w-full px-1">{week.label}</span>
+            <span className="truncate max-w-full px-1">{week.startDate} au {week.endDate}</span>
             
             {/* Badge des opérations en attente (Impayés ou Non reçus) */}
             {pendingCount > 0 && (
