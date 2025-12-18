@@ -1,5 +1,6 @@
 
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Clock, Wallet, AlertCircle, ArrowDownCircle, Target, TrendingDown, TrendingUp, Info, X } from 'lucide-react';
 import { StatCard } from '../atoms/StatCard';
 import { Account } from '../../../types';
@@ -10,31 +11,58 @@ interface StatsSummaryProps {
 }
 
 /**
- * Composant de Tooltip compatible mobile (s'affiche au clic)
+ * Composant de Tooltip compatible mobile avec Portal pour éviter les problèmes de z-index
  */
 const MobileTooltip: React.FC<{ text: string }> = ({ text }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [position, setPosition] = useState({ top: 0, left: 0 });
+
+  const toggle = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!isOpen) {
+        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+        setPosition({
+            top: rect.top,
+            left: rect.left + rect.width / 2
+        });
+    }
+    setIsOpen(!isOpen);
+  };
 
   return (
-    <div className="relative inline-block ml-1">
+    <>
       <button 
         type="button"
-        onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }}
-        className="p-1 text-slate-300 hover:text-indigo-500 transition-colors"
+        onClick={toggle}
+        className="p-1 text-slate-300 hover:text-indigo-500 transition-colors inline-block"
       >
         <Info size={12} />
       </button>
-      {isOpen && (
-        <div className="absolute z-30 bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-slate-900 text-white text-[10px] rounded-lg shadow-xl animate-in zoom-in-95 fade-in duration-200">
-          <div className="flex justify-between items-start mb-1 font-bold border-b border-slate-700 pb-1">
-            <span>Aide</span>
-            <X size={10} className="cursor-pointer" onClick={() => setIsOpen(false)} />
-          </div>
-          {text}
-          <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-slate-900"></div>
-        </div>
+      {isOpen && createPortal(
+        <div className="relative z-[9999]">
+             {/* Backdrop */}
+             <div className="fixed inset-0 cursor-default" onClick={(e) => { e.stopPropagation(); setIsOpen(false); }} />
+             
+             <div 
+                className="fixed w-48 p-2 bg-slate-900 text-white text-[10px] rounded-lg shadow-xl animate-in zoom-in-95 fade-in duration-200"
+                style={{ 
+                    top: position.top - 6, 
+                    left: position.left,
+                    transform: 'translate(-50%, -100%)' 
+                }}
+                onClick={(e) => e.stopPropagation()}
+            >
+                <div className="flex justify-between items-start mb-1 font-bold border-b border-slate-700 pb-1">
+                    <span>Aide</span>
+                    <X size={10} className="cursor-pointer hover:text-red-400" onClick={() => setIsOpen(false)} />
+                </div>
+                {text}
+                <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-900"></div>
+            </div>
+        </div>,
+        document.body
       )}
-    </div>
+    </>
   );
 };
 

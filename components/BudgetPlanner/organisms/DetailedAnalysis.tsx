@@ -1,6 +1,7 @@
 
-import React from 'react';
-import { Users, Wallet, Check, TrendingUp } from 'lucide-react';
+import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
+import { Users, Wallet, Check, TrendingUp, TrendingDown, Info, X } from 'lucide-react';
 import { Card } from '../../ui/Card';
 import { Person, Account } from '../../../types';
 
@@ -9,6 +10,63 @@ interface DetailedAnalysisProps {
   people: Person[];
   accounts: Account[];
 }
+
+/**
+ * Composant de Tooltip compatible mobile (s'affiche au clic)
+ * Utilise un Portal pour s'afficher au-dessus de tout le reste (z-index/overflow)
+ */
+const MobileTooltip: React.FC<{ text: string }> = ({ text }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [position, setPosition] = useState({ top: 0, left: 0 });
+
+  const toggle = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!isOpen) {
+        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+        setPosition({
+            top: rect.top,
+            left: rect.left + rect.width / 2
+        });
+    }
+    setIsOpen(!isOpen);
+  };
+
+  return (
+    <>
+      <button 
+        type="button"
+        onClick={toggle}
+        className="text-slate-300 hover:text-indigo-500 transition-colors inline-flex align-middle ml-1"
+      >
+        <Info size={10} />
+      </button>
+      {isOpen && createPortal(
+        <div className="relative z-[9999]">
+            {/* Backdrop invisible pour fermer au clic ailleurs */}
+            <div className="fixed inset-0 cursor-default" onClick={(e) => { e.stopPropagation(); setIsOpen(false); }} />
+            
+            <div 
+                className="fixed w-48 p-2 bg-slate-900 text-white text-[10px] rounded-lg shadow-xl animate-in zoom-in-95 fade-in duration-200 normal-case font-normal tracking-normal text-left"
+                style={{ 
+                    top: position.top - 6, 
+                    left: position.left,
+                    transform: 'translate(-50%, -100%)' 
+                }}
+                onClick={(e) => e.stopPropagation()}
+            >
+                <div className="flex justify-between items-start mb-1 font-bold border-b border-slate-700 pb-1">
+                    <span>Info</span>
+                    <X size={10} className="cursor-pointer hover:text-red-400" onClick={() => setIsOpen(false)} />
+                </div>
+                {text}
+                <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-900"></div>
+            </div>
+        </div>,
+        document.body
+      )}
+    </>
+  );
+};
 
 export const DetailedAnalysis: React.FC<DetailedAnalysisProps> = ({ stats, people, accounts }) => {
   const hasDiff = (paid: number, planned: number) => Math.abs(paid - planned) > 0.01;
@@ -54,6 +112,7 @@ export const DetailedAnalysis: React.FC<DetailedAnalysisProps> = ({ stats, peopl
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      {/* TABLEAU DES FLUX PAR PERSONNE */}
       <Card className="p-4 shadow-sm lg:col-span-2">
         <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-1.5">
           <Users size={12}/> Flux de la Période
@@ -63,9 +122,15 @@ export const DetailedAnalysis: React.FC<DetailedAnalysisProps> = ({ stats, peopl
             <thead>
               <tr className="text-slate-400 border-b border-slate-100">
                 <th className="text-left font-bold pb-2 uppercase tracking-tighter text-[9px]">Membre</th>
-                <th className="text-right font-bold pb-2 uppercase tracking-tighter text-[9px]">Revenus</th>
-                <th className="text-right font-bold pb-2 uppercase tracking-tighter text-[9px]">Dépenses</th>
-                <th className="text-right font-bold pb-2 uppercase tracking-tighter text-[9px]">Bilan Personnel</th>
+                <th className="text-right font-bold pb-2 uppercase tracking-tighter text-[9px]">
+                   Revenus (Réel) <MobileTooltip text="Montants réellement perçus sur la période." />
+                </th>
+                <th className="text-right font-bold pb-2 uppercase tracking-tighter text-[9px]">
+                   Dépenses (Réel) <MobileTooltip text="Montants réellement payés sur la période." />
+                </th>
+                <th className="text-right font-bold pb-2 uppercase tracking-tighter text-[9px]">
+                   Bilan <MobileTooltip text="Différence entre revenus et dépenses réels." />
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
@@ -80,9 +145,9 @@ export const DetailedAnalysis: React.FC<DetailedAnalysisProps> = ({ stats, peopl
                     <td className="py-3 text-right">
                       <div className="font-bold text-emerald-600">{p.income.paid.toFixed(2)} €</div>
                       {hasDiff(p.income.paid, p.income.planned) && (
-                        <div className="flex justify-end items-center gap-1 mt-0.5">
-                            <span className="text-[9px] text-slate-300 line-through">{p.income.planned.toFixed(2)}</span>
-                            {renderVariance(p.income.paid, p.income.planned, false)}
+                        <div className="flex justify-end items-center gap-1 mt-0.5 opacity-60">
+                            <span className="text-[9px] text-slate-400 mr-1">Prévu:</span>
+                            <span className="text-[9px] text-slate-400 line-through">{p.income.planned.toFixed(2)}</span>
                         </div>
                       )}
                     </td>
@@ -90,7 +155,8 @@ export const DetailedAnalysis: React.FC<DetailedAnalysisProps> = ({ stats, peopl
                       <div className="font-bold text-slate-800">{p.expense.paid.toFixed(2)} €</div>
                       {hasDiff(p.expense.paid, p.expense.planned) && (
                         <div className="flex justify-end items-center gap-1 mt-0.5">
-                            <span className="text-[9px] text-slate-300 line-through">{p.expense.planned.toFixed(2)}</span>
+                             <span className="text-[9px] text-slate-400 mr-1">Prévu:</span>
+                            <span className="text-[9px] text-slate-400 line-through">{p.expense.planned.toFixed(2)}</span>
                             {renderVariance(p.expense.paid, p.expense.planned, true)}
                         </div>
                       )}
@@ -107,7 +173,7 @@ export const DetailedAnalysis: React.FC<DetailedAnalysisProps> = ({ stats, peopl
             <tfoot>
               <tr className="bg-slate-900 text-white border-t-2 border-indigo-500">
                 <td className="py-3 px-3 rounded-l-lg font-black uppercase text-[10px] flex items-center gap-2">
-                   <TrendingUp size={14} className="text-indigo-400" /> Total Période
+                   <TrendingUp size={14} className="text-indigo-400" /> Total
                 </td>
                 <td className="py-3 text-right font-bold text-emerald-400">{totals.income.toFixed(2)} €</td>
                 <td className="py-3 text-right font-bold text-slate-300">{totals.expense.toFixed(2)} €</td>
@@ -121,9 +187,12 @@ export const DetailedAnalysis: React.FC<DetailedAnalysisProps> = ({ stats, peopl
           </table>
         </div>
       </Card>
+
+      {/* LISTE DES COMPTES (FLUX) */}
       <Card className="p-4 shadow-sm relative overflow-hidden">
         <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-1.5">
-          <Wallet size={12}/> État des Comptes
+          <Wallet size={12}/> Flux par Compte
+          <MobileTooltip text="Total des mouvements (Entrées/Sorties) impactant chaque compte sur cette période." />
         </h3>
         <div className="space-y-4 relative z-10 max-h-[320px] overflow-y-auto pr-1 custom-scrollbar">
           {(!stats.byAccount || Object.keys(stats.byAccount).length === 0) && (
@@ -132,25 +201,56 @@ export const DetailedAnalysis: React.FC<DetailedAnalysisProps> = ({ stats, peopl
           {Object.entries(stats.byAccount || {}).map(([account_id, s]: [string, any]) => {
             const account = accounts.find(a => a.id === account_id);
             const displayName = account ? account.name : 'Compte Inconnu';
+            const variance = s.paid - s.planned;
+            const hasVariance = Math.abs(variance) > 0.01;
+            const isBad = variance > 0.01;
+
             return (
               <div key={account_id} className="border-b border-slate-50 pb-3 last:border-0 last:pb-0">
                 <div className="flex justify-between items-start mb-1">
                     <span className="font-semibold text-slate-700 truncate pr-2 text-xs">{displayName}</span>
                     <div className="text-right">
-                        <span className="font-bold text-slate-900 text-xs">{s.paid.toFixed(2)} €</span>
-                        {hasDiff(s.paid, s.planned) && (
-                            <div className="flex items-center justify-end gap-1 mt-0.5">
-                                <span className="text-[9px] text-slate-300 line-through">{s.planned.toFixed(2)}</span>
-                                {renderVariance(s.paid, s.planned, s.paid > s.planned)}
-                            </div>
-                        )}
+                        <div className="flex items-center justify-end gap-1.5">
+                            <span className="text-[9px] text-slate-400 uppercase font-medium">Réel</span>
+                            <span className="font-bold text-slate-900 text-xs">{s.paid.toFixed(2)} €</span>
+                        </div>
                     </div>
                 </div>
-                <div className="flex justify-between items-center mt-2">
+
+                {hasVariance && (
+                  <div className={`mt-2 p-2 rounded-lg border flex items-center justify-between gap-2 ${
+                      isBad ? 'bg-rose-50 border-rose-100' : 'bg-emerald-50 border-emerald-100'
+                  }`}>
+                      <div className="flex items-center gap-2">
+                           <div className={`p-1.5 rounded-md ${isBad ? 'bg-rose-100 text-rose-600' : 'bg-emerald-100 text-emerald-600'}`}>
+                              {isBad ? <TrendingDown size={14} /> : <TrendingUp size={14} />}
+                           </div>
+                           <div className="flex flex-col">
+                               <span className="text-[9px] text-slate-500 font-medium">Prévu initial</span>
+                               <span className="text-[10px] font-bold text-slate-700 line-through decoration-slate-400/50">
+                                  {s.planned.toFixed(2)} €
+                               </span>
+                           </div>
+                      </div>
+                      <div className={`text-right ${isBad ? 'text-rose-700' : 'text-emerald-700'}`}>
+                          <span className="text-[9px] font-black block uppercase tracking-wide">
+                              {isBad ? 'Dépassement' : 'Économie'}
+                          </span>
+                          <span className="text-xs font-bold block">
+                              {isBad ? '+' : ''}{variance.toFixed(2)} €
+                          </span>
+                      </div>
+                  </div>
+                )}
+                
+                <div className="flex justify-between items-center mt-2 pl-1">
                     {s.remaining !== 0 ? (
-                        <span className="text-[9px] text-amber-600 font-bold bg-amber-50 px-1.5 py-0.5 rounded border border-amber-100/50">
-                          ATTENTE : {s.remaining.toFixed(2)} €
-                        </span>
+                        <div className="flex items-center gap-1">
+                           <span className="text-[9px] text-amber-600 font-bold bg-amber-50 px-1.5 py-0.5 rounded border border-amber-100/50">
+                             EN ATTENTE : {s.remaining.toFixed(2)} €
+                           </span>
+                           <MobileTooltip text="Somme des opérations planifiées sur ce compte mais non encore pointées." />
+                        </div>
                     ) : (
                         s.planned !== 0 && (
                             <span className="text-[9px] text-emerald-600 font-bold flex items-center gap-1">
