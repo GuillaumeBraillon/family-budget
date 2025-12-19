@@ -17,6 +17,10 @@ export interface Account {
   ownerId: string;
   currentBalance: number;
   bankName?: string;
+  isJoint?: boolean; // Identifie le compte pivot pour la trésorerie
+  // Nouveaux champs pour la logique de répartition
+  targetRatio?: number; // Pourcentage (ex: 30 pour 30%)
+  targetCap?: number;   // Plafond en euros (ex: 50)
 }
 
 export interface CategoryDef {

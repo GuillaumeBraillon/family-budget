@@ -4,6 +4,7 @@ import { useBudget } from './hooks/useBudget';
 import { WelcomeEmptyState } from './components/Dashboard/WelcomeEmptyState';
 import { DashboardPlaceholder } from './components/Dashboard/DashboardPlaceholder';
 import { BudgetPlanner } from './components/BudgetPlanner/BudgetPlanner';
+import { BalancesView } from './components/Balances/BalancesView';
 import { ConfigurationView } from './components/Configuration/ConfigurationView';
 import { Header } from './components/Layout/Header';
 import { ConfigTab } from './hooks/useConfigurationUI';
@@ -12,7 +13,7 @@ import { isSupabaseConfigured, resetSupabaseConfig } from './services/supabase';
 import { Loader2, AlertTriangle } from 'lucide-react';
 import { SavingsDashboard } from './components/Savings/SavingsDashboard';
 
-type ViewState = 'dashboard' | 'planner' | 'savings' | 'config';
+type ViewState = 'dashboard' | 'balances' | 'planner' | 'savings' | 'config';
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<ViewState>('dashboard');
@@ -101,6 +102,18 @@ const App: React.FC = () => {
           />
         )}
 
+        {currentView === 'balances' && (
+          <BalancesView 
+            accounts={accounts}
+            people={people}
+            configs={configs}
+            incomeConfigs={incomeConfigs}
+            paidItems={paidItems}
+            settings={settings}
+            onUpdateAccount={actions.upsertAccount}
+          />
+        )}
+
         {currentView === 'planner' && (
           <div className="animate-in fade-in duration-500">
             <BudgetPlanner 
@@ -146,9 +159,11 @@ const App: React.FC = () => {
               settings={settings}
               activeTab={activeConfigTab}
               setActiveTab={setActiveConfigTab}
-              onUpdateCategories={actions.upsertCategory as any} 
-              onUpdatePeople={actions.upsertPerson as any} 
-              onUpdateAccounts={actions.upsertAccount as any}
+              onUpdateCategories={actions.upsertCategory as any} // Reste temporaire, à refactoriser si besoin
+              onUpsertPerson={actions.upsertPerson} 
+              onDeletePerson={actions.deletePerson}
+              onUpsertAccount={actions.upsertAccount}
+              onDeleteAccount={actions.deleteAccount}
               onUpdateSettings={actions.updateSettings}
               onResetConnection={handleResetConnection}
             />

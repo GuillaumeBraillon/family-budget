@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Plus, Trash2, Pencil, X, User, Users, Save } from 'lucide-react';
 import { Person } from '../../../types';
@@ -5,10 +6,11 @@ import { ConfirmModal } from '../atoms/ConfirmModal';
 
 interface PeopleManagerProps {
     people: Person[];
-    onUpdatePeople: (p: Person[]) => void;
+    onUpsertPerson: (p: Person) => void;
+    onDeletePerson: (id: string) => void;
 }
 
-export const PeopleManager: React.FC<PeopleManagerProps> = ({ people, onUpdatePeople }) => {
+export const PeopleManager: React.FC<PeopleManagerProps> = ({ people, onUpsertPerson, onDeletePerson }) => {
     const [editingPersonId, setEditingPersonId] = useState<string | null>(null);
     const [tempName, setTempName] = useState('');
     const [tempIsChild, setTempIsChild] = useState(false);
@@ -21,7 +23,7 @@ export const PeopleManager: React.FC<PeopleManagerProps> = ({ people, onUpdatePe
     const addPerson = () => {
         if(!newName) return;
         const newPerson: Person = { id: `p_${Date.now()}`, name: newName, isChild };
-        onUpdatePeople([...people, newPerson]);
+        onUpsertPerson(newPerson);
         setNewName('');
         setIsChild(false);
     };
@@ -34,7 +36,7 @@ export const PeopleManager: React.FC<PeopleManagerProps> = ({ people, onUpdatePe
 
     const saveEdit = () => {
         if (!editingPersonId) return;
-        onUpdatePeople(people.map(p => p.id === editingPersonId ? { ...p, name: tempName, isChild: tempIsChild } : p));
+        onUpsertPerson({ id: editingPersonId, name: tempName, isChild: tempIsChild });
         setEditingPersonId(null);
     };
 
@@ -44,7 +46,7 @@ export const PeopleManager: React.FC<PeopleManagerProps> = ({ people, onUpdatePe
 
     const handleDelete = () => {
         if (deleteConfirm) {
-            onUpdatePeople(people.filter(p => p.id !== deleteConfirm.id));
+            onDeletePerson(deleteConfirm.id);
             setDeleteConfirm(null);
         }
     };

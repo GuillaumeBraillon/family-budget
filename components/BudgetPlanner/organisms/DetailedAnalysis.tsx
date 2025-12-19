@@ -1,72 +1,15 @@
 
-import React, { useState } from 'react';
-import { createPortal } from 'react-dom';
-import { Users, Wallet, Check, TrendingUp, TrendingDown, Info, X } from 'lucide-react';
+import React from 'react';
+import { Users, Wallet, Check, TrendingUp, TrendingDown } from 'lucide-react';
 import { Card } from '../../ui/Card';
 import { Person, Account } from '../../../types';
+import { MobileTooltip } from '../../ui/MobileTooltip';
 
 interface DetailedAnalysisProps {
   stats: any;
   people: Person[];
   accounts: Account[];
 }
-
-/**
- * Composant de Tooltip compatible mobile (s'affiche au clic)
- * Utilise un Portal pour s'afficher au-dessus de tout le reste (z-index/overflow)
- */
-const MobileTooltip: React.FC<{ text: string }> = ({ text }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [position, setPosition] = useState({ top: 0, left: 0 });
-
-  const toggle = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!isOpen) {
-        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-        setPosition({
-            top: rect.top,
-            left: rect.left + rect.width / 2
-        });
-    }
-    setIsOpen(!isOpen);
-  };
-
-  return (
-    <>
-      <button 
-        type="button"
-        onClick={toggle}
-        className="text-slate-300 hover:text-indigo-500 transition-colors inline-flex align-middle ml-1"
-      >
-        <Info size={10} />
-      </button>
-      {isOpen && createPortal(
-        <div className="relative z-[9999]">
-            {/* Backdrop invisible pour fermer au clic ailleurs */}
-            <div className="fixed inset-0 cursor-default" onClick={(e) => { e.stopPropagation(); setIsOpen(false); }} />
-            
-            <div 
-                className="fixed w-48 p-2 bg-slate-900 text-white text-[10px] rounded-lg shadow-xl animate-in zoom-in-95 fade-in duration-200 normal-case font-normal tracking-normal text-left"
-                style={{ 
-                    top: position.top - 6, 
-                    left: position.left,
-                    transform: 'translate(-50%, -100%)' 
-                }}
-                onClick={(e) => e.stopPropagation()}
-            >
-                <div className="flex justify-between items-start mb-1 font-bold border-b border-slate-700 pb-1">
-                    <span>Info</span>
-                    <X size={10} className="cursor-pointer hover:text-red-400" onClick={() => setIsOpen(false)} />
-                </div>
-                {text}
-                <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-900"></div>
-            </div>
-        </div>,
-        document.body
-      )}
-    </>
-  );
-};
 
 export const DetailedAnalysis: React.FC<DetailedAnalysisProps> = ({ stats, people, accounts }) => {
   const hasDiff = (paid: number, planned: number) => Math.abs(paid - planned) > 0.01;
@@ -123,13 +66,13 @@ export const DetailedAnalysis: React.FC<DetailedAnalysisProps> = ({ stats, peopl
               <tr className="text-slate-400 border-b border-slate-100">
                 <th className="text-left font-bold pb-2 uppercase tracking-tighter text-[9px]">Membre</th>
                 <th className="text-right font-bold pb-2 uppercase tracking-tighter text-[9px]">
-                   Revenus (Réel) <MobileTooltip text="Montants réellement perçus sur la période." />
+                   Revenus (Réel) <MobileTooltip text="Montants réellement perçus sur la période." iconSize={10} widthClass="w-48" />
                 </th>
                 <th className="text-right font-bold pb-2 uppercase tracking-tighter text-[9px]">
-                   Dépenses (Réel) <MobileTooltip text="Montants réellement payés sur la période." />
+                   Dépenses (Réel) <MobileTooltip text="Montants réellement payés sur la période." iconSize={10} widthClass="w-48" />
                 </th>
                 <th className="text-right font-bold pb-2 uppercase tracking-tighter text-[9px]">
-                   Bilan <MobileTooltip text="Différence entre revenus et dépenses réels." />
+                   Bilan <MobileTooltip text="Différence entre revenus et dépenses réels." iconSize={10} widthClass="w-48" />
                 </th>
               </tr>
             </thead>
@@ -192,7 +135,7 @@ export const DetailedAnalysis: React.FC<DetailedAnalysisProps> = ({ stats, peopl
       <Card className="p-4 shadow-sm relative overflow-hidden">
         <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-1.5">
           <Wallet size={12}/> Flux par Compte
-          <MobileTooltip text="Total des mouvements (Entrées/Sorties) impactant chaque compte sur cette période." />
+          <MobileTooltip text="Total des mouvements (Entrées/Sorties) impactant chaque compte sur cette période." iconSize={10} widthClass="w-48" />
         </h3>
         <div className="space-y-4 relative z-10 max-h-[320px] overflow-y-auto pr-1 custom-scrollbar">
           {(!stats.byAccount || Object.keys(stats.byAccount).length === 0) && (
@@ -261,7 +204,7 @@ export const DetailedAnalysis: React.FC<DetailedAnalysisProps> = ({ stats, peopl
                            <span className="text-[9px] text-amber-600 font-bold bg-amber-50 px-1.5 py-0.5 rounded border border-amber-100/50">
                              DONT EN ATTENTE : {remaining.toFixed(2)} € <span className="text-amber-800">({pendingCount})</span>
                            </span>
-                           <MobileTooltip text={`${pendingCount} opération(s) non pointée(s) incluse(s) dans le total.`} />
+                           <MobileTooltip text={`${pendingCount} opération(s) non pointée(s) incluse(s) dans le total.`} iconSize={10} widthClass="w-48" />
                         </div>
                     ) : (
                         planned !== 0 && (

@@ -21,7 +21,10 @@ export const apiUpsertAccount = async (account: Account) =>
     type: account.type, 
     owner_id: account.ownerId, 
     current_balance: account.currentBalance, 
-    bank_name: account.bankName 
+    bank_name: account.bankName || null,
+    is_joint: !!account.isJoint, // Nouveau champ
+    target_ratio: account.targetRatio !== undefined ? account.targetRatio : null,
+    target_cap: account.targetCap !== undefined ? account.targetCap : null
   });
 
 export const apiDeleteAccount = async (id: string) => 
@@ -30,13 +33,21 @@ export const apiDeleteAccount = async (id: string) =>
 /**
  * Opérations sur les Catégories
  */
-export const apiUpsertCategory = async (category: CategoryDef) => 
-  supabase.from('categories').upsert({ 
-    id: category.id, 
-    name: category.name, 
-    type: category.type, 
-    sub_categories: category.subCategories 
-  });
+export const apiUpsertCategory = async (categoryOrList: CategoryDef | CategoryDef[]) => {
+  const payload = Array.isArray(categoryOrList) ? categoryOrList.map(c => ({
+    id: c.id, 
+    name: c.name, 
+    type: c.type, 
+    sub_categories: c.subCategories 
+  })) : {
+    id: categoryOrList.id, 
+    name: categoryOrList.name, 
+    type: categoryOrList.type, 
+    sub_categories: categoryOrList.subCategories 
+  };
+  
+  return supabase.from('categories').upsert(payload);
+}
 
 export const apiDeleteCategory = async (id: string) => 
   supabase.from('categories').delete().eq('id', id);

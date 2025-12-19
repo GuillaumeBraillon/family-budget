@@ -19,7 +19,10 @@ export const mapDbAccount = (a: any): Account => ({
   type: a.type as AccountType,
   ownerId: a.owner_id,
   currentBalance: a.current_balance ?? 0,
-  bankName: a.bank_name
+  bankName: a.bank_name,
+  isJoint: !!a.is_joint,
+  targetRatio: a.target_ratio !== null && a.target_ratio !== undefined ? Number(a.target_ratio) : undefined,
+  targetCap: a.target_cap !== null && a.target_cap !== undefined ? Number(a.target_cap) : undefined
 });
 
 /**

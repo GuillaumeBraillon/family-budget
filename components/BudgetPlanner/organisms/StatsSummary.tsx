@@ -1,70 +1,14 @@
 
-import React, { useState } from 'react';
-import { createPortal } from 'react-dom';
-import { Clock, Wallet, AlertCircle, ArrowDownCircle, Target, TrendingDown, TrendingUp, Info, X } from 'lucide-react';
+import React from 'react';
+import { Clock, Wallet, AlertCircle, ArrowDownCircle, TrendingDown, TrendingUp } from 'lucide-react';
 import { StatCard } from '../atoms/StatCard';
 import { Account } from '../../../types';
+import { MobileTooltip } from '../../ui/MobileTooltip';
 
 interface StatsSummaryProps {
   stats: any;
   accounts: Account[];
 }
-
-/**
- * Composant de Tooltip compatible mobile avec Portal pour éviter les problèmes de z-index
- */
-const MobileTooltip: React.FC<{ text: string }> = ({ text }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [position, setPosition] = useState({ top: 0, left: 0 });
-
-  const toggle = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!isOpen) {
-        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-        setPosition({
-            top: rect.top,
-            left: rect.left + rect.width / 2
-        });
-    }
-    setIsOpen(!isOpen);
-  };
-
-  return (
-    <>
-      <button 
-        type="button"
-        onClick={toggle}
-        className="p-1 text-slate-300 hover:text-indigo-500 transition-colors inline-block"
-      >
-        <Info size={12} />
-      </button>
-      {isOpen && createPortal(
-        <div className="relative z-[9999]">
-             {/* Backdrop */}
-             <div className="fixed inset-0 cursor-default" onClick={(e) => { e.stopPropagation(); setIsOpen(false); }} />
-             
-             <div 
-                className="fixed w-48 p-2 bg-slate-900 text-white text-[10px] rounded-lg shadow-xl animate-in zoom-in-95 fade-in duration-200"
-                style={{ 
-                    top: position.top - 6, 
-                    left: position.left,
-                    transform: 'translate(-50%, -100%)' 
-                }}
-                onClick={(e) => e.stopPropagation()}
-            >
-                <div className="flex justify-between items-start mb-1 font-bold border-b border-slate-700 pb-1">
-                    <span>Aide</span>
-                    <X size={10} className="cursor-pointer hover:text-red-400" onClick={() => setIsOpen(false)} />
-                </div>
-                {text}
-                <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-900"></div>
-            </div>
-        </div>,
-        document.body
-      )}
-    </>
-  );
-};
 
 export const StatsSummary: React.FC<StatsSummaryProps> = ({ stats, accounts }) => {
   const variance = stats.paidRealPeriod - stats.paidOriginalValue;
@@ -88,7 +32,7 @@ export const StatsSummary: React.FC<StatsSummaryProps> = ({ stats, accounts }) =
           <div className="flex justify-between items-center py-2 px-3 bg-emerald-50 rounded-lg border border-emerald-100/50">
             <span className="text-emerald-700 font-medium flex items-center gap-2">
               <ArrowDownCircle size={14} /> Déjà payé
-              <MobileTooltip text="Somme des montants tels qu'ils ont été saisis lors du pointage de cette période." />
+              <MobileTooltip text="Somme des montants tels qu'ils ont été saisis lors du pointage de cette période." iconSize={12} widthClass="w-48" />
             </span>
             <span className="font-black text-emerald-700 text-sm">{stats.paidRealPeriod.toFixed(2)} €</span>
           </div>
@@ -97,7 +41,7 @@ export const StatsSummary: React.FC<StatsSummaryProps> = ({ stats, accounts }) =
             <span className="flex items-center gap-2 italic">
                <div className="w-1.5 h-1.5 rounded-full bg-slate-300"></div>
                Reste à payer
-               <MobileTooltip text="Somme des montants restants à payer pour finir la période en cours." />
+               <MobileTooltip text="Somme des montants restants à payer pour finir la période en cours." iconSize={12} widthClass="w-48" />
             </span>
             <span className="font-bold text-slate-700">{stats.remainingRealPeriod.toFixed(2)} €</span>
           </div>
@@ -106,7 +50,7 @@ export const StatsSummary: React.FC<StatsSummaryProps> = ({ stats, accounts }) =
             <div className="flex justify-between items-center py-2 px-3 bg-rose-50 rounded-lg border border-rose-100 text-rose-600 animate-pulse">
               <span className="font-bold flex items-center gap-2">
                 <AlertCircle size={14} /> Retards périodes précédentes
-                <MobileTooltip text="Somme des opérations des périodes passées qui n'ont jamais été pointées comme payées." />
+                <MobileTooltip text="Somme des opérations des périodes passées qui n'ont jamais été pointées comme payées." iconSize={12} widthClass="w-48" />
               </span>
               <span className="font-black text-sm">{stats.delaysRealPrevious.toFixed(2)} €</span>
             </div>
@@ -139,7 +83,7 @@ export const StatsSummary: React.FC<StatsSummaryProps> = ({ stats, accounts }) =
                       ? `${isOverBudget ? 'Dépassement' : 'Économie'} de ${Math.abs(variance).toFixed(2)} €` 
                       : "Conforme au prévisionnel"}
                 </span>
-                <MobileTooltip text="Différence entre ce que vous avez RÉELLEMENT payé et ce que vous aviez PRÉVU pour les items cochés." />
+                <MobileTooltip text="Différence entre ce que vous avez RÉELLEMENT payé et ce que vous aviez PRÉVU pour les items cochés." iconSize={12} widthClass="w-48" />
             </div>
           </div>
 
@@ -147,7 +91,7 @@ export const StatsSummary: React.FC<StatsSummaryProps> = ({ stats, accounts }) =
           <div className="flex justify-between items-center px-1">
             <span className="text-[10px] text-slate-400 font-black uppercase tracking-widest flex items-center">
                 Solde nécessaire
-                <MobileTooltip text="Montant net qu'il vous reste théoriquement pour finir la période sans dépasser le budget initialement prévu." />
+                <MobileTooltip text="Montant net qu'il vous reste théoriquement pour finir la période sans dépasser le budget initialement prévu." iconSize={12} widthClass="w-48" />
             </span>
             <div className="text-right">
                 <span className={`text-sm font-black ${remainingBudgetCapacity >= 0 ? 'text-indigo-600' : 'text-rose-600'}`}>

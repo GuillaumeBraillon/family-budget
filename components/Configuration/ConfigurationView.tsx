@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Settings, UserCircle, CreditCard, Tag, Sliders } from 'lucide-react';
 import { ConfigTab } from '../../hooks/useConfigurationUI';
@@ -20,8 +21,10 @@ interface ConfigurationViewProps {
   activeTab: ConfigTab;
   setActiveTab: (tab: ConfigTab) => void;
   onUpdateCategories: (newCategories: CategoryDef[]) => void;
-  onUpdatePeople: (newPeople: Person[]) => void;
-  onUpdateAccounts: (newAccounts: Account[]) => void;
+  onUpsertPerson: (p: Person) => void;
+  onDeletePerson: (id: string) => void;
+  onUpsertAccount: (a: Account) => void;
+  onDeleteAccount: (id: string) => void;
   onUpdateSettings: (newSettings: AppSettings) => void;
   onResetConnection: () => void;
 }
@@ -30,7 +33,9 @@ export const ConfigurationView: React.FC<ConfigurationViewProps> = ({
   categories, people, accounts, settings,
   activeTab, setActiveTab,
   onUpdateCategories,
-  onUpdatePeople, onUpdateAccounts, onUpdateSettings,
+  onUpsertPerson, onDeletePerson,
+  onUpsertAccount, onDeleteAccount,
+  onUpdateSettings,
   onResetConnection
 }) => {
   return (
@@ -81,7 +86,8 @@ export const ConfigurationView: React.FC<ConfigurationViewProps> = ({
               />
               <PeopleManager 
                   people={people} 
-                  onUpdatePeople={onUpdatePeople} 
+                  onUpsertPerson={onUpsertPerson}
+                  onDeletePerson={onDeletePerson}
               />
             </>
         )}
@@ -95,7 +101,8 @@ export const ConfigurationView: React.FC<ConfigurationViewProps> = ({
               <AccountManager 
                   accounts={accounts} 
                   people={people} 
-                  onUpdateAccounts={onUpdateAccounts} 
+                  onUpsertAccount={onUpsertAccount}
+                  onDeleteAccount={onDeleteAccount}
               />
             </>
         )}
