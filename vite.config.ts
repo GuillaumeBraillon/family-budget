@@ -1,3 +1,4 @@
+
 import path from "path";
 import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
@@ -13,62 +14,27 @@ export default defineConfig(({ mode }) => {
     plugins: [
       react(),
       VitePWA({
-        registerType: "autoUpdate",
-        includeAssets: ["icon.svg", "icon-192.png", "icon-512.png"],
+        registerType: 'autoUpdate',
+        includeAssets: ['favicon.ico', 'icon.svg'],
         manifest: {
-          name: "Budget Familial",
-          short_name: "Budget",
-          description: "Application de gestion financière pour la famille",
-          theme_color: "#4F46E5",
-          background_color: "#f8fafc",
-          display: "standalone",
-          orientation: "portrait",
-          start_url: "/",
-          scope: "/",
-          lang: "fr",
-          dir: "ltr",
-          categories: ["finance", "productivity"],
+          name: 'Budget Familial',
+          short_name: 'Budget',
+          description: 'Application de gestion financière pour la famille',
+          theme_color: '#ffffff',
+          background_color: '#f8fafc',
+          display: 'standalone',
+          orientation: 'portrait',
+          start_url: '/',
           icons: [
             {
-              src: "icon-192.png",
-              sizes: "192x192",
-              type: "image/png",
-              purpose: "any",
-            },
-            {
-              src: "icon-512.png",
-              sizes: "512x512",
-              type: "image/png",
-              purpose: "any",
-            },
-            {
-              src: "icon-512.png",
-              sizes: "512x512",
-              type: "image/png",
-              purpose: "maskable",
-            },
-          ],
-        },
-        workbox: {
-          globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
-          runtimeCaching: [
-            {
-              urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
-              handler: "CacheFirst",
-              options: {
-                cacheName: "google-fonts-cache",
-                expiration: {
-                  maxEntries: 10,
-                  maxAgeSeconds: 60 * 60 * 24 * 365, // 1 an
-                },
-                cacheableResponse: {
-                  statuses: [0, 200],
-                },
-              },
-            },
-          ],
-        },
-      }),
+              src: 'icon.svg',
+              sizes: 'any',
+              type: 'image/svg+xml',
+              purpose: 'any maskable'
+            }
+          ]
+        }
+      })
     ],
     define: {
       "process.env.API_KEY": JSON.stringify(env.GEMINI_API_KEY),
