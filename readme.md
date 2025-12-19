@@ -1,30 +1,20 @@
-# 💰 Budget Familial
+<div align="center">
+<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+</div>
 
-Application de gestion financière optimisée pour les couples.
+# Run and deploy your AI Studio app
 
-## 🛡️ Sécurisation de la Base de Données (Supabase)
+This contains everything you need to run your app locally.
 
-Pour une installation conforme aux bonnes pratiques de sécurité :
+View your app in AI Studio: https://ai.studio/apps/drive/1RrCO_xHR53vuhUbbxfmxsYc647qszyx3
 
-1.  **URL & Clés** : Récupérez votre `Project ID` et votre `API Key (anon public)` dans les paramètres de votre projet Supabase.
-2.  **Variables d'Environnement** : L'application recherche les variables `SUPABASE_PROJECT_ID` et `SUPABASE_ANON_KEY`.
-    - **En local** : Copiez le fichier `default.env.txt` vers un fichier `.env` et remplissez vos informations.
-    - **En production** : Renseignez ces variables dans l'interface de votre hébergeur (Vercel, Netlify, etc.).
-3.  **Script SQL** : 
-    - Allez dans le **SQL Editor** de Supabase.
-    - Utilisez les schémas décrits pour créer les tables `people`, `accounts`, `categories`, `expense_configs`, `income_configs`, `paid_items` et `app_settings`.
-4.  **Vérification RLS** :
-    - Vérifiez que la colonne **RLS** indique bien `Enabled` pour toutes les tables.
-    - Configurez les politiques d'accès (Policies) pour permettre l'accès public ou authentifié selon vos besoins.
+## Run Locally
 
-## 🛠️ Développement
+**Prerequisites:**  Node.js
 
-L'application utilise :
-- **React 19** pour l'interface.
-- **Tailwind CSS** pour le design.
-- **Supabase** pour la persistance des données.
-- **Lucide React** pour l'iconographie.
 
-## 📝 Changelog
-
-Consultez `CHANGELOG.md` pour voir les dernières évolutions, notamment le support des variables d'environnement pour éviter la volatilité du localStorage.
+1. Install dependencies:
+   `npm install`
+2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
+3. Run the app:
+   `npm run dev`
