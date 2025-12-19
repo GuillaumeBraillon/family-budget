@@ -1,6 +1,7 @@
 
-import React from 'react';
-import { Plus, Trash2, Pencil } from 'lucide-react';
+import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
+import { Plus, Trash2, Pencil, Info, X } from 'lucide-react';
 import { SavingsTransaction } from '../../../types';
 
 interface HistoryItem extends SavingsTransaction {
@@ -13,6 +14,58 @@ interface SavingsHistoryTableProps {
   onEditTransaction: (tx: SavingsTransaction) => void;
   onDeleteTransaction: (id: string) => void;
 }
+
+const MobileTooltip: React.FC<{ text: string }> = ({ text }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [position, setPosition] = useState({ top: 0, left: 0 });
+
+  const toggle = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!isOpen) {
+        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+        setPosition({
+            top: rect.top,
+            left: rect.left + rect.width / 2
+        });
+    }
+    setIsOpen(!isOpen);
+  };
+
+  return (
+    <>
+      <button 
+        type="button"
+        onClick={toggle}
+        className="ml-1 text-slate-300 hover:text-indigo-500 transition-colors inline-flex align-middle"
+      >
+        <Info size={12} />
+      </button>
+      {isOpen && createPortal(
+        <div className="relative z-[9999]">
+            <div className="fixed inset-0 cursor-default" onClick={(e) => { e.stopPropagation(); setIsOpen(false); }} />
+            
+            <div 
+                className="fixed w-48 p-2 bg-slate-900 text-white text-[10px] rounded-lg shadow-xl animate-in zoom-in-95 fade-in duration-200 normal-case font-normal tracking-normal text-left"
+                style={{ 
+                    top: position.top - 6, 
+                    left: position.left,
+                    transform: 'translate(-50%, -100%)' 
+                }}
+                onClick={(e) => e.stopPropagation()}
+            >
+                <div className="flex justify-between items-start mb-1 font-bold border-b border-slate-700 pb-1">
+                    <span>Info</span>
+                    <X size={10} className="cursor-pointer hover:text-red-400" onClick={() => setIsOpen(false)} />
+                </div>
+                {text}
+                <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-900"></div>
+            </div>
+        </div>,
+        document.body
+      )}
+    </>
+  );
+};
 
 export const SavingsHistoryTable: React.FC<SavingsHistoryTableProps> = ({ 
   history, 
@@ -45,7 +98,9 @@ export const SavingsHistoryTable: React.FC<SavingsHistoryTableProps> = ({
                       <th className="px-6 py-3">Libellé</th>
                       <th className="px-6 py-3 text-right text-red-600 w-32">Débit</th>
                       <th className="px-6 py-3 text-right text-emerald-600 w-32">Crédit</th>
-                      <th className="px-6 py-3 text-right bg-slate-100/50 w-32">Solde</th>
+                      <th className="px-6 py-3 text-right bg-slate-100/50 w-32 flex items-center justify-end gap-1">
+                        Solde <MobileTooltip text="Solde du compte calculé après prise en compte de cette opération." />
+                      </th>
                       <th className="px-4 py-3 w-20 text-center">Actions</th>
                   </tr>
               </thead>
