@@ -44,12 +44,21 @@ export interface Transaction {
   initiatedBy: string;
 }
 
+export interface SavingsTransaction {
+  id: string;
+  accountId: string;
+  date: string;
+  label: string;
+  amount: number;
+}
+
 export type PeriodType = 'FIXED_DAYS' | 'CALENDAR_WEEKS' | 'CUSTOM_SPLIT';
 
 export interface AppSettings {
   monthly_envelope: number;
   period_type: PeriodType;
   period_value: number;
+  savings_labels?: string[];
 }
 
 export interface ExpenseConfig {

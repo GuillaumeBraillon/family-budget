@@ -1,5 +1,5 @@
 
-import { Person, Account, CategoryDef, ExpenseConfig, IncomeConfig, PaidItemDetails, AppSettings, AccountType } from '../types';
+import { Person, Account, CategoryDef, ExpenseConfig, IncomeConfig, PaidItemDetails, AppSettings, AccountType, SavingsTransaction } from '../types';
 
 /**
  * Mappe un enregistrement de la table 'people' vers le type Person.
@@ -78,14 +78,25 @@ export const mapDbPaidItem = (item: any): PaidItemDetails => ({
 });
 
 /**
+ * Mappe un enregistrement de la table 'savings_transactions' vers le type SavingsTransaction.
+ */
+export const mapDbSavingsTransaction = (t: any): SavingsTransaction => ({
+  id: t.id,
+  accountId: t.account_id,
+  date: t.date,
+  label: t.label,
+  amount: Number(t.amount)
+});
+
+/**
  * Mappe un enregistrement de la table 'app_settings' vers le type AppSettings.
  */
 export const mapDbSettings = (data: any): AppSettings => {
-  if (!data) return { monthly_envelope: 2000, period_type: 'FIXED_DAYS', period_value: 7 };
+  if (!data) return { monthly_envelope: 2000, period_type: 'FIXED_DAYS', period_value: 7, savings_labels: [] };
   return {
-    // Modification ici : On lit 'monthly_envelope' directement depuis la DB
     monthly_envelope: Number(data.monthly_envelope || 2000),
     period_type: (data.period_type || 'FIXED_DAYS') as any,
-    period_value: Number(data.period_value || 7)
+    period_value: Number(data.period_value || 7),
+    savings_labels: data.savings_labels || []
   };
 };

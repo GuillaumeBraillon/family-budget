@@ -10,8 +10,9 @@ import { ConfigTab } from './hooks/useConfigurationUI';
 import { SupabaseSetup } from './components/Configuration/SupabaseSetup';
 import { isSupabaseConfigured, resetSupabaseConfig } from './services/supabase';
 import { Loader2, AlertTriangle } from 'lucide-react';
+import { SavingsDashboard } from './components/Savings/SavingsDashboard';
 
-type ViewState = 'dashboard' | 'planner' | 'config';
+type ViewState = 'dashboard' | 'planner' | 'savings' | 'config';
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<ViewState>('dashboard');
@@ -19,7 +20,7 @@ const App: React.FC = () => {
   const [configured, setConfigured] = useState(isSupabaseConfigured());
   
   const { 
-    accounts, configs, incomeConfigs, categories, people, paidItems, settings,
+    accounts, configs, incomeConfigs, categories, people, paidItems, settings, savingsTransactions,
     loading, error, isDbEmpty, actions 
   } = useBudget();
 
@@ -94,6 +95,7 @@ const App: React.FC = () => {
             incomeConfigs={incomeConfigs}
             paidItems={paidItems}
             settings={settings}
+            savingsTransactions={savingsTransactions}
             onNavigateToPlanner={() => setCurrentView('planner')}
             onNavigateToConfig={() => navigateToConfig('general')}
           />
@@ -116,6 +118,19 @@ const App: React.FC = () => {
               onAddIncome={actions.upsertIncome} 
               onUpdateIncome={actions.upsertIncome} 
               onDeleteIncome={actions.deleteIncome}
+            />
+          </div>
+        )}
+
+        {currentView === 'savings' && (
+          <div className="animate-in fade-in duration-500">
+            <SavingsDashboard 
+              accounts={accounts}
+              savingsTransactions={savingsTransactions}
+              settings={settings}
+              onUpsertTransaction={actions.upsertSavingsTransaction}
+              onDeleteTransaction={actions.deleteSavingsTransaction}
+              onNavigateToConfig={() => navigateToConfig('accounts')}
             />
           </div>
         )}

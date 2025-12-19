@@ -1,8 +1,8 @@
 
 import React from 'react';
-import { WalletCards, LayoutDashboard, CalendarCheck, Settings } from 'lucide-react';
+import { WalletCards, LayoutDashboard, CalendarCheck, Settings, PiggyBank } from 'lucide-react';
 
-type ViewState = 'dashboard' | 'planner' | 'config';
+type ViewState = 'dashboard' | 'planner' | 'savings' | 'config';
 
 interface HeaderProps {
   currentView: ViewState;
@@ -27,7 +27,7 @@ export const Header: React.FC<HeaderProps> = ({ currentView, onViewChange }) => 
           <h1 className="text-lg font-bold">Budget <span className="text-indigo-600">Famille</span></h1>
         </div>
         
-        <nav className="flex bg-slate-100 p-1 rounded-xl">
+        <nav className="flex bg-slate-100 p-1 rounded-xl overflow-x-auto no-scrollbar">
           <NavBtn 
             active={currentView === 'dashboard'} 
             onClick={() => onViewChange('dashboard')} 
@@ -39,6 +39,12 @@ export const Header: React.FC<HeaderProps> = ({ currentView, onViewChange }) => 
             onClick={() => onViewChange('planner')} 
             icon={<CalendarCheck size={16}/>} 
             label="Échéancier" 
+          />
+          <NavBtn 
+            active={currentView === 'savings'} 
+            onClick={() => onViewChange('savings')} 
+            icon={<PiggyBank size={16}/>} 
+            label="Épargne" 
           />
           <NavBtn 
             active={currentView === 'config'} 
@@ -60,7 +66,7 @@ const NavBtn: React.FC<{ active: boolean; onClick: () => void; icon: React.React
 }) => (
   <button 
     onClick={onClick} 
-    className={`px-4 py-1.5 text-sm font-semibold rounded-lg transition-all flex items-center gap-2 ${
+    className={`px-4 py-1.5 text-sm font-semibold rounded-lg transition-all flex items-center gap-2 whitespace-nowrap ${
       active 
         ? 'bg-white text-indigo-600 shadow-sm' 
         : 'text-slate-500 hover:text-slate-900'

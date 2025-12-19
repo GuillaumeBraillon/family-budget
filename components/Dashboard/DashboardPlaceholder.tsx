@@ -1,10 +1,11 @@
 
 import React, { useMemo } from 'react';
-import { LayoutDashboard, ArrowRight } from 'lucide-react';
 import { usePlanner } from '../../hooks/usePlanner';
 import { StatsSummary } from '../BudgetPlanner/organisms/StatsSummary';
 import { DetailedAnalysis } from '../BudgetPlanner/organisms/DetailedAnalysis';
-import { Account, Person, ExpenseConfig, IncomeConfig, PaidItemDetails, AppSettings } from '../../types';
+import { DashboardHeader } from './DashboardHeader';
+import { SavingsSummaryCard } from './SavingsSummaryCard';
+import { Account, Person, ExpenseConfig, IncomeConfig, PaidItemDetails, AppSettings, AccountType, SavingsTransaction } from '../../types';
 
 interface DashboardViewProps {
   accounts: Account[];
@@ -13,6 +14,7 @@ interface DashboardViewProps {
   incomeConfigs: IncomeConfig[];
   paidItems: Record<string, PaidItemDetails>;
   settings: AppSettings;
+  savingsTransactions: SavingsTransaction[];
   onNavigateToPlanner: () => void;
   onNavigateToConfig: () => void;
 }
@@ -22,7 +24,7 @@ interface DashboardViewProps {
  * Affiche une vue synthétique du MOIS EN COURS (sans découpage par période).
  */
 export const DashboardPlaceholder: React.FC<DashboardViewProps> = ({ 
-  accounts, people, configs, incomeConfigs, paidItems, settings,
+  accounts, people, configs, incomeConfigs, paidItems, settings, savingsTransactions,
   onNavigateToPlanner, 
   onNavigateToConfig 
 }) => {
@@ -42,31 +44,23 @@ export const DashboardPlaceholder: React.FC<DashboardViewProps> = ({
   // On récupère les stats de la "Période 1" qui correspond ici à tout le mois
   const currentMonthStats = getStats(1);
 
-  const monthLabel = new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' }).format(currentDate);
-
+  // Filtrage des comptes d'épargne
+  const savingsAccounts = useMemo(() => accounts.filter(a => a.type === AccountType.SAVINGS), [accounts]);
+  
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       
+      {/* COMPTES EPARGNE - VUE REGROUPÉE */}
+      <SavingsSummaryCard 
+        accounts={savingsAccounts} 
+        transactions={savingsTransactions} 
+      />
+
       {/* En-tête du Dashboard */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-           <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2 capitalize">
-             <LayoutDashboard className="text-indigo-600" />
-             Situation : {monthLabel}
-           </h2>
-           <p className="text-sm text-slate-500 mt-1">
-             Vue consolidée de l'ensemble du mois en cours.
-           </p>
-        </div>
-        <div className="flex gap-2">
-            <button 
-                onClick={onNavigateToPlanner}
-                className="text-xs font-bold px-4 py-2 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-700 flex items-center gap-2 transition-colors"
-            >
-                Voir l'échéancier détaillé <ArrowRight size={14} />
-            </button>
-        </div>
-      </div>
+      <DashboardHeader 
+        currentDate={currentDate} 
+        onNavigateToPlanner={onNavigateToPlanner} 
+      />
 
       {/* Cartes de Synthèse (Reste à payer, Budget Période/Mois) */}
       <StatsSummary stats={currentMonthStats} accounts={accounts} />

@@ -1,6 +1,6 @@
 
 import { supabase } from './supabase';
-import { Person, Account, CategoryDef, ExpenseConfig, IncomeConfig, PaidItemDetails, AppSettings } from '../types';
+import { Person, Account, CategoryDef, ExpenseConfig, IncomeConfig, PaidItemDetails, AppSettings, SavingsTransaction } from '../types';
 
 /**
  * Opérations sur les Membres (People)
@@ -47,10 +47,10 @@ export const apiDeleteCategory = async (id: string) =>
 export const apiUpdateSettings = async (settings: AppSettings) => 
   supabase.from('app_settings').upsert({ 
     id: 'global', 
-    // Modification ici : On écrit dans 'monthly_envelope' au lieu de 'weekly_envelope'
     monthly_envelope: Number(settings.monthly_envelope), 
     period_type: settings.period_type,
-    period_value: Math.floor(Number(settings.period_value))
+    period_value: Math.floor(Number(settings.period_value)),
+    savings_labels: settings.savings_labels
   });
 
 /**
@@ -112,3 +112,18 @@ export const apiSetPaidStatus = async (details: PaidItemDetails | null, instance
     return supabase.from('paid_items').delete().eq('instance_id', instanceId);
   }
 };
+
+/**
+ * Opérations sur les Transactions d'Épargne
+ */
+export const apiUpsertSavingsTransaction = async (tx: SavingsTransaction) => 
+  supabase.from('savings_transactions').upsert({
+    id: tx.id,
+    account_id: tx.accountId,
+    date: tx.date,
+    label: tx.label,
+    amount: tx.amount
+  });
+
+export const apiDeleteSavingsTransaction = async (id: string) => 
+  supabase.from('savings_transactions').delete().eq('id', id);

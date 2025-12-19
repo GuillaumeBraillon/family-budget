@@ -8,7 +8,8 @@ import {
   apiUpdateSettings, 
   apiUpsertConfig, apiDeleteConfig, 
   apiUpsertIncome, apiDeleteIncome, 
-  apiSetPaidStatus 
+  apiSetPaidStatus,
+  apiUpsertSavingsTransaction, apiDeleteSavingsTransaction
 } from './apiCrud';
 
 /**
@@ -23,7 +24,8 @@ export const fetchInitialData = async () => {
     configsRes, 
     incomesRes, 
     paidItemsRes, 
-    settingsRes
+    settingsRes,
+    savingsRes
   ] = await Promise.all([
     supabase.from('people').select('*'),
     supabase.from('accounts').select('*'),
@@ -31,10 +33,11 @@ export const fetchInitialData = async () => {
     supabase.from('expense_configs').select('*'),
     supabase.from('income_configs').select('*'),
     supabase.from('paid_items').select('*'),
-    supabase.from('app_settings').select('*').maybeSingle()
+    supabase.from('app_settings').select('*').maybeSingle(),
+    supabase.from('savings_transactions').select('*').order('date', { ascending: false })
   ]);
 
-  const responses = [peopleRes, accountsRes, categoriesRes, configsRes, incomesRes, paidItemsRes, settingsRes];
+  const responses = [peopleRes, accountsRes, categoriesRes, configsRes, incomesRes, paidItemsRes, settingsRes, savingsRes];
   const errors = responses.map(r => r.error).filter(e => e !== null);
   
   if (errors.length > 0) {
@@ -47,13 +50,14 @@ export const fetchInitialData = async () => {
   const configs = (configsRes.data || []).map(mappers.mapDbExpenseConfig);
   const incomeConfigs = (incomesRes.data || []).map(mappers.mapDbIncomeConfig);
   const settings = mappers.mapDbSettings(settingsRes.data);
+  const savingsTransactions = (savingsRes.data || []).map(mappers.mapDbSavingsTransaction);
 
   const paidItems: Record<string, any> = {};
   (paidItemsRes.data || []).forEach((item: any) => {
     paidItems[item.instance_id] = mappers.mapDbPaidItem(item);
   });
 
-  return { people, accounts, categories, configs, incomeConfigs, paidItems, settings };
+  return { people, accounts, categories, configs, incomeConfigs, paidItems, settings, savingsTransactions };
 };
 
 // Ré-exports explicites pour garantir la visibilité par le compilateur TS
@@ -64,5 +68,6 @@ export {
   apiUpdateSettings,
   apiUpsertConfig, apiDeleteConfig,
   apiUpsertIncome, apiDeleteIncome,
-  apiSetPaidStatus
+  apiSetPaidStatus,
+  apiUpsertSavingsTransaction, apiDeleteSavingsTransaction
 };

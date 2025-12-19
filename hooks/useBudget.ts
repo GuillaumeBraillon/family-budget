@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
-import { Account, ExpenseConfig, IncomeConfig, CategoryDef, Person, PaidItemDetails, AppSettings } from '../types';
+import { Account, ExpenseConfig, IncomeConfig, CategoryDef, Person, PaidItemDetails, AppSettings, SavingsTransaction } from '../types';
 import { 
   fetchInitialData, 
   apiUpsertConfig, apiDeleteConfig, 
@@ -8,8 +8,18 @@ import {
   apiUpsertCategory, apiDeleteCategory, 
   apiUpsertPerson, apiDeletePerson, 
   apiUpsertAccount, apiDeleteAccount, 
-  apiSetPaidStatus, apiUpdateSettings 
+  apiSetPaidStatus, apiUpdateSettings,
+  apiUpsertSavingsTransaction, apiDeleteSavingsTransaction
 } from '../services/api';
+
+const DEFAULT_SAVINGS_LABELS = [
+  "Virement mensuel",
+  "Épargne automatique",
+  "Intérêts",
+  "Retrait",
+  "Apport exceptionnel",
+  "Régularisation"
+];
 
 /**
  * Hook central gérant l'état global des finances et les actions CRUD synchronisées avec Supabase.
@@ -29,17 +39,27 @@ export const useBudget = () => {
     settings: { 
       monthly_envelope: 2000,
       period_type: 'FIXED_DAYS',
-      period_value: 7
-    } as AppSettings
+      period_value: 7,
+      savings_labels: DEFAULT_SAVINGS_LABELS
+    } as AppSettings,
+    savingsTransactions: [] as SavingsTransaction[]
   });
 
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       setError(null);
       const res = await fetchInitialData();
       
       setIsDbEmpty(res.people.length === 0 && res.accounts.length === 0);
+
+      // Si les settings de la DB n'ont pas de labels (undefined ou array vide), on met les défauts
+      const mergedSettings = {
+          ...res.settings,
+          savings_labels: (res.settings.savings_labels && res.settings.savings_labels.length > 0) 
+            ? res.settings.savings_labels 
+            : DEFAULT_SAVINGS_LABELS
+      };
 
       setData({
         accounts: res.accounts,
@@ -48,12 +68,13 @@ export const useBudget = () => {
         categories: res.categories,
         people: res.people,
         paidItems: res.paidItems,
-        settings: res.settings
+        settings: mergedSettings,
+        savingsTransactions: res.savingsTransactions
       });
     } catch (err: any) {
       setError(err.message || "Erreur lors du chargement des données");
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, []);
 
@@ -93,7 +114,7 @@ export const useBudget = () => {
     try {
       const { error: apiErr } = await fn(...args);
       if (apiErr) throw apiErr;
-      await loadData();
+      await loadData(true);
     } catch (err: any) {
       setError(err.message || "Erreur lors de l'opération");
     }
@@ -118,6 +139,8 @@ export const useBudget = () => {
       deletePerson: wrapCrud(apiDeletePerson),
       upsertAccount: wrapCrud(apiUpsertAccount),
       deleteAccount: wrapCrud(apiDeleteAccount),
+      upsertSavingsTransaction: wrapCrud(apiUpsertSavingsTransaction),
+      deleteSavingsTransaction: wrapCrud(apiDeleteSavingsTransaction)
     }
   };
 };

@@ -4,6 +4,7 @@ import { AppSettings } from '../../../types';
 import { MonthlyEnvelopeCard } from '../molecules/WeeklyEnvelopeCard';
 import { PeriodSettingsCard } from '../molecules/PeriodSettingsCard';
 import { DatabaseConnectionCard } from '../molecules/DatabaseConnectionCard';
+import { SavingsLabelManager } from '../molecules/SavingsLabelManager';
 
 interface GlobalSettingsProps {
   settings: AppSettings;
@@ -35,6 +36,13 @@ export const GlobalSettings: React.FC<GlobalSettingsProps> = ({ settings, onUpda
           settings={settings} 
           onUpdate={updatePeriod} 
         />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-1 gap-6">
+         <SavingsLabelManager 
+            settings={settings}
+            onUpdate={onUpdate}
+         />
       </div>
       
       <div className="border-t border-slate-200 pt-6">
