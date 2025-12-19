@@ -41,6 +41,13 @@ export const BalancesView: React.FC<BalancesViewProps> = ({
   const budgetPeriodeGlobal = stats.periodLimit;
   const resteAPayer = stats.totalToRegularizeActual;
 
+  // Calcul du solde total des comptes personnels (COURANT et NON JOINT)
+  const totalPersonalBalance = useMemo(() => {
+    return accounts
+      .filter(a => a.type === 'COURANT' && !a.isJoint)
+      .reduce((sum, acc) => sum + acc.currentBalance, 0);
+  }, [accounts]);
+
   const { rows, virLddsTotal } = useMemo(() => {
     const r: BalanceRow[] = [];
     const checkingAccounts = accounts.filter(a => a.type === 'COURANT');
@@ -124,6 +131,7 @@ export const BalancesView: React.FC<BalancesViewProps> = ({
       <BalancesHeader 
         budgetPeriodeGlobal={budgetPeriodeGlobal}
         resteAPayer={resteAPayer}
+        totalPersonalBalance={totalPersonalBalance}
       />
 
       <BalancesTable 
