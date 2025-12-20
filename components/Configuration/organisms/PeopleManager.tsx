@@ -1,8 +1,11 @@
 
 import React, { useState } from 'react';
-import { Plus, Trash2, Pencil, X, User, Users, Save } from 'lucide-react';
+import { Trash2, User, Users, Save, Baby } from 'lucide-react';
 import { Person } from '../../../types';
 import { ConfirmModal } from '../atoms/ConfirmModal';
+import { DataList, DataListRow } from '../../molecules/DataList';
+import { Modal } from '../../ui/Modal';
+import { TextInput } from '../../molecules/FormInputs';
 
 interface PeopleManagerProps {
     people: Person[];
@@ -11,43 +14,51 @@ interface PeopleManagerProps {
 }
 
 export const PeopleManager: React.FC<PeopleManagerProps> = ({ people, onUpsertPerson, onDeletePerson }) => {
-    const [editingPersonId, setEditingPersonId] = useState<string | null>(null);
-    const [tempName, setTempName] = useState('');
-    const [tempIsChild, setTempIsChild] = useState(false);
-    
-    const [newName, setNewName] = useState('');
-    const [isChild, setIsChild] = useState(false);
-    
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [editingPerson, setEditingPerson] = useState<Person | null>(null);
     const [deleteConfirm, setDeleteConfirm] = useState<{ id: string, name: string } | null>(null);
 
-    const addPerson = () => {
-        if(!newName) return;
-        const newPerson: Person = { id: `p_${Date.now()}`, name: newName, isChild };
-        onUpsertPerson(newPerson);
-        setNewName('');
+    // Form State
+    const [name, setName] = useState('');
+    const [isChild, setIsChild] = useState(false);
+
+    const resetForm = () => {
+        setName('');
         setIsChild(false);
+        setEditingPerson(null);
+        setIsModalOpen(false);
+        setDeleteConfirm(null);
     };
 
-    const startEdit = (p: Person) => {
-        setEditingPersonId(p.id);
-        setTempName(p.name);
-        setTempIsChild(!!p.isChild);
+    const handleAddClick = () => {
+        setEditingPerson(null);
+        setName('');
+        setIsChild(false);
+        setIsModalOpen(true);
     };
 
-    const saveEdit = () => {
-        if (!editingPersonId) return;
-        onUpsertPerson({ id: editingPersonId, name: tempName, isChild: tempIsChild });
-        setEditingPersonId(null);
+    const handleEditClick = (p: Person) => {
+        setEditingPerson(p);
+        setName(p.name);
+        setIsChild(!!p.isChild);
+        setIsModalOpen(true);
     };
 
-    const confirmDeletePerson = (p: Person) => {
-        setDeleteConfirm({ id: p.id, name: p.name });
+    const handleSubmit = () => {
+        if(!name) return;
+        const person: Person = {
+            id: editingPerson ? editingPerson.id : `p_${Date.now()}`,
+            name,
+            isChild
+        };
+        onUpsertPerson(person);
+        resetForm();
     };
 
     const handleDelete = () => {
         if (deleteConfirm) {
             onDeletePerson(deleteConfirm.id);
-            setDeleteConfirm(null);
+            resetForm();
         }
     };
 
@@ -61,62 +72,78 @@ export const PeopleManager: React.FC<PeopleManagerProps> = ({ people, onUpsertPe
                 onCancel={() => setDeleteConfirm(null)}
              />
 
-             <div className="bg-white p-4 rounded-lg border border-slate-200 flex flex-col gap-3 shadow-sm">
-                <div className="flex-1 w-full">
-                    <label className="text-xs text-slate-500 uppercase font-medium">Ajouter une personne / Entité</label>
-                    <input value={newName} onChange={e => setNewName(e.target.value)} className="w-full p-2 border border-slate-300 rounded bg-white text-slate-900" placeholder="Prénom..." />
-                </div>
-                <div className="flex items-center gap-6">
-                    <div className="flex items-center gap-2">
-                        <input type="checkbox" id="child" checked={isChild} onChange={e => setIsChild(e.target.checked)} className="h-4 w-4 text-indigo-600 bg-white" />
-                        <label htmlFor="child" className="text-sm text-slate-700">Enfant (Non payeur)</label>
-                    </div>
-                </div>
-                <button onClick={addPerson} className="bg-indigo-600 text-white px-4 py-2 rounded font-medium hover:bg-indigo-700 w-full sm:w-auto self-end">Ajouter</button>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {people.map(p => (
-                    <div key={p.id} className="bg-white p-3 rounded-lg border border-slate-200 flex justify-between items-center shadow-sm">
-                        {editingPersonId === p.id ? (
-                            <div className="flex flex-col gap-2 w-full">
-                                <div className="flex-1 space-y-2">
-                                    <input value={tempName} onChange={e => setTempName(e.target.value)} className="w-full p-1 border rounded text-sm bg-white text-slate-900" />
-                                    <div className="flex items-center gap-4">
-                                        <div className="flex items-center gap-2">
-                                            <input type="checkbox" checked={tempIsChild} onChange={e => setTempIsChild(e.target.checked)} className="h-4 w-4 bg-white" />
-                                            <span className="text-xs text-slate-600">Enfant</span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="flex justify-end gap-2">
-                                    <button onClick={saveEdit} className="text-green-600 p-2 hover:bg-green-50 rounded"><Save size={18} /></button>
-                                    <button onClick={() => setEditingPersonId(null)} className="text-slate-400 p-2 hover:bg-slate-50 rounded"><X size={18} /></button>
-                                </div>
+             <Modal 
+                isOpen={isModalOpen} 
+                onClose={resetForm} 
+                title={editingPerson ? "Modifier le membre" : "Ajouter un membre"}
+            >
+                <div className="space-y-4">
+                    <TextInput 
+                        label="Prénom / Nom" 
+                        value={name} 
+                        onChange={e => setName(e.target.value)} 
+                        placeholder="Ex: Guillaume, Enfant 1..."
+                        required 
+                        autoFocus
+                    />
+                    
+                    <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
+                        <label className="flex items-center gap-3 cursor-pointer">
+                            <input 
+                                type="checkbox" 
+                                checked={isChild} 
+                                onChange={e => setIsChild(e.target.checked)} 
+                                className="h-5 w-5 text-indigo-600 rounded bg-white border-slate-300 focus:ring-indigo-500" 
+                            />
+                            <div className="flex flex-col">
+                                <span className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                                    <Baby size={16} className="text-indigo-500" /> Enfant (Non contributeur)
+                                </span>
+                                <span className="text-xs text-slate-500">
+                                    Les revenus et dépenses de ce membre ne seront pas comptabilisés dans le calcul de l'équité du couple.
+                                </span>
                             </div>
-                        ) : (
-                            <>
-                                <div className="flex items-center gap-3">
-                                    <div className={`p-2 rounded-full ${p.isChild ? 'bg-slate-100 text-slate-600' : 'bg-indigo-100 text-indigo-600'}`}>
-                                        {p.isChild ? <User size={18} /> : <Users size={18} />}
-                                    </div>
-                                    <div>
-                                        <p className="font-semibold text-slate-900">{p.name}</p>
-                                        <div className="flex gap-2">
-                                            {p.isChild && <span className="text-[10px] bg-slate-100 px-1.5 py-0.5 rounded text-slate-600">Enfant</span>}
-                                            {!p.isChild && <span className="text-[10px] text-slate-400">Adulte</span>}
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="flex gap-1">
-                                    <button onClick={() => startEdit(p)} className="text-slate-300 hover:text-indigo-500 p-1.5"><Pencil size={18} /></button>
-                                    <button onClick={() => confirmDeletePerson(p)} className="text-slate-300 hover:text-red-500 p-1.5"><Trash2 size={18} /></button>
-                                </div>
-                            </>
-                        )}
+                        </label>
                     </div>
+
+                    <div className="flex gap-3 pt-2">
+                        {editingPerson && (
+                            <button 
+                                type="button" 
+                                onClick={() => setDeleteConfirm({ id: editingPerson.id, name: editingPerson.name })}
+                                className="px-4 bg-red-50 text-red-600 rounded-lg font-bold hover:bg-red-100"
+                            >
+                                <Trash2 size={20} />
+                            </button>
+                        )}
+                        <button 
+                            onClick={handleSubmit} 
+                            className="flex-1 bg-slate-900 text-white py-3 rounded-lg font-bold hover:bg-slate-800 transition-colors flex items-center justify-center gap-2"
+                        >
+                            <Save size={18} /> {editingPerson ? "Enregistrer" : "Ajouter"}
+                        </button>
+                    </div>
+                </div>
+            </Modal>
+
+            <DataList 
+                title="Membres du Foyer" 
+                count={people.length} 
+                onAdd={handleAddClick} 
+                addButtonLabel="Ajouter un membre"
+                emptyMessage="Aucun membre défini."
+            >
+                {people.map(p => (
+                    <DataListRow 
+                        key={p.id}
+                        icon={p.isChild ? <Baby size={20} /> : <User size={20} />}
+                        label={p.name}
+                        category={p.isChild ? "Enfant" : "Adulte / Payeur"}
+                        onClick={() => handleEditClick(p)}
+                        badge={p.isChild ? <span className="text-[9px] bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded font-bold uppercase">Enfant</span> : null}
+                    />
                 ))}
-            </div>
+            </DataList>
         </div>
     );
 };

@@ -97,6 +97,7 @@ export const SavingsAccountView: React.FC<SavingsAccountViewProps> = ({ account,
         accountId={account.id}
         suggestions={availableLabels}
         onSave={onAddTransaction}
+        onDelete={onDeleteTransaction}
       />
     </div>
   );

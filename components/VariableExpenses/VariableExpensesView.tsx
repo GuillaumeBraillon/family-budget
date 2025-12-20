@@ -27,34 +27,28 @@ export const VariableExpensesView: React.FC<VariableExpensesViewProps> = ({
   variableTransactions, accounts, settings, categories, people,
   onAddTransaction, onDeleteTransaction
 }) => {
-  // Réutilisation de la logique UI du Planner (mois, recherche, activeWeek)
   const ui = usePlannerUI();
   const [editingTransaction, setEditingTransaction] = useState<VariableTransaction | null>(null);
+  const [isFormOpen, setIsFormOpen] = useState(false);
   
-  // On utilise usePlanner pour obtenir la structure des périodes (weeks)
   const { filteredWeeks } = usePlanner([], [], {}, ui.currentDate, '', settings);
   
   const currentMonth = ui.currentDate.getMonth();
   const currentYear = ui.currentDate.getFullYear();
   const monthShort = new Intl.DateTimeFormat('fr-FR', { month: 'short' }).format(ui.currentDate);
 
-  // Filtrage des transactions pour le mois sélectionné
   const currentMonthTransactions = variableTransactions.filter(t => {
       const d = new Date(t.date);
       return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
   });
 
-  // Calcul de la période active par défaut si nécessaire
   const safeActiveWeek = filteredWeeks.some(w => w.weekNumber === ui.activeWeek) ? ui.activeWeek : 1;
   const activeWeekData = filteredWeeks.find(w => w.weekNumber === safeActiveWeek);
 
-  // Filtrage des transactions pour la période active ET la recherche
   const filteredTransactions = currentMonthTransactions.filter(t => {
-      // Filtre période
       const day = new Date(t.date).getDate();
       const inPeriod = activeWeekData && day >= activeWeekData.startDate && day <= activeWeekData.endDate;
       
-      // Filtre recherche
       const matchesSearch = !ui.searchQuery 
           || t.label.toLowerCase().includes(ui.searchQuery.toLowerCase())
           || t.category.toLowerCase().includes(ui.searchQuery.toLowerCase());
@@ -62,22 +56,17 @@ export const VariableExpensesView: React.FC<VariableExpensesViewProps> = ({
       return inPeriod && matchesSearch;
   });
 
-  // Tri par date décroissante
   filteredTransactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-  // Calcul de la date par défaut pour le formulaire (aujourd'hui ou début de période)
   const defaultFormDate = (() => {
       const today = new Date();
-      // Si aujourd'hui est dans la période active et le mois affiché
       if (today.getMonth() === currentMonth && today.getFullYear() === currentYear && activeWeekData) {
           const d = today.getDate();
           if (d >= activeWeekData.startDate && d <= activeWeekData.endDate) {
               return today.toISOString().split('T')[0];
           }
       }
-      // Sinon, 1er jour de la période active
       if (activeWeekData) {
-          // Astuce pour éviter le décalage UTC lors de la création de la string date
           const d = new Date(currentYear, currentMonth, activeWeekData.startDate, 12, 0, 0);
           return d.toISOString().split('T')[0];
       }
@@ -86,10 +75,17 @@ export const VariableExpensesView: React.FC<VariableExpensesViewProps> = ({
 
   const handleEdit = (tx: VariableTransaction) => {
     setEditingTransaction(tx);
+    setIsFormOpen(true);
   };
 
-  const handleCancelEdit = () => {
+  const handleAddClick = () => {
     setEditingTransaction(null);
+    setIsFormOpen(true);
+  };
+
+  const closeForm = () => {
+    setEditingTransaction(null);
+    setIsFormOpen(false);
   };
 
   return (
@@ -124,23 +120,25 @@ export const VariableExpensesView: React.FC<VariableExpensesViewProps> = ({
         />
 
         <VariableTransactionForm 
+            isOpen={isFormOpen}
+            onClose={closeForm}
             accounts={accounts}
             categories={categories}
             people={people}
-            onAddTransaction={(t) => { onAddTransaction(t); setEditingTransaction(null); }}
+            onAddTransaction={onAddTransaction}
+            onDeleteTransaction={onDeleteTransaction}
             defaultDate={defaultFormDate}
             labelsSuggestions={settings.variable_labels}
             editingTransaction={editingTransaction}
-            onCancelEdit={handleCancelEdit}
         />
 
         <VariableOperationsList 
             transactions={filteredTransactions}
             accounts={accounts}
             people={people}
-            onDeleteTransaction={onDeleteTransaction}
             onEditTransaction={handleEdit}
             monthShort={monthShort}
+            onAddClick={handleAddClick}
         />
     </div>
   );

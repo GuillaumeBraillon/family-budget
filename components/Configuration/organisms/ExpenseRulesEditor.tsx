@@ -1,9 +1,13 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Plus, Trash2, CalendarRange, Wallet, Pencil, X, CreditCard, ArrowUp, ArrowDown } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '../../ui/Card';
+import { Trash2, ArrowUp, ArrowDown, Save } from 'lucide-react';
 import { ExpenseConfig, CategoryDef, Person, Account } from '../../../types';
 import { CategorySelector } from '../../molecules/CategorySelector';
+import { TextInput, AmountInput } from '../../molecules/FormInputs';
+import { AccountSelector, BeneficiarySelector } from '../../molecules/SmartSelectors';
+import { DataList, DataListRow } from '../../molecules/DataList';
+import { ConfirmModal } from '../atoms/ConfirmModal';
+import { Modal } from '../../ui/Modal';
 
 interface ExpenseRulesEditorProps {
     configs: ExpenseConfig[];
@@ -23,9 +27,11 @@ export const ExpenseRulesEditor: React.FC<ExpenseRulesEditorProps> = ({
 }) => {
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    
     const [sortKey, setSortKey] = useState<SortKey>('dayOfMonth');
     const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
-
+    
     const defaultAccount = accounts[0]?.id || '';
 
     const [formData, setFormData] = useState<Partial<ExpenseConfig>>({
@@ -38,7 +44,6 @@ export const ExpenseRulesEditor: React.FC<ExpenseRulesEditorProps> = ({
     const [durationMode, setDurationMode] = useState<'dates' | 'duration'>('duration');
     const [durationMonths, setDurationMonths] = useState<number>(3);
 
-    // Calcul automatique de la date de fin si on est en mode durée
     useEffect(() => {
         if (formData.isExtra && durationMode === 'duration' && formData.startMonth && durationMonths > 0) {
             const [year, month] = formData.startMonth.split('-').map(Number);
@@ -50,7 +55,6 @@ export const ExpenseRulesEditor: React.FC<ExpenseRulesEditorProps> = ({
             const endMonth = String(endDate.getMonth() + 1).padStart(2, '0');
             const calculatedEnd = `${endYear}-${endMonth}`;
             
-            // On met à jour seulement si c'est différent pour éviter les boucles
             if (formData.endMonth !== calculatedEnd) {
                 setFormData(prev => ({ ...prev, endMonth: calculatedEnd }));
             }
@@ -69,19 +73,31 @@ export const ExpenseRulesEditor: React.FC<ExpenseRulesEditorProps> = ({
         setDurationMonths(3);
         setEditingId(null);
         setIsFormOpen(false);
+        setShowDeleteConfirm(false);
     };
 
     const handleEdit = (config: ExpenseConfig) => {
         setFormData(config);
         setEditingId(config.id);
         setIsFormOpen(true);
-        // Si on édite, on passe par défaut en mode "dates" pour voir la date de fin explicite
         setDurationMode('dates'); 
-        window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
+    const handleAddClick = () => {
+        setEditingId(null);
+        // Reset form data for new entry
+        setFormData({ 
+            label: '', amount: 0, dayOfMonth: 1, 
+            accountId: accounts[0]?.id || '', 
+            beneficiaryId: people[0]?.id, 
+            category: '', subCategory: '', 
+            isExtra: false, startMonth: '', endMonth: '' 
+        });
+        setIsFormOpen(true);
+    }
+
+    const handleSubmit = () => {
+        if (!formData.label || !formData.amount) return;
         const finalConfig: ExpenseConfig = {
             id: editingId || Date.now().toString(),
             ...formData as any
@@ -89,6 +105,13 @@ export const ExpenseRulesEditor: React.FC<ExpenseRulesEditorProps> = ({
         editingId ? onUpdateConfig(finalConfig) : onAddConfig(finalConfig);
         resetForm();
     };
+
+    const handleDelete = () => {
+        if (editingId) {
+            onDeleteConfig(editingId);
+            resetForm();
+        }
+    }
 
     const toggleSort = (key: SortKey) => {
         if (sortKey === key) {
@@ -111,181 +134,183 @@ export const ExpenseRulesEditor: React.FC<ExpenseRulesEditorProps> = ({
         });
     }, [configs, sortKey, sortOrder]);
 
+    if (showDeleteConfirm) {
+         return (
+             <ConfirmModal 
+                isOpen={true}
+                title="Supprimer la règle ?"
+                message={`Voulez-vous vraiment supprimer "${formData.label}" ?`}
+                onConfirm={handleDelete}
+                onCancel={() => setShowDeleteConfirm(false)}
+             />
+         );
+    }
+
     return (
         <div className="space-y-4 animate-in fade-in duration-300">
-             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2">
                 <div className="flex items-center gap-2 bg-white p-1.5 rounded-lg border border-slate-200 shadow-sm">
                     <span className="text-xs font-medium text-slate-500 px-2 uppercase">Trier :</span>
                     <button onClick={() => toggleSort('dayOfMonth')} className={`px-3 py-1.5 rounded text-xs font-medium flex items-center gap-1 transition-colors ${sortKey === 'dayOfMonth' ? 'bg-indigo-100 text-indigo-700' : 'hover:bg-slate-100 text-slate-600'}`}>Date {sortKey === 'dayOfMonth' && (sortOrder === 'asc' ? <ArrowUp size={12}/> : <ArrowDown size={12}/>)}</button>
                     <button onClick={() => toggleSort('label')} className={`px-3 py-1.5 rounded text-xs font-medium flex items-center gap-1 transition-colors ${sortKey === 'label' ? 'bg-indigo-100 text-indigo-700' : 'hover:bg-slate-100 text-slate-600'}`}>Libellé {sortKey === 'label' && (sortOrder === 'asc' ? <ArrowUp size={12}/> : <ArrowDown size={12}/>)}</button>
                     <button onClick={() => toggleSort('amount')} className={`px-3 py-1.5 rounded text-xs font-medium flex items-center gap-1 transition-colors ${sortKey === 'amount' ? 'bg-indigo-100 text-indigo-700' : 'hover:bg-slate-100 text-slate-600'}`}>Montant {sortKey === 'amount' && (sortOrder === 'asc' ? <ArrowUp size={12}/> : <ArrowDown size={12}/>)}</button>
                 </div>
-                {!isFormOpen && (
-                    <button onClick={() => setIsFormOpen(true)} className="bg-indigo-600 text-white px-5 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-indigo-700 shadow-sm active:scale-95 transition-all">
-                        <Plus size={18} /> Ajouter
-                    </button>
-                )}
             </div>
 
-            {isFormOpen && (
-                <Card className={`border ${editingId ? 'border-amber-200 bg-amber-50/30' : 'border-indigo-100 bg-indigo-50/50'}`}>
-                    <CardHeader className="flex flex-row justify-between items-center py-3">
-                        <CardTitle className="text-base">{editingId ? 'Modifier la dépense' : 'Nouvelle Dépense Récurrente'}</CardTitle>
-                        <button onClick={resetForm}><X size={20} className="text-slate-400" /></button>
-                    </CardHeader>
-                    <CardContent>
-                        <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="md:col-span-2">
-                                <label className="text-xs font-medium text-slate-500 uppercase">Libellé</label>
-                                <input type="text" required value={formData.label} onChange={e => setFormData({...formData, label: e.target.value})} className="w-full p-2 rounded border border-slate-300 bg-white text-slate-900" />
-                            </div>
-                            <div>
-                                <label className="text-xs font-medium text-slate-500 uppercase">Montant (€)</label>
-                                <input type="number" step="0.01" required value={formData.amount} onChange={e => setFormData({...formData, amount: parseFloat(e.target.value)})} className="w-full p-2 rounded border border-slate-300 bg-white text-slate-900" />
-                            </div>
-                            <div>
-                                <label className="text-xs font-medium text-slate-500 uppercase">Jour du mois</label>
-                                <input type="number" min="1" max="31" required value={formData.dayOfMonth} onChange={e => setFormData({...formData, dayOfMonth: parseInt(e.target.value)})} className="w-full p-2 rounded border border-slate-300 bg-white text-slate-900" />
-                            </div>
-                             <div>
-                                <label className="text-xs font-medium text-slate-500 uppercase">Compte</label>
-                                <select value={formData.accountId} onChange={e => setFormData({...formData, accountId: e.target.value})} className="w-full p-2 rounded border border-slate-300 bg-white text-slate-900">
-                                    {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
-                                </select>
-                            </div>
-                            <div>
-                                <label className="text-xs font-medium text-slate-500 uppercase">Bénéficiaire</label>
-                                <select value={formData.beneficiaryId} onChange={e => setFormData({...formData, beneficiaryId: e.target.value})} className="w-full p-2 rounded border border-slate-300 bg-white text-slate-900">
-                                    {people.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                                </select>
-                            </div>
-                            
-                            {/* CATEGORY SELECTOR REUSABLE */}
-                            <CategorySelector 
-                                categories={categories}
-                                type="EXPENSE"
-                                selectedCategory={formData.category || ''}
-                                selectedSubCategory={formData.subCategory || ''}
-                                onCategoryChange={val => setFormData({...formData, category: val})}
-                                onSubCategoryChange={val => setFormData({...formData, subCategory: val})}
+            <Modal 
+                isOpen={isFormOpen} 
+                onClose={resetForm} 
+                title={editingId ? 'Modifier la dépense' : 'Nouvelle Dépense Récurrente'}
+            >
+                <div className="space-y-4">
+                    <TextInput 
+                        label="Libellé" 
+                        value={formData.label} 
+                        onChange={e => setFormData({...formData, label: e.target.value})} 
+                        required
+                    />
+                    
+                    <AmountInput 
+                        label="Montant"
+                        value={formData.amount}
+                        onChange={e => setFormData({...formData, amount: parseFloat(e.target.value)})}
+                        required
+                    />
+
+                    <TextInput 
+                        label="Jour du mois"
+                        type="number"
+                        min={1} max={31}
+                        value={formData.dayOfMonth}
+                        onChange={e => setFormData({...formData, dayOfMonth: parseInt(e.target.value)})}
+                        required
+                    />
+                    
+                    <AccountSelector 
+                        accounts={accounts}
+                        value={formData.accountId}
+                        onChange={e => setFormData({...formData, accountId: e.target.value})}
+                    />
+                    
+                    <BeneficiarySelector 
+                        people={people}
+                        value={formData.beneficiaryId}
+                        onChange={e => setFormData({...formData, beneficiaryId: e.target.value})}
+                    />
+                    
+                    <CategorySelector 
+                        categories={categories}
+                        type="EXPENSE"
+                        selectedCategory={formData.category || ''}
+                        selectedSubCategory={formData.subCategory || ''}
+                        onCategoryChange={val => setFormData({...formData, category: val})}
+                        onSubCategoryChange={val => setFormData({...formData, subCategory: val})}
+                    />
+                    
+                    {/* OPTION EXTRA */}
+                    <div className="bg-white/60 p-3 rounded-lg border border-slate-200 mt-2">
+                        <div className="flex items-center gap-2 mb-3">
+                            <input 
+                                type="checkbox" 
+                                id="extra" 
+                                checked={formData.isExtra} 
+                                onChange={e => setFormData({...formData, isExtra: e.target.checked})} 
+                                className="h-4 w-4 text-indigo-600 rounded bg-white" 
                             />
-                            
-                            {/* OPTION EXTRA */}
-                            <div className="md:col-span-2 bg-white/60 p-3 rounded-lg border border-slate-200 mt-2">
-                                <div className="flex items-center gap-2 mb-3">
-                                    <input 
-                                        type="checkbox" 
-                                        id="extra" 
-                                        checked={formData.isExtra} 
-                                        onChange={e => setFormData({...formData, isExtra: e.target.checked})} 
-                                        className="h-4 w-4 text-indigo-600 rounded bg-white" 
-                                    />
-                                    <label htmlFor="extra" className="text-sm font-bold text-slate-800 cursor-pointer">
-                                        Dépense temporaire / Exceptionnelle
-                                    </label>
-                                </div>
+                            <label htmlFor="extra" className="text-sm font-bold text-slate-800 cursor-pointer">
+                                Dépense temporaire / Exceptionnelle
+                            </label>
+                        </div>
+                        
+                        {formData.isExtra && (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2">
+                                <TextInput 
+                                    label="Mois de début"
+                                    type="month"
+                                    value={formData.startMonth}
+                                    onChange={e => setFormData({...formData, startMonth: e.target.value})}
+                                    required={formData.isExtra}
+                                />
                                 
-                                {formData.isExtra && (
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2">
-                                        <div>
-                                            <label className="text-xs font-medium text-slate-500 uppercase block mb-1">Mois de début</label>
-                                            <input 
-                                                type="month" 
-                                                required={formData.isExtra} 
-                                                value={formData.startMonth} 
-                                                onChange={e => setFormData({...formData, startMonth: e.target.value})} 
-                                                className="w-full p-2 rounded border border-slate-300 bg-white text-slate-900" 
-                                            />
-                                        </div>
-                                        <div className="flex flex-col gap-2">
-                                            <div className="flex gap-2 text-xs mb-1">
-                                                <button type="button" onClick={() => setDurationMode('duration')} className={`px-2 py-1 rounded ${durationMode === 'duration' ? 'bg-indigo-100 text-indigo-700 font-medium' : 'text-slate-500 hover:bg-slate-100'}`}>Par durée</button>
-                                                <button type="button" onClick={() => setDurationMode('dates')} className={`px-2 py-1 rounded ${durationMode === 'dates' ? 'bg-indigo-100 text-indigo-700 font-medium' : 'text-slate-500 hover:bg-slate-100'}`}>Par date de fin</button>
-                                            </div>
-                                            {durationMode === 'duration' ? (
-                                                <div>
-                                                     <label className="text-xs font-medium text-slate-500 uppercase block mb-1">Durée (Mois)</label>
-                                                     <div className="flex items-center gap-2">
-                                                        <input 
-                                                            type="number" min="1" 
-                                                            value={durationMonths} 
-                                                            onChange={e => setDurationMonths(parseInt(e.target.value) || 1)} 
-                                                            className="w-full p-2 rounded border border-slate-300 bg-white text-slate-900" 
-                                                        />
-                                                        <span className="text-xs text-slate-500 whitespace-nowrap bg-slate-100 px-2 py-2 rounded">
-                                                            Fin : {formData.endMonth || '?'}
-                                                        </span>
-                                                     </div>
-                                                </div>
-                                            ) : (
-                                                <div>
-                                                    <label className="text-xs font-medium text-slate-500 uppercase block mb-1">Mois de fin</label>
-                                                    <input 
-                                                        type="month" 
-                                                        required={formData.isExtra} 
-                                                        value={formData.endMonth} 
-                                                        onChange={e => {
-                                                            setDurationMonths(0);
-                                                            setFormData({...formData, endMonth: e.target.value});
-                                                        }} 
-                                                        className="w-full p-2 rounded border border-slate-300 bg-white text-slate-900" 
-                                                    />
-                                                </div>
-                                            )}
-                                        </div>
+                                <div className="flex flex-col gap-2">
+                                    <div className="flex gap-2 text-xs mb-1">
+                                        <button type="button" onClick={() => setDurationMode('duration')} className={`px-2 py-1 rounded ${durationMode === 'duration' ? 'bg-indigo-100 text-indigo-700 font-medium' : 'text-slate-500 hover:bg-slate-100'}`}>Par durée</button>
+                                        <button type="button" onClick={() => setDurationMode('dates')} className={`px-2 py-1 rounded ${durationMode === 'dates' ? 'bg-indigo-100 text-indigo-700 font-medium' : 'text-slate-500 hover:bg-slate-100'}`}>Par date de fin</button>
                                     </div>
-                                )}
+                                    {durationMode === 'duration' ? (
+                                        <div>
+                                            <label className="text-xs font-medium text-slate-500 uppercase block mb-1">Durée (Mois)</label>
+                                            <div className="flex items-center gap-2">
+                                                <input 
+                                                    type="number" min="1" 
+                                                    value={durationMonths} 
+                                                    onChange={e => setDurationMonths(parseInt(e.target.value) || 1)} 
+                                                    className="w-full p-2 rounded-lg border border-slate-300 bg-white text-slate-900" 
+                                                />
+                                                <span className="text-xs text-slate-500 whitespace-nowrap bg-slate-100 px-2 py-2 rounded">
+                                                    Fin : {formData.endMonth || '?'}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <TextInput 
+                                            label="Mois de fin"
+                                            type="month"
+                                            value={formData.endMonth}
+                                            onChange={e => {
+                                                setDurationMonths(0);
+                                                setFormData({...formData, endMonth: e.target.value});
+                                            }}
+                                            required={formData.isExtra}
+                                        />
+                                    )}
+                                </div>
                             </div>
-
-                            <button type="submit" className="md:col-span-2 bg-slate-900 text-white py-3 rounded-lg font-bold hover:bg-slate-800 transition-colors">
-                                {editingId ? 'Mettre à jour la règle' : 'Créer la règle'}
+                        )}
+                    </div>
+                    
+                    <div className="flex gap-3 pt-2">
+                        {editingId && (
+                            <button 
+                                type="button" 
+                                onClick={() => setShowDeleteConfirm(true)}
+                                className="px-4 bg-red-50 text-red-600 rounded-lg font-bold hover:bg-red-100"
+                            >
+                                <Trash2 size={20} />
                             </button>
-                        </form>
-                    </CardContent>
-                </Card>
-            )}
+                        )}
+                        <button onClick={handleSubmit} className="flex-1 bg-slate-900 text-white py-3 rounded-lg font-bold hover:bg-slate-800 transition-colors flex items-center justify-center gap-2">
+                            <Save size={18} /> {editingId ? 'Mettre à jour' : 'Créer la règle'}
+                        </button>
+                    </div>
+                </div>
+            </Modal>
 
-            <div className="grid gap-3">
+            <DataList 
+                title="Modèles de Dépenses" 
+                count={configs.length} 
+                onAdd={handleAddClick}
+                addButtonLabel="Créer un modèle"
+            >
                 {sortedConfigs.map(config => {
-                    const accountName = accounts.find(a => a.id === config.accountId)?.name || 'Compte inconnu';
+                    const accountName = accounts.find(a => a.id === config.accountId)?.name || 'Inconnu';
                     const beneficiaryName = people.find(p => p.id === config.beneficiaryId)?.name || '?';
                     return (
-                        <div key={config.id} className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm hover:shadow-md transition-shadow flex items-center justify-between">
-                            <div className="flex items-center gap-4">
-                                <div className={`p-2 rounded-full ${config.isExtra ? 'bg-amber-100 text-amber-600' : 'bg-slate-100 text-slate-600'}`}>
-                                    {config.isExtra ? <CalendarRange size={18} /> : <Wallet size={18} />}
-                                </div>
-                                <div>
-                                    <div className="flex items-center gap-2">
-                                        <h4 className="font-semibold text-slate-900">{config.label}</h4>
-                                        {config.isExtra && (
-                                            <span className="text-[10px] bg-amber-50 text-amber-700 border border-amber-100 px-1.5 py-0.5 rounded font-bold uppercase">
-                                                {config.startMonth} ➔ {config.endMonth}
-                                            </span>
-                                        )}
-                                    </div>
-                                    <div className="text-xs text-slate-500 flex flex-wrap items-center gap-2 mt-0.5">
-                                        <span className="bg-slate-100 px-1.5 rounded">Le {config.dayOfMonth}</span>
-                                        <span>•</span>
-                                        <span>{config.category} {config.subCategory && `> ${config.subCategory}`}</span>
-                                        <span>•</span>
-                                        <span className="text-indigo-600">Pour {beneficiaryName}</span>
-                                        <span>•</span>
-                                        <span className="text-slate-600 flex items-center gap-1"><CreditCard size={10}/> {accountName}</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-3">
-                                <span className="font-bold text-slate-700">{config.amount.toFixed(2)} €</span>
-                                <div className="flex gap-1">
-                                    <button onClick={() => handleEdit(config)} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded"><Pencil size={16} /></button>
-                                    <button onClick={() => onDeleteConfig(config.id)} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded"><Trash2 size={16} /></button>
-                                </div>
-                            </div>
-                        </div>
+                        <DataListRow 
+                            key={config.id}
+                            date={{ day: config.dayOfMonth, month: 'DU MOIS' }}
+                            label={config.label}
+                            amount={config.amount}
+                            category={config.category}
+                            subCategory={config.subCategory}
+                            beneficiary={beneficiaryName}
+                            accountName={accountName}
+                            onClick={() => handleEdit(config)}
+                            badge={config.isExtra ? <span className="text-[9px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-bold uppercase">Temp</span> : null}
+                        />
                     );
                 })}
-            </div>
+            </DataList>
         </div>
     );
 };

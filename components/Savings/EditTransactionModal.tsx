@@ -2,6 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { Modal } from '../ui/Modal';
 import { SavingsTransaction, TransactionType } from '../../types';
+import { Trash2 } from 'lucide-react';
+import { ConfirmModal } from '../Configuration/atoms/ConfirmModal';
 
 interface EditTransactionModalProps {
   isOpen: boolean;
@@ -10,6 +12,7 @@ interface EditTransactionModalProps {
   accountId: string;
   suggestions?: string[];
   onSave: (t: SavingsTransaction) => void;
+  onDelete?: (id: string) => void; // Nouveau prop
 }
 
 const DEFAULT_LABELS = [
@@ -21,11 +24,12 @@ const DEFAULT_LABELS = [
   "Régularisation"
 ];
 
-export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({ isOpen, onClose, transaction, accountId, suggestions, onSave }) => {
+export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({ isOpen, onClose, transaction, accountId, suggestions, onSave, onDelete }) => {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [label, setLabel] = useState('');
   const [amount, setAmount] = useState(0);
   const [type, setType] = useState<TransactionType>(TransactionType.CREDIT);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const labelsToUse = (suggestions && suggestions.length > 0) ? suggestions : DEFAULT_LABELS;
 
@@ -59,6 +63,26 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({ isOp
     onSave(newTransaction);
     onClose();
   };
+
+  const handleDelete = () => {
+      if (transaction && onDelete) {
+          onDelete(transaction.id);
+          setShowDeleteConfirm(false);
+          onClose();
+      }
+  };
+
+  if (showDeleteConfirm) {
+      return (
+          <ConfirmModal 
+             isOpen={true}
+             title="Supprimer la transaction ?"
+             message={`Voulez-vous vraiment supprimer "${transaction?.label}" ?`}
+             onConfirm={handleDelete}
+             onCancel={() => setShowDeleteConfirm(false)}
+          />
+      );
+  }
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={transaction ? "Modifier le mouvement" : "Nouveau mouvement d'épargne"}>
@@ -125,12 +149,22 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({ isOp
           />
         </div>
 
-        <button 
-          onClick={handleSubmit}
-          className="w-full bg-slate-900 text-white py-3 rounded-lg font-bold mt-4 hover:bg-slate-800 transition-colors"
-        >
-          Enregistrer
-        </button>
+        <div className="flex gap-3 pt-2">
+            {transaction && onDelete && (
+                <button 
+                    onClick={() => setShowDeleteConfirm(true)}
+                    className="px-4 py-3 bg-red-50 text-red-600 rounded-lg font-bold hover:bg-red-100"
+                >
+                    <Trash2 size={20} />
+                </button>
+            )}
+            <button 
+            onClick={handleSubmit}
+            className="flex-1 bg-slate-900 text-white py-3 rounded-lg font-bold hover:bg-slate-800 transition-colors"
+            >
+            Enregistrer
+            </button>
+        </div>
       </div>
     </Modal>
   );
