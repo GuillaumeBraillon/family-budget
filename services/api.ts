@@ -9,7 +9,8 @@ import {
   apiUpsertConfig, apiDeleteConfig, 
   apiUpsertIncome, apiDeleteIncome, 
   apiSetPaidStatus,
-  apiUpsertSavingsTransaction, apiDeleteSavingsTransaction
+  apiUpsertSavingsTransaction, apiDeleteSavingsTransaction,
+  apiUpsertVariableTransaction, apiDeleteVariableTransaction
 } from './apiCrud';
 
 /**
@@ -41,7 +42,7 @@ export const fetchInitialData = async () => {
   const errors = responses.map(r => r.error).filter(e => e !== null);
   
   if (errors.length > 0) {
-      throw new Error(errors[0]?.message || "Erreur lors du chargement des données. Vérifiez votre schéma SQL.");
+      throw new Error(errors[0]?.message || "Erreur lors du chargement des données.");
   }
 
   const people = (peopleRes.data || []).map(mappers.mapDbPerson);
@@ -53,14 +54,32 @@ export const fetchInitialData = async () => {
   const savingsTransactions = (savingsRes.data || []).map(mappers.mapDbSavingsTransaction);
 
   const paidItems: Record<string, any> = {};
+  const variableTransactions: any[] = []; // On reconstruit cette liste depuis paidItems
+
   (paidItemsRes.data || []).forEach((item: any) => {
-    paidItems[item.instance_id] = mappers.mapDbPaidItem(item);
+    const mapped = mappers.mapDbPaidItem(item);
+    paidItems[item.instance_id] = mapped;
+    
+    // Si c'est manuel, on l'ajoute aussi comme "VariableTransaction" pour la rétrocompatibilité
+    if (mapped.isManual) {
+        variableTransactions.push({
+            id: mapped.instanceId,
+            date: mapped.paymentDate,
+            label: mapped.label,
+            amount: mapped.amount,
+            category: mapped.category,
+            subCategory: mapped.subCategory,
+            accountId: mapped.accountId,
+            beneficiaryId: mapped.beneficiaryId,
+            type: mapped.type
+        });
+    }
   });
 
-  return { people, accounts, categories, configs, incomeConfigs, paidItems, settings, savingsTransactions };
+  return { people, accounts, categories, configs, incomeConfigs, paidItems, settings, savingsTransactions, variableTransactions };
 };
 
-// Ré-exports explicites pour garantir la visibilité par le compilateur TS
+// Ré-exports explicites
 export {
   apiUpsertPerson, apiDeletePerson,
   apiUpsertAccount, apiDeleteAccount,
@@ -69,5 +88,6 @@ export {
   apiUpsertConfig, apiDeleteConfig,
   apiUpsertIncome, apiDeleteIncome,
   apiSetPaidStatus,
-  apiUpsertSavingsTransaction, apiDeleteSavingsTransaction
+  apiUpsertSavingsTransaction, apiDeleteSavingsTransaction,
+  apiUpsertVariableTransaction, apiDeleteVariableTransaction
 };

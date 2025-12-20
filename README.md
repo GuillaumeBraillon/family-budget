@@ -1,3 +1,4 @@
+
 # 💰 Budget Familial
 
 Application de gestion financière optimisée pour les couples.
@@ -12,7 +13,8 @@ Pour une installation conforme aux bonnes pratiques de sécurité :
     - **En production** : Renseignez ces variables dans l'interface de votre hébergeur (Vercel, Netlify, etc.).
 3.  **Script SQL** : 
     - Allez dans le **SQL Editor** de Supabase.
-    - Utilisez les schémas décrits pour créer les tables `people`, `accounts`, `categories`, `expense_configs`, `income_configs`, `paid_items` et `app_settings`.
+    - Copiez-collez le contenu du fichier `supabase_schema.sql` fourni à la racine du projet pour créer toutes les tables nécessaires (`variable_transactions`, `people`, `accounts`, etc.).
+    - (Optionnel) Pour tester avec des données, exécutez le script `seed_data.sql`.
 4.  **Vérification RLS** :
     - Vérifiez que la colonne **RLS** indique bien `Enabled` pour toutes les tables.
     - Configurez les politiques d'accès (Policies) pour permettre l'accès public ou authentifié selon vos besoins.

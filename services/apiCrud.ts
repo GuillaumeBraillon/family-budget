@@ -1,6 +1,6 @@
 
 import { supabase } from './supabase';
-import { Person, Account, CategoryDef, ExpenseConfig, IncomeConfig, PaidItemDetails, AppSettings, SavingsTransaction } from '../types';
+import { Person, Account, CategoryDef, ExpenseConfig, IncomeConfig, PaidItemDetails, AppSettings, SavingsTransaction, VariableTransaction } from '../types';
 
 /**
  * Opérations sur les Membres (People)
@@ -61,7 +61,8 @@ export const apiUpdateSettings = async (settings: AppSettings) =>
     monthly_envelope: Number(settings.monthly_envelope), 
     period_type: settings.period_type,
     period_value: Math.floor(Number(settings.period_value)),
-    savings_labels: settings.savings_labels
+    savings_labels: settings.savings_labels,
+    variable_labels: settings.variable_labels
   });
 
 /**
@@ -110,14 +111,15 @@ export const apiSetPaidStatus = async (details: PaidItemDetails | null, instance
   if (details) {
     return supabase.from('paid_items').upsert({ 
       instance_id: details.instanceId, 
-      is_paid: true, 
       amount: details.amount, 
       payment_date: details.paymentDate, 
       account_id: details.accountId, 
       beneficiary_id: details.beneficiaryId, 
       label: details.label, 
       category: details.category, 
-      sub_category: details.subCategory 
+      sub_category: details.subCategory,
+      type: details.type,
+      is_manual: false // Pointage d'échéancier = pas manuel
     });
   } else {
     return supabase.from('paid_items').delete().eq('instance_id', instanceId);
@@ -138,3 +140,24 @@ export const apiUpsertSavingsTransaction = async (tx: SavingsTransaction) =>
 
 export const apiDeleteSavingsTransaction = async (id: string) => 
   supabase.from('savings_transactions').delete().eq('id', id);
+
+/**
+ * Opérations sur les Transactions Variables (Suivi Réel)
+ * REDIRIGÉ VERS PAID_ITEMS avec is_manual = true
+ */
+export const apiUpsertVariableTransaction = async (tx: VariableTransaction) => 
+  supabase.from('paid_items').upsert({
+    instance_id: tx.id, // On utilise l'ID de la transaction comme instance_id
+    payment_date: tx.date,
+    label: tx.label,
+    amount: tx.amount,
+    category: tx.category,
+    sub_category: tx.subCategory || null,
+    account_id: tx.accountId,
+    beneficiary_id: tx.beneficiaryId || null,
+    type: tx.type,
+    is_manual: true // Indique que c'est une opération hors échéancier
+  });
+
+export const apiDeleteVariableTransaction = async (id: string) => 
+  supabase.from('paid_items').delete().eq('instance_id', id);

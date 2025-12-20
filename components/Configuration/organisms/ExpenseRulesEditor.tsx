@@ -1,8 +1,9 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Plus, Trash2, CalendarRange, Wallet, Pencil, X, CreditCard, Save, ArrowUp, ArrowDown } from 'lucide-react';
+import { Plus, Trash2, CalendarRange, Wallet, Pencil, X, CreditCard, ArrowUp, ArrowDown } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../ui/Card';
 import { ExpenseConfig, CategoryDef, Person, Account } from '../../../types';
+import { CategorySelector } from '../../molecules/CategorySelector';
 
 interface ExpenseRulesEditorProps {
     configs: ExpenseConfig[];
@@ -25,20 +26,19 @@ export const ExpenseRulesEditor: React.FC<ExpenseRulesEditorProps> = ({
     const [sortKey, setSortKey] = useState<SortKey>('dayOfMonth');
     const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
 
-    const expenseCategories = categories.filter(c => c.type === 'EXPENSE');
-    const defaultCat = expenseCategories[0]?.name || '';
     const defaultAccount = accounts[0]?.id || '';
 
     const [formData, setFormData] = useState<Partial<ExpenseConfig>>({
         label: '', amount: 0, dayOfMonth: 1, 
         accountId: defaultAccount, 
         beneficiaryId: people[0]?.id, 
-        category: defaultCat, subCategory: '', isExtra: false, startMonth: '', endMonth: ''
+        category: '', subCategory: '', isExtra: false, startMonth: '', endMonth: ''
     });
 
     const [durationMode, setDurationMode] = useState<'dates' | 'duration'>('duration');
-    const [durationMonths, setDurationMonths] = useState<number>(1);
+    const [durationMonths, setDurationMonths] = useState<number>(3);
 
+    // Calcul automatique de la date de fin si on est en mode durée
     useEffect(() => {
         if (formData.isExtra && durationMode === 'duration' && formData.startMonth && durationMonths > 0) {
             const [year, month] = formData.startMonth.split('-').map(Number);
@@ -48,16 +48,21 @@ export const ExpenseRulesEditor: React.FC<ExpenseRulesEditorProps> = ({
             
             const endYear = endDate.getFullYear();
             const endMonth = String(endDate.getMonth() + 1).padStart(2, '0');
-            setFormData(prev => ({ ...prev, endMonth: `${endYear}-${endMonth}` }));
+            const calculatedEnd = `${endYear}-${endMonth}`;
+            
+            // On met à jour seulement si c'est différent pour éviter les boucles
+            if (formData.endMonth !== calculatedEnd) {
+                setFormData(prev => ({ ...prev, endMonth: calculatedEnd }));
+            }
         }
-    }, [formData.startMonth, durationMonths, durationMode, formData.isExtra]);
+    }, [formData.startMonth, durationMonths, durationMode, formData.isExtra, formData.endMonth]);
 
     const resetForm = () => {
         setFormData({ 
             label: '', amount: 0, dayOfMonth: 1, 
             accountId: accounts[0]?.id || '', 
             beneficiaryId: people[0]?.id, 
-            category: expenseCategories[0]?.name || '', subCategory: '', 
+            category: '', subCategory: '', 
             isExtra: false, startMonth: '', endMonth: '' 
         });
         setDurationMode('duration');
@@ -70,6 +75,7 @@ export const ExpenseRulesEditor: React.FC<ExpenseRulesEditorProps> = ({
         setFormData(config);
         setEditingId(config.id);
         setIsFormOpen(true);
+        // Si on édite, on passe par défaut en mode "dates" pour voir la date de fin explicite
         setDurationMode('dates'); 
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
@@ -104,8 +110,6 @@ export const ExpenseRulesEditor: React.FC<ExpenseRulesEditorProps> = ({
             return sortOrder === 'asc' ? res : -res;
         });
     }, [configs, sortKey, sortOrder]);
-
-    const activeSubCats = categories.find(c => c.name === formData.category)?.subCategories || [];
 
     return (
         <div className="space-y-4 animate-in fade-in duration-300">
@@ -155,46 +159,67 @@ export const ExpenseRulesEditor: React.FC<ExpenseRulesEditorProps> = ({
                                     {people.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                                 </select>
                             </div>
-                             <div>
-                                <label className="text-xs font-medium text-slate-500 uppercase">Catégorie</label>
-                                <select value={formData.category} onChange={e => setFormData({...formData, category: e.target.value, subCategory: ''})} className="w-full p-2 rounded border border-slate-300 bg-white text-slate-900">
-                                    {expenseCategories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
-                                </select>
-                            </div>
-                            <div>
-                                <label className="text-xs font-medium text-slate-500 uppercase">Sous-Catégorie</label>
-                                <select value={formData.subCategory || ''} onChange={e => setFormData({...formData, subCategory: e.target.value})} className="w-full p-2 rounded border border-slate-300 bg-white text-slate-900" disabled={activeSubCats.length === 0}>
-                                    <option value="">-- Aucune --</option>
-                                    {activeSubCats.map(sc => <option key={sc} value={sc}>{sc}</option>)}
-                                </select>
-                            </div>
-                            <div className="md:col-span-2 bg-white/50 p-3 rounded-lg border border-slate-200 mt-2">
+                            
+                            {/* CATEGORY SELECTOR REUSABLE */}
+                            <CategorySelector 
+                                categories={categories}
+                                type="EXPENSE"
+                                selectedCategory={formData.category || ''}
+                                selectedSubCategory={formData.subCategory || ''}
+                                onCategoryChange={val => setFormData({...formData, category: val})}
+                                onSubCategoryChange={val => setFormData({...formData, subCategory: val})}
+                            />
+                            
+                            {/* OPTION EXTRA */}
+                            <div className="md:col-span-2 bg-white/60 p-3 rounded-lg border border-slate-200 mt-2">
                                 <div className="flex items-center gap-2 mb-3">
-                                    <input type="checkbox" id="extra" checked={formData.isExtra} onChange={e => setFormData({...formData, isExtra: e.target.checked})} className="h-4 w-4 text-indigo-600 rounded bg-white" />
-                                    <label htmlFor="extra" className="text-sm font-semibold text-slate-700">Dépense temporaire / Exceptionnelle</label>
+                                    <input 
+                                        type="checkbox" 
+                                        id="extra" 
+                                        checked={formData.isExtra} 
+                                        onChange={e => setFormData({...formData, isExtra: e.target.checked})} 
+                                        className="h-4 w-4 text-indigo-600 rounded bg-white" 
+                                    />
+                                    <label htmlFor="extra" className="text-sm font-bold text-slate-800 cursor-pointer">
+                                        Dépense temporaire / Exceptionnelle
+                                    </label>
                                 </div>
+                                
                                 {formData.isExtra && (
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2">
                                         <div>
-                                            <label className="text-xs font-medium text-slate-500 uppercase">Mois de début</label>
-                                            <input type="month" required={formData.isExtra} value={formData.startMonth} onChange={e => setFormData({...formData, startMonth: e.target.value})} className="w-full p-2 rounded border border-slate-300 bg-white text-slate-900" />
+                                            <label className="text-xs font-medium text-slate-500 uppercase block mb-1">Mois de début</label>
+                                            <input 
+                                                type="month" 
+                                                required={formData.isExtra} 
+                                                value={formData.startMonth} 
+                                                onChange={e => setFormData({...formData, startMonth: e.target.value})} 
+                                                className="w-full p-2 rounded border border-slate-300 bg-white text-slate-900" 
+                                            />
                                         </div>
                                         <div className="flex flex-col gap-2">
-                                            <div className="flex gap-2 text-xs">
+                                            <div className="flex gap-2 text-xs mb-1">
                                                 <button type="button" onClick={() => setDurationMode('duration')} className={`px-2 py-1 rounded ${durationMode === 'duration' ? 'bg-indigo-100 text-indigo-700 font-medium' : 'text-slate-500 hover:bg-slate-100'}`}>Par durée</button>
                                                 <button type="button" onClick={() => setDurationMode('dates')} className={`px-2 py-1 rounded ${durationMode === 'dates' ? 'bg-indigo-100 text-indigo-700 font-medium' : 'text-slate-500 hover:bg-slate-100'}`}>Par date de fin</button>
                                             </div>
                                             {durationMode === 'duration' ? (
                                                 <div>
-                                                     <label className="text-xs font-medium text-slate-500 uppercase">Durée (Mois)</label>
+                                                     <label className="text-xs font-medium text-slate-500 uppercase block mb-1">Durée (Mois)</label>
                                                      <div className="flex items-center gap-2">
-                                                        <input type="number" min="1" value={durationMonths} onChange={e => setDurationMonths(parseInt(e.target.value) || 1)} className="w-full p-2 rounded border border-slate-300 bg-white text-slate-900" />
-                                                        <span className="text-xs text-slate-500 whitespace-nowrap">Fin : {formData.endMonth || '...'}</span>
+                                                        <input 
+                                                            type="number" min="1" 
+                                                            value={durationMonths} 
+                                                            onChange={e => setDurationMonths(parseInt(e.target.value) || 1)} 
+                                                            className="w-full p-2 rounded border border-slate-300 bg-white text-slate-900" 
+                                                        />
+                                                        <span className="text-xs text-slate-500 whitespace-nowrap bg-slate-100 px-2 py-2 rounded">
+                                                            Fin : {formData.endMonth || '?'}
+                                                        </span>
                                                      </div>
                                                 </div>
                                             ) : (
                                                 <div>
-                                                    <label className="text-xs font-medium text-slate-500 uppercase">Mois de fin</label>
+                                                    <label className="text-xs font-medium text-slate-500 uppercase block mb-1">Mois de fin</label>
                                                     <input 
                                                         type="month" 
                                                         required={formData.isExtra} 
@@ -211,7 +236,10 @@ export const ExpenseRulesEditor: React.FC<ExpenseRulesEditorProps> = ({
                                     </div>
                                 )}
                             </div>
-                            <button type="submit" className="md:col-span-2 bg-slate-900 text-white py-2 rounded-lg font-medium hover:bg-slate-800">Sauvegarder</button>
+
+                            <button type="submit" className="md:col-span-2 bg-slate-900 text-white py-3 rounded-lg font-bold hover:bg-slate-800 transition-colors">
+                                {editingId ? 'Mettre à jour la règle' : 'Créer la règle'}
+                            </button>
                         </form>
                     </CardContent>
                 </Card>
@@ -228,7 +256,14 @@ export const ExpenseRulesEditor: React.FC<ExpenseRulesEditorProps> = ({
                                     {config.isExtra ? <CalendarRange size={18} /> : <Wallet size={18} />}
                                 </div>
                                 <div>
-                                    <h4 className="font-semibold text-slate-900">{config.label}</h4>
+                                    <div className="flex items-center gap-2">
+                                        <h4 className="font-semibold text-slate-900">{config.label}</h4>
+                                        {config.isExtra && (
+                                            <span className="text-[10px] bg-amber-50 text-amber-700 border border-amber-100 px-1.5 py-0.5 rounded font-bold uppercase">
+                                                {config.startMonth} ➔ {config.endMonth}
+                                            </span>
+                                        )}
+                                    </div>
                                     <div className="text-xs text-slate-500 flex flex-wrap items-center gap-2 mt-0.5">
                                         <span className="bg-slate-100 px-1.5 rounded">Le {config.dayOfMonth}</span>
                                         <span>•</span>

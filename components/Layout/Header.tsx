@@ -1,8 +1,8 @@
 
 import React from 'react';
-import { WalletCards, LayoutDashboard, CalendarCheck, Settings, PiggyBank, Calculator } from 'lucide-react';
+import { WalletCards, LayoutDashboard, CalendarCheck, Settings, PiggyBank, Calculator, ShoppingBag } from 'lucide-react';
 
-type ViewState = 'dashboard' | 'balances' | 'planner' | 'savings' | 'config';
+type ViewState = 'dashboard' | 'balances' | 'planner' | 'savings' | 'config' | 'variables';
 
 interface HeaderProps {
   currentView: ViewState;
@@ -16,7 +16,7 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({ currentView, onViewChange }) => {
   return (
     <header className="bg-white border-b sticky top-0 z-20">
-      <div className="max-w-5xl mx-auto px-4 h-16 flex justify-between items-center">
+      <div className="max-w-7xl mx-auto px-4 h-16 flex justify-between items-center">
         <div 
           className="flex items-center gap-2 cursor-pointer group" 
           onClick={() => onViewChange('dashboard')}
@@ -33,6 +33,12 @@ export const Header: React.FC<HeaderProps> = ({ currentView, onViewChange }) => 
             onClick={() => onViewChange('dashboard')} 
             icon={<LayoutDashboard size={16}/>} 
             label="Dashboard" 
+          />
+          <NavBtn 
+            active={currentView === 'variables'} 
+            onClick={() => onViewChange('variables')} 
+            icon={<ShoppingBag size={16}/>} 
+            label="Variables" 
           />
           <NavBtn 
             active={currentView === 'balances'} 

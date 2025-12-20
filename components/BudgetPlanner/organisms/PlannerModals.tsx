@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { X, Check } from 'lucide-react';
 import { Modal } from '../../ui/Modal';
@@ -94,7 +95,8 @@ export const PlannerModals: React.FC<PlannerModalsProps> = ({
                       amount: confirmModal.amount, 
                       paymentDate: confirmModal.paymentDate, 
                       accountId: confirmModal.accountId, 
-                      label: confirmModal.label 
+                      label: confirmModal.label,
+                      type: confirmModal.item.type 
                     } as any, confirmModal.item.instanceId); 
                   }
                   onCloseConfirm(); 

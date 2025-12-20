@@ -1,5 +1,5 @@
 
-import { Person, Account, CategoryDef, ExpenseConfig, IncomeConfig, PaidItemDetails, AppSettings, AccountType, SavingsTransaction } from '../types';
+import { Person, Account, CategoryDef, ExpenseConfig, IncomeConfig, PaidItemDetails, AppSettings, AccountType, SavingsTransaction, VariableTransaction } from '../types';
 
 /**
  * Mappe un enregistrement de la table 'people' vers le type Person.
@@ -77,7 +77,9 @@ export const mapDbPaidItem = (item: any): PaidItemDetails => ({
   beneficiaryId: item.beneficiary_id,
   label: item.label,
   category: item.category,
-  subCategory: item.sub_category
+  subCategory: item.sub_category,
+  type: item.type || 'EXPENSE',
+  isManual: !!item.is_manual
 });
 
 /**
@@ -92,14 +94,31 @@ export const mapDbSavingsTransaction = (t: any): SavingsTransaction => ({
 });
 
 /**
+ * Mappe un enregistrement de la table 'variable_transactions' vers le type VariableTransaction.
+ * Note: Consolidé via paid_items, ce mapper sert pour l'historique ou la transition.
+ */
+export const mapDbVariableTransaction = (t: any): VariableTransaction => ({
+  id: t.id,
+  date: t.date,
+  label: t.label,
+  amount: Number(t.amount),
+  category: t.category,
+  subCategory: t.sub_category,
+  accountId: t.account_id,
+  beneficiaryId: t.beneficiary_id,
+  type: t.type || 'EXPENSE'
+});
+
+/**
  * Mappe un enregistrement de la table 'app_settings' vers le type AppSettings.
  */
 export const mapDbSettings = (data: any): AppSettings => {
-  if (!data) return { monthly_envelope: 2000, period_type: 'FIXED_DAYS', period_value: 7, savings_labels: [] };
+  if (!data) return { monthly_envelope: 2000, period_type: 'FIXED_DAYS', period_value: 7, savings_labels: [], variable_labels: [] };
   return {
     monthly_envelope: Number(data.monthly_envelope || 2000),
     period_type: (data.period_type || 'FIXED_DAYS') as any,
     period_value: Number(data.period_value || 7),
-    savings_labels: data.savings_labels || []
+    savings_labels: data.savings_labels || [],
+    variable_labels: data.variable_labels || []
   };
 };

@@ -12,7 +12,7 @@ interface SavingsSummaryCardProps {
 export const SavingsSummaryCard: React.FC<SavingsSummaryCardProps> = ({ accounts, transactions }) => {
   
   // Calcul des soldes d'épargne localement dans le composant
-  const savingsBalances = useMemo(() => {
+  const savingsBalances = useMemo<Record<string, number>>(() => {
     const balances: Record<string, number> = {};
     accounts.forEach(acc => {
         const total = transactions
@@ -23,7 +23,7 @@ export const SavingsSummaryCard: React.FC<SavingsSummaryCardProps> = ({ accounts
     return balances;
   }, [accounts, transactions]);
 
-  const totalSavings = Object.values(savingsBalances).reduce((acc, val) => acc + val, 0);
+  const totalSavings = Object.values(savingsBalances).reduce((acc: number, val: number) => acc + val, 0);
 
   if (accounts.length === 0) return null;
 

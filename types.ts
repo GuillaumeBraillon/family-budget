@@ -56,6 +56,18 @@ export interface SavingsTransaction {
   amount: number;
 }
 
+export interface VariableTransaction {
+  id: string;
+  date: string;
+  label: string;
+  amount: number;
+  category: string;
+  subCategory?: string;
+  accountId: string;
+  beneficiaryId?: string;
+  type: 'EXPENSE' | 'INCOME';
+}
+
 export type PeriodType = 'FIXED_DAYS' | 'CALENDAR_WEEKS' | 'CUSTOM_SPLIT';
 
 export interface AppSettings {
@@ -63,6 +75,7 @@ export interface AppSettings {
   period_type: PeriodType;
   period_value: number;
   savings_labels?: string[];
+  variable_labels?: string[];
 }
 
 export interface ExpenseConfig {
@@ -99,6 +112,8 @@ export interface PaidItemDetails {
   label: string;
   category: string;
   subCategory?: string;
+  type: 'EXPENSE' | 'INCOME';
+  isManual?: boolean; // Nouveau champ pour distinguer les ajouts manuels
 }
 
 export type PlannedItemType = 'EXPENSE' | 'INCOME';

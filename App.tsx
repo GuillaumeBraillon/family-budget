@@ -5,6 +5,7 @@ import { WelcomeEmptyState } from './components/Dashboard/WelcomeEmptyState';
 import { DashboardPlaceholder } from './components/Dashboard/DashboardPlaceholder';
 import { BudgetPlanner } from './components/BudgetPlanner/BudgetPlanner';
 import { BalancesView } from './components/Balances/BalancesView';
+import { VariableExpensesView } from './components/VariableExpenses/VariableExpensesView';
 import { ConfigurationView } from './components/Configuration/ConfigurationView';
 import { Header } from './components/Layout/Header';
 import { ConfigTab } from './hooks/useConfigurationUI';
@@ -13,7 +14,7 @@ import { isSupabaseConfigured, resetSupabaseConfig } from './services/supabase';
 import { Loader2, AlertTriangle } from 'lucide-react';
 import { SavingsDashboard } from './components/Savings/SavingsDashboard';
 
-type ViewState = 'dashboard' | 'balances' | 'planner' | 'savings' | 'config';
+type ViewState = 'dashboard' | 'balances' | 'planner' | 'savings' | 'config' | 'variables';
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<ViewState>('dashboard');
@@ -21,7 +22,7 @@ const App: React.FC = () => {
   const [configured, setConfigured] = useState(isSupabaseConfigured());
   
   const { 
-    accounts, configs, incomeConfigs, categories, people, paidItems, settings, savingsTransactions,
+    accounts, configs, incomeConfigs, categories, people, paidItems, settings, savingsTransactions, variableTransactions,
     loading, error, isDbEmpty, actions 
   } = useBudget();
 
@@ -67,7 +68,7 @@ const App: React.FC = () => {
     <div className="min-h-screen bg-slate-50 pb-20">
       <Header currentView={currentView} onViewChange={setCurrentView} />
 
-      <main className="max-w-5xl mx-auto px-4 py-8">
+      <main className="max-w-7xl mx-auto px-4 py-8">
         {error !== null && (
           <div className="mb-6 p-4 bg-red-50 text-red-700 border border-red-200 rounded-xl flex gap-3 items-center shadow-sm animate-in slide-in-from-top-2">
             <AlertTriangle size={20} className="flex-shrink-0" />
@@ -97,8 +98,22 @@ const App: React.FC = () => {
             paidItems={paidItems}
             settings={settings}
             savingsTransactions={savingsTransactions}
+            variableTransactions={variableTransactions}
             onNavigateToPlanner={() => setCurrentView('planner')}
             onNavigateToConfig={() => navigateToConfig('general')}
+          />
+        )}
+        
+        {currentView === 'variables' && (
+          <VariableExpensesView 
+             variableTransactions={variableTransactions}
+             accounts={accounts}
+             settings={settings}
+             incomeConfigs={incomeConfigs}
+             people={people}
+             categories={categories}
+             onAddTransaction={actions.upsertVariableTransaction}
+             onDeleteTransaction={actions.deleteVariableTransaction}
           />
         )}
 

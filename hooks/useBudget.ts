@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
-import { Account, ExpenseConfig, IncomeConfig, CategoryDef, Person, PaidItemDetails, AppSettings, SavingsTransaction } from '../types';
+import { Account, ExpenseConfig, IncomeConfig, CategoryDef, Person, PaidItemDetails, AppSettings, SavingsTransaction, VariableTransaction } from '../types';
 import { 
   fetchInitialData, 
   apiUpsertConfig, apiDeleteConfig, 
@@ -9,7 +9,8 @@ import {
   apiUpsertPerson, apiDeletePerson, 
   apiUpsertAccount, apiDeleteAccount, 
   apiSetPaidStatus, apiUpdateSettings,
-  apiUpsertSavingsTransaction, apiDeleteSavingsTransaction
+  apiUpsertSavingsTransaction, apiDeleteSavingsTransaction,
+  apiUpsertVariableTransaction, apiDeleteVariableTransaction
 } from '../services/api';
 
 const DEFAULT_SAVINGS_LABELS = [
@@ -19,6 +20,15 @@ const DEFAULT_SAVINGS_LABELS = [
   "Retrait",
   "Apport exceptionnel",
   "Régularisation"
+];
+
+const DEFAULT_VARIABLE_LABELS = [
+  "Courses Alimentaires",
+  "Essence / Carburant",
+  "Restaurant",
+  "Pharmacie",
+  "Loisirs",
+  "Shopping"
 ];
 
 /**
@@ -40,9 +50,11 @@ export const useBudget = () => {
       monthly_envelope: 2000,
       period_type: 'FIXED_DAYS',
       period_value: 7,
-      savings_labels: DEFAULT_SAVINGS_LABELS
+      savings_labels: DEFAULT_SAVINGS_LABELS,
+      variable_labels: DEFAULT_VARIABLE_LABELS
     } as AppSettings,
-    savingsTransactions: [] as SavingsTransaction[]
+    savingsTransactions: [] as SavingsTransaction[],
+    variableTransactions: [] as VariableTransaction[]
   });
 
   const loadData = useCallback(async (silent = false) => {
@@ -53,12 +65,14 @@ export const useBudget = () => {
       
       setIsDbEmpty(res.people.length === 0 && res.accounts.length === 0);
 
-      // Si les settings de la DB n'ont pas de labels (undefined ou array vide), on met les défauts
       const mergedSettings = {
           ...res.settings,
           savings_labels: (res.settings.savings_labels && res.settings.savings_labels.length > 0) 
             ? res.settings.savings_labels 
-            : DEFAULT_SAVINGS_LABELS
+            : DEFAULT_SAVINGS_LABELS,
+          variable_labels: (res.settings.variable_labels && res.settings.variable_labels.length > 0)
+            ? res.settings.variable_labels
+            : DEFAULT_VARIABLE_LABELS
       };
 
       setData({
@@ -69,7 +83,8 @@ export const useBudget = () => {
         people: res.people,
         paidItems: res.paidItems,
         settings: mergedSettings,
-        savingsTransactions: res.savingsTransactions
+        savingsTransactions: res.savingsTransactions,
+        variableTransactions: res.variableTransactions
       });
     } catch (err: any) {
       setError(err.message || "Erreur lors du chargement des données");
@@ -83,6 +98,7 @@ export const useBudget = () => {
   }, [loadData]);
 
   const setPaidStatus = async (details: PaidItemDetails | null, instanceId: string) => {
+    // Optimistic Update
     setData(prev => {
       const nextPaid = { ...prev.paidItems };
       if (!details) delete nextPaid[instanceId];
@@ -140,7 +156,9 @@ export const useBudget = () => {
       upsertAccount: wrapCrud(apiUpsertAccount),
       deleteAccount: wrapCrud(apiDeleteAccount),
       upsertSavingsTransaction: wrapCrud(apiUpsertSavingsTransaction),
-      deleteSavingsTransaction: wrapCrud(apiDeleteSavingsTransaction)
+      deleteSavingsTransaction: wrapCrud(apiDeleteSavingsTransaction),
+      upsertVariableTransaction: wrapCrud(apiUpsertVariableTransaction),
+      deleteVariableTransaction: wrapCrud(apiDeleteVariableTransaction)
     }
   };
 };

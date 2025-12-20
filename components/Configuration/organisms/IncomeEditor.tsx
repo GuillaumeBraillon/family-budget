@@ -3,6 +3,7 @@ import React, { useState, useMemo } from 'react';
 import { Plus, Trash2, Pencil, X, CreditCard, TrendingUp, ArrowUp, ArrowDown } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../ui/Card';
 import { IncomeConfig, CategoryDef, Person, Account } from '../../../types';
+import { CategorySelector } from '../../molecules/CategorySelector';
 
 interface IncomeEditorProps {
     incomeConfigs: IncomeConfig[];
@@ -25,15 +26,13 @@ export const IncomeEditor: React.FC<IncomeEditorProps> = ({
     const [sortKey, setSortKey] = useState<SortKey>('dayOfMonth');
     const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
 
-    const incomeCategories = categories.filter(c => c.type === 'INCOME');
-    const defaultIncomeCat = incomeCategories[0]?.name || 'Salaire';
     const defaultAccount = accounts[0]?.id || '';
 
     const [formData, setFormData] = useState<Partial<IncomeConfig>>({
         label: '', amount: 0, dayOfMonth: 1, 
         accountId: defaultAccount, 
         beneficiaryId: people[0]?.id,
-        category: defaultIncomeCat,
+        category: '',
         subCategory: ''
     });
 
@@ -42,7 +41,7 @@ export const IncomeEditor: React.FC<IncomeEditorProps> = ({
             label: '', amount: 0, dayOfMonth: 1, 
             accountId: accounts[0]?.id || '', 
             beneficiaryId: people[0]?.id,
-            category: incomeCategories[0]?.name || 'Salaire',
+            category: '',
             subCategory: ''
         });
         setEditingId(null);
@@ -85,8 +84,6 @@ export const IncomeEditor: React.FC<IncomeEditorProps> = ({
             return sortOrder === 'asc' ? res : -res;
         });
     }, [incomeConfigs, sortKey, sortOrder]);
-
-    const activeSubCats = categories.find(c => c.name === formData.category)?.subCategories || [];
 
     return (
         <div className="space-y-4 animate-in fade-in duration-300">
@@ -136,25 +133,17 @@ export const IncomeEditor: React.FC<IncomeEditorProps> = ({
                                     {people.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                                 </select>
                             </div>
-                            <div>
-                                <label className="text-xs font-medium text-slate-500 uppercase">Catégorie</label>
-                                <select value={formData.category} onChange={e => setFormData({...formData, category: e.target.value, subCategory: ''})} className="w-full p-2 rounded border border-slate-300 bg-white text-slate-900">
-                                    {incomeCategories.length > 0 ? (
-                                        incomeCategories.map(cat => (
-                                            <option key={cat.id} value={cat.name}>{cat.name}</option>
-                                        ))
-                                    ) : (
-                                        <option value="Salaire">Salaire</option>
-                                    )}
-                                </select>
-                            </div>
-                            <div>
-                                <label className="text-xs font-medium text-slate-500 uppercase">Sous-Catégorie</label>
-                                <select value={formData.subCategory || ''} onChange={e => setFormData({...formData, subCategory: e.target.value})} className="w-full p-2 rounded border border-slate-300 bg-white text-slate-900" disabled={activeSubCats.length === 0}>
-                                    <option value="">-- Aucune --</option>
-                                    {activeSubCats.map(sc => <option key={sc} value={sc}>{sc}</option>)}
-                                </select>
-                            </div>
+                            
+                            {/* CATEGORY SELECTOR REUSABLE */}
+                            <CategorySelector 
+                                categories={categories}
+                                type="INCOME"
+                                selectedCategory={formData.category || ''}
+                                selectedSubCategory={formData.subCategory || ''}
+                                onCategoryChange={val => setFormData({...formData, category: val})}
+                                onSubCategoryChange={val => setFormData({...formData, subCategory: val})}
+                            />
+                            
                             <button type="submit" className="md:col-span-2 bg-slate-900 text-white py-2 rounded-lg font-medium hover:bg-slate-800">Sauvegarder</button>
                         </form>
                     </CardContent>
