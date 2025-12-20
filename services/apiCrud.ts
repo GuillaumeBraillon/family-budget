@@ -1,6 +1,6 @@
 
 import { supabase } from './supabase';
-import { Person, Account, CategoryDef, ExpenseConfig, IncomeConfig, PaidItemDetails, AppSettings, SavingsTransaction, VariableTransaction } from '../types';
+import { Person, Account, CategoryDef, ExpenseConfig, IncomeConfig, PaidItemDetails, AppSettings, SavingsTransaction, VariableTransaction, SavedLabel } from '../types';
 
 /**
  * Opérations sur les Membres (People)
@@ -53,6 +53,19 @@ export const apiDeleteCategory = async (id: string) =>
   supabase.from('categories').delete().eq('id', id);
 
 /**
+ * Opérations sur les Libellés Sauvegardés (Saved Labels)
+ */
+export const apiUpsertLabel = async (label: SavedLabel) => 
+  supabase.from('saved_labels').upsert({
+    id: label.id,
+    name: label.name,
+    type: label.type
+  });
+
+export const apiDeleteLabel = async (id: string) => 
+  supabase.from('saved_labels').delete().eq('id', id);
+
+/**
  * Opérations sur les Paramètres (Settings)
  */
 export const apiUpdateSettings = async (settings: AppSettings) => 
@@ -60,9 +73,8 @@ export const apiUpdateSettings = async (settings: AppSettings) =>
     id: 'global', 
     monthly_envelope: Number(settings.monthly_envelope), 
     period_type: settings.period_type,
-    period_value: Math.floor(Number(settings.period_value)),
-    savings_labels: settings.savings_labels,
-    variable_labels: settings.variable_labels
+    period_value: Math.floor(Number(settings.period_value))
+    // savings_labels et variable_labels ne sont plus gérés ici
   });
 
 /**

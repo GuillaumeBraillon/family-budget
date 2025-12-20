@@ -1,5 +1,5 @@
 
-import { Person, Account, CategoryDef, ExpenseConfig, IncomeConfig, PaidItemDetails, AppSettings, AccountType, SavingsTransaction, VariableTransaction } from '../types';
+import { Person, Account, CategoryDef, ExpenseConfig, IncomeConfig, PaidItemDetails, AppSettings, AccountType, SavingsTransaction, VariableTransaction, SavedLabel } from '../types';
 
 /**
  * Mappe un enregistrement de la table 'people' vers le type Person.
@@ -33,6 +33,15 @@ export const mapDbCategory = (c: any): CategoryDef => ({
   name: c.name,
   type: c.type || 'EXPENSE',
   subCategories: c.sub_categories || []
+});
+
+/**
+ * Mappe un enregistrement de la table 'saved_labels' vers le type SavedLabel.
+ */
+export const mapDbSavedLabel = (l: any): SavedLabel => ({
+  id: l.id,
+  name: l.name,
+  type: l.type
 });
 
 /**
@@ -113,12 +122,10 @@ export const mapDbVariableTransaction = (t: any): VariableTransaction => ({
  * Mappe un enregistrement de la table 'app_settings' vers le type AppSettings.
  */
 export const mapDbSettings = (data: any): AppSettings => {
-  if (!data) return { monthly_envelope: 2000, period_type: 'FIXED_DAYS', period_value: 7, savings_labels: [], variable_labels: [] };
+  if (!data) return { monthly_envelope: 2000, period_type: 'FIXED_DAYS', period_value: 7 };
   return {
     monthly_envelope: Number(data.monthly_envelope || 2000),
     period_type: (data.period_type || 'FIXED_DAYS') as any,
-    period_value: Number(data.period_value || 7),
-    savings_labels: data.savings_labels || [],
-    variable_labels: data.variable_labels || []
+    period_value: Number(data.period_value || 7)
   };
 };

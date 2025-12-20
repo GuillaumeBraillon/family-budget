@@ -30,6 +30,12 @@ export interface CategoryDef {
   subCategories: string[];
 }
 
+export interface SavedLabel {
+  id: string;
+  name: string;
+  type: AccountType; // Lien direct avec le type de compte
+}
+
 export enum TransactionType {
   DEBIT = 'DEBIT',
   CREDIT = 'CREDIT'
@@ -74,6 +80,7 @@ export interface AppSettings {
   monthly_envelope: number;
   period_type: PeriodType;
   period_value: number;
+  // savings_labels et variable_labels sont injectés par useBudget pour l'UI (rétrocompatibilité)
   savings_labels?: string[];
   variable_labels?: string[];
 }

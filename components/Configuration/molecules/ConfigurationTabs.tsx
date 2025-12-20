@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { ConfigTab } from '../../../hooks/useConfigurationUI';
-import { Settings2, Users, CreditCard, Tag } from 'lucide-react';
+import { Settings2, Users, CreditCard, Tag, List } from 'lucide-react';
 
 interface ConfigurationTabsProps {
   activeTab: ConfigTab;
@@ -22,6 +22,7 @@ export const ConfigurationTabs: React.FC<ConfigurationTabsProps> = ({ activeTab,
         { id: 'family', label: 'Membres', icon: <Users size={14} /> },
         { id: 'accounts', label: 'Comptes', icon: <CreditCard size={14} /> },
         { id: 'categories', label: 'Catégories', icon: <Tag size={14} /> },
+        { id: 'labels', label: 'Libellés', icon: <List size={14} /> },
       ]
     }
   ];

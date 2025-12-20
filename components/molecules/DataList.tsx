@@ -10,14 +10,15 @@ interface DataListProps {
   addButtonLabel?: string;
   children: React.ReactNode;
   emptyMessage?: string;
+  className?: string;
 }
 
 export const DataList: React.FC<DataListProps> = ({ 
-  title, count, onAdd, addButtonLabel = "Ajouter une ligne", children, emptyMessage = "Aucun élément."
+  title, count, onAdd, addButtonLabel = "Ajouter une ligne", children, emptyMessage = "Aucun élément.", className = ""
 }) => {
   return (
-    <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden flex flex-col h-full">
-      <div className="px-6 py-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+    <div className={`bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden flex flex-col ${className}`}>
+      <div className="px-6 py-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center flex-shrink-0">
         <h3 className="font-semibold text-slate-900 flex items-center gap-2">
           {title}
           {count !== undefined && (
@@ -36,7 +37,7 @@ export const DataList: React.FC<DataListProps> = ({
         )}
       </div>
       
-      <div className="divide-y divide-slate-100">
+      <div className="divide-y divide-slate-100 overflow-y-auto">
         {React.Children.count(children) > 0 ? children : (
             <div className="p-12 text-center text-slate-400 flex flex-col items-center">
                 <div className="bg-slate-50 p-4 rounded-full mb-3">

@@ -1,8 +1,8 @@
 
 import React from 'react';
-import { Settings, UserCircle, CreditCard, Tag, Sliders } from 'lucide-react';
+import { Settings, UserCircle, CreditCard, Tag, Sliders, List } from 'lucide-react';
 import { ConfigTab } from '../../hooks/useConfigurationUI';
-import { ExpenseConfig, IncomeConfig, CategoryDef, Person, Account, AppSettings } from '../../types';
+import { ExpenseConfig, IncomeConfig, CategoryDef, Person, Account, AppSettings, SavedLabel } from '../../types';
 import { InfoBox } from '../ui/InfoBox';
 
 import { ConfigurationTabs } from './molecules/ConfigurationTabs';
@@ -10,6 +10,7 @@ import { CategoryManager } from './organisms/CategoryManager';
 import { PeopleManager } from './organisms/PeopleManager';
 import { AccountManager } from './organisms/AccountManager';
 import { GlobalSettings } from './organisms/GlobalSettings';
+import { AccountLabelManager } from './organisms/AccountLabelManager';
 
 interface ConfigurationViewProps {
   configs: ExpenseConfig[];
@@ -18,6 +19,7 @@ interface ConfigurationViewProps {
   people: Person[];
   accounts: Account[];
   settings: AppSettings;
+  savedLabels: SavedLabel[];
   activeTab: ConfigTab;
   setActiveTab: (tab: ConfigTab) => void;
   onUpdateCategories: (newCategories: CategoryDef[]) => void;
@@ -27,16 +29,19 @@ interface ConfigurationViewProps {
   onDeleteAccount: (id: string) => void;
   onUpdateSettings: (newSettings: AppSettings) => void;
   onResetConnection: () => void;
+  onUpsertLabel: (l: SavedLabel) => void;
+  onDeleteLabel: (id: string) => void;
 }
 
 export const ConfigurationView: React.FC<ConfigurationViewProps> = ({ 
-  categories, people, accounts, settings,
+  categories, people, accounts, settings, savedLabels,
   activeTab, setActiveTab,
   onUpdateCategories,
   onUpsertPerson, onDeletePerson,
   onUpsertAccount, onDeleteAccount,
   onUpdateSettings,
-  onResetConnection
+  onResetConnection,
+  onUpsertLabel, onDeleteLabel
 }) => {
   return (
     <div className="space-y-6">
@@ -68,12 +73,26 @@ export const ConfigurationView: React.FC<ConfigurationViewProps> = ({
             <>
               <InfoBox 
                 title="Classification des flux"
-                description="Personnalisez vos catégories et sous-catégories pour organiser vos d'épenses et revenus. Une bonne classification permet une analyse plus fine de vos habitudes de consommation."
+                description="Personnalisez vos catégories et sous-catégories pour organiser vos dépenses et revenus. Une bonne classification permet une analyse plus fine de vos habitudes de consommation."
                 icon={<Tag size={18} />}
               />
               <CategoryManager 
                   categories={categories} 
                   onUpdateCategories={onUpdateCategories} 
+              />
+            </>
+        )}
+        {activeTab === 'labels' && (
+            <>
+              <InfoBox 
+                title="Libellés de compte"
+                description="Gérez les listes de libellés pré-définis pour vos opérations (virements d'épargne, dépenses courantes) afin d'accélérer la saisie lors de l'ajout de transactions."
+                icon={<List size={18} />}
+              />
+              <AccountLabelManager 
+                  labels={savedLabels} 
+                  onUpsertLabel={onUpsertLabel}
+                  onDeleteLabel={onDeleteLabel}
               />
             </>
         )}

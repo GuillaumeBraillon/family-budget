@@ -22,7 +22,7 @@ const App: React.FC = () => {
   const [configured, setConfigured] = useState(isSupabaseConfigured());
   
   const { 
-    accounts, configs, incomeConfigs, categories, people, paidItems, settings, savingsTransactions, variableTransactions,
+    accounts, configs, incomeConfigs, categories, people, paidItems, settings, savingsTransactions, variableTransactions, savedLabels,
     loading, error, isDbEmpty, actions 
   } = useBudget();
 
@@ -172,6 +172,7 @@ const App: React.FC = () => {
               people={people} 
               accounts={accounts} 
               settings={settings}
+              savedLabels={savedLabels}
               activeTab={activeConfigTab}
               setActiveTab={setActiveConfigTab}
               onUpdateCategories={actions.upsertCategory as any} // Reste temporaire, à refactoriser si besoin
@@ -181,6 +182,8 @@ const App: React.FC = () => {
               onDeleteAccount={actions.deleteAccount}
               onUpdateSettings={actions.updateSettings}
               onResetConnection={handleResetConnection}
+              onUpsertLabel={actions.upsertLabel}
+              onDeleteLabel={actions.deleteLabel}
             />
           </div>
         )}

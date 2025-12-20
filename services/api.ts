@@ -10,7 +10,8 @@ import {
   apiUpsertIncome, apiDeleteIncome, 
   apiSetPaidStatus,
   apiUpsertSavingsTransaction, apiDeleteSavingsTransaction,
-  apiUpsertVariableTransaction, apiDeleteVariableTransaction
+  apiUpsertVariableTransaction, apiDeleteVariableTransaction,
+  apiUpsertLabel, apiDeleteLabel
 } from './apiCrud';
 
 /**
@@ -26,7 +27,8 @@ export const fetchInitialData = async () => {
     incomesRes, 
     paidItemsRes, 
     settingsRes,
-    savingsRes
+    savingsRes,
+    savedLabelsRes
   ] = await Promise.all([
     supabase.from('people').select('*'),
     supabase.from('accounts').select('*'),
@@ -35,10 +37,11 @@ export const fetchInitialData = async () => {
     supabase.from('income_configs').select('*'),
     supabase.from('paid_items').select('*'),
     supabase.from('app_settings').select('*').maybeSingle(),
-    supabase.from('savings_transactions').select('*').order('date', { ascending: false })
+    supabase.from('savings_transactions').select('*').order('date', { ascending: false }),
+    supabase.from('saved_labels').select('*')
   ]);
 
-  const responses = [peopleRes, accountsRes, categoriesRes, configsRes, incomesRes, paidItemsRes, settingsRes, savingsRes];
+  const responses = [peopleRes, accountsRes, categoriesRes, configsRes, incomesRes, paidItemsRes, settingsRes, savingsRes, savedLabelsRes];
   const errors = responses.map(r => r.error).filter(e => e !== null);
   
   if (errors.length > 0) {
@@ -52,6 +55,7 @@ export const fetchInitialData = async () => {
   const incomeConfigs = (incomesRes.data || []).map(mappers.mapDbIncomeConfig);
   const settings = mappers.mapDbSettings(settingsRes.data);
   const savingsTransactions = (savingsRes.data || []).map(mappers.mapDbSavingsTransaction);
+  const savedLabels = (savedLabelsRes.data || []).map(mappers.mapDbSavedLabel);
 
   const paidItems: Record<string, any> = {};
   const variableTransactions: any[] = []; // On reconstruit cette liste depuis paidItems
@@ -76,7 +80,7 @@ export const fetchInitialData = async () => {
     }
   });
 
-  return { people, accounts, categories, configs, incomeConfigs, paidItems, settings, savingsTransactions, variableTransactions };
+  return { people, accounts, categories, configs, incomeConfigs, paidItems, settings, savingsTransactions, variableTransactions, savedLabels };
 };
 
 // Ré-exports explicites
@@ -89,5 +93,6 @@ export {
   apiUpsertIncome, apiDeleteIncome,
   apiSetPaidStatus,
   apiUpsertSavingsTransaction, apiDeleteSavingsTransaction,
-  apiUpsertVariableTransaction, apiDeleteVariableTransaction
+  apiUpsertVariableTransaction, apiDeleteVariableTransaction,
+  apiUpsertLabel, apiDeleteLabel
 };

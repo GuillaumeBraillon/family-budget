@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
-import { Account, ExpenseConfig, IncomeConfig, CategoryDef, Person, PaidItemDetails, AppSettings, SavingsTransaction, VariableTransaction } from '../types';
+import { Account, ExpenseConfig, IncomeConfig, CategoryDef, Person, PaidItemDetails, AppSettings, SavingsTransaction, VariableTransaction, SavedLabel, AccountType } from '../types';
 import { 
   fetchInitialData, 
   apiUpsertConfig, apiDeleteConfig, 
@@ -10,7 +10,8 @@ import {
   apiUpsertAccount, apiDeleteAccount, 
   apiSetPaidStatus, apiUpdateSettings,
   apiUpsertSavingsTransaction, apiDeleteSavingsTransaction,
-  apiUpsertVariableTransaction, apiDeleteVariableTransaction
+  apiUpsertVariableTransaction, apiDeleteVariableTransaction,
+  apiUpsertLabel, apiDeleteLabel
 } from '../services/api';
 
 const DEFAULT_SAVINGS_LABELS = [
@@ -49,12 +50,11 @@ export const useBudget = () => {
     settings: { 
       monthly_envelope: 2000,
       period_type: 'FIXED_DAYS',
-      period_value: 7,
-      savings_labels: DEFAULT_SAVINGS_LABELS,
-      variable_labels: DEFAULT_VARIABLE_LABELS
+      period_value: 7
     } as AppSettings,
     savingsTransactions: [] as SavingsTransaction[],
-    variableTransactions: [] as VariableTransaction[]
+    variableTransactions: [] as VariableTransaction[],
+    savedLabels: [] as SavedLabel[]
   });
 
   const loadData = useCallback(async (silent = false) => {
@@ -65,16 +65,6 @@ export const useBudget = () => {
       
       setIsDbEmpty(res.people.length === 0 && res.accounts.length === 0);
 
-      const mergedSettings = {
-          ...res.settings,
-          savings_labels: (res.settings.savings_labels && res.settings.savings_labels.length > 0) 
-            ? res.settings.savings_labels 
-            : DEFAULT_SAVINGS_LABELS,
-          variable_labels: (res.settings.variable_labels && res.settings.variable_labels.length > 0)
-            ? res.settings.variable_labels
-            : DEFAULT_VARIABLE_LABELS
-      };
-
       setData({
         accounts: res.accounts,
         configs: res.configs,
@@ -82,9 +72,10 @@ export const useBudget = () => {
         categories: res.categories,
         people: res.people,
         paidItems: res.paidItems,
-        settings: mergedSettings,
+        settings: res.settings,
         savingsTransactions: res.savingsTransactions,
-        variableTransactions: res.variableTransactions
+        variableTransactions: res.variableTransactions,
+        savedLabels: res.savedLabels
       });
     } catch (err: any) {
       setError(err.message || "Erreur lors du chargement des données");
@@ -136,8 +127,32 @@ export const useBudget = () => {
     }
   };
 
+  // Helpers pour dériver les listes de suggestions pour l'UI existante
+  // EPARGNE correspond aux anciens SAVINGS_LABELS
+  const savingsSuggestions = data.savedLabels
+    .filter(l => l.type === AccountType.SAVINGS)
+    .map(l => l.name);
+
+  // COURANT correspond aux anciens VARIABLE_LABELS
+  const variableSuggestions = data.savedLabels
+    .filter(l => l.type === AccountType.CHECKING)
+    .map(l => l.name);
+
+  // Si vide, on utilise les défauts (visuel uniquement, ne persiste pas en BDD sauf si utilisateur ajoute)
+  const finalSavingsSuggestions = savingsSuggestions.length > 0 ? savingsSuggestions : DEFAULT_SAVINGS_LABELS;
+  const finalVariableSuggestions = variableSuggestions.length > 0 ? variableSuggestions : DEFAULT_VARIABLE_LABELS;
+
+  // Surcharge pour l'UI qui attendait ces champs dans settings
+  const settingsWithLabels = {
+      ...data.settings,
+      savings_labels: finalSavingsSuggestions,
+      variable_labels: finalVariableSuggestions
+  };
+
   return {
     ...data,
+    settings: settingsWithLabels, // Rétro-compatibilité pour l'UI
+    savedLabels: data.savedLabels, // Accès direct aux objets complets
     loading,
     error,
     isDbEmpty,
@@ -158,7 +173,9 @@ export const useBudget = () => {
       upsertSavingsTransaction: wrapCrud(apiUpsertSavingsTransaction),
       deleteSavingsTransaction: wrapCrud(apiDeleteSavingsTransaction),
       upsertVariableTransaction: wrapCrud(apiUpsertVariableTransaction),
-      deleteVariableTransaction: wrapCrud(apiDeleteVariableTransaction)
+      deleteVariableTransaction: wrapCrud(apiDeleteVariableTransaction),
+      upsertLabel: wrapCrud(apiUpsertLabel),
+      deleteLabel: wrapCrud(apiDeleteLabel)
     }
   };
 };
