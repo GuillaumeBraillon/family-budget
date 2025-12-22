@@ -110,6 +110,7 @@ export interface IncomeConfig {
   category: string; 
   subCategory?: string;
   isExtra?: boolean;
+  isSalary?: boolean; // Nouveau champ pour identifier les revenus structurels
 }
 
 export interface PaidItemDetails {
@@ -146,6 +147,7 @@ export interface PlannedItem {
   subCategory?: string;
   beneficiaryId: string;
   isExtra: boolean;
+  isSalary?: boolean;   // Propagation de l'info structurelle
   accountId: string;
   startMonth?: string;
   endMonth?: string;
@@ -166,6 +168,8 @@ export interface OperationFilters {
   source: 'RECURRING' | 'VARIABLE' | 'ALL';
   status: 'WAITING' | 'REAL' | 'ALL';
   extra: 'ALL' | 'ONLY' | 'EXCLUDE';
+  transfer: 'ALL' | 'ONLY' | 'EXCLUDE';
+  salary: 'ALL' | 'ONLY' | 'EXCLUDE';
   accountIds: string[];
   beneficiaryIds: string[];
 }

@@ -2,7 +2,7 @@
 import React from 'react';
 import { PlannedItem, Person, Account } from '../../../types';
 import { DataList, DataListRow } from '../../molecules/DataList';
-import { ShoppingBag, CalendarClock, Plus } from 'lucide-react';
+import { ShoppingBag, CalendarClock, Plus, Briefcase } from 'lucide-react';
 
 interface OperationsListProps {
   items: PlannedItem[];
@@ -81,6 +81,13 @@ export const OperationsList: React.FC<OperationsListProps> = ({
                                       <CalendarClock size={10} /> Récurrent
                                   </span>
                               )}
+
+                              {item.isSalary && (
+                                <span className="text-[9px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded font-bold uppercase flex items-center gap-1">
+                                    <Briefcase size={10} /> Salaire
+                                </span>
+                              )}
+
                               {item.isExtra && progress && (
                                   <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase ${
                                   progress.isLast ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'

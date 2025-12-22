@@ -55,7 +55,8 @@ export const mapDbIncomeConfig = (i: any): IncomeConfig => ({
   dayOfMonth: i.day_of_month,
   category: i.category,
   subCategory: i.sub_category,
-  isExtra: !!i.is_extra
+  isExtra: !!i.is_extra,
+  isSalary: !!i.is_salary
 });
 
 export const mapDbPaidItem = (item: any): PaidItemDetails => ({

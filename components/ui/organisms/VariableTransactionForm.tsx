@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Save, TrendingUp, TrendingDown, Calendar, Trash2, Clock, CheckCircle2, Star, MessageSquare, ArrowRightLeft, ArrowDown } from 'lucide-react';
-import { VariableTransaction, Account, CategoryDef, AccountType, Person } from '../../../types';
+import { VariableTransaction, Account, CategoryDef, AccountType, Person, SavingsTransaction } from '../../../types';
 import { CategorySelector } from '../molecules/CategorySelector';
 import { TextInput, AmountInput, SearchableTextInput } from '../atoms/Inputs';
 import { AccountSelector, BeneficiarySelector } from '../molecules/SmartSelectors';
@@ -16,13 +16,14 @@ interface VariableTransactionFormProps {
   people: Person[]; 
   onAddTransaction: (t: VariableTransaction) => void;
   onDeleteTransaction?: (id: string) => void;
+  onUpsertSavings?: (t: SavingsTransaction) => void;
   defaultDate: string;
   labelsSuggestions?: string[];
   editingTransaction?: VariableTransaction | null;
 }
 
 export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = ({ 
-  isOpen, onClose, accounts, categories, people, onAddTransaction, onDeleteTransaction, defaultDate, labelsSuggestions = [], editingTransaction
+  isOpen, onClose, accounts, categories, people, onAddTransaction, onDeleteTransaction, onUpsertSavings, defaultDate, labelsSuggestions = [], editingTransaction
 }) => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   
@@ -86,7 +87,11 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
         if (!destAccountId || accountId === destAccountId) return;
         
         const amountNum = parseFloat(amount);
-        const transferLabel = `Virement: ${label}`;
+        const sourceAcc = accounts.find(a => a.id === accountId);
+        const destAcc = accounts.find(a => a.id === destAccountId);
+        
+        // Construction du libellé avec le flux : "Virement interne : Source => Dest (Raison)"
+        const transferLabel = `Virement interne : ${sourceAcc?.name || '?'} => ${destAcc?.name || '?'} (${label})`;
         
         // 1. Débit (Source)
         onAddTransaction({
@@ -101,8 +106,19 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
             type: 'EXPENSE',
             isWaiting: false, // Virement immédiat
             isExtra: false,   // Ne compte pas dans le budget
-            comments: `Vers ${accounts.find(a => a.id === destAccountId)?.name}`
+            comments: `Vers ${destAcc?.name}`
         });
+
+        // 1b. Si Source = EPARGNE, on ajoute aussi dans l'historique épargne
+        if (sourceAcc?.type === AccountType.SAVINGS && onUpsertSavings) {
+            onUpsertSavings({
+                id: `sav_auto_out_${Date.now()}`,
+                accountId: accountId,
+                date: date,
+                label: `Virement vers ${destAcc?.name} (${label})`,
+                amount: -amountNum
+            });
+        }
 
         // 2. Crédit (Destination)
         onAddTransaction({
@@ -117,8 +133,19 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
             type: 'INCOME',
             isWaiting: false,
             isExtra: false,
-            comments: `De ${accounts.find(a => a.id === accountId)?.name}`
+            comments: `De ${sourceAcc?.name}`
         });
+
+        // 2b. Si Dest = EPARGNE, on ajoute aussi dans l'historique épargne
+        if (destAcc?.type === AccountType.SAVINGS && onUpsertSavings) {
+            onUpsertSavings({
+                id: `sav_auto_in_${Date.now()}`,
+                accountId: destAccountId,
+                date: date,
+                label: `Virement depuis ${sourceAcc?.name} (${label})`,
+                amount: amountNum
+            });
+        }
 
     } else {
         onAddTransaction({
@@ -372,10 +399,10 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
                 />
 
                 <TextInput 
-                    label="Libellé du virement" 
+                    label="Raison du virement" 
                     value={label} 
                     onChange={e => setLabel(e.target.value)}
-                    placeholder="Ex: Salaire Guillaume, Épargne..."
+                    placeholder="Ex: Épargne, Remboursement..."
                     required
                 />
             </div>

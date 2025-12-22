@@ -2,7 +2,7 @@
 import React, { useState, useMemo } from 'react';
 import { usePlanner } from '../../../hooks/usePlanner';
 import { usePlannerUI } from '../../../hooks/usePlannerUI';
-import { ExpenseConfig, IncomeConfig, Account, Person, PaidItemDetails, PlannedItem, AppSettings, VariableTransaction, OperationFilters } from '../../../types';
+import { ExpenseConfig, IncomeConfig, Account, Person, PaidItemDetails, PlannedItem, AppSettings, VariableTransaction, OperationFilters, SavingsTransaction } from '../../../types';
 
 // Imports UI Atomic
 import { OperationsList } from '../../ui/organisms/OperationsList';
@@ -26,17 +26,20 @@ interface OperationsViewProps {
   onTogglePaid: (details: PaidItemDetails | null, instanceId: string) => void;
   onUpsertVariable: (t: VariableTransaction) => void;
   onDeleteVariable: (id: string) => void;
+  onUpsertSavings?: (t: SavingsTransaction) => void;
 }
 
 export const OperationsView: React.FC<OperationsViewProps> = ({ 
   configs, incomeConfigs, variableTransactions, accounts, people, paidItems, settings, categories,
-  onTogglePaid, onUpsertVariable, onDeleteVariable
+  onTogglePaid, onUpsertVariable, onDeleteVariable, onUpsertSavings
 }) => {
   const ui = usePlannerUI();
   const [isVarFormOpen, setIsVarFormOpen] = useState(false);
   const [editingVar, setEditingVar] = useState<VariableTransaction | null>(null);
+  
+  // Initialisation avec salary: 'EXCLUDE' (Masqué par défaut)
   const [filters, setFilters] = useState<OperationFilters>({
-    flux: 'ALL', source: 'ALL', status: 'ALL', extra: 'ALL', accountIds: [], beneficiaryIds: []
+    flux: 'ALL', source: 'ALL', status: 'ALL', extra: 'ALL', transfer: 'EXCLUDE', salary: 'EXCLUDE', accountIds: [], beneficiaryIds: []
   });
   
   const { filteredWeeks } = usePlanner(configs, incomeConfigs, paidItems, variableTransactions, ui.currentDate, ui.searchQuery, settings, filters);
@@ -49,6 +52,10 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
     currentItems.forEach(item => {
         // Exclure les virements internes des statistiques globales
         if (item.category === 'Virement Interne') return;
+
+        // Exclure UNIQUEMENT les revenus structurels (Salaires) des statistiques de la période
+        // Les autres revenus récurrents (CAF, Aides...) s'ajoutent au budget de la période
+        if (item.type === 'INCOME' && item.isSalary) return;
 
         const target = item.type === 'INCOME' ? stats.income : stats.expenses;
         
@@ -105,7 +112,7 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
           <OperationsList items={currentItems} monthShort={monthShort} people={people} accounts={accounts} currentDate={ui.currentDate} onItemClick={handleItemClick} onAddClick={() => { setEditingVar(null); setIsVarFormOpen(true); }} />
       </div>
       <PlannerModals confirmModal={ui.confirmModal} uncheckModal={ui.uncheckModal} accounts={accounts} onTogglePaid={onTogglePaid} onCloseConfirm={ui.closeConfirmModal} onCloseUncheck={ui.closeUncheckModal} setConfirmModal={ui.setConfirmModal} />
-      <VariableTransactionForm isOpen={isVarFormOpen} onClose={() => setIsVarFormOpen(false)} accounts={accounts} categories={categories} people={people} onAddTransaction={onUpsertVariable} onDeleteTransaction={onDeleteVariable} defaultDate={defaultVarDate} labelsSuggestions={settings.variable_labels} editingTransaction={editingVar} />
+      <VariableTransactionForm isOpen={isVarFormOpen} onClose={() => setIsVarFormOpen(false)} accounts={accounts} categories={categories} people={people} onAddTransaction={onUpsertVariable} onDeleteTransaction={onDeleteVariable} defaultDate={defaultVarDate} labelsSuggestions={settings.variable_labels} editingTransaction={editingVar} onUpsertSavings={onUpsertSavings} />
     </div>
   );
 };

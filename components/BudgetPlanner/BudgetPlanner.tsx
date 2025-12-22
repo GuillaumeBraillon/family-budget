@@ -41,6 +41,8 @@ export const BudgetPlanner: React.FC<BudgetPlannerProps> = ({
     source: 'ALL',
     status: 'ALL',
     extra: 'ALL',
+    transfer: 'EXCLUDE',
+    salary: 'EXCLUDE', // Masqué par défaut
     accountIds: [],
     beneficiaryIds: []
   });
@@ -67,6 +69,9 @@ export const BudgetPlanner: React.FC<BudgetPlannerProps> = ({
     };
 
     currentItems.forEach(item => {
+        // Exclusion des revenus fixes structurels UNIQUEMENT
+        if (item.type === 'INCOME' && item.isSalary) return;
+
         const target = item.type === 'INCOME' ? stats.income : stats.expenses;
         
         if (item.source === 'VARIABLE') {

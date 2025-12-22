@@ -110,7 +110,8 @@ export const apiUpsertIncome = async (income: IncomeConfig) =>
     day_of_month: income.dayOfMonth, 
     category: income.category, 
     sub_category: income.subCategory,
-    is_extra: income.isExtra
+    is_extra: income.isExtra,
+    is_salary: income.isSalary
   });
 
 export const apiDeleteIncome = async (id: string) => 

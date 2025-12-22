@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Filter, X, ShoppingBag, Star, Clock, CalendarClock, CheckCircle2, ChevronDown, ChevronUp } from 'lucide-react';
+import { Filter, X, ShoppingBag, Star, Clock, CalendarClock, CheckCircle2, ChevronDown, ChevronUp, ArrowRightLeft, Briefcase } from 'lucide-react';
 import { OperationFilters, Account, Person, AccountType } from '../../../types';
 
 interface FilterBarProps {
@@ -41,12 +41,24 @@ export const FilterBar: React.FC<FilterBarProps> = ({ filters, onFilterChange, a
       onFilterChange({ ...filters, extra: nextValue });
   };
 
+  const toggleTransfer = (val: 'ALL' | 'ONLY') => {
+      const nextValue = filters.transfer === val ? 'EXCLUDE' : val;
+      onFilterChange({ ...filters, transfer: nextValue });
+  };
+
+  const toggleSalary = (val: 'ALL' | 'ONLY') => {
+      const nextValue = filters.salary === val ? 'EXCLUDE' : val;
+      onFilterChange({ ...filters, salary: nextValue });
+  };
+
   const clear = () => {
     onFilterChange({
         flux: 'ALL',
         source: 'ALL',
         status: 'ALL',
         extra: 'ALL',
+        transfer: 'EXCLUDE',
+        salary: 'EXCLUDE',
         accountIds: [],
         beneficiaryIds: []
     });
@@ -57,6 +69,8 @@ export const FilterBar: React.FC<FilterBarProps> = ({ filters, onFilterChange, a
     filters.source !== 'ALL',
     filters.status !== 'ALL',
     filters.extra !== 'ALL',
+    filters.transfer !== 'EXCLUDE',
+    filters.salary !== 'EXCLUDE',
     filters.accountIds.length > 0,
     filters.beneficiaryIds.length > 0
   ].filter(Boolean).length;
@@ -85,7 +99,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({ filters, onFilterChange, a
                     onClick={(e) => { e.stopPropagation(); clear(); }}
                     className="text-[10px] font-black text-rose-500 hover:text-rose-600 flex items-center gap-1 uppercase transition-colors"
                 >
-                    <X size={12} /> Effacer
+                    <X size={12} /> Réinitialiser
                 </button>
               )}
               <div className="text-slate-400 group-hover:text-indigo-500 transition-colors">
@@ -94,9 +108,43 @@ export const FilterBar: React.FC<FilterBarProps> = ({ filters, onFilterChange, a
           </div>
       </div>
 
+      {/* FILTRES TOUJOURS VISIBLES */}
+      <div className="flex flex-wrap gap-3">
+          {/* ÉTAT */}
+          <FilterGroup label="État">
+              <FilterChip 
+                  label="Réel" 
+                  icon={<CheckCircle2 size={10} />}
+                  active={filters.status === 'REAL'} 
+                  onClick={() => toggleStatus('REAL')} 
+                  color="emerald"
+              />
+              <FilterChip 
+                  label="Attente" 
+                  icon={<Clock size={10} />}
+                  active={filters.status === 'WAITING'} 
+                  onClick={() => toggleStatus('WAITING')} 
+                  color="amber"
+              />
+          </FilterGroup>
+
+          {/* COMPTES */}
+          <FilterGroup label="Comptes">
+              {checkingAccounts.map(acc => (
+                  <FilterChip 
+                      key={acc.id}
+                      label={acc.name} 
+                      active={filters.accountIds.includes(acc.id)} 
+                      onClick={() => toggleMulti('accountIds', acc.id)} 
+                  />
+              ))}
+          </FilterGroup>
+      </div>
+
+      {/* FILTRES REPLIABLES */}
       {isExpanded && (
         <div className="flex flex-wrap gap-3 pb-2 pt-2 border-t border-slate-100 animate-in slide-in-from-top-2 duration-300">
-            {/* FLUX - EXCLUSIF */}
+            {/* FLUX */}
             <FilterGroup label="Flux">
                 <FilterChip 
                     label="Dépenses" 
@@ -112,7 +160,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({ filters, onFilterChange, a
                 />
             </FilterGroup>
 
-            {/* SOURCE - EXCLUSIF */}
+            {/* SOURCE */}
             <FilterGroup label="Source">
                 <FilterChip 
                     label="Récurrent" 
@@ -130,25 +178,41 @@ export const FilterBar: React.FC<FilterBarProps> = ({ filters, onFilterChange, a
                 />
             </FilterGroup>
 
-            {/* ÉTAT - EXCLUSIF */}
-            <FilterGroup label="État">
+            {/* SALAIRES */}
+            <FilterGroup label="Salaires">
                 <FilterChip 
-                    label="Réel" 
-                    icon={<CheckCircle2 size={10} />}
-                    active={filters.status === 'REAL'} 
-                    onClick={() => toggleStatus('REAL')} 
-                    color="emerald"
+                    label="Afficher" 
+                    active={filters.salary === 'ALL'} 
+                    onClick={() => toggleSalary('ALL')} 
+                    color="indigo"
                 />
                 <FilterChip 
-                    label="Attente" 
-                    icon={<Clock size={10} />}
-                    active={filters.status === 'WAITING'} 
-                    onClick={() => toggleStatus('WAITING')} 
-                    color="amber"
+                    label="Uniquement" 
+                    icon={<Briefcase size={10} />}
+                    active={filters.salary === 'ONLY'} 
+                    onClick={() => toggleSalary('ONLY')} 
+                    color="emerald"
                 />
             </FilterGroup>
 
-            {/* NATURE (STANDARD / EXTRA) */}
+            {/* VIREMENTS */}
+            <FilterGroup label="Virements">
+                <FilterChip 
+                    label="Afficher" 
+                    active={filters.transfer === 'ALL'} 
+                    onClick={() => toggleTransfer('ALL')} 
+                    color="indigo"
+                />
+                <FilterChip 
+                    label="Uniquement" 
+                    icon={<ArrowRightLeft size={10} />}
+                    active={filters.transfer === 'ONLY'} 
+                    onClick={() => toggleTransfer('ONLY')} 
+                    color="indigo"
+                />
+            </FilterGroup>
+
+            {/* NATURE */}
             <FilterGroup label="Nature">
                 <FilterChip 
                     label="Standard" 
@@ -165,19 +229,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({ filters, onFilterChange, a
                 />
             </FilterGroup>
 
-            {/* COMPTES - MULTI-SELECT */}
-            <FilterGroup label="Comptes">
-                {checkingAccounts.map(acc => (
-                    <FilterChip 
-                        key={acc.id}
-                        label={acc.name} 
-                        active={filters.accountIds.includes(acc.id)} 
-                        onClick={() => toggleMulti('accountIds', acc.id)} 
-                    />
-                ))}
-            </FilterGroup>
-
-            {/* BÉNÉFICIAIRES - MULTI-SELECT */}
+            {/* BÉNÉFICIAIRES */}
             <FilterGroup label="Bénéficiaires">
                 {people.map(p => (
                     <FilterChip 

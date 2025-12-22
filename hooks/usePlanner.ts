@@ -138,6 +138,7 @@ export const usePlanner = (
         isWaiting: !isActuallyPaid,
         paidDetails: paid,
         isExtra: !!(paid ? paid.isExtra : inc.isExtra),
+        isSalary: !!inc.isSalary, // Passage de l'info structurelle
         comments: paid?.comments || ''
       });
     });
@@ -177,7 +178,6 @@ export const usePlanner = (
         let items = w.items;
 
         if (searchQuery.trim()) {
-            // Remplace les virgules par des points pour permettre la recherche de "50,5" dans "50.5"
             const q = searchQuery.toLowerCase().replace(/,/g, '.');
             items = items.filter(i => 
               i.label.toLowerCase().includes(q) || 
@@ -188,35 +188,34 @@ export const usePlanner = (
         }
 
         if (filters) {
-            // 1. FLUX (Dépenses ou Revenus) - Exclusif
             if (filters.flux !== 'ALL') {
                 items = items.filter(i => i.type === filters.flux);
             }
-            
-            // 2. TYPE SOURCE (Récurrent ou Variable) - Exclusif
             if (filters.source !== 'ALL') {
                 items = items.filter(i => i.source === filters.source);
             }
-
-            // 3. ÉTAT (Réel ou Attente) - Exclusif
             if (filters.status !== 'ALL') {
                 const wantWaiting = filters.status === 'WAITING';
                 items = items.filter(i => i.isWaiting === wantWaiting);
             }
-
-            // 4. EXTRAS - 3 États (Affiche TOUT, UNIQUEMENT EXTRAS, ou EXCLUT EXTRAS)
             if (filters.extra === 'ONLY') {
                 items = items.filter(i => i.isExtra === true);
             } else if (filters.extra === 'EXCLUDE') {
                 items = items.filter(i => i.isExtra === false);
             }
-
-            // 5. COMPTES (Multi-select)
+            if (filters.transfer === 'ONLY') {
+                items = items.filter(i => i.category === 'Virement Interne');
+            } else if (filters.transfer === 'EXCLUDE') {
+                items = items.filter(i => i.category !== 'Virement Interne');
+            }
+            if (filters.salary === 'ONLY') {
+                items = items.filter(i => i.isSalary === true);
+            } else if (filters.salary === 'EXCLUDE') {
+                items = items.filter(i => !i.isSalary);
+            }
             if (filters.accountIds.length > 0) {
                 items = items.filter(i => filters.accountIds.includes(i.accountId));
             }
-
-            // 6. MEMBRES (Multi-select)
             if (filters.beneficiaryIds.length > 0) {
                 items = items.filter(i => filters.beneficiaryIds.includes(i.beneficiaryId));
             }
@@ -243,7 +242,7 @@ export const usePlanner = (
     const incByBeneficiary: Record<string, any> = {};
 
     [...currentItems, ...previousUnpaidItems].forEach(item => {
-      // 1. Calcul des Soldes de Compte (On inclut TOUT, même les virements internes)
+      // 1. Calcul des Soldes de Compte
       if (!byAccount[item.accountId]) byAccount[item.accountId] = { paid: 0, remaining: 0, planned: 0, pendingCount: 0 };
       const val = item.amount;
       const originalVal = item.originalAmount;
@@ -259,8 +258,7 @@ export const usePlanner = (
           byAccount[item.accountId].planned += (item.type === 'EXPENSE' ? originalVal : -originalVal);
       }
 
-      // 2. Calcul des KPI d'Équité (On EXCLUT les Virements Internes)
-      // Un virement interne n'est ni une dépense réelle du foyer, ni un revenu réel du foyer.
+      // 2. Calcul des KPI d'Équité
       if (item.category !== 'Virement Interne') {
           if (item.isPaid) {
               if (!incByBeneficiary[item.beneficiaryId]) incByBeneficiary[item.beneficiaryId] = { paid: 0, planned: 0 };
@@ -284,7 +282,6 @@ export const usePlanner = (
 
     const periodLimit = currentWeek?.periodLimit || 0;
     
-    // EXCLUSION des 'Virement Interne' du calcul du budget variable (dépenses et revenus)
     const budgetVariableItems = currentItems.filter(i => 
         i.source === 'VARIABLE' && 
         !i.isExtra && 
@@ -294,7 +291,6 @@ export const usePlanner = (
     const varExpenses = sum(budgetVariableItems, 'EXPENSE');
     const varIncome = sum(budgetVariableItems, 'INCOME');
 
-    // Pour les totaux globaux (KPI Dashboard), on exclut aussi les virements internes
     return {
       fixedPaid: sum(currentItems.filter(i => i.source === 'RECURRING' && i.isPaid && i.category !== 'Virement Interne'), 'EXPENSE'),
       fixedToPay: sum(currentItems.filter(i => i.source === 'RECURRING' && !i.isPaid && i.category !== 'Virement Interne'), 'EXPENSE'),

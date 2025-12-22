@@ -40,7 +40,7 @@ export const BudgetPlanner: React.FC<BudgetPlannerProps> = ({
   const [isVarFormOpen, setIsVarFormOpen] = useState(false);
   const [editingVar, setEditingVar] = useState<VariableTransaction | null>(null);
   const [filters, setFilters] = useState<OperationFilters>({
-    flux: 'ALL', source: 'ALL', status: 'ALL', extra: 'ALL', accountIds: [], beneficiaryIds: []
+    flux: 'ALL', source: 'ALL', status: 'ALL', extra: 'ALL', transfer: 'EXCLUDE', salary: 'EXCLUDE', accountIds: [], beneficiaryIds: []
   });
   
   const { filteredWeeks } = usePlanner(configs, incomeConfigs, paidItems, variableTransactions, ui.currentDate, ui.searchQuery, settings, filters);
