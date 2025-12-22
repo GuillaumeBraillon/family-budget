@@ -110,6 +110,7 @@ const App: React.FC = () => {
              accounts={accounts}
              settings={settings}
              incomeConfigs={incomeConfigs}
+             paidItems={paidItems}
              people={people}
              categories={categories}
              onAddTransaction={actions.upsertVariableTransaction}
@@ -134,18 +135,11 @@ const App: React.FC = () => {
             <BudgetPlanner 
               configs={configs} 
               incomeConfigs={incomeConfigs} 
-              categories={categories}
-              accounts={accounts} 
-              people={people} 
               paidItems={paidItems} 
               settings={settings}
+              accounts={accounts} 
+              people={people} 
               onTogglePaid={actions.setPaidStatus}
-              onAddConfig={actions.upsertConfig} 
-              onUpdateConfig={actions.upsertConfig} 
-              onDeleteConfig={actions.deleteConfig}
-              onAddIncome={actions.upsertIncome} 
-              onUpdateIncome={actions.upsertIncome} 
-              onDeleteIncome={actions.deleteIncome}
             />
           </div>
         )}
@@ -175,7 +169,7 @@ const App: React.FC = () => {
               savedLabels={savedLabels}
               activeTab={activeConfigTab}
               setActiveTab={setActiveConfigTab}
-              onUpdateCategories={actions.upsertCategory as any} // Reste temporaire, à refactoriser si besoin
+              onUpdateCategories={actions.upsertCategory as any} 
               onUpsertPerson={actions.upsertPerson} 
               onDeletePerson={actions.deletePerson}
               onUpsertAccount={actions.upsertAccount}
@@ -184,6 +178,12 @@ const App: React.FC = () => {
               onResetConnection={handleResetConnection}
               onUpsertLabel={actions.upsertLabel}
               onDeleteLabel={actions.deleteLabel}
+              onAddConfig={actions.upsertConfig} 
+              onUpdateConfig={actions.upsertConfig} 
+              onDeleteConfig={actions.deleteConfig}
+              onAddIncome={actions.upsertIncome} 
+              onUpdateIncome={actions.upsertIncome} 
+              onDeleteIncome={actions.deleteIncome}
             />
           </div>
         )}

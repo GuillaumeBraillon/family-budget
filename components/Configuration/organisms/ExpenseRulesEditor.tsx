@@ -85,7 +85,6 @@ export const ExpenseRulesEditor: React.FC<ExpenseRulesEditorProps> = ({
 
     const handleAddClick = () => {
         setEditingId(null);
-        // Reset form data for new entry
         setFormData({ 
             label: '', amount: 0, dayOfMonth: 1, 
             accountId: accounts[0]?.id || '', 
@@ -166,14 +165,20 @@ export const ExpenseRulesEditor: React.FC<ExpenseRulesEditorProps> = ({
                     <TextInput 
                         label="Libellé" 
                         value={formData.label} 
-                        onChange={e => setFormData({...formData, label: e.target.value})} 
+                        onChange={e => {
+                            const val = e.target.value;
+                            setFormData(prev => ({ ...prev, label: val }));
+                        }} 
                         required
                     />
                     
                     <AmountInput 
                         label="Montant"
                         value={formData.amount}
-                        onChange={e => setFormData({...formData, amount: parseFloat(e.target.value)})}
+                        onChange={e => {
+                            const val = parseFloat(e.target.value);
+                            setFormData(prev => ({ ...prev, amount: isNaN(val) ? 0 : val }));
+                        }}
                         required
                     />
 
@@ -182,20 +187,29 @@ export const ExpenseRulesEditor: React.FC<ExpenseRulesEditorProps> = ({
                         type="number"
                         min={1} max={31}
                         value={formData.dayOfMonth}
-                        onChange={e => setFormData({...formData, dayOfMonth: parseInt(e.target.value)})}
+                        onChange={e => {
+                            const val = parseInt(e.target.value);
+                            setFormData(prev => ({ ...prev, dayOfMonth: isNaN(val) ? 1 : val }));
+                        }}
                         required
                     />
                     
                     <AccountSelector 
                         accounts={accounts}
                         value={formData.accountId}
-                        onChange={e => setFormData({...formData, accountId: e.target.value})}
+                        onChange={e => {
+                            const val = e.target.value;
+                            setFormData(prev => ({ ...prev, accountId: val }));
+                        }}
                     />
                     
                     <BeneficiarySelector 
                         people={people}
                         value={formData.beneficiaryId}
-                        onChange={e => setFormData({...formData, beneficiaryId: e.target.value})}
+                        onChange={e => {
+                            const val = e.target.value;
+                            setFormData(prev => ({ ...prev, beneficiaryId: val }));
+                        }}
                     />
                     
                     <CategorySelector 
@@ -203,18 +217,20 @@ export const ExpenseRulesEditor: React.FC<ExpenseRulesEditorProps> = ({
                         type="EXPENSE"
                         selectedCategory={formData.category || ''}
                         selectedSubCategory={formData.subCategory || ''}
-                        onCategoryChange={val => setFormData({...formData, category: val})}
-                        onSubCategoryChange={val => setFormData({...formData, subCategory: val})}
+                        onCategoryChange={val => setFormData(prev => ({ ...prev, category: val }))}
+                        onSubCategoryChange={val => setFormData(prev => ({ ...prev, subCategory: val }))}
                     />
                     
-                    {/* OPTION EXTRA */}
                     <div className="bg-white/60 p-3 rounded-lg border border-slate-200 mt-2">
                         <div className="flex items-center gap-2 mb-3">
                             <input 
                                 type="checkbox" 
                                 id="extra" 
                                 checked={formData.isExtra} 
-                                onChange={e => setFormData({...formData, isExtra: e.target.checked})} 
+                                onChange={e => {
+                                    const val = e.target.checked;
+                                    setFormData(prev => ({ ...prev, isExtra: val }));
+                                }} 
                                 className="h-4 w-4 text-indigo-600 rounded bg-white" 
                             />
                             <label htmlFor="extra" className="text-sm font-bold text-slate-800 cursor-pointer">
@@ -228,7 +244,10 @@ export const ExpenseRulesEditor: React.FC<ExpenseRulesEditorProps> = ({
                                     label="Mois de début"
                                     type="month"
                                     value={formData.startMonth}
-                                    onChange={e => setFormData({...formData, startMonth: e.target.value})}
+                                    onChange={e => {
+                                        const val = e.target.value;
+                                        setFormData(prev => ({ ...prev, startMonth: val }));
+                                    }}
                                     required={formData.isExtra}
                                 />
                                 
@@ -258,8 +277,9 @@ export const ExpenseRulesEditor: React.FC<ExpenseRulesEditorProps> = ({
                                             type="month"
                                             value={formData.endMonth}
                                             onChange={e => {
+                                                const val = e.target.value;
                                                 setDurationMonths(0);
-                                                setFormData({...formData, endMonth: e.target.value});
+                                                setFormData(prev => ({ ...prev, endMonth: val }));
                                             }}
                                             required={formData.isExtra}
                                         />

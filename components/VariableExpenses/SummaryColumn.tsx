@@ -1,41 +1,54 @@
 
 import React, { useMemo } from 'react';
 import { Card, CardContent } from '../ui/Card';
-import { VariableTransaction, WeeklyBudget, IncomeConfig, Person, AppSettings } from '../../types';
-import { Calculator, Wallet, TrendingUp } from 'lucide-react';
+import { VariableTransaction, WeeklyBudget, IncomeConfig, Person, AppSettings, PaidItemDetails } from '../../types';
+import { Calculator, Wallet, TrendingUp, CheckCircle2 } from 'lucide-react';
 import { MobileTooltip } from '../ui/MobileTooltip';
 
 interface SummaryColumnProps {
   transactions: VariableTransaction[];
   weeks: WeeklyBudget[];
   incomeConfigs: IncomeConfig[];
+  paidItems?: Record<string, PaidItemDetails>;
   people: Person[];
   settings: AppSettings;
   currentDate: Date;
 }
 
 export const SummaryColumn: React.FC<SummaryColumnProps> = ({ 
-  transactions, weeks, incomeConfigs, people, settings, currentDate 
+  transactions, weeks, incomeConfigs, paidItems = {}, people, settings, currentDate 
 }) => {
   const monthLabel = new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' }).format(currentDate);
+  const currentMonthKey = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
   
   // Totaux globaux
   const totalExpensesMonth = transactions.filter(t => t.type !== 'INCOME').reduce((acc, t) => acc + t.amount, 0);
   const totalVarIncomeMonth = transactions.filter(t => t.type === 'INCOME').reduce((acc, t) => acc + t.amount, 0);
   
-  // Calcul des salaires fixes (basé sur IncomeConfigs catégorisés comme "Salaire" ou par défaut)
-  // On regroupe par personne pour simuler la section "Salaires" du CSV
-  const salaries = useMemo<Record<string, number>>(() => {
-    const map: Record<string, number> = {};
+  // Calcul des salaires : On prend le REEL (paidItems) si dispo, sinon le PRÉVU (config)
+  const salaries: Record<string, { amount: number, isReal: boolean }> = useMemo(() => {
+    const map: Record<string, { amount: number, isReal: boolean }> = {};
+    
     incomeConfigs.forEach(inc => {
-        // On considère que tout ce qui est IncomeConfig est un revenu fixe mensuel pour ce tableau
-        if (!map[inc.beneficiaryId]) map[inc.beneficiaryId] = 0;
-        map[inc.beneficiaryId] += inc.amount;
+        const instanceId = `${inc.id}-${currentMonthKey}`;
+        const paidItem = paidItems[instanceId];
+        
+        // Initialisation si nécessaire
+        if (!map[inc.beneficiaryId]) {
+            map[inc.beneficiaryId] = { amount: 0, isReal: false };
+        }
+        
+        if (paidItem) {
+            map[inc.beneficiaryId].amount += paidItem.amount;
+            map[inc.beneficiaryId].isReal = true; // Au moins un revenu réel détecté pour cette personne
+        } else {
+            map[inc.beneficiaryId].amount += inc.amount;
+        }
     });
     return map;
-  }, [incomeConfigs]);
+  }, [incomeConfigs, paidItems, currentMonthKey]);
 
-  const totalSalaries = Object.values(salaries).reduce((acc: number, v: number) => acc + v, 0);
+  const totalSalaries: number = Object.values(salaries).reduce((acc, v) => acc + v.amount, 0);
 
   // Calcul du "Reste" sur l'enveloppe : Budget + Revenus Variables - Dépenses Variables
   const totalBudget = settings.monthly_envelope;
@@ -112,11 +125,16 @@ export const SummaryColumn: React.FC<SummaryColumnProps> = ({
                 
                 <div className="space-y-3">
                     {people.filter(p => !p.isChild).map(p => {
-                        const amount = salaries[p.id] || 0;
+                        const data = salaries[p.id] || { amount: 0, isReal: false };
                         return (
                             <div key={p.id} className="flex justify-between items-center">
-                                <span className="text-sm font-medium text-slate-600">{p.name}</span>
-                                <span className="font-bold text-slate-900">{amount.toFixed(0)} €</span>
+                                <span className="text-sm font-medium text-slate-600 flex items-center gap-1">
+                                    {p.name}
+                                    {data.isReal && <CheckCircle2 size={12} className="text-emerald-500" />}
+                                </span>
+                                <span className={`font-bold ${data.isReal ? 'text-emerald-700' : 'text-slate-900'}`}>
+                                    {data.amount.toFixed(0)} €
+                                </span>
                             </div>
                         );
                     })}
@@ -129,7 +147,7 @@ export const SummaryColumn: React.FC<SummaryColumnProps> = ({
                     <div className="text-center pt-2">
                         <span className="text-[10px] text-slate-400 bg-slate-50 px-2 py-1 rounded-full">
                            Solde Théorique (Par pers.) : {((totalSalaries - totalExpensesMonth + totalVarIncomeMonth) / 2).toFixed(0)} €
-                           <MobileTooltip text="Revenus totaux (fixes + variables) moins dépenses variables, divisé par 2." />
+                           <MobileTooltip text="Revenus totaux (fixes + variables) moins dépenses variables, divisé par 2. Les revenus fixes sont basés sur le réel si pointé dans l'échéancier." />
                         </span>
                     </div>
                 </div>

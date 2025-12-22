@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta name="theme-color" content="#4F46E5" />
+    <meta name="color-scheme" content="light" />
     <meta name="description" content="Application de gestion financière familiale" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
@@ -13,11 +14,23 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
     <style>
+      :root {
+        color-scheme: light;
+      }
       body {
         font-family: "Inter", sans-serif;
         background-color: #f8fafc;
         /* Prevent pull-to-refresh on mobile which feels web-like */
         overscroll-behavior-y: none;
+      }
+      /* Force input text color to be dark, ensuring visibility on Android Dark Mode */
+      input, select, textarea {
+        color: #0f172a !important; /* slate-900 */
+      }
+      /* Specific override for placeholders to ensure they are visible but distinct */
+      ::placeholder {
+        color: #94a3b8 !important; /* slate-400 */
+        opacity: 1;
       }
     </style>
   <script type="importmap">

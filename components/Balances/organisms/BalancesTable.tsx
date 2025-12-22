@@ -58,7 +58,7 @@ export const BalancesTable: React.FC<BalancesTableProps> = ({ rows, onUpdateBala
                       </th>
                       <th className="px-6 py-4 text-right bg-indigo-50/50 text-indigo-900">
                           Virement Nécessaire
-                          <MobileTooltip text="Montant à ajouter pour atteindre la cible. Le compte joint est alimenté par l'épargne (LDDS), les comptes persos sont alimentés par le compte joint." iconClassName="text-indigo-600 hover:text-indigo-400 transition-colors" />
+                          <MobileTooltip text="Montant à ajouter pour atteindre la cible. Si Négatif, c'est que vous avez trop d'argent sur le compte (ex: salaire reçu) et qu'il faut le virer vers le compte pivot." iconClassName="text-indigo-600 hover:text-indigo-400 transition-colors" />
                       </th>
                   </tr>
               </thead>
@@ -116,11 +116,12 @@ export const BalancesTable: React.FC<BalancesTableProps> = ({ rows, onUpdateBala
                                   <span className={row.transfer > 0 ? 'text-indigo-600' : 'text-emerald-600'}>
                                       {row.transfer > 0 ? '+' : ''}{row.transfer.toFixed(2)} €
                                   </span>
-                                  {row.transfer > 0 && (
-                                      <span className="text-[9px] text-indigo-400 uppercase font-medium">
-                                          {row.isJoint ? 'Depuis LDDS' : 'Depuis C. Joint'}
-                                      </span>
-                                  )}
+                                  <span className="text-[9px] text-indigo-400 uppercase font-medium">
+                                      {row.transfer > 0 
+                                        ? (row.isJoint ? 'Depuis LDDS' : 'Depuis C. Joint')
+                                        : (row.isJoint ? 'Vers LDDS' : 'Vers C. Joint')
+                                      }
+                                  </span>
                               </div>
                           </td>
                       </tr>

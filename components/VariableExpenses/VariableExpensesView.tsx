@@ -2,21 +2,24 @@
 import React, { useState } from 'react';
 import { usePlanner } from '../../hooks/usePlanner';
 import { usePlannerUI } from '../../hooks/usePlannerUI';
-import { VariableTransaction, Account, AppSettings, IncomeConfig, Person, CategoryDef } from '../../types';
+import { VariableTransaction, Account, AppSettings, IncomeConfig, Person, CategoryDef, PaidItemDetails } from '../../types';
 import { InfoBox } from '../ui/InfoBox';
 import { ShoppingBag } from 'lucide-react';
 
 import { MonthNavigator } from '../BudgetPlanner/molecules/MonthNavigator';
 import { SearchBar } from '../BudgetPlanner/atoms/SearchBar';
+import { WeekSelector } from '../BudgetPlanner/molecules/WeekSelector';
 import { VariableTransactionForm } from './organisms/VariableTransactionForm';
-import { VariablePeriodSelector } from './molecules/VariablePeriodSelector';
 import { VariableOperationsList } from './organisms/VariableOperationsList';
+import { VariableStatsSummary } from './organisms/VariableStatsSummary';
+import { VariableDetailedAnalysis } from './organisms/VariableDetailedAnalysis';
 
 interface VariableExpensesViewProps {
   variableTransactions: VariableTransaction[];
   accounts: Account[];
   settings: AppSettings;
   incomeConfigs: IncomeConfig[];
+  paidItems: Record<string, PaidItemDetails>;
   people: Person[];
   categories: CategoryDef[];
   onAddTransaction: (t: VariableTransaction) => void;
@@ -24,7 +27,7 @@ interface VariableExpensesViewProps {
 }
 
 export const VariableExpensesView: React.FC<VariableExpensesViewProps> = ({
-  variableTransactions, accounts, settings, categories, people,
+  variableTransactions, accounts, settings, categories, people, incomeConfigs, paidItems,
   onAddTransaction, onDeleteTransaction
 }) => {
   const ui = usePlannerUI();
@@ -92,7 +95,7 @@ export const VariableExpensesView: React.FC<VariableExpensesViewProps> = ({
     <div className="space-y-6 animate-in fade-in duration-500">
         <InfoBox 
             title="Dépenses Variables au Réel"
-            description="Suivez ici vos dépenses quotidiennes (Courses, Loisirs...). Sélectionnez une période pour voir le détail et ajoutez vos tickets de caisse pour tenir à jour votre 'Reste à vivre'."
+            description="Suivez ici vos dépenses quotidiennes. Les montants des 'Revenus Fixes' sont calculés à partir de vos saisies réelles dans l'Échéancier pour une précision maximale."
             icon={<ShoppingBag size={18} />}
         />
 
@@ -110,13 +113,31 @@ export const VariableExpensesView: React.FC<VariableExpensesViewProps> = ({
             />
         </div>
 
-        <VariablePeriodSelector 
-            weeks={filteredWeeks}
-            activeWeek={safeActiveWeek}
-            onSelect={ui.setActiveWeek}
-            transactions={currentMonthTransactions}
+        <WeekSelector 
+            weeks={filteredWeeks} 
+            activeWeek={safeActiveWeek} 
+            onSelect={ui.setActiveWeek} 
+        />
+
+        <VariableStatsSummary 
+            budget={activeWeekData?.periodLimit || 0}
+            expenses={filteredTransactions.filter(t => t.type !== 'INCOME').reduce((sum, t) => sum + t.amount, 0)}
+            income={filteredTransactions.filter(t => t.type === 'INCOME').reduce((sum, t) => sum + t.amount, 0)}
+        />
+
+        <VariableDetailedAnalysis 
+            transactions={filteredTransactions}
+            people={people}
+            accounts={accounts}
+        />
+
+        <VariableOperationsList 
+            transactions={filteredTransactions}
             accounts={accounts}
             people={people}
+            onEditTransaction={handleEdit}
+            monthShort={monthShort}
+            onAddClick={handleAddClick}
         />
 
         <VariableTransactionForm 
@@ -130,15 +151,6 @@ export const VariableExpensesView: React.FC<VariableExpensesViewProps> = ({
             defaultDate={defaultFormDate}
             labelsSuggestions={settings.variable_labels}
             editingTransaction={editingTransaction}
-        />
-
-        <VariableOperationsList 
-            transactions={filteredTransactions}
-            accounts={accounts}
-            people={people}
-            onEditTransaction={handleEdit}
-            monthShort={monthShort}
-            onAddClick={handleAddClick}
         />
     </div>
   );

@@ -143,7 +143,10 @@ export const IncomeEditor: React.FC<IncomeEditorProps> = ({
                     <TextInput 
                         label="Libellé" 
                         value={formData.label} 
-                        onChange={e => setFormData({...formData, label: e.target.value})} 
+                        onChange={e => {
+                            const val = e.target.value;
+                            setFormData(prev => ({ ...prev, label: val }));
+                        }} 
                         placeholder="Ex: Salaire Guillaume, CAF..."
                         required
                     />
@@ -151,7 +154,10 @@ export const IncomeEditor: React.FC<IncomeEditorProps> = ({
                     <AmountInput 
                         label="Montant"
                         value={formData.amount}
-                        onChange={e => setFormData({...formData, amount: parseFloat(e.target.value)})}
+                        onChange={e => {
+                            const val = parseFloat(e.target.value);
+                            setFormData(prev => ({ ...prev, amount: isNaN(val) ? 0 : val }));
+                        }}
                         color="emerald"
                         required
                     />
@@ -161,21 +167,30 @@ export const IncomeEditor: React.FC<IncomeEditorProps> = ({
                         type="number"
                         min={1} max={31}
                         value={formData.dayOfMonth}
-                        onChange={e => setFormData({...formData, dayOfMonth: parseInt(e.target.value)})}
+                        onChange={e => {
+                            const val = parseInt(e.target.value);
+                            setFormData(prev => ({ ...prev, dayOfMonth: isNaN(val) ? 1 : val }));
+                        }}
                         required
                     />
                     
                     <AccountSelector 
                         accounts={accounts}
                         value={formData.accountId}
-                        onChange={e => setFormData({...formData, accountId: e.target.value})}
+                        onChange={e => {
+                            const val = e.target.value;
+                            setFormData(prev => ({ ...prev, accountId: val }));
+                        }}
                         color="emerald"
                     />
                     
                     <BeneficiarySelector 
                         people={people}
                         value={formData.beneficiaryId}
-                        onChange={e => setFormData({...formData, beneficiaryId: e.target.value})}
+                        onChange={e => {
+                            const val = e.target.value;
+                            setFormData(prev => ({ ...prev, beneficiaryId: val }));
+                        }}
                         color="emerald"
                     />
                     
@@ -184,8 +199,8 @@ export const IncomeEditor: React.FC<IncomeEditorProps> = ({
                         type="INCOME"
                         selectedCategory={formData.category || ''}
                         selectedSubCategory={formData.subCategory || ''}
-                        onCategoryChange={val => setFormData({...formData, category: val})}
-                        onSubCategoryChange={val => setFormData({...formData, subCategory: val})}
+                        onCategoryChange={val => setFormData(prev => ({ ...prev, category: val }))}
+                        onSubCategoryChange={val => setFormData(prev => ({ ...prev, subCategory: val }))}
                     />
                     
                     <div className="flex gap-3 pt-2">

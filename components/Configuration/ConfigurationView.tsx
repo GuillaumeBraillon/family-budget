@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Settings, UserCircle, CreditCard, Tag, Sliders, List } from 'lucide-react';
+import { Settings, UserCircle, CreditCard, Tag, Sliders, List, CalendarRange } from 'lucide-react';
 import { ConfigTab } from '../../hooks/useConfigurationUI';
 import { ExpenseConfig, IncomeConfig, CategoryDef, Person, Account, AppSettings, SavedLabel } from '../../types';
 import { InfoBox } from '../ui/InfoBox';
@@ -11,10 +11,11 @@ import { PeopleManager } from './organisms/PeopleManager';
 import { AccountManager } from './organisms/AccountManager';
 import { GlobalSettings } from './organisms/GlobalSettings';
 import { AccountLabelManager } from './organisms/AccountLabelManager';
+import { OperationsManager } from './organisms/OperationsManager';
 
 interface ConfigurationViewProps {
   configs: ExpenseConfig[];
-  incomeConfigs?: IncomeConfig[]; 
+  incomeConfigs: IncomeConfig[]; // Devenu obligatoire pour OperationsManager
   categories: CategoryDef[];
   people: Person[];
   accounts: Account[];
@@ -31,17 +32,26 @@ interface ConfigurationViewProps {
   onResetConnection: () => void;
   onUpsertLabel: (l: SavedLabel) => void;
   onDeleteLabel: (id: string) => void;
+  // Props CRUD pour OperationsManager
+  onAddConfig: (c: ExpenseConfig) => void;
+  onUpdateConfig: (c: ExpenseConfig) => void;
+  onDeleteConfig: (id: string) => void;
+  onAddIncome: (i: IncomeConfig) => void;
+  onUpdateIncome: (i: IncomeConfig) => void;
+  onDeleteIncome: (id: string) => void;
 }
 
 export const ConfigurationView: React.FC<ConfigurationViewProps> = ({ 
-  categories, people, accounts, settings, savedLabels,
+  configs, incomeConfigs, categories, people, accounts, settings, savedLabels,
   activeTab, setActiveTab,
   onUpdateCategories,
   onUpsertPerson, onDeletePerson,
   onUpsertAccount, onDeleteAccount,
   onUpdateSettings,
   onResetConnection,
-  onUpsertLabel, onDeleteLabel
+  onUpsertLabel, onDeleteLabel,
+  onAddConfig, onUpdateConfig, onDeleteConfig,
+  onAddIncome, onUpdateIncome, onDeleteIncome
 }) => {
   return (
     <div className="space-y-6">
@@ -66,6 +76,28 @@ export const ConfigurationView: React.FC<ConfigurationViewProps> = ({
                 settings={settings} 
                 onUpdate={onUpdateSettings} 
                 onResetConnection={onResetConnection}
+              />
+            </>
+        )}
+        {activeTab === 'operations' && (
+            <>
+              <InfoBox 
+                title="Modèles d'opérations"
+                description="Définissez ici vos revenus (salaires, aides) et dépenses fixes (loyer, abonnements) qui reviennent chaque mois. Ces règles génèrent automatiquement votre échéancier."
+                icon={<CalendarRange size={18} />}
+              />
+              <OperationsManager 
+                  configs={configs}
+                  incomeConfigs={incomeConfigs}
+                  categories={categories}
+                  people={people}
+                  accounts={accounts}
+                  onAddConfig={onAddConfig}
+                  onUpdateConfig={onUpdateConfig}
+                  onDeleteConfig={onDeleteConfig}
+                  onAddIncome={onAddIncome}
+                  onUpdateIncome={onUpdateIncome}
+                  onDeleteIncome={onDeleteIncome}
               />
             </>
         )}

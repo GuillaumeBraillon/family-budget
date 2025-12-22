@@ -55,10 +55,10 @@ export const DetailedAnalysis: React.FC<DetailedAnalysisProps> = ({ stats, peopl
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-      {/* TABLEAU DES FLUX PAR PERSONNE */}
+      {/* TABLEAU PAR MEMBRE */}
       <Card className="p-4 shadow-sm lg:col-span-2">
         <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-1.5">
-          <Users size={12}/> Bénéficiaires
+          <Users size={12}/> Répartition par Membre
         </h3>
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
@@ -66,10 +66,10 @@ export const DetailedAnalysis: React.FC<DetailedAnalysisProps> = ({ stats, peopl
               <tr className="text-slate-400 border-b border-slate-100">
                 <th className="text-left font-bold pb-2 uppercase tracking-tighter text-[9px]">Membre</th>
                 <th className="text-right font-bold pb-2 uppercase tracking-tighter text-[9px]">
-                   Revenus (Réel) <MobileTooltip text="Montants réellement perçus sur la période." iconSize={10} widthClass="w-48" />
+                   Revenus <MobileTooltip text="Montants réellement perçus sur la période." iconSize={10} widthClass="w-48" />
                 </th>
                 <th className="text-right font-bold pb-2 uppercase tracking-tighter text-[9px]">
-                   Dépenses (Réel) <MobileTooltip text="Montants réellement payés sur la période." iconSize={10} widthClass="w-48" />
+                   Dépenses <MobileTooltip text="Montants réellement payés sur la période." iconSize={10} widthClass="w-48" />
                 </th>
                 <th className="text-right font-bold pb-2 uppercase tracking-tighter text-[9px]">
                    Bilan <MobileTooltip text="Différence entre revenus et dépenses réels." iconSize={10} widthClass="w-48" />
