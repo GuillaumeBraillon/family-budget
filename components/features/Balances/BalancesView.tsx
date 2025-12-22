@@ -28,7 +28,8 @@ export const BalancesView: React.FC<BalancesViewProps> = ({
   onUpdateAccount
 }) => {
   const currentDate = new Date();
-  const { getStats } = usePlanner(configs, incomeConfigs, paidItems, variableTransactions, currentDate, '', settings);
+  // On récupère filteredWeeks pour avoir accès aux items de la semaine (y compris variables en attente)
+  const { getStats, filteredWeeks } = usePlanner(configs, incomeConfigs, paidItems, variableTransactions, currentDate, '', settings);
   
   const getWeekFromDate = (date: Date): number => {
     const day = date.getDate();
@@ -40,71 +41,113 @@ export const BalancesView: React.FC<BalancesViewProps> = ({
   const activeWeek = getWeekFromDate(currentDate);
   const stats = getStats(activeWeek);
   
+  // Budget alloué pour la période
   const budgetPeriodeGlobal = stats.periodLimit;
-  const resteAPayer = stats.fixedToPay + stats.fixedDelays;
 
-  const totalPersonalBalance = useMemo(() => {
-    return accounts
-      .filter(a => a.type === 'COURANT' && !a.isJoint)
-      .reduce((sum, acc) => sum + acc.currentBalance, 0);
-  }, [accounts]);
+  // 1. Identification des comptes
+  const checkingAccounts = useMemo(() => accounts.filter(a => a.type === 'COURANT'), [accounts]);
+  const jointAccount = checkingAccounts.find(a => a.isJoint);
+  const personalAccounts = checkingAccounts.filter(a => !a.isJoint);
+
+  // 2. Calcul du total des soldes personnels actuels
+  const totalPersonalBalance = personalAccounts.reduce((sum, acc) => sum + acc.currentBalance, 0);
+
+  // 3. Récupération des données précises de la semaine active
+  const currentWeekData = filteredWeeks.find(w => w.weekNumber === (filteredWeeks.some(w => w.weekNumber === activeWeek) ? activeWeek : 1));
+  const weekItems = currentWeekData?.items || [];
+
+  // Calcul de la consommation variable totale (Payé + En attente)
+  // On exclut les virements internes et les extras
+  const totalVariableConsumed = weekItems
+    .filter(i => i.source === 'VARIABLE' && !i.isExtra && i.category !== 'Virement Interne')
+    .reduce((acc, i) => acc + i.amount, 0);
+
+  // Dépenses en attente sur le compte joint (Récurrentes + Variables)
+  const pendingOnJoint = weekItems
+    .filter(i => !i.isPaid && i.accountId === jointAccount?.id && i.category !== 'Virement Interne')
+    .reduce((acc, i) => acc + i.amount, 0);
+    
+  // Ajout des retards passés (Fixed Delays) qui sont forcément dus
+  const totalJointLiability = pendingOnJoint + stats.fixedDelays;
 
   const { rows, virLddsTotal } = useMemo(() => {
     const r: BalanceRow[] = [];
-    const checkingAccounts = accounts.filter(a => a.type === 'COURANT');
-    const jointAccount = checkingAccounts.find(a => a.isJoint);
-    let totalNeededByPersonals = 0;
-    const personalAccounts = checkingAccounts.filter(a => !a.isJoint);
     
+    // -- A. CALCUL DU RESTE À VIVRE RÉEL --
+    // Budget Période - (Ce qu'on a déjà dépensé ou engagé en variable)
+    const remainingBudget = Math.max(0, budgetPeriodeGlobal - totalVariableConsumed);
+
+    // -- B. MONTANT NET À DISTRIBUER (TOP-UP) --
+    // Reste à vivre - Ce qu'ils ont déjà sur leurs comptes
+    const netDistributable = Math.max(0, remainingBudget - totalPersonalBalance);
+
+    let totalTransfersToPersonals = 0;
+
+    // -- C. CALCUL POUR CHAQUE COMPTE PERSO --
     for (const acc of personalAccounts) {
         const owner = people.find(p => p.id === acc.ownerId);
-        let target = 0;
         
-        if (acc.targetRatio !== undefined || acc.targetCap !== undefined) {
-            const ratioPart = acc.targetRatio ? (budgetPeriodeGlobal * (acc.targetRatio / 100)) : Infinity;
-            const capPart = acc.targetCap !== undefined ? acc.targetCap : Infinity;
+        let transferAmount = 0;
+        
+        // Si le compte a un ratio défini
+        if (acc.targetRatio !== undefined) {
+            // Le ratio s'applique sur le montant NET à distribuer (le complément)
+            const shareOfDistributable = netDistributable * (acc.targetRatio / 100);
             
-            if (ratioPart === Infinity && capPart === Infinity) {
-                target = 0;
-            } else {
-                target = Math.min(ratioPart, capPart);
-            }
+            // Application du plafond (Cap) si défini
+            const cap = acc.targetCap !== undefined ? acc.targetCap : Infinity;
+            transferAmount = Math.min(shareOfDistributable, cap);
         }
 
-        const transfer = target - acc.currentBalance;
-        if (transfer > 0) totalNeededByPersonals += transfer;
+        // Cible = Solde Actuel + Virement calculé
+        // (C'est ce qu'ils auront à la fin pour finir la période)
+        const targetBalance = acc.currentBalance + transferAmount;
+
+        if (transferAmount > 0) {
+            totalTransfersToPersonals += transferAmount;
+        }
 
         r.push({
             id: acc.id,
             name: acc.name,
             owner: owner?.name || 'Inconnu',
             balance: acc.currentBalance,
-            target: target,
-            transfer: transfer,
+            target: targetBalance,
+            transfer: transferAmount,
             isJoint: false
         });
     }
 
-    let jointTransfer = 0;
-    
+    // -- D. LOGIQUE COMPTE JOINT --
+    let jointTransferNeeded = 0;
+    let jointTarget = 0;
+
     if (jointAccount) {
         const owner = people.find(p => p.id === jointAccount.ownerId);
-        const totalNeedJoint = resteAPayer + totalNeededByPersonals;
-        jointTransfer = totalNeedJoint - jointAccount.currentBalance;
+        
+        // Besoin Joint = (Toutes les dettes en attente) + (Argent à envoyer aux comptes persos)
+        const totalNeedJoint = totalJointLiability + totalTransfersToPersonals;
+        
+        // Virement nécessaire = Besoin - Solde Actuel
+        jointTransferNeeded = totalNeedJoint - jointAccount.currentBalance;
+        jointTarget = totalNeedJoint; // La cible est d'avoir exactement de quoi tout payer
 
         r.unshift({
             id: jointAccount.id,
             name: jointAccount.name,
             owner: owner?.name || 'Commun',
             balance: jointAccount.currentBalance,
-            target: totalNeedJoint,
-            transfer: jointTransfer,
+            target: jointTarget,
+            transfer: jointTransferNeeded,
             isJoint: true
         });
     }
 
-    return { rows: r, virLddsTotal: jointTransfer };
-  }, [accounts, people, budgetPeriodeGlobal, resteAPayer]);
+    return { rows: r, virLddsTotal: jointTransferNeeded };
+  }, [
+    accounts, people, budgetPeriodeGlobal, totalVariableConsumed, 
+    totalJointLiability, totalPersonalBalance, jointAccount, personalAccounts
+  ]);
 
   const handleUpdateBalance = (id: string, newBalance: number) => {
     const account = accounts.find(a => a.id === id);
@@ -117,7 +160,7 @@ export const BalancesView: React.FC<BalancesViewProps> = ({
     <div className="space-y-6 animate-in fade-in duration-500">
       <BalancesHeader 
         budgetPeriodeGlobal={budgetPeriodeGlobal}
-        resteAPayer={resteAPayer}
+        resteAPayer={totalJointLiability}
         totalPersonalBalance={totalPersonalBalance}
       />
 
