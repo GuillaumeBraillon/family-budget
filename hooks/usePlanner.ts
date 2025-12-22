@@ -243,16 +243,13 @@ export const usePlanner = (
     const incByBeneficiary: Record<string, any> = {};
 
     [...currentItems, ...previousUnpaidItems].forEach(item => {
+      // 1. Calcul des Soldes de Compte (On inclut TOUT, même les virements internes)
       if (!byAccount[item.accountId]) byAccount[item.accountId] = { paid: 0, remaining: 0, planned: 0, pendingCount: 0 };
       const val = item.amount;
       const originalVal = item.originalAmount;
 
       if (item.isPaid) {
           byAccount[item.accountId].paid += (item.type === 'EXPENSE' ? val : -val);
-          if (!incByBeneficiary[item.beneficiaryId]) incByBeneficiary[item.beneficiaryId] = { paid: 0, planned: 0 };
-          if (!expByBeneficiary[item.beneficiaryId]) expByBeneficiary[item.beneficiaryId] = { paid: 0, planned: 0 };
-          if (item.type === 'INCOME') incByBeneficiary[item.beneficiaryId].paid += val;
-          else expByBeneficiary[item.beneficiaryId].paid += val;
       } else {
           byAccount[item.accountId].remaining += (item.type === 'EXPENSE' ? val : -val);
           byAccount[item.accountId].pendingCount++;
@@ -260,32 +257,54 @@ export const usePlanner = (
       
       if (item.source === 'RECURRING') {
           byAccount[item.accountId].planned += (item.type === 'EXPENSE' ? originalVal : -originalVal);
-          if (item.type === 'INCOME') {
+      }
+
+      // 2. Calcul des KPI d'Équité (On EXCLUT les Virements Internes)
+      // Un virement interne n'est ni une dépense réelle du foyer, ni un revenu réel du foyer.
+      if (item.category !== 'Virement Interne') {
+          if (item.isPaid) {
               if (!incByBeneficiary[item.beneficiaryId]) incByBeneficiary[item.beneficiaryId] = { paid: 0, planned: 0 };
-              incByBeneficiary[item.beneficiaryId].planned += originalVal;
-          } else {
               if (!expByBeneficiary[item.beneficiaryId]) expByBeneficiary[item.beneficiaryId] = { paid: 0, planned: 0 };
-              expByBeneficiary[item.beneficiaryId].planned += originalVal;
+              
+              if (item.type === 'INCOME') incByBeneficiary[item.beneficiaryId].paid += val;
+              else expByBeneficiary[item.beneficiaryId].paid += val;
+          }
+
+          if (item.source === 'RECURRING') {
+              if (item.type === 'INCOME') {
+                  if (!incByBeneficiary[item.beneficiaryId]) incByBeneficiary[item.beneficiaryId] = { paid: 0, planned: 0 };
+                  incByBeneficiary[item.beneficiaryId].planned += originalVal;
+              } else {
+                  if (!expByBeneficiary[item.beneficiaryId]) expByBeneficiary[item.beneficiaryId] = { paid: 0, planned: 0 };
+                  expByBeneficiary[item.beneficiaryId].planned += originalVal;
+              }
           }
       }
     });
 
     const periodLimit = currentWeek?.periodLimit || 0;
     
-    const budgetVariableItems = currentItems.filter(i => i.source === 'VARIABLE' && !i.isExtra && !i.isWaiting);
+    // EXCLUSION des 'Virement Interne' du calcul du budget variable (dépenses et revenus)
+    const budgetVariableItems = currentItems.filter(i => 
+        i.source === 'VARIABLE' && 
+        !i.isExtra && 
+        !i.isWaiting && 
+        i.category !== 'Virement Interne'
+    );
     const varExpenses = sum(budgetVariableItems, 'EXPENSE');
     const varIncome = sum(budgetVariableItems, 'INCOME');
 
+    // Pour les totaux globaux (KPI Dashboard), on exclut aussi les virements internes
     return {
-      fixedPaid: sum(currentItems.filter(i => i.source === 'RECURRING' && i.isPaid), 'EXPENSE'),
-      fixedToPay: sum(currentItems.filter(i => i.source === 'RECURRING' && !i.isPaid), 'EXPENSE'),
-      fixedDelays: sum(previousUnpaidItems.filter(i => i.source === 'RECURRING'), 'EXPENSE'),
-      fixedPlanned: sum(currentItems.filter(i => i.source === 'RECURRING'), 'EXPENSE', true),
+      fixedPaid: sum(currentItems.filter(i => i.source === 'RECURRING' && i.isPaid && i.category !== 'Virement Interne'), 'EXPENSE'),
+      fixedToPay: sum(currentItems.filter(i => i.source === 'RECURRING' && !i.isPaid && i.category !== 'Virement Interne'), 'EXPENSE'),
+      fixedDelays: sum(previousUnpaidItems.filter(i => i.source === 'RECURRING' && i.category !== 'Virement Interne'), 'EXPENSE'),
+      fixedPlanned: sum(currentItems.filter(i => i.source === 'RECURRING' && i.category !== 'Virement Interne'), 'EXPENSE', true),
       varExpenses,
       varIncome,
       periodLimit,
       varRemaining: (periodLimit + varIncome) - varExpenses,
-      totalIncomeReal: sum(currentItems.filter(i => i.isPaid), 'INCOME'),
+      totalIncomeReal: sum(currentItems.filter(i => i.isPaid && i.category !== 'Virement Interne'), 'INCOME'),
       byAccount,
       expByBeneficiary,
       incByBeneficiary

@@ -63,6 +63,9 @@ export const VariableExpensesView: React.FC<VariableExpensesViewProps> = ({
 
   filteredTransactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
+  // Pour les statistiques, on exclut les virements internes
+  const statsTransactions = filteredTransactions.filter(t => t.category !== 'Virement Interne');
+
   const defaultFormDate = (() => {
       const today = new Date();
       if (today.getMonth() === currentMonth && today.getFullYear() === currentYear && activeWeekData) {
@@ -122,18 +125,20 @@ export const VariableExpensesView: React.FC<VariableExpensesViewProps> = ({
             searchQuery={ui.searchQuery}
         />
 
+        {/* Stats uniquement sur les vraies dépenses/revenus (pas de virements) */}
         <VariableStatsSummary 
             budget={activeWeekData?.periodLimit || 0}
-            expenses={filteredTransactions.filter(t => t.type !== 'INCOME').reduce((sum, t) => sum + t.amount, 0)}
-            income={filteredTransactions.filter(t => t.type === 'INCOME').reduce((sum, t) => sum + t.amount, 0)}
+            expenses={statsTransactions.filter(t => t.type !== 'INCOME').reduce((sum, t) => sum + t.amount, 0)}
+            income={statsTransactions.filter(t => t.type === 'INCOME').reduce((sum, t) => sum + t.amount, 0)}
         />
 
         <VariableDetailedAnalysis 
-            transactions={filteredTransactions}
+            transactions={statsTransactions}
             people={people}
             accounts={accounts}
         />
 
+        {/* La liste affiche TOUT, y compris les virements, pour la traçabilité */}
         <VariableOperationsList 
             transactions={filteredTransactions}
             accounts={accounts}

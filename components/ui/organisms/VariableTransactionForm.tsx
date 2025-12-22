@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Save, TrendingUp, TrendingDown, Calendar, Trash2, Clock, CheckCircle2, Star, MessageSquare } from 'lucide-react';
+import { Save, TrendingUp, TrendingDown, Calendar, Trash2, Clock, CheckCircle2, Star, MessageSquare, ArrowRightLeft, ArrowDown } from 'lucide-react';
 import { VariableTransaction, Account, CategoryDef, AccountType, Person } from '../../../types';
 import { CategorySelector } from '../molecules/CategorySelector';
 import { TextInput, AmountInput, SearchableTextInput } from '../atoms/Inputs';
@@ -26,6 +26,9 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
 }) => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   
+  // Mode switch: 'STANDARD' vs 'TRANSFER'
+  const [mode, setMode] = useState<'STANDARD' | 'TRANSFER'>('STANDARD');
+
   const [type, setType] = useState<'EXPENSE' | 'INCOME'>('EXPENSE');
   const [date, setDate] = useState(defaultDate);
   const [label, setLabel] = useState('');
@@ -36,6 +39,7 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
   
   const checkingAccounts = accounts.filter(a => a.type === AccountType.CHECKING);
   const [accountId, setAccountId] = useState(checkingAccounts[0]?.id || '');
+  const [destAccountId, setDestAccountId] = useState(checkingAccounts[1]?.id || checkingAccounts[0]?.id || '');
   
   const [category, setCategory] = useState('');
   const [subCategory, setSubCategory] = useState('');
@@ -46,6 +50,7 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
   useEffect(() => {
     if (isOpen) {
         if (editingTransaction) {
+            setMode('STANDARD');
             setType(editingTransaction.type || 'EXPENSE');
             setDate(editingTransaction.date);
             setLabel(editingTransaction.label);
@@ -58,6 +63,7 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
             setIsExtra(!!editingTransaction.isExtra);
             setComments(editingTransaction.comments || '');
         } else {
+            setMode('STANDARD');
             setDate(defaultDate);
             setLabel('');
             setAmount('');
@@ -76,20 +82,60 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
   const handleSubmit = () => {
     if (!label || !amount || !accountId) return;
 
-    onAddTransaction({
-      id: editingTransaction?.id || `var_${Date.now()}`,
-      date,
-      label,
-      amount: parseFloat(amount),
-      category,
-      subCategory,
-      accountId,
-      beneficiaryId,
-      type,
-      isWaiting,
-      isExtra,
-      comments: comments.trim() || undefined
-    });
+    if (mode === 'TRANSFER') {
+        if (!destAccountId || accountId === destAccountId) return;
+        
+        const amountNum = parseFloat(amount);
+        const transferLabel = `Virement: ${label}`;
+        
+        // 1. Débit (Source)
+        onAddTransaction({
+            id: `var_tr_out_${Date.now()}`,
+            date,
+            label: transferLabel,
+            amount: amountNum,
+            category: 'Virement Interne',
+            subCategory: 'Débit',
+            accountId: accountId, // Source
+            beneficiaryId: '', 
+            type: 'EXPENSE',
+            isWaiting: false, // Virement immédiat
+            isExtra: false,   // Ne compte pas dans le budget
+            comments: `Vers ${accounts.find(a => a.id === destAccountId)?.name}`
+        });
+
+        // 2. Crédit (Destination)
+        onAddTransaction({
+            id: `var_tr_in_${Date.now()}`,
+            date,
+            label: transferLabel,
+            amount: amountNum,
+            category: 'Virement Interne',
+            subCategory: 'Crédit',
+            accountId: destAccountId, // Destination
+            beneficiaryId: '',
+            type: 'INCOME',
+            isWaiting: false,
+            isExtra: false,
+            comments: `De ${accounts.find(a => a.id === accountId)?.name}`
+        });
+
+    } else {
+        onAddTransaction({
+            id: editingTransaction?.id || `var_${Date.now()}`,
+            date,
+            label,
+            amount: parseFloat(amount),
+            category,
+            subCategory,
+            accountId,
+            beneficiaryId,
+            type,
+            isWaiting,
+            isExtra,
+            comments: comments.trim() || undefined
+        });
+    }
     onClose();
   };
 
@@ -102,7 +148,7 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
   };
 
   const isExpense = type === 'EXPENSE';
-  const themeColor = isExpense ? 'indigo' : 'emerald';
+  const themeColor = mode === 'TRANSFER' ? 'indigo' : (isExpense ? 'indigo' : 'emerald');
 
   if (showDeleteConfirm) {
       return <ConfirmModal isOpen={true} title="Supprimer ?" message={`Voulez-vous supprimer "${editingTransaction?.label}" ?`} onConfirm={() => { onDeleteTransaction?.(editingTransaction!.id); setShowDeleteConfirm(false); onClose(); }} onCancel={() => setShowDeleteConfirm(false)} />;
@@ -115,134 +161,223 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
         title={editingTransaction ? "Modifier l'opération" : "Nouvelle opération"}
     >
       <div className="space-y-4">
-        <div className="grid grid-cols-2 gap-2">
-            <div>
-                <label className="text-xs font-medium text-slate-500 uppercase block mb-1">Type de flux</label>
-                <div className="flex bg-slate-100 p-1 rounded-lg">
-                    <button
-                        type="button"
-                        onClick={() => setType('EXPENSE')}
-                        className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm font-bold transition-all ${isExpense ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                    >
-                        <TrendingDown size={14}/> Dépense
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => setType('INCOME')}
-                        className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm font-bold transition-all ${!isExpense ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                    >
-                        <TrendingUp size={14}/> Revenu
-                    </button>
-                </div>
-            </div>
-
-            <div>
-                <label className="text-xs font-medium text-slate-500 uppercase block mb-1">État du pointage</label>
-                <div className="flex bg-slate-100 p-1 rounded-lg">
-                    <button
-                        type="button"
-                        onClick={() => setIsWaiting(false)}
-                        className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm font-bold transition-all ${!isWaiting ? 'bg-emerald-500 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                    >
-                        <CheckCircle2 size={14}/> Réel
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => setIsWaiting(true)}
-                        className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm font-bold transition-all ${isWaiting ? 'bg-amber-500 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                    >
-                        <Clock size={14}/> Attente
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <SearchableTextInput 
-            label="Libellé" 
-            value={label} 
-            onChange={e => setLabel(e.target.value)}
-            onSelectSuggestion={setLabel}
-            placeholder={isExpense ? "Ex: Courses Carrefour..." : "Ex: Vente Vinted..."}
-            suggestions={isExpense ? labelsSuggestions : []}
-            required
-            autoFocus={!editingTransaction}
-        />
         
-        <AmountInput 
-            label="Montant"
-            value={amount}
-            onChange={e => setAmount(e.target.value)}
-            color={themeColor}
-            required
-        />
+        {/* SÉLECTEUR DE MODE (Visible uniquement en création) */}
+        {!editingTransaction && (
+            <div className="flex bg-slate-100 p-1 rounded-lg mb-2">
+                <button
+                    type="button"
+                    onClick={() => setMode('STANDARD')}
+                    className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-xs font-bold transition-all ${mode === 'STANDARD' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                >
+                    Opération Standard
+                </button>
+                <button
+                    type="button"
+                    onClick={() => { setMode('TRANSFER'); setLabel('Virement interne'); }}
+                    className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-xs font-bold transition-all ${mode === 'TRANSFER' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                >
+                    <ArrowRightLeft size={12}/> Virement Interne
+                </button>
+            </div>
+        )}
 
-        <TextInput 
-            label="Date de l'achat"
-            type="date"
-            icon={Calendar}
-            value={date}
-            onChange={e => setDate(e.target.value)}
-            required
-        />
+        {mode === 'STANDARD' ? (
+            /* --- MODE STANDARD --- */
+            <>
+                <div className="grid grid-cols-2 gap-2">
+                    <div>
+                        <label className="text-xs font-medium text-slate-500 uppercase block mb-1">Type de flux</label>
+                        <div className="flex bg-slate-100 p-1 rounded-lg">
+                            <button
+                                type="button"
+                                onClick={() => setType('EXPENSE')}
+                                className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm font-bold transition-all ${isExpense ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                            >
+                                <TrendingDown size={14}/> Dépense
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setType('INCOME')}
+                                className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm font-bold transition-all ${!isExpense ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                            >
+                                <TrendingUp size={14}/> Revenu
+                            </button>
+                        </div>
+                    </div>
 
-        <div className={`p-3 rounded-xl border-2 transition-all ${isExtra ? 'bg-amber-50 border-amber-300 shadow-sm' : 'bg-slate-50 border-slate-200'}`}>
-            <label className="flex items-center gap-3 cursor-pointer">
-                <input 
-                    type="checkbox" 
-                    checked={isExtra}
-                    onChange={e => setIsExtra(e.target.checked)}
-                    className="h-5 w-5 text-amber-600 rounded"
-                />
-                <div className="flex flex-col">
-                    <span className="text-sm font-bold text-slate-700 flex items-center gap-1.5">
-                        <Star size={14} className={isExtra ? 'text-amber-500' : 'text-slate-400'} /> Opération Extra / Exceptionnelle
-                    </span>
-                    <span className="text-[10px] text-slate-500 leading-tight">
-                        Exclut ce montant de la consommation de votre budget variable hebdomadaire.
-                    </span>
+                    <div>
+                        <label className="text-xs font-medium text-slate-500 uppercase block mb-1">État du pointage</label>
+                        <div className="flex bg-slate-100 p-1 rounded-lg">
+                            <button
+                                type="button"
+                                onClick={() => setIsWaiting(false)}
+                                className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm font-bold transition-all ${!isWaiting ? 'bg-emerald-500 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                            >
+                                <CheckCircle2 size={14}/> Réel
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setIsWaiting(true)}
+                                className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm font-bold transition-all ${isWaiting ? 'bg-amber-500 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                            >
+                                <Clock size={14}/> Attente
+                            </button>
+                        </div>
+                    </div>
                 </div>
-            </label>
-        </div>
 
-        <AccountSelector 
-            label={isExpense ? 'Compte débité' : 'Compte crédité'}
-            accounts={checkingAccounts}
-            value={accountId}
-            onChange={e => setAccountId(e.target.value)}
-            color={themeColor}
-        />
+                <SearchableTextInput 
+                    label="Libellé" 
+                    value={label} 
+                    onChange={e => setLabel(e.target.value)}
+                    onSelectSuggestion={setLabel}
+                    placeholder={isExpense ? "Ex: Courses Carrefour..." : "Ex: Vente Vinted..."}
+                    suggestions={isExpense ? labelsSuggestions : []}
+                    required
+                    autoFocus={!editingTransaction}
+                />
+                
+                <AmountInput 
+                    label="Montant"
+                    value={amount}
+                    onChange={e => setAmount(e.target.value)}
+                    color={themeColor}
+                    required
+                />
 
-        <CategorySelector 
-            categories={categories}
-            type={type}
-            selectedCategory={category}
-            selectedSubCategory={subCategory}
-            onCategoryChange={setCategory}
-            onSubCategoryChange={setSubCategory}
-        />
+                <TextInput 
+                    label="Date de l'achat"
+                    type="date"
+                    icon={Calendar}
+                    value={date}
+                    onChange={e => setDate(e.target.value)}
+                    required
+                />
 
-        <BeneficiarySelector 
-            people={people}
-            value={beneficiaryId}
-            onChange={e => setBeneficiaryId(e.target.value)}
-            color={themeColor}
-            label="Bénéficiaires"
-        />
+                <div className={`p-3 rounded-xl border-2 transition-all ${isExtra ? 'bg-amber-50 border-amber-300 shadow-sm' : 'bg-slate-50 border-slate-200'}`}>
+                    <label className="flex items-center gap-3 cursor-pointer">
+                        <input 
+                            type="checkbox" 
+                            checked={isExtra}
+                            onChange={e => setIsExtra(e.target.checked)}
+                            className="h-5 w-5 text-amber-600 rounded"
+                        />
+                        <div className="flex flex-col">
+                            <span className="text-sm font-bold text-slate-700 flex items-center gap-1.5">
+                                <Star size={14} className={isExtra ? 'text-amber-500' : 'text-slate-400'} /> Opération Extra / Exceptionnelle
+                            </span>
+                            <span className="text-[10px] text-slate-500 leading-tight">
+                                Exclut ce montant de la consommation de votre budget variable hebdomadaire.
+                            </span>
+                        </div>
+                    </label>
+                </div>
 
-        <TextInput 
-            label="Note / Commentaire" 
-            value={comments} 
-            onChange={e => setComments(e.target.value)}
-            placeholder="Infos complémentaires..."
-            icon={MessageSquare}
-        />
+                <AccountSelector 
+                    label={isExpense ? 'Compte débité' : 'Compte crédité'}
+                    accounts={checkingAccounts}
+                    value={accountId}
+                    onChange={e => setAccountId(e.target.value)}
+                    color={themeColor}
+                />
 
-        {isWaiting && (
-            <div className="bg-amber-50 p-3 rounded-xl border border-amber-200 flex items-start gap-3 animate-in slide-in-from-top-2">
-                <Clock size={18} className="text-amber-500 mt-0.5" />
-                <p className="text-[11px] text-amber-800 leading-tight">
-                    Cette opération apparaîtra en ambre dans l'échéancier. Vous pourrez la valider d'un clic lorsqu'elle sera visible sur votre compte bancaire.
-                </p>
+                <CategorySelector 
+                    categories={categories}
+                    type={type}
+                    selectedCategory={category}
+                    selectedSubCategory={subCategory}
+                    onCategoryChange={setCategory}
+                    onSubCategoryChange={setSubCategory}
+                />
+
+                <BeneficiarySelector 
+                    people={people}
+                    value={beneficiaryId}
+                    onChange={e => setBeneficiaryId(e.target.value)}
+                    color={themeColor}
+                    label="Bénéficiaires"
+                />
+
+                <TextInput 
+                    label="Note / Commentaire" 
+                    value={comments} 
+                    onChange={e => setComments(e.target.value)}
+                    placeholder="Infos complémentaires..."
+                    icon={MessageSquare}
+                />
+
+                {isWaiting && (
+                    <div className="bg-amber-50 p-3 rounded-xl border border-amber-200 flex items-start gap-3 animate-in slide-in-from-top-2">
+                        <Clock size={18} className="text-amber-500 mt-0.5" />
+                        <p className="text-[11px] text-amber-800 leading-tight">
+                            Cette opération apparaîtra en ambre dans l'échéancier. Vous pourrez la valider d'un clic lorsqu'elle sera visible sur votre compte bancaire.
+                        </p>
+                    </div>
+                )}
+            </>
+        ) : (
+            /* --- MODE VIREMENT INTERNE --- */
+            <div className="space-y-6 pt-2">
+                <div className="bg-indigo-50 border border-indigo-100 p-4 rounded-xl flex items-start gap-3">
+                    <ArrowRightLeft className="text-indigo-600 mt-1" size={20} />
+                    <p className="text-xs text-indigo-800 leading-relaxed">
+                        Ce mode crée automatiquement deux opérations (un débit et un crédit) pour équilibrer vos comptes. Ces mouvements ne seront pas comptabilisés comme des dépenses ou des revenus dans votre budget.
+                    </p>
+                </div>
+
+                <AmountInput 
+                    label="Montant à transférer"
+                    value={amount}
+                    onChange={e => setAmount(e.target.value)}
+                    color="indigo"
+                    required
+                    autoFocus
+                />
+
+                <div className="relative">
+                    <div className="absolute left-[13px] top-[34px] bottom-[34px] w-0.5 bg-slate-200 -z-10"></div>
+                    <div className="space-y-4">
+                        <AccountSelector 
+                            label="Depuis le compte (Débit)"
+                            accounts={accounts}
+                            value={accountId}
+                            onChange={e => setAccountId(e.target.value)}
+                            color="indigo"
+                            showBalance
+                        />
+                        <div className="flex justify-center -my-2 relative z-10">
+                            <div className="bg-white p-1 rounded-full border border-slate-200 text-slate-400">
+                                <ArrowDown size={14} />
+                            </div>
+                        </div>
+                        <AccountSelector 
+                            label="Vers le compte (Crédit)"
+                            accounts={accounts}
+                            value={destAccountId}
+                            onChange={e => setDestAccountId(e.target.value)}
+                            color="emerald"
+                            showBalance
+                        />
+                    </div>
+                </div>
+
+                <TextInput 
+                    label="Date du virement"
+                    type="date"
+                    icon={Calendar}
+                    value={date}
+                    onChange={e => setDate(e.target.value)}
+                    required
+                />
+
+                <TextInput 
+                    label="Libellé du virement" 
+                    value={label} 
+                    onChange={e => setLabel(e.target.value)}
+                    placeholder="Ex: Salaire Guillaume, Épargne..."
+                    required
+                />
             </div>
         )}
 
@@ -259,9 +394,9 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
 
             <button 
                 onClick={handleSubmit} 
-                className={`flex-1 text-white py-3 rounded-xl font-bold shadow-sm transition-colors flex items-center justify-center gap-2 ${editingTransaction ? 'bg-amber-600 hover:bg-amber-700' : (isExpense ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-emerald-600 hover:bg-emerald-700')}`}
+                className={`flex-1 text-white py-3 rounded-xl font-bold shadow-sm transition-colors flex items-center justify-center gap-2 ${editingTransaction ? 'bg-amber-600 hover:bg-amber-700' : (isExpense || mode === 'TRANSFER' ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-emerald-600 hover:bg-emerald-700')}`}
             >
-                {editingTransaction ? <><Save size={18}/> Enregistrer</> : <><Save size={18}/> {!isWaiting ? 'Ajouter au réel' : 'Saisir en attente'}</>}
+                {editingTransaction ? <><Save size={18}/> Enregistrer</> : <><Save size={18}/> {mode === 'TRANSFER' ? 'Exécuter le virement' : (!isWaiting ? 'Ajouter au réel' : 'Saisir en attente')}</>}
             </button>
         </div>
       </div>

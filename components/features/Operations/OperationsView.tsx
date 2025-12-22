@@ -47,6 +47,9 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
   const quickStats = useMemo(() => {
     const stats = { expenses: { real: 0, planned: 0, pending: 0, extra: 0 }, income: { real: 0, planned: 0, pending: 0, extra: 0 } };
     currentItems.forEach(item => {
+        // Exclure les virements internes des statistiques globales
+        if (item.category === 'Virement Interne') return;
+
         const target = item.type === 'INCOME' ? stats.income : stats.expenses;
         
         if (item.source === 'VARIABLE') {
