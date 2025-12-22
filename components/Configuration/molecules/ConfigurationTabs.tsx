@@ -18,12 +18,12 @@ export const ConfigurationTabs: React.FC<ConfigurationTabsProps> = ({ activeTab,
     {
       label: 'Configuration',
       tabs: [
-        { id: 'general', label: 'Général', icon: <Settings2 size={14} /> },
-        { id: 'family', label: 'Membres', icon: <Users size={14} /> },
+        { id: 'family', label: 'Bénéficiaires', icon: <Users size={14} /> },
         { id: 'accounts', label: 'Comptes', icon: <CreditCard size={14} /> },
         { id: 'operations', label: 'Opérations', icon: <CalendarRange size={14} /> },
         { id: 'categories', label: 'Catégories', icon: <Tag size={14} /> },
         { id: 'labels', label: 'Libellés', icon: <List size={14} /> },
+        { id: 'general', label: 'Général', icon: <Settings2 size={14} /> },
       ]
     }
   ];

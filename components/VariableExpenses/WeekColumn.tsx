@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { Plus, Trash2, CreditCard, ShoppingBag, Users } from 'lucide-react';
 import { Card } from '../ui/Card';
@@ -50,6 +49,7 @@ export const WeekColumn: React.FC<WeekColumnProps> = ({
     e.preventDefault();
     if (!newLabel || !newAmount || !newAccount) return;
 
+    // Fix: Added missing properties 'isWaiting' and 'isExtra' to satisfy VariableTransaction interface
     onAddTransaction({
         id: `var_${Date.now()}`,
         date: txDate,
@@ -57,7 +57,9 @@ export const WeekColumn: React.FC<WeekColumnProps> = ({
         amount: parseFloat(newAmount),
         accountId: newAccount,
         category: 'Variable',
-        type: 'EXPENSE'
+        type: 'EXPENSE',
+        isWaiting: false,
+        isExtra: false
     });
 
     setNewLabel('');

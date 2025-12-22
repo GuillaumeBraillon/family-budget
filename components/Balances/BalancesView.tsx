@@ -1,6 +1,6 @@
 
 import React, { useMemo } from 'react';
-import { Account, Person, ExpenseConfig, IncomeConfig, PaidItemDetails, AppSettings } from '../../types';
+import { Account, Person, ExpenseConfig, IncomeConfig, PaidItemDetails, AppSettings, VariableTransaction } from '../../types';
 import { usePlanner } from '../../hooks/usePlanner';
 import { BalancesHeader } from './molecules/BalancesHeader';
 import { BalancesTable, BalanceRow } from './organisms/BalancesTable';
@@ -12,6 +12,7 @@ interface BalancesViewProps {
   configs: ExpenseConfig[];
   incomeConfigs: IncomeConfig[];
   paidItems: Record<string, PaidItemDetails>;
+  variableTransactions: VariableTransaction[];
   settings: AppSettings;
   onUpdateAccount: (account: Account) => void;
 }
@@ -22,11 +23,13 @@ export const BalancesView: React.FC<BalancesViewProps> = ({
   configs,
   incomeConfigs,
   paidItems,
+  variableTransactions,
   settings,
   onUpdateAccount
 }) => {
   const currentDate = new Date();
-  const { getStats } = usePlanner(configs, incomeConfigs, paidItems, currentDate, '', settings);
+  // Fix: added variableTransactions as the 4th argument to the usePlanner call (7 arguments required)
+  const { getStats } = usePlanner(configs, incomeConfigs, paidItems, variableTransactions, currentDate, '', settings);
   
   const getWeekFromDate = (date: Date): number => {
     const day = date.getDate();
@@ -39,7 +42,8 @@ export const BalancesView: React.FC<BalancesViewProps> = ({
   const stats = getStats(activeWeek);
   
   const budgetPeriodeGlobal = stats.periodLimit;
-  const resteAPayer = stats.totalToRegularizeActual;
+  // Fix: corrected property name from totalToRegularizeActual to a calculation of remaining fixed expenses
+  const resteAPayer = stats.fixedToPay + stats.fixedDelays;
 
   // Calcul du solde total des comptes personnels (COURANT et NON JOINT)
   const totalPersonalBalance = useMemo(() => {

@@ -2,6 +2,7 @@
 import React from 'react';
 import { PlannedItem, Person, Account } from '../../../types';
 import { DataList, DataListRow } from '../../molecules/DataList';
+import { ShoppingBag, CalendarClock, Plus } from 'lucide-react';
 
 interface OperationsListProps {
   items: PlannedItem[];
@@ -10,6 +11,7 @@ interface OperationsListProps {
   accounts: Account[];
   currentDate: Date;
   onItemClick: (item: PlannedItem) => void;
+  onAddClick: () => void; // Ajout de la prop pour l'action d'ajout
 }
 
 export const OperationsList: React.FC<OperationsListProps> = ({
@@ -18,7 +20,8 @@ export const OperationsList: React.FC<OperationsListProps> = ({
   people,
   accounts,
   currentDate,
-  onItemClick
+  onItemClick,
+  onAddClick
 }) => {
   
   const getExtraProgress = (item: PlannedItem) => {
@@ -37,41 +40,71 @@ export const OperationsList: React.FC<OperationsListProps> = ({
   };
 
   return (
-    <DataList 
-        title="Détail des opérations" 
-        count={items.length} 
-        emptyMessage="Aucune opération prévue pour cette période."
-    >
-        {items.map(item => {
-             const progress = getExtraProgress(item);
-             const person = people.find(p => p.id === item.beneficiaryId);
-             const account = accounts.find(a => a.id === item.accountId);
-             
-             return (
-                <DataListRow
-                    key={item.instanceId}
-                    date={{ day: item.day, month: monthShort }}
-                    label={item.label}
-                    amount={item.amount}
-                    originalAmount={item.originalAmount}
-                    isIncome={item.type === 'INCOME'}
-                    category={item.category}
-                    subCategory={item.subCategory}
-                    beneficiary={person?.name}
-                    isChild={person?.isChild}
-                    accountName={account?.name}
-                    isPaid={!!item.isPaid}
-                    onClick={() => onItemClick(item)}
-                    badge={item.isExtra && progress ? (
-                        <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase ${
-                          progress.isLast ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
-                        }`}>
-                          Temp {progress.text}
-                        </span>
-                    ) : null}
-                />
-             );
-        })}
-    </DataList>
+    <div className="space-y-4">
+      <DataList 
+          title="Détail des opérations" 
+          count={items.length} 
+          onAdd={onAddClick}
+          addButtonLabel="Ajouter"
+          emptyMessage="Aucune opération ne correspond à vos filtres pour cette période."
+      >
+          {items.map(item => {
+               const progress = getExtraProgress(item);
+               const person = people.find(p => p.id === item.beneficiaryId);
+               const account = accounts.find(a => a.id === item.accountId);
+               const isVariable = item.source === 'VARIABLE';
+               
+               return (
+                  <DataListRow
+                      key={item.instanceId}
+                      date={{ day: item.day, month: monthShort }}
+                      label={item.label}
+                      amount={item.amount}
+                      originalAmount={isVariable ? undefined : item.originalAmount}
+                      isIncome={item.type === 'INCOME'}
+                      category={item.category}
+                      subCategory={item.subCategory}
+                      beneficiary={person?.name}
+                      isChild={person?.isChild}
+                      accountName={account?.name}
+                      isPaid={!!item.isPaid}
+                      onClick={() => onItemClick(item)}
+                      comments={item.comments}
+                      badge={
+                          <div className="flex gap-1 items-center">
+                              {isVariable ? (
+                                  <span className="text-[9px] bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded font-bold uppercase flex items-center gap-1">
+                                      <ShoppingBag size={10} /> Variable
+                                  </span>
+                              ) : (
+                                  <span className="text-[9px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded font-bold uppercase flex items-center gap-1">
+                                      <CalendarClock size={10} /> Récurrent
+                                  </span>
+                              )}
+                              {item.isExtra && progress && (
+                                  <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase ${
+                                  progress.isLast ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
+                                  }`}>
+                                  Temp {progress.text}
+                                  </span>
+                              )}
+                          </div>
+                      }
+                  />
+               );
+          })}
+      </DataList>
+
+      {/* Bouton d'ajout en bas de liste pour l'ergonomie mobile */}
+      {items.length > 0 && (
+        <button 
+          onClick={onAddClick}
+          className="w-full py-4 border-2 border-dashed border-slate-200 rounded-2xl text-slate-400 font-bold text-sm flex items-center justify-center gap-2 hover:border-indigo-300 hover:text-indigo-600 hover:bg-indigo-50 transition-all active:scale-95"
+        >
+          <Plus size={18} />
+          Nouvelle opération
+        </button>
+      )}
+    </div>
   );
 };

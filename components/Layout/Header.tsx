@@ -1,18 +1,14 @@
 
 import React from 'react';
-import { WalletCards, LayoutDashboard, CalendarCheck, Settings, PiggyBank, Calculator, ShoppingBag } from 'lucide-react';
+import { WalletCards, LayoutDashboard, CalendarCheck, Settings, PiggyBank, Calculator } from 'lucide-react';
 
-type ViewState = 'dashboard' | 'balances' | 'planner' | 'savings' | 'config' | 'variables';
+type ViewState = 'dashboard' | 'balances' | 'planner' | 'savings' | 'config';
 
 interface HeaderProps {
   currentView: ViewState;
   onViewChange: (view: ViewState) => void;
 }
 
-/**
- * Composant de navigation principal.
- * Affiche le logo et les onglets de navigation avec un style responsive.
- */
 export const Header: React.FC<HeaderProps> = ({ currentView, onViewChange }) => {
   return (
     <header className="bg-white border-b sticky top-0 z-20">
@@ -35,22 +31,16 @@ export const Header: React.FC<HeaderProps> = ({ currentView, onViewChange }) => 
             label="Dashboard" 
           />
           <NavBtn 
-            active={currentView === 'variables'} 
-            onClick={() => onViewChange('variables')} 
-            icon={<ShoppingBag size={16}/>} 
-            label="Variables" 
+            active={currentView === 'planner'} 
+            onClick={() => onViewChange('planner')} 
+            icon={<CalendarCheck size={16}/>} 
+            label="Opérations" 
           />
           <NavBtn 
             active={currentView === 'balances'} 
             onClick={() => onViewChange('balances')} 
             icon={<Calculator size={16}/>} 
             label="Soldes" 
-          />
-          <NavBtn 
-            active={currentView === 'planner'} 
-            onClick={() => onViewChange('planner')} 
-            icon={<CalendarCheck size={16}/>} 
-            label="Échéancier" 
           />
           <NavBtn 
             active={currentView === 'savings'} 
@@ -70,9 +60,6 @@ export const Header: React.FC<HeaderProps> = ({ currentView, onViewChange }) => 
   );
 };
 
-/**
- * Bouton de navigation individuel.
- */
 const NavBtn: React.FC<{ active: boolean; onClick: () => void; icon: React.ReactNode; label: string }> = ({ 
   active, onClick, icon, label 
 }) => (

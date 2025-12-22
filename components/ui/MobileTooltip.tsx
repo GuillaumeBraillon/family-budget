@@ -5,6 +5,7 @@ import { Info, X } from 'lucide-react';
 
 interface MobileTooltipProps {
   text: string;
+  icon?: React.ReactNode;
   iconSize?: number;
   iconClassName?: string;
   widthClass?: string;
@@ -12,6 +13,7 @@ interface MobileTooltipProps {
 
 export const MobileTooltip: React.FC<MobileTooltipProps> = ({ 
     text, 
+    icon,
     iconSize = 14, 
     iconClassName = "text-slate-300 hover:text-indigo-500",
     widthClass = "w-56"
@@ -67,7 +69,7 @@ export const MobileTooltip: React.FC<MobileTooltipProps> = ({
         onClick={toggle}
         className={`inline-flex align-middle transition-colors ml-1 ${iconClassName}`}
       >
-        <Info size={iconSize} />
+        {icon || <Info size={iconSize} />}
       </button>
       {isOpen && createPortal(
         <div className="relative z-[9999]">
@@ -84,7 +86,7 @@ export const MobileTooltip: React.FC<MobileTooltipProps> = ({
                 onClick={(e) => e.stopPropagation()}
             >
                 <div className="flex justify-between items-start mb-1 font-bold border-b border-slate-700 pb-1">
-                    <span>Info</span>
+                    <span>Note</span>
                     <X size={10} className="cursor-pointer hover:text-red-400" onClick={() => setIsOpen(false)} />
                 </div>
                 {text}

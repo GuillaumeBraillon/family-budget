@@ -2,23 +2,22 @@
 import React, { useState, useEffect } from 'react';
 import { useBudget } from './hooks/useBudget';
 import { WelcomeEmptyState } from './components/Dashboard/WelcomeEmptyState';
-import { DashboardPlaceholder } from './components/Dashboard/DashboardPlaceholder';
-import { BudgetPlanner } from './components/BudgetPlanner/BudgetPlanner';
-import { BalancesView } from './components/Balances/BalancesView';
-import { VariableExpensesView } from './components/VariableExpenses/VariableExpensesView';
-import { ConfigurationView } from './components/Configuration/ConfigurationView';
+import { DashboardView } from './components/features/Dashboard/DashboardView';
+import { OperationsView } from './components/features/Operations/OperationsView';
+import { BalancesView } from './components/features/Balances/BalancesView';
+import { ConfigurationView } from './components/features/Configuration/ConfigurationView';
+import { SavingsView } from './components/features/Savings/SavingsView';
 import { Header } from './components/Layout/Header';
 import { ConfigTab } from './hooks/useConfigurationUI';
 import { SupabaseSetup } from './components/Configuration/SupabaseSetup';
 import { isSupabaseConfigured, resetSupabaseConfig } from './services/supabase';
 import { Loader2, AlertTriangle } from 'lucide-react';
-import { SavingsDashboard } from './components/Savings/SavingsDashboard';
 
-type ViewState = 'dashboard' | 'balances' | 'planner' | 'savings' | 'config' | 'variables';
+type ViewState = 'dashboard' | 'balances' | 'planner' | 'savings' | 'config';
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<ViewState>('dashboard');
-  const [activeConfigTab, setActiveConfigTab] = useState<ConfigTab>('general');
+  const [activeConfigTab, setActiveConfigTab] = useState<ConfigTab>('family');
   const [configured, setConfigured] = useState(isSupabaseConfigured());
   
   const { 
@@ -26,7 +25,6 @@ const App: React.FC = () => {
     loading, error, isDbEmpty, actions 
   } = useBudget();
 
-  // Déclenche le chargement initial si on vient d'être configuré
   useEffect(() => {
     if (configured) {
       actions.loadData();
@@ -41,7 +39,7 @@ const App: React.FC = () => {
   const handleResetConnection = () => {
     resetSupabaseConfig();
     setConfigured(false);
-    setCurrentView('dashboard'); // Reset de la vue par défaut
+    setCurrentView('dashboard');
   };
 
   const navigateToConfig = (tab: ConfigTab) => {
@@ -76,10 +74,7 @@ const App: React.FC = () => {
               <span className="text-[10px] font-bold uppercase opacity-60">Erreur de synchronisation</span>
               <span className="text-sm font-medium">{String(error)}</span>
             </div>
-            <button 
-              onClick={() => actions.loadData()} 
-              className="ml-auto text-xs font-bold bg-white px-3 py-1.5 rounded-lg border border-red-200 hover:bg-red-50 transition-colors"
-            >
+            <button onClick={() => actions.loadData()} className="ml-auto text-xs font-bold bg-white px-3 py-1.5 rounded-lg border border-red-200 hover:bg-red-50 transition-colors">
               RÉESSAYER
             </button>
           </div>
@@ -90,102 +85,27 @@ const App: React.FC = () => {
         )}
 
         {currentView === 'dashboard' && (
-          <DashboardPlaceholder 
-            accounts={accounts}
-            people={people}
-            configs={configs}
-            incomeConfigs={incomeConfigs}
-            paidItems={paidItems}
-            settings={settings}
-            savingsTransactions={savingsTransactions}
-            variableTransactions={variableTransactions}
-            onNavigateToPlanner={() => setCurrentView('planner')}
-            onNavigateToConfig={() => navigateToConfig('general')}
+          <DashboardView 
+            accounts={accounts} people={people} configs={configs} incomeConfigs={incomeConfigs} paidItems={paidItems} 
+            settings={settings} savingsTransactions={savingsTransactions} variableTransactions={variableTransactions}
+            onNavigateToPlanner={() => setCurrentView('planner')} onNavigateToConfig={() => navigateToConfig('general')}
           />
         )}
         
-        {currentView === 'variables' && (
-          <VariableExpensesView 
-             variableTransactions={variableTransactions}
-             accounts={accounts}
-             settings={settings}
-             incomeConfigs={incomeConfigs}
-             paidItems={paidItems}
-             people={people}
-             categories={categories}
-             onAddTransaction={actions.upsertVariableTransaction}
-             onDeleteTransaction={actions.deleteVariableTransaction}
-          />
-        )}
-
         {currentView === 'balances' && (
-          <BalancesView 
-            accounts={accounts}
-            people={people}
-            configs={configs}
-            incomeConfigs={incomeConfigs}
-            paidItems={paidItems}
-            settings={settings}
-            onUpdateAccount={actions.upsertAccount}
-          />
+          <BalancesView accounts={accounts} people={people} configs={configs} incomeConfigs={incomeConfigs} paidItems={paidItems} variableTransactions={variableTransactions} settings={settings} onUpdateAccount={actions.upsertAccount} />
         )}
 
         {currentView === 'planner' && (
-          <div className="animate-in fade-in duration-500">
-            <BudgetPlanner 
-              configs={configs} 
-              incomeConfigs={incomeConfigs} 
-              paidItems={paidItems} 
-              settings={settings}
-              accounts={accounts} 
-              people={people} 
-              onTogglePaid={actions.setPaidStatus}
-            />
-          </div>
+          <OperationsView configs={configs} incomeConfigs={incomeConfigs} variableTransactions={variableTransactions} paidItems={paidItems} settings={settings} accounts={accounts} people={people} categories={categories} onTogglePaid={actions.setPaidStatus} onUpsertVariable={actions.upsertVariableTransaction} onDeleteVariable={actions.deleteVariableTransaction} />
         )}
 
         {currentView === 'savings' && (
-          <div className="animate-in fade-in duration-500">
-            <SavingsDashboard 
-              accounts={accounts}
-              savingsTransactions={savingsTransactions}
-              settings={settings}
-              onUpsertTransaction={actions.upsertSavingsTransaction}
-              onDeleteTransaction={actions.deleteSavingsTransaction}
-              onNavigateToConfig={() => navigateToConfig('accounts')}
-            />
-          </div>
+          <SavingsView accounts={accounts} savingsTransactions={savingsTransactions} settings={settings} onUpsertTransaction={actions.upsertSavingsTransaction} onDeleteTransaction={actions.deleteSavingsTransaction} onNavigateToConfig={() => navigateToConfig('accounts')} />
         )}
 
         {currentView === 'config' && (
-          <div className="animate-in fade-in duration-500">
-            <ConfigurationView 
-              configs={configs} 
-              incomeConfigs={incomeConfigs} 
-              categories={categories} 
-              people={people} 
-              accounts={accounts} 
-              settings={settings}
-              savedLabels={savedLabels}
-              activeTab={activeConfigTab}
-              setActiveTab={setActiveConfigTab}
-              onUpdateCategories={actions.upsertCategory as any} 
-              onUpsertPerson={actions.upsertPerson} 
-              onDeletePerson={actions.deletePerson}
-              onUpsertAccount={actions.upsertAccount}
-              onDeleteAccount={actions.deleteAccount}
-              onUpdateSettings={actions.updateSettings}
-              onResetConnection={handleResetConnection}
-              onUpsertLabel={actions.upsertLabel}
-              onDeleteLabel={actions.deleteLabel}
-              onAddConfig={actions.upsertConfig} 
-              onUpdateConfig={actions.upsertConfig} 
-              onDeleteConfig={actions.deleteConfig}
-              onAddIncome={actions.upsertIncome} 
-              onUpdateIncome={actions.upsertIncome} 
-              onDeleteIncome={actions.deleteIncome}
-            />
-          </div>
+          <ConfigurationView configs={configs} incomeConfigs={incomeConfigs} categories={categories} people={people} accounts={accounts} settings={settings} savedLabels={savedLabels} activeTab={activeConfigTab} setActiveTab={setActiveConfigTab} onUpdateCategories={actions.upsertCategory as any} onUpsertPerson={actions.upsertPerson} onDeletePerson={actions.deletePerson} onUpsertAccount={actions.upsertAccount} onDeleteAccount={actions.deleteAccount} onUpdateSettings={actions.updateSettings} onResetConnection={handleResetConnection} onUpsertLabel={actions.upsertLabel} onDeleteLabel={actions.deleteLabel} onAddConfig={actions.upsertConfig} onUpdateConfig={actions.upsertConfig} onDeleteConfig={actions.deleteConfig} onAddIncome={actions.upsertIncome} onUpdateIncome={actions.upsertIncome} onDeleteIncome={actions.deleteIncome} />
         )}
       </main>
     </div>

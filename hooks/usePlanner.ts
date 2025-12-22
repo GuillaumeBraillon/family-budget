@@ -1,15 +1,17 @@
 
 import { useMemo } from 'react';
 import { startOfMonth, endOfMonth, eachWeekOfInterval, getDate, getDaysInMonth } from 'date-fns';
-import { ExpenseConfig, IncomeConfig, PaidItemDetails, PlannedItem, WeeklyBudget, AppSettings } from '../types';
+import { ExpenseConfig, IncomeConfig, PaidItemDetails, PlannedItem, WeeklyBudget, AppSettings, VariableTransaction, OperationFilters } from '../types';
 
 export const usePlanner = (
   configs: ExpenseConfig[],
   incomeConfigs: IncomeConfig[],
   paidItems: Record<string, PaidItemDetails>,
+  variableTransactions: VariableTransaction[],
   currentDate: Date,
   searchQuery: string,
-  settings: AppSettings
+  settings: AppSettings,
+  filters?: OperationFilters 
 ) => {
   const currentMonthKey = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
   const daysInMonth = getDaysInMonth(currentDate);
@@ -68,6 +70,15 @@ export const usePlanner = (
       if (period) period.items.push(item);
     };
 
+    // Helper pour extraire le jour du mois sans problème de timezone
+    const getDayFromDateStr = (dateStr?: string, defaultDay?: number) => {
+        if (!dateStr) return defaultDay || 1;
+        const parts = dateStr.split('-');
+        if (parts.length === 3) return parseInt(parts[2], 10);
+        return new Date(dateStr).getDate();
+    };
+
+    // 1. Assigner les Opérations Récurrentes
     configs.filter(conf => {
       if (!conf.startMonth) return true;
       if (currentMonthKey < conf.startMonth) return false;
@@ -76,94 +87,208 @@ export const usePlanner = (
     }).forEach(conf => {
       const instanceId = `${conf.id}-${currentMonthKey}`;
       const paid = paidItems[instanceId];
+      const isActuallyPaid = paid ? !paid.isWaiting : false;
+      
+      // Utiliser la date de paiement réelle si disponible
+      const day = paid ? getDayFromDateStr(paid.paymentDate, conf.dayOfMonth) : conf.dayOfMonth;
+
       assignToPeriod({
-        type: 'EXPENSE', configId: conf.id, instanceId, day: conf.dayOfMonth,
+        type: 'EXPENSE', 
+        source: 'RECURRING', 
+        configId: conf.id, 
+        instanceId, 
+        day,
         label: paid ? paid.label : conf.label,
         amount: paid ? paid.amount : conf.amount,
-        originalAmount: conf.amount, category: conf.category, subCategory: conf.subCategory,
-        beneficiaryId: conf.beneficiaryId, accountId: conf.accountId, isExtra: conf.isExtra,
-        isPaid: !!paid, paidDetails: paid
+        originalAmount: conf.amount, 
+        category: conf.category, 
+        subCategory: conf.subCategory,
+        beneficiaryId: conf.beneficiaryId, 
+        accountId: conf.accountId, 
+        isExtra: !!(paid ? paid.isExtra : conf.isExtra),
+        isPaid: isActuallyPaid,
+        isWaiting: !isActuallyPaid,
+        paidDetails: paid,
+        comments: paid?.comments || ''
       });
     });
 
     incomeConfigs.forEach(inc => {
       const instanceId = `${inc.id}-${currentMonthKey}`;
       const paid = paidItems[instanceId];
+      const isActuallyPaid = paid ? !paid.isWaiting : false;
+
+      // Utiliser la date de paiement réelle si disponible
+      const day = paid ? getDayFromDateStr(paid.paymentDate, inc.dayOfMonth) : inc.dayOfMonth;
+
       assignToPeriod({
-        type: 'INCOME', configId: inc.id, instanceId, day: inc.dayOfMonth,
+        type: 'INCOME', 
+        source: 'RECURRING', 
+        configId: inc.id, 
+        instanceId, 
+        day,
         label: paid ? paid.label : inc.label,
         amount: paid ? paid.amount : inc.amount,
-        originalAmount: inc.amount, category: inc.category, subCategory: inc.subCategory,
-        beneficiaryId: inc.beneficiaryId, accountId: inc.accountId, isPaid: !!paid, paidDetails: paid
+        originalAmount: inc.amount, 
+        category: inc.category, 
+        subCategory: inc.subCategory,
+        beneficiaryId: inc.beneficiaryId, 
+        accountId: inc.accountId, 
+        isPaid: isActuallyPaid,
+        isWaiting: !isActuallyPaid,
+        paidDetails: paid,
+        isExtra: !!(paid ? paid.isExtra : inc.isExtra),
+        comments: paid?.comments || ''
       });
+    });
+
+    // 2. Assigner les Opérations Variables
+    variableTransactions.filter(vt => {
+        const d = new Date(vt.date);
+        return d.getMonth() === currentDate.getMonth() && d.getFullYear() === currentDate.getFullYear();
+    }).forEach(vt => {
+        const d = new Date(vt.date).getDate();
+        assignToPeriod({
+            type: vt.type === 'INCOME' ? 'INCOME' : 'EXPENSE',
+            source: 'VARIABLE',
+            configId: vt.id,
+            instanceId: vt.id,
+            day: d,
+            label: vt.label,
+            amount: vt.amount,
+            originalAmount: vt.amount,
+            category: vt.category,
+            subCategory: vt.subCategory,
+            beneficiaryId: vt.beneficiaryId || '',
+            accountId: vt.accountId,
+            isPaid: !vt.isWaiting,
+            isWaiting: !!vt.isWaiting,
+            isExtra: !!vt.isExtra,
+            comments: vt.comments || ''
+        });
     });
 
     res.forEach(w => w.items.sort((a, b) => a.day - b.day));
     return res;
-  }, [configs, incomeConfigs, paidItems, currentMonthKey, settings, currentDate, daysInMonth, monthlyBudget]);
+  }, [configs, incomeConfigs, paidItems, variableTransactions, currentMonthKey, settings, currentDate, daysInMonth, monthlyBudget]);
 
   const filteredWeeks = useMemo(() => {
-    if (!searchQuery.trim()) return weeks;
-    const q = searchQuery.toLowerCase();
-    return weeks.map(w => ({
-      ...w,
-      items: w.items.filter(i => i.label.toLowerCase().includes(q) || i.category.toLowerCase().includes(q))
-    }));
-  }, [weeks, searchQuery]);
+    return weeks.map(w => {
+        let items = w.items;
+
+        if (searchQuery.trim()) {
+            // Remplace les virgules par des points pour permettre la recherche de "50,5" dans "50.5"
+            const q = searchQuery.toLowerCase().replace(/,/g, '.');
+            items = items.filter(i => 
+              i.label.toLowerCase().includes(q) || 
+              i.category.toLowerCase().includes(q) ||
+              i.amount.toString().includes(q) ||
+              (i.comments && i.comments.toLowerCase().includes(q))
+            );
+        }
+
+        if (filters) {
+            // 1. FLUX (Dépenses ou Revenus) - Exclusif
+            if (filters.flux !== 'ALL') {
+                items = items.filter(i => i.type === filters.flux);
+            }
+            
+            // 2. TYPE SOURCE (Récurrent ou Variable) - Exclusif
+            if (filters.source !== 'ALL') {
+                items = items.filter(i => i.source === filters.source);
+            }
+
+            // 3. ÉTAT (Réel ou Attente) - Exclusif
+            if (filters.status !== 'ALL') {
+                const wantWaiting = filters.status === 'WAITING';
+                items = items.filter(i => i.isWaiting === wantWaiting);
+            }
+
+            // 4. EXTRAS - 3 États (Affiche TOUT, UNIQUEMENT EXTRAS, ou EXCLUT EXTRAS)
+            if (filters.extra === 'ONLY') {
+                items = items.filter(i => i.isExtra === true);
+            } else if (filters.extra === 'EXCLUDE') {
+                items = items.filter(i => i.isExtra === false);
+            }
+
+            // 5. COMPTES (Multi-select)
+            if (filters.accountIds.length > 0) {
+                items = items.filter(i => filters.accountIds.includes(i.accountId));
+            }
+
+            // 6. MEMBRES (Multi-select)
+            if (filters.beneficiaryIds.length > 0) {
+                items = items.filter(i => filters.beneficiaryIds.includes(i.beneficiaryId));
+            }
+        }
+
+        return { ...w, items };
+    });
+  }, [weeks, searchQuery, filters]);
 
   const getStats = (activeWeek: number) => {
     const safeActiveWeek = weeks.some(w => w.weekNumber === activeWeek) ? activeWeek : 1;
-    const currentWeek = filteredWeeks.find(w => w.weekNumber === safeActiveWeek);
+    const currentWeek = weeks.find(w => w.weekNumber === safeActiveWeek);
     const currentItems = currentWeek?.items || [];
-    const previousUnpaid = filteredWeeks.filter(w => w.weekNumber < safeActiveWeek).flatMap(w => w.items).filter(i => !i.isPaid);
+    const previousUnpaidItems = weeks
+        .filter(w => w.weekNumber < safeActiveWeek)
+        .flatMap(w => w.items)
+        .filter(i => !i.isPaid);
 
-    const calcNet = (items: PlannedItem[], useOriginal = false) => 
-      items.reduce((acc, i) => {
-        const val = useOriginal ? i.originalAmount : i.amount;
-        return i.type === 'EXPENSE' ? acc + val : acc - val;
-      }, 0);
+    const sum = (items: PlannedItem[], type: 'EXPENSE' | 'INCOME', useOriginal = false) => 
+        items.filter(i => i.type === type).reduce((acc, i) => acc + (useOriginal ? i.originalAmount : i.amount), 0);
 
-    const itemsPaidInPeriod = currentItems.filter(i => i.isPaid);
-
-    // Calcul par bénéficiaire et compte pour DetailedAnalysis
     const byAccount: Record<string, any> = {};
     const expByBeneficiary: Record<string, any> = {};
     const incByBeneficiary: Record<string, any> = {};
 
-    [...currentItems, ...previousUnpaid].forEach(item => {
-      if (!byAccount[item.accountId]) byAccount[item.accountId] = { total: 0, remaining: 0, planned: 0, paid: 0 };
-      const isCurrent = currentItems.some(ci => ci.instanceId === item.instanceId);
-      if (isCurrent) {
-        const targetB = item.type === 'EXPENSE' ? expByBeneficiary : incByBeneficiary;
-        if (!targetB[item.beneficiaryId]) targetB[item.beneficiaryId] = { planned: 0, paid: 0 };
-        targetB[item.beneficiaryId].planned += item.originalAmount;
-        byAccount[item.accountId].planned += (item.type === 'EXPENSE' ? item.originalAmount : -item.originalAmount);
-        if (item.isPaid) {
-          targetB[item.beneficiaryId].paid += item.amount;
-          byAccount[item.accountId].paid += (item.type === 'EXPENSE' ? item.amount : -item.amount);
-        }
-        byAccount[item.accountId].total += (item.type === 'EXPENSE' ? item.amount : -item.amount);
+    [...currentItems, ...previousUnpaidItems].forEach(item => {
+      if (!byAccount[item.accountId]) byAccount[item.accountId] = { paid: 0, remaining: 0, planned: 0, pendingCount: 0 };
+      const val = item.amount;
+      const originalVal = item.originalAmount;
+
+      if (item.isPaid) {
+          byAccount[item.accountId].paid += (item.type === 'EXPENSE' ? val : -val);
+          if (!incByBeneficiary[item.beneficiaryId]) incByBeneficiary[item.beneficiaryId] = { paid: 0, planned: 0 };
+          if (!expByBeneficiary[item.beneficiaryId]) expByBeneficiary[item.beneficiaryId] = { paid: 0, planned: 0 };
+          if (item.type === 'INCOME') incByBeneficiary[item.beneficiaryId].paid += val;
+          else expByBeneficiary[item.beneficiaryId].paid += val;
+      } else {
+          byAccount[item.accountId].remaining += (item.type === 'EXPENSE' ? val : -val);
+          byAccount[item.accountId].pendingCount++;
       }
-      if (!item.isPaid) {
-        byAccount[item.accountId].remaining += (item.type === 'EXPENSE' ? item.amount : -item.amount);
+      
+      if (item.source === 'RECURRING') {
+          byAccount[item.accountId].planned += (item.type === 'EXPENSE' ? originalVal : -originalVal);
+          if (item.type === 'INCOME') {
+              if (!incByBeneficiary[item.beneficiaryId]) incByBeneficiary[item.beneficiaryId] = { paid: 0, planned: 0 };
+              incByBeneficiary[item.beneficiaryId].planned += originalVal;
+          } else {
+              if (!expByBeneficiary[item.beneficiaryId]) expByBeneficiary[item.beneficiaryId] = { paid: 0, planned: 0 };
+              expByBeneficiary[item.beneficiaryId].planned += originalVal;
+          }
       }
     });
 
+    const periodLimit = currentWeek?.periodLimit || 0;
+    
+    const budgetVariableItems = currentItems.filter(i => i.source === 'VARIABLE' && !i.isExtra && !i.isWaiting);
+    const varExpenses = sum(budgetVariableItems, 'EXPENSE');
+    const varIncome = sum(budgetVariableItems, 'INCOME');
+
     return {
-      // RÉEL (Carte 1)
-      paidRealPeriod: calcNet(itemsPaidInPeriod, false), 
-      remainingRealPeriod: calcNet(currentItems.filter(i => !i.isPaid), false), 
-      delaysRealPrevious: calcNet(previousUnpaid, false),
-      totalToRegularizeActual: calcNet(currentItems.filter(i => !i.isPaid), false) + calcNet(previousUnpaid, false),
-      
-      // PRÉVU (Carte 2)
-      totalPlannedPeriod: calcNet(currentItems, true),
-      paidOriginalValue: calcNet(itemsPaidInPeriod, true),
-      
+      fixedPaid: sum(currentItems.filter(i => i.source === 'RECURRING' && i.isPaid), 'EXPENSE'),
+      fixedToPay: sum(currentItems.filter(i => i.source === 'RECURRING' && !i.isPaid), 'EXPENSE'),
+      fixedDelays: sum(previousUnpaidItems.filter(i => i.source === 'RECURRING'), 'EXPENSE'),
+      fixedPlanned: sum(currentItems.filter(i => i.source === 'RECURRING'), 'EXPENSE', true),
+      varExpenses,
+      varIncome,
+      periodLimit,
+      varRemaining: (periodLimit + varIncome) - varExpenses,
+      totalIncomeReal: sum(currentItems.filter(i => i.isPaid), 'INCOME'),
       byAccount,
       expByBeneficiary,
-      incByBeneficiary,
-      periodLimit: currentWeek?.periodLimit || 0
+      incByBeneficiary
     };
   };
 

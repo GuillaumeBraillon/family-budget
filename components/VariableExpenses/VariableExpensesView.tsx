@@ -6,9 +6,9 @@ import { VariableTransaction, Account, AppSettings, IncomeConfig, Person, Catego
 import { InfoBox } from '../ui/InfoBox';
 import { ShoppingBag } from 'lucide-react';
 
-import { MonthNavigator } from '../BudgetPlanner/molecules/MonthNavigator';
-import { SearchBar } from '../BudgetPlanner/atoms/SearchBar';
-import { WeekSelector } from '../BudgetPlanner/molecules/WeekSelector';
+import { MonthNavigator } from '../molecules/MonthNavigator';
+import { SearchBar } from '../atoms/SearchBar';
+import { WeekSelector } from '../../ui/molecules/WeekSelector';
 import { VariableTransactionForm } from './organisms/VariableTransactionForm';
 import { VariableOperationsList } from './organisms/VariableOperationsList';
 import { VariableStatsSummary } from './organisms/VariableStatsSummary';
@@ -34,7 +34,7 @@ export const VariableExpensesView: React.FC<VariableExpensesViewProps> = ({
   const [editingTransaction, setEditingTransaction] = useState<VariableTransaction | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   
-  const { filteredWeeks } = usePlanner([], [], {}, ui.currentDate, '', settings);
+  const { filteredWeeks } = usePlanner([], [], {}, variableTransactions, ui.currentDate, ui.searchQuery, settings);
   
   const currentMonth = ui.currentDate.getMonth();
   const currentYear = ui.currentDate.getFullYear();
@@ -52,9 +52,11 @@ export const VariableExpensesView: React.FC<VariableExpensesViewProps> = ({
       const day = new Date(t.date).getDate();
       const inPeriod = activeWeekData && day >= activeWeekData.startDate && day <= activeWeekData.endDate;
       
+      const normalizedQuery = ui.searchQuery.toLowerCase().replace(/,/g, '.');
       const matchesSearch = !ui.searchQuery 
-          || t.label.toLowerCase().includes(ui.searchQuery.toLowerCase())
-          || t.category.toLowerCase().includes(ui.searchQuery.toLowerCase());
+          || t.label.toLowerCase().includes(normalizedQuery)
+          || t.category.toLowerCase().includes(normalizedQuery)
+          || t.amount.toString().includes(normalizedQuery);
 
       return inPeriod && matchesSearch;
   });
@@ -117,6 +119,7 @@ export const VariableExpensesView: React.FC<VariableExpensesViewProps> = ({
             weeks={filteredWeeks} 
             activeWeek={safeActiveWeek} 
             onSelect={ui.setActiveWeek} 
+            searchQuery={ui.searchQuery}
         />
 
         <VariableStatsSummary 

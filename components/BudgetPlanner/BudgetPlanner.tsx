@@ -1,61 +1,133 @@
 
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { usePlanner } from '../../hooks/usePlanner';
 import { usePlannerUI } from '../../hooks/usePlannerUI';
-import { ExpenseConfig, IncomeConfig, Account, Person, PaidItemDetails, PlannedItem, AppSettings } from '../../types';
-import { DetailedAnalysis } from './organisms/DetailedAnalysis';
-import { StatsSummary } from './organisms/StatsSummary';
+import { ExpenseConfig, IncomeConfig, Account, Person, PaidItemDetails, PlannedItem, AppSettings, VariableTransaction, OperationFilters } from '../../types';
 import { OperationsList } from './organisms/OperationsList';
 import { PlannerModals } from './organisms/PlannerModals';
 import { MonthNavigator } from './molecules/MonthNavigator';
 import { SearchBar } from './atoms/SearchBar';
+import { FilterBar } from './molecules/FilterBar';
 import { WeekSelector } from './molecules/WeekSelector';
+import { QuickPeriodSummary } from './atoms/QuickPeriodSummary';
 import { InfoBox } from '../ui/InfoBox';
-import { Target } from 'lucide-react';
+import { Target, Plus } from 'lucide-react';
+import { VariableTransactionForm } from '../VariableExpenses/organisms/VariableTransactionForm';
 
 interface BudgetPlannerProps {
   configs: ExpenseConfig[];
   incomeConfigs: IncomeConfig[]; 
+  variableTransactions: VariableTransaction[];
   accounts: Account[];
   people: Person[]; 
   paidItems: Record<string, PaidItemDetails>; 
   settings: AppSettings;
+  categories: any[];
   onTogglePaid: (details: PaidItemDetails | null, instanceId: string) => void;
+  onUpsertVariable: (t: VariableTransaction) => void;
+  onDeleteVariable: (id: string) => void;
 }
 
 export const BudgetPlanner: React.FC<BudgetPlannerProps> = ({ 
-  configs, incomeConfigs, accounts, people, paidItems, settings,
-  onTogglePaid
+  configs, incomeConfigs, variableTransactions, accounts, people, paidItems, settings, categories,
+  onTogglePaid, onUpsertVariable, onDeleteVariable
 }) => {
   const ui = usePlannerUI();
+  const [isVarFormOpen, setIsVarFormOpen] = useState(false);
+  const [editingVar, setEditingVar] = useState<VariableTransaction | null>(null);
   
-  const { filteredWeeks, getStats } = usePlanner(configs, incomeConfigs, paidItems, ui.currentDate, ui.searchQuery, settings);
+  const [filters, setFilters] = useState<OperationFilters>({
+    flux: 'ALL',
+    source: 'ALL',
+    status: 'ALL',
+    extra: 'ALL',
+    accountIds: [],
+    beneficiaryIds: []
+  });
   
-  // Correction de l'index de semaine active si le découpage change
+  const { filteredWeeks } = usePlanner(
+    configs, 
+    incomeConfigs, 
+    paidItems, 
+    variableTransactions, 
+    ui.currentDate, 
+    ui.searchQuery, 
+    settings,
+    filters
+  );
+  
   const currentWeekIndex = filteredWeeks.some(w => w.weekNumber === ui.activeWeek) ? ui.activeWeek : 1;
-  const stats = getStats(currentWeekIndex);
   const currentWeekData = filteredWeeks.find(w => w.weekNumber === currentWeekIndex);
+  
+  const currentItems = currentWeekData?.items || [];
+  const quickStats = useMemo(() => {
+    const stats = {
+        expenses: { real: 0, planned: 0, pending: 0, extra: 0 },
+        income: { real: 0, planned: 0, pending: 0, extra: 0 }
+    };
+
+    currentItems.forEach(item => {
+        const target = item.type === 'INCOME' ? stats.income : stats.expenses;
+        
+        if (item.source === 'VARIABLE') {
+            if (item.isPaid) {
+                target.real += item.amount;
+            } else {
+                target.pending += item.amount;
+            }
+            if (item.isExtra) target.extra += item.amount;
+        } else {
+            target.planned += item.originalAmount;
+            if (item.isPaid) {
+                target.real += item.amount;
+            } else {
+                target.pending += item.amount;
+            }
+        }
+    });
+
+    return stats;
+  }, [currentItems]);
 
   const monthShort = new Intl.DateTimeFormat('fr-FR', { month: 'short' }).format(ui.currentDate);
 
   const handleItemClick = (item: PlannedItem) => {
-    if (item.isPaid) {
-      ui.openUncheckModal(item);
+    if (item.source === 'RECURRING') {
+      if (item.isPaid) {
+        ui.openUncheckModal(item);
+      } else {
+        const defaultAccount = accounts.find(a => a.id === item.accountId)?.id || accounts[0]?.id || '';
+        ui.openConfirmModal(item, defaultAccount);
+      }
     } else {
-      const defaultAccount = accounts.find(a => a.id === item.accountId)?.id || accounts[0]?.id || '';
-      ui.openConfirmModal(item, defaultAccount);
+      const tx = variableTransactions.find(t => t.id === item.instanceId);
+      if (tx) {
+        setEditingVar(tx);
+        setIsVarFormOpen(true);
+      }
     }
   };
+
+  const handleAddVar = () => {
+    setEditingVar(null);
+    setIsVarFormOpen(true);
+  };
+
+  const defaultVarDate = (() => {
+      const today = new Date();
+      if (today.getMonth() === ui.currentDate.getMonth() && today.getFullYear() === ui.currentDate.getFullYear()) {
+          return today.toISOString().split('T')[0];
+      }
+      if (currentWeekData) {
+          const d = new Date(ui.currentDate.getFullYear(), ui.currentDate.getMonth(), currentWeekData.startDate, 12);
+          return d.toISOString().split('T')[0];
+      }
+      return new Date().toISOString().split('T')[0];
+  })();
 
   return (
     <div className="space-y-6">
       <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-          <InfoBox 
-            title="Suivi & Pointage"
-            description="Cochez les opérations au fur et à mesure qu'elles apparaissent sur vos comptes bancaires réels. Le 'Reste à payer' s'ajuste automatiquement pour vous donner une vision claire de votre fin de mois."
-            icon={<Target size={18} />}
-          />
-
           <div className="flex flex-col md:flex-row justify-between gap-4">
             <MonthNavigator 
               date={ui.currentDate} 
@@ -63,11 +135,13 @@ export const BudgetPlanner: React.FC<BudgetPlannerProps> = ({
               onNext={ui.handleNextMonth} 
             />
             
-            <SearchBar 
-              value={ui.searchQuery} 
-              onChange={ui.setSearchQuery} 
-              placeholder="Rechercher une opération..." 
-            />
+            <div className="flex flex-1 gap-2 items-center">
+                <SearchBar 
+                    value={ui.searchQuery} 
+                    onChange={ui.setSearchQuery} 
+                    placeholder="Rechercher..." 
+                />
+            </div>
           </div>
 
           <WeekSelector 
@@ -76,17 +150,28 @@ export const BudgetPlanner: React.FC<BudgetPlannerProps> = ({
             onSelect={ui.setActiveWeek} 
           />
 
-          <StatsSummary stats={stats} accounts={accounts} />
+          <QuickPeriodSummary 
+            expenses={quickStats.expenses} 
+            income={quickStats.income} 
+          />
 
-          <DetailedAnalysis stats={stats} people={people} accounts={accounts} />
+          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+              <FilterBar 
+                filters={filters} 
+                onFilterChange={setFilters} 
+                accounts={accounts} 
+                people={people} 
+              />
+          </div>
 
           <OperationsList 
-            items={currentWeekData?.items || []}
+            items={currentItems}
             monthShort={monthShort}
             people={people}
             accounts={accounts}
             currentDate={ui.currentDate}
             onItemClick={handleItemClick}
+            onAddClick={handleAddVar}
           />
       </div>
 
@@ -98,6 +183,19 @@ export const BudgetPlanner: React.FC<BudgetPlannerProps> = ({
         onCloseConfirm={ui.closeConfirmModal}
         onCloseUncheck={ui.closeUncheckModal}
         setConfirmModal={ui.setConfirmModal}
+      />
+
+      <VariableTransactionForm 
+        isOpen={isVarFormOpen}
+        onClose={() => setIsVarFormOpen(false)}
+        accounts={accounts}
+        categories={categories}
+        people={people}
+        onAddTransaction={onUpsertVariable}
+        onDeleteTransaction={onDeleteVariable}
+        defaultDate={defaultVarDate}
+        labelsSuggestions={settings.variable_labels}
+        editingTransaction={editingVar}
       />
     </div>
   );

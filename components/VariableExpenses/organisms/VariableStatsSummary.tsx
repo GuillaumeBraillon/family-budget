@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Wallet, ShoppingBag, TrendingUp, AlertCircle } from 'lucide-react';
-import { StatCard } from '../../BudgetPlanner/atoms/StatCard';
+import { StatCard } from '../../atoms/StatCard';
 
 interface VariableStatsSummaryProps {
   budget: number;

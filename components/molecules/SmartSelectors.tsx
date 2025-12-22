@@ -33,7 +33,7 @@ interface BeneficiarySelectorProps extends Omit<React.SelectHTMLAttributes<HTMLS
 }
 
 export const BeneficiarySelector: React.FC<BeneficiarySelectorProps> = ({ 
-  people, label = "Membre", color, ...props 
+  people, label = "Bénéficiaires", color, ...props 
 }) => {
   return (
     <SelectInput label={label} icon={User} color={color} {...props}>

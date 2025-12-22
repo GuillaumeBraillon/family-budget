@@ -10,8 +10,8 @@ interface CategorySelectorProps {
   selectedSubCategory: string;
   onCategoryChange: (category: string) => void;
   onSubCategoryChange: (subCategory: string) => void;
-  className?: string; // Classe pour le conteneur des inputs (ex: pour la grille)
-  layout?: 'grid' | 'stack'; // Pour gérer l'affichage si besoin
+  className?: string; 
+  layout?: 'grid' | 'stack';
 }
 
 export const CategorySelector: React.FC<CategorySelectorProps> = ({
@@ -22,31 +22,29 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
   onCategoryChange,
   onSubCategoryChange
 }) => {
-  // Filtrer les catégories selon le type (Dépense ou Revenu)
+  // Filtrer et TRIER les catégories par ordre alphabétique
   const filteredCategories = useMemo(() => {
-    return categories.filter(c => c.type === type);
+    return [...categories]
+      .filter(c => c.type === type)
+      .sort((a, b) => a.name.localeCompare(b.name));
   }, [categories, type]);
 
-  // Récupérer les sous-catégories de la catégorie active
+  // Récupérer et TRIER les sous-catégories de la catégorie active
   const activeSubCats = useMemo(() => {
-    return categories.find(c => c.name === selectedCategory)?.subCategories || [];
+    const subs = categories.find(c => c.name === selectedCategory)?.subCategories || [];
+    return [...subs].sort((a, b) => a.localeCompare(b));
   }, [categories, selectedCategory]);
 
-  // Déterminer la couleur de focus selon le type
   const focusRing = type === 'EXPENSE' ? 'focus:ring-indigo-500' : 'focus:ring-emerald-500';
 
-  // Effet de bord : Si la catégorie sélectionnée n'existe pas dans le type actuel (ex: switch dépense -> revenu), on reset
   useEffect(() => {
-    // Si la liste filtrée n'est pas vide et que la catégorie actuelle n'est pas dedans
     if (filteredCategories.length > 0) {
       const isValid = filteredCategories.some(c => c.name === selectedCategory);
       if (!isValid) {
-        // On sélectionne la première par défaut
         onCategoryChange(filteredCategories[0].name);
         onSubCategoryChange('');
       }
     } else if (filteredCategories.length === 0 && selectedCategory !== '') {
-        // Cas rare : aucune catégorie définie pour ce type
         onCategoryChange('');
         onSubCategoryChange('');
     }
@@ -62,7 +60,7 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
           value={selectedCategory}
           onChange={e => {
             onCategoryChange(e.target.value);
-            onSubCategoryChange(''); // Reset subcat on change
+            onSubCategoryChange(''); 
           }}
           className={`w-full p-2.5 rounded-lg border border-slate-300 bg-white text-slate-900 focus:ring-2 outline-none ${focusRing}`}
         >

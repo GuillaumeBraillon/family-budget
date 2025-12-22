@@ -44,6 +44,7 @@ export const VariableOperationsList: React.FC<VariableOperationsListProps> = ({
                     isChild={person?.isChild}
                     accountName={account?.name}
                     onClick={() => onEditTransaction(item)}
+                    comments={item.comments}
                 />
             );
         })}

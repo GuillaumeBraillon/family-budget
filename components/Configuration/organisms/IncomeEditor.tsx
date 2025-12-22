@@ -39,7 +39,8 @@ export const IncomeEditor: React.FC<IncomeEditorProps> = ({
         accountId: defaultAccount, 
         beneficiaryId: people[0]?.id,
         category: '',
-        subCategory: ''
+        subCategory: '',
+        isExtra: false
     });
 
     const resetForm = () => {
@@ -48,7 +49,8 @@ export const IncomeEditor: React.FC<IncomeEditorProps> = ({
             accountId: accounts[0]?.id || '', 
             beneficiaryId: people[0]?.id,
             category: '',
-            subCategory: ''
+            subCategory: '',
+            isExtra: false
         });
         setEditingId(null);
         setIsFormOpen(false);
@@ -68,7 +70,8 @@ export const IncomeEditor: React.FC<IncomeEditorProps> = ({
             accountId: accounts[0]?.id || '', 
             beneficiaryId: people[0]?.id,
             category: '',
-            subCategory: ''
+            subCategory: '',
+            isExtra: false
         });
         setIsFormOpen(true);
     }
@@ -202,6 +205,24 @@ export const IncomeEditor: React.FC<IncomeEditorProps> = ({
                         onCategoryChange={val => setFormData(prev => ({ ...prev, category: val }))}
                         onSubCategoryChange={val => setFormData(prev => ({ ...prev, subCategory: val }))}
                     />
+
+                    <div className="bg-white/60 p-3 rounded-lg border border-slate-200 mt-2">
+                        <div className="flex items-center gap-2">
+                            <input 
+                                type="checkbox" 
+                                id="extra" 
+                                checked={formData.isExtra} 
+                                onChange={e => {
+                                    const val = e.target.checked;
+                                    setFormData(prev => ({ ...prev, isExtra: val }));
+                                }} 
+                                className="h-4 w-4 text-emerald-600 rounded bg-white" 
+                            />
+                            <label htmlFor="extra" className="text-sm font-bold text-slate-800 cursor-pointer">
+                                Revenu Exceptionnel / Temporaire
+                            </label>
+                        </div>
+                    </div>
                     
                     <div className="flex gap-3 pt-2">
                         {editingId && (
@@ -241,6 +262,7 @@ export const IncomeEditor: React.FC<IncomeEditorProps> = ({
                             beneficiary={beneficiaryName}
                             accountName={accountName}
                             onClick={() => handleEdit(inc)}
+                            badge={inc.isExtra ? <span className="text-[9px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-bold uppercase">Temp</span> : null}
                         />
                     );
                 })}

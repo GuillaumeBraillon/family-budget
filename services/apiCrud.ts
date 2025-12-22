@@ -22,7 +22,7 @@ export const apiUpsertAccount = async (account: Account) =>
     owner_id: account.ownerId, 
     current_balance: account.currentBalance, 
     bank_name: account.bankName || null,
-    is_joint: !!account.isJoint, // Nouveau champ
+    is_joint: !!account.isJoint,
     target_ratio: account.targetRatio !== undefined ? account.targetRatio : null,
     target_cap: account.targetCap !== undefined ? account.targetCap : null
   });
@@ -74,7 +74,6 @@ export const apiUpdateSettings = async (settings: AppSettings) =>
     monthly_envelope: Number(settings.monthly_envelope), 
     period_type: settings.period_type,
     period_value: Math.floor(Number(settings.period_value))
-    // savings_labels et variable_labels ne sont plus gérés ici
   });
 
 /**
@@ -110,7 +109,8 @@ export const apiUpsertIncome = async (income: IncomeConfig) =>
     beneficiary_id: income.beneficiaryId, 
     day_of_month: income.dayOfMonth, 
     category: income.category, 
-    sub_category: income.subCategory 
+    sub_category: income.subCategory,
+    is_extra: income.isExtra
   });
 
 export const apiDeleteIncome = async (id: string) => 
@@ -131,7 +131,10 @@ export const apiSetPaidStatus = async (details: PaidItemDetails | null, instance
       category: details.category, 
       sub_category: details.subCategory,
       type: details.type,
-      is_manual: false // Pointage d'échéancier = pas manuel
+      is_variable: !!details.isVariable,
+      is_waiting: !!details.isWaiting, // False si pointé
+      is_extra: !!details.isExtra,
+      comments: details.comments || null
     });
   } else {
     return supabase.from('paid_items').delete().eq('instance_id', instanceId);
@@ -155,11 +158,10 @@ export const apiDeleteSavingsTransaction = async (id: string) =>
 
 /**
  * Opérations sur les Transactions Variables (Suivi Réel)
- * REDIRIGÉ VERS PAID_ITEMS avec is_manual = true
  */
 export const apiUpsertVariableTransaction = async (tx: VariableTransaction) => 
   supabase.from('paid_items').upsert({
-    instance_id: tx.id, // On utilise l'ID de la transaction comme instance_id
+    instance_id: tx.id, 
     payment_date: tx.date,
     label: tx.label,
     amount: tx.amount,
@@ -168,7 +170,10 @@ export const apiUpsertVariableTransaction = async (tx: VariableTransaction) =>
     account_id: tx.accountId,
     beneficiary_id: tx.beneficiaryId || null,
     type: tx.type,
-    is_manual: true // Indique que c'est une opération hors échéancier
+    is_variable: true,
+    is_waiting: !!tx.isWaiting,
+    is_extra: !!tx.isExtra,
+    comments: tx.comments || null
   });
 
 export const apiDeleteVariableTransaction = async (id: string) => 

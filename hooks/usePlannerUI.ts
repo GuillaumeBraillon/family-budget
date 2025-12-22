@@ -28,13 +28,15 @@ export const usePlannerUI = (initialDate: Date = new Date()) => {
     paymentDate: string;
     accountId: string;
     label: string;
+    comments: string;
   }>({
     isOpen: false,
     item: null,
     amount: 0,
     paymentDate: new Date().toISOString().split('T')[0],
     accountId: '',
-    label: ''
+    label: '',
+    comments: ''
   });
 
   const [uncheckModal, setUncheckModal] = useState<{
@@ -64,7 +66,8 @@ export const usePlannerUI = (initialDate: Date = new Date()) => {
       amount: item.amount,
       paymentDate: new Date().toISOString().split('T')[0],
       accountId: defaultAccountId,
-      label: item.label
+      label: item.label,
+      comments: item.comments || ''
     });
   };
 

@@ -17,10 +17,9 @@ export interface Account {
   ownerId: string;
   currentBalance: number;
   bankName?: string;
-  isJoint?: boolean; // Identifie le compte pivot pour la trésorerie
-  // Nouveaux champs pour la logique de répartition
-  targetRatio?: number; // Pourcentage (ex: 30 pour 30%)
-  targetCap?: number;   // Plafond en euros (ex: 50)
+  isJoint?: boolean;
+  targetRatio?: number;
+  targetCap?: number;
 }
 
 export interface CategoryDef {
@@ -33,7 +32,7 @@ export interface CategoryDef {
 export interface SavedLabel {
   id: string;
   name: string;
-  type: AccountType; // Lien direct avec le type de compte
+  type: AccountType;
 }
 
 export enum TransactionType {
@@ -72,6 +71,9 @@ export interface VariableTransaction {
   accountId: string;
   beneficiaryId?: string;
   type: 'EXPENSE' | 'INCOME';
+  isWaiting: boolean; // True = En attente, False = Pointé
+  isExtra: boolean;   // True = Hors budget
+  comments?: string;
 }
 
 export type PeriodType = 'FIXED_DAYS' | 'CALENDAR_WEEKS' | 'CUSTOM_SPLIT';
@@ -80,7 +82,6 @@ export interface AppSettings {
   monthly_envelope: number;
   period_type: PeriodType;
   period_value: number;
-  // savings_labels et variable_labels sont injectés par useBudget pour l'UI (rétrocompatibilité)
   savings_labels?: string[];
   variable_labels?: string[];
 }
@@ -108,6 +109,7 @@ export interface IncomeConfig {
   dayOfMonth: number;
   category: string; 
   subCategory?: string;
+  isExtra?: boolean;
 }
 
 export interface PaidItemDetails {
@@ -120,13 +122,17 @@ export interface PaidItemDetails {
   category: string;
   subCategory?: string;
   type: 'EXPENSE' | 'INCOME';
-  isManual?: boolean; // Nouveau champ pour distinguer les ajouts manuels
+  isVariable: boolean;
+  isWaiting: boolean;
+  isExtra: boolean;
+  comments?: string;
 }
 
 export type PlannedItemType = 'EXPENSE' | 'INCOME';
 
 export interface PlannedItem {
   type: PlannedItemType;
+  source: 'RECURRING' | 'VARIABLE';
   configId: string;
   instanceId: string;
   day: number;
@@ -134,14 +140,16 @@ export interface PlannedItem {
   amount: number;
   originalAmount: number;
   paidDetails?: PaidItemDetails; 
-  isPaid?: boolean;
+  isPaid: boolean;      // Pour l'UI : inverse de isWaiting
+  isWaiting: boolean;   // Pour la logique métier
   category: string;
   subCategory?: string;
   beneficiaryId: string;
-  isExtra?: boolean;
+  isExtra: boolean;
   accountId: string;
   startMonth?: string;
   endMonth?: string;
+  comments?: string;
 }
 
 export interface WeeklyBudget {
@@ -151,4 +159,13 @@ export interface WeeklyBudget {
   startDate: number;
   endDate: number;
   periodLimit?: number;
+}
+
+export interface OperationFilters {
+  flux: 'EXPENSE' | 'INCOME' | 'ALL';
+  source: 'RECURRING' | 'VARIABLE' | 'ALL';
+  status: 'WAITING' | 'REAL' | 'ALL';
+  extra: 'ALL' | 'ONLY' | 'EXCLUDE';
+  accountIds: string[];
+  beneficiaryIds: string[];
 }

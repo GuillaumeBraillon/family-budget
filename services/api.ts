@@ -58,14 +58,14 @@ export const fetchInitialData = async () => {
   const savedLabels = (savedLabelsRes.data || []).map(mappers.mapDbSavedLabel);
 
   const paidItems: Record<string, any> = {};
-  const variableTransactions: any[] = []; // On reconstruit cette liste depuis paidItems
+  const variableTransactions: any[] = []; 
 
   (paidItemsRes.data || []).forEach((item: any) => {
     const mapped = mappers.mapDbPaidItem(item);
     paidItems[item.instance_id] = mapped;
     
-    // Si c'est manuel, on l'ajoute aussi comme "VariableTransaction" pour la rétrocompatibilité
-    if (mapped.isManual) {
+    // Si c'est une opération VARIABLE (is_variable = true)
+    if (mapped.isVariable) {
         variableTransactions.push({
             id: mapped.instanceId,
             date: mapped.paymentDate,
@@ -75,7 +75,10 @@ export const fetchInitialData = async () => {
             subCategory: mapped.subCategory,
             accountId: mapped.accountId,
             beneficiaryId: mapped.beneficiaryId,
-            type: mapped.type
+            type: mapped.type,
+            isWaiting: mapped.isWaiting,
+            isExtra: mapped.isExtra,
+            comments: mapped.comments // FIX: Inclusion du commentaire pour l'état local
         });
     }
   });

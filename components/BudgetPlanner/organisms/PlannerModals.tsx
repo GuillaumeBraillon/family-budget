@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { X, Check } from 'lucide-react';
+import { X, Check, MessageSquare } from 'lucide-react';
 import { Modal } from '../../ui/Modal';
 import { PlannedItem, Account, PaidItemDetails } from '../../../types';
 
@@ -12,6 +12,7 @@ interface PlannerModalsProps {
     paymentDate: string;
     accountId: string;
     label: string;
+    comments: string;
   };
   uncheckModal: {
     isOpen: boolean;
@@ -87,6 +88,20 @@ export const PlannerModals: React.FC<PlannerModalsProps> = ({
                   {accounts.map(acc => <option key={acc.id} value={acc.id}>{acc.name} ({acc.type})</option>)}
                 </select>
               </FormField>
+
+              <FormField label="Note / Commentaire">
+                <div className="relative">
+                  <MessageSquare size={14} className="absolute left-3 top-3 text-slate-400" />
+                  <input 
+                    type="text" 
+                    placeholder="Note optionnelle..."
+                    value={confirmModal.comments} 
+                    onChange={e => setConfirmModal({...confirmModal, comments: e.target.value})} 
+                    className="w-full p-2 pl-9 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-slate-900 text-sm" 
+                  />
+                </div>
+              </FormField>
+
               <button 
                 onClick={() => { 
                   if (confirmModal.item) {
@@ -96,7 +111,8 @@ export const PlannerModals: React.FC<PlannerModalsProps> = ({
                       paymentDate: confirmModal.paymentDate, 
                       accountId: confirmModal.accountId, 
                       label: confirmModal.label,
-                      type: confirmModal.item.type 
+                      type: confirmModal.item.type,
+                      comments: confirmModal.comments.trim() || undefined
                     } as any, confirmModal.item.instanceId); 
                   }
                   onCloseConfirm(); 

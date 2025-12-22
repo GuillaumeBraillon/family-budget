@@ -66,7 +66,7 @@ export const PeopleManager: React.FC<PeopleManagerProps> = ({ people, onUpsertPe
         <div className="space-y-4">
              <ConfirmModal 
                 isOpen={!!deleteConfirm}
-                title="Supprimer la personne ?"
+                title="Supprimer le bénéficiaire ?"
                 message={<span>Voulez-vous vraiment supprimer <strong>{deleteConfirm?.name}</strong> ?<br/><br/>Attention : Cela peut affecter les règles de budget liées à cette personne.</span>}
                 onConfirm={handleDelete}
                 onCancel={() => setDeleteConfirm(null)}
@@ -75,14 +75,14 @@ export const PeopleManager: React.FC<PeopleManagerProps> = ({ people, onUpsertPe
              <Modal 
                 isOpen={isModalOpen} 
                 onClose={resetForm} 
-                title={editingPerson ? "Modifier le membre" : "Ajouter un membre"}
+                title={editingPerson ? "Modifier le bénéficiaire" : "Ajouter un bénéficiaire"}
             >
                 <div className="space-y-4">
                     <TextInput 
                         label="Prénom / Nom" 
                         value={name} 
                         onChange={e => setName(e.target.value)} 
-                        placeholder="Ex: Guillaume, Enfant 1..."
+                        placeholder="Ex: Guillaume, Nelly, Enfant 1..."
                         required 
                         autoFocus
                     />
@@ -100,7 +100,7 @@ export const PeopleManager: React.FC<PeopleManagerProps> = ({ people, onUpsertPe
                                     <Baby size={16} className="text-indigo-500" /> Enfant (Non contributeur)
                                 </span>
                                 <span className="text-xs text-slate-500">
-                                    Les revenus et dépenses de ce membre ne seront pas comptabilisés dans le calcul de l'équité du couple.
+                                    Les revenus et dépenses de ce bénéficiaire ne seront pas comptabilisés dans le calcul de l'équité du couple.
                                 </span>
                             </div>
                         </label>
@@ -127,11 +127,11 @@ export const PeopleManager: React.FC<PeopleManagerProps> = ({ people, onUpsertPe
             </Modal>
 
             <DataList 
-                title="Membres du Foyer" 
+                title="Bénéficiaires du Foyer" 
                 count={people.length} 
                 onAdd={handleAddClick} 
-                addButtonLabel="Ajouter un membre"
-                emptyMessage="Aucun membre défini."
+                addButtonLabel="Ajouter un bénéficiaire"
+                emptyMessage="Aucun bénéficiaire défini."
             >
                 {people.map(p => (
                     <DataListRow 

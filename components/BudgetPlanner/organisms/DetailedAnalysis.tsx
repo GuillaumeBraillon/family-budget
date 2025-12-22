@@ -55,16 +55,16 @@ export const DetailedAnalysis: React.FC<DetailedAnalysisProps> = ({ stats, peopl
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-      {/* TABLEAU PAR MEMBRE */}
+      {/* TABLEAU PAR BÉNÉFICIAIRE */}
       <Card className="p-4 shadow-sm lg:col-span-2">
         <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-1.5">
-          <Users size={12}/> Répartition par Membre
+          <Users size={12}/> Répartition par Bénéficiaire
         </h3>
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead>
               <tr className="text-slate-400 border-b border-slate-100">
-                <th className="text-left font-bold pb-2 uppercase tracking-tighter text-[9px]">Membre</th>
+                <th className="text-left font-bold pb-2 uppercase tracking-tighter text-[9px]">Bénéficiaire</th>
                 <th className="text-right font-bold pb-2 uppercase tracking-tighter text-[9px]">
                    Revenus <MobileTooltip text="Montants réellement perçus sur la période." iconSize={10} widthClass="w-48" />
                 </th>
@@ -145,17 +145,12 @@ export const DetailedAnalysis: React.FC<DetailedAnalysisProps> = ({ stats, peopl
             const account = accounts.find(a => a.id === account_id);
             const displayName = account ? account.name : 'Compte Inconnu';
             
-            // Sécurisation des valeurs
             const paid = s.paid || 0;
             const planned = s.planned || 0;
             const remaining = s.remaining || 0;
             const pendingCount = s.pendingCount || 0;
 
-            // NOUVEAU : On calcule le TOTAL PROJETÉ (Ce qui a été payé + Ce qui reste à payer)
             const projectedTotal = paid + remaining;
-
-            // L'écart se calcule désormais entre le Total Projeté et le Prévu Initial
-            // Ainsi, si j'ai un impayé, il compte dans le "Projected" et révèle un éventuel dépassement
             const variance = projectedTotal - planned;
             const hasVariance = Math.abs(variance) > 0.01;
             const isBad = variance > 0.01;

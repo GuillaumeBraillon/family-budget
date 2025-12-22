@@ -1,18 +1,12 @@
 
 import { Person, Account, CategoryDef, ExpenseConfig, IncomeConfig, PaidItemDetails, AppSettings, AccountType, SavingsTransaction, VariableTransaction, SavedLabel } from '../types';
 
-/**
- * Mappe un enregistrement de la table 'people' vers le type Person.
- */
 export const mapDbPerson = (p: any): Person => ({
   id: p.id,
   name: p.name,
   isChild: p.is_child
 });
 
-/**
- * Mappe un enregistrement de la table 'accounts' vers le type Account.
- */
 export const mapDbAccount = (a: any): Account => ({
   id: a.id,
   name: a.name,
@@ -25,9 +19,6 @@ export const mapDbAccount = (a: any): Account => ({
   targetCap: a.target_cap !== null && a.target_cap !== undefined ? Number(a.target_cap) : undefined
 });
 
-/**
- * Mappe un enregistrement de la table 'categories' vers le type CategoryDef.
- */
 export const mapDbCategory = (c: any): CategoryDef => ({
   id: c.id,
   name: c.name,
@@ -35,18 +26,12 @@ export const mapDbCategory = (c: any): CategoryDef => ({
   subCategories: c.sub_categories || []
 });
 
-/**
- * Mappe un enregistrement de la table 'saved_labels' vers le type SavedLabel.
- */
 export const mapDbSavedLabel = (l: any): SavedLabel => ({
   id: l.id,
   name: l.name,
   type: l.type
 });
 
-/**
- * Mappe un enregistrement de la table 'expense_configs' vers le type ExpenseConfig.
- */
 export const mapDbExpenseConfig = (c: any): ExpenseConfig => ({
   id: c.id,
   label: c.label,
@@ -58,12 +43,9 @@ export const mapDbExpenseConfig = (c: any): ExpenseConfig => ({
   dayOfMonth: c.day_of_month,
   startMonth: c.start_month,
   endMonth: c.end_month,
-  isExtra: c.is_extra
+  isExtra: !!c.is_extra
 });
 
-/**
- * Mappe un enregistrement de la table 'income_configs' vers le type IncomeConfig.
- */
 export const mapDbIncomeConfig = (i: any): IncomeConfig => ({
   id: i.id,
   label: i.label,
@@ -72,15 +54,13 @@ export const mapDbIncomeConfig = (i: any): IncomeConfig => ({
   beneficiaryId: i.beneficiary_id,
   dayOfMonth: i.day_of_month,
   category: i.category,
-  subCategory: i.sub_category
+  subCategory: i.sub_category,
+  isExtra: !!i.is_extra
 });
 
-/**
- * Mappe un enregistrement de la table 'paid_items' vers le type PaidItemDetails.
- */
 export const mapDbPaidItem = (item: any): PaidItemDetails => ({
   instanceId: item.instance_id,
-  amount: item.amount,
+  amount: Number(item.amount),
   paymentDate: item.payment_date,
   accountId: item.account_id,
   beneficiaryId: item.beneficiary_id,
@@ -88,12 +68,12 @@ export const mapDbPaidItem = (item: any): PaidItemDetails => ({
   category: item.category,
   subCategory: item.sub_category,
   type: item.type || 'EXPENSE',
-  isManual: !!item.is_manual
+  isVariable: !!item.is_variable,
+  isWaiting: !!item.is_waiting,
+  isExtra: !!item.is_extra,
+  comments: item.comments || undefined
 });
 
-/**
- * Mappe un enregistrement de la table 'savings_transactions' vers le type SavingsTransaction.
- */
 export const mapDbSavingsTransaction = (t: any): SavingsTransaction => ({
   id: t.id,
   accountId: t.account_id,
@@ -102,10 +82,6 @@ export const mapDbSavingsTransaction = (t: any): SavingsTransaction => ({
   amount: Number(t.amount)
 });
 
-/**
- * Mappe un enregistrement de la table 'variable_transactions' vers le type VariableTransaction.
- * Note: Consolidé via paid_items, ce mapper sert pour l'historique ou la transition.
- */
 export const mapDbVariableTransaction = (t: any): VariableTransaction => ({
   id: t.id,
   date: t.date,
@@ -115,12 +91,12 @@ export const mapDbVariableTransaction = (t: any): VariableTransaction => ({
   subCategory: t.sub_category,
   accountId: t.account_id,
   beneficiaryId: t.beneficiary_id,
-  type: t.type || 'EXPENSE'
+  type: t.type || 'EXPENSE',
+  isWaiting: !!t.is_waiting,
+  isExtra: !!t.is_extra,
+  comments: t.comments || undefined
 });
 
-/**
- * Mappe un enregistrement de la table 'app_settings' vers le type AppSettings.
- */
 export const mapDbSettings = (data: any): AppSettings => {
   if (!data) return { monthly_envelope: 2000, period_type: 'FIXED_DAYS', period_value: 7 };
   return {

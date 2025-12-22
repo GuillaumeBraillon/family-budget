@@ -15,7 +15,7 @@ import { OperationsManager } from './organisms/OperationsManager';
 
 interface ConfigurationViewProps {
   configs: ExpenseConfig[];
-  incomeConfigs: IncomeConfig[]; // Devenu obligatoire pour OperationsManager
+  incomeConfigs: IncomeConfig[]; 
   categories: CategoryDef[];
   people: Person[];
   accounts: Account[];
@@ -32,7 +32,6 @@ interface ConfigurationViewProps {
   onResetConnection: () => void;
   onUpsertLabel: (l: SavedLabel) => void;
   onDeleteLabel: (id: string) => void;
-  // Props CRUD pour OperationsManager
   onAddConfig: (c: ExpenseConfig) => void;
   onUpdateConfig: (c: ExpenseConfig) => void;
   onDeleteConfig: (id: string) => void;
@@ -131,8 +130,8 @@ export const ConfigurationView: React.FC<ConfigurationViewProps> = ({
         {activeTab === 'family' && (
             <>
               <InfoBox 
-                title="Gestion du Foyer"
-                description="Définissez les membres de votre famille. Marquer un membre comme 'Enfant' permet de le distinguer dans les KPIs d'équité (ils ne sont pas considérés comme contributeurs financiers)."
+                title="Gestion des Bénéficiaires"
+                description="Définissez les bénéficiaires de votre foyer. Marquer un membre comme 'Enfant' permet de le distinguer dans les KPIs d'équité (ils ne sont pas considérés comme contributeurs financiers)."
                 icon={<UserCircle size={18} />}
               />
               <PeopleManager 
