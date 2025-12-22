@@ -21,7 +21,6 @@ export const SummaryColumn: React.FC<SummaryColumnProps> = ({
   const monthLabel = new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' }).format(currentDate);
   const currentMonthKey = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
   
-  // On filtre pour exclure les Virements Internes des calculs de budget
   const realTransactions = transactions.filter(t => t.category !== 'Virement Interne');
 
   const totalExpensesMonth = realTransactions.filter(t => t.type !== 'INCOME').reduce((acc, t) => acc + t.amount, 0);

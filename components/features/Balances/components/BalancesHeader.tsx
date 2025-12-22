@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Calculator } from 'lucide-react';
-import { MobileTooltip } from '../../ui/MobileTooltip';
+import { MobileTooltip } from '../../../ui/MobileTooltip';
 
 interface BalancesHeaderProps {
   budgetPeriodeGlobal: number;

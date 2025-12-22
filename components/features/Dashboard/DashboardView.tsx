@@ -1,10 +1,10 @@
 
 import React, { useMemo } from 'react';
 import { usePlanner } from '../../../hooks/usePlanner';
-import { StatsSummary } from '../../BudgetPlanner/organisms/StatsSummary'; // A deplacer idealement ou a garder comme composant legacy temporaire si specifique
-import { DetailedAnalysis } from '../../BudgetPlanner/organisms/DetailedAnalysis'; // Idem
-import { DashboardHeader } from '../../Dashboard/DashboardHeader';
-import { SavingsSummaryCard } from '../../Dashboard/SavingsSummaryCard';
+import { StatsSummary } from '../Operations/components/StatsSummary';
+import { DetailedAnalysis } from '../Operations/components/DetailedAnalysis';
+import { DashboardHeader } from './components/DashboardHeader';
+import { SavingsSummaryCard } from './components/SavingsSummaryCard';
 import { SummaryColumn } from './components/SummaryColumn';
 import { InfoBox } from '../../ui/InfoBox';
 import { LayoutDashboard } from 'lucide-react';

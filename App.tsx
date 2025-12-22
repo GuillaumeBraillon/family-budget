@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useBudget } from './hooks/useBudget';
-import { WelcomeEmptyState } from './components/Dashboard/WelcomeEmptyState';
+import { WelcomeEmptyState } from './components/features/Dashboard/components/WelcomeEmptyState';
 import { DashboardView } from './components/features/Dashboard/DashboardView';
 import { OperationsView } from './components/features/Operations/OperationsView';
 import { BalancesView } from './components/features/Balances/BalancesView';

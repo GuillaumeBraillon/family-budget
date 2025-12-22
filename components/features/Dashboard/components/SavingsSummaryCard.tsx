@@ -1,7 +1,8 @@
+
 import React, { useMemo } from 'react';
 import { PiggyBank, Wallet } from 'lucide-react';
-import { Account, SavingsTransaction } from '../../types';
-import { Card } from '../ui/Card';
+import { Account, SavingsTransaction } from '../../../../types';
+import { Card } from '../../../ui/Card';
 
 interface SavingsSummaryCardProps {
   accounts: Account[];

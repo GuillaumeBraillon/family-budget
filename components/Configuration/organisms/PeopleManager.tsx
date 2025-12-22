@@ -3,9 +3,10 @@ import React, { useState } from 'react';
 import { Trash2, User, Users, Save, Baby } from 'lucide-react';
 import { Person } from '../../../types';
 import { ConfirmModal } from '../atoms/ConfirmModal';
-import { DataList, DataListRow } from '../../molecules/DataList';
+import { DataList } from '../../ui/molecules/DataList';
+import { DataListRow } from '../../ui/molecules/DataListRow';
 import { Modal } from '../../ui/Modal';
-import { TextInput } from '../../molecules/FormInputs';
+import { TextInput } from '../../ui/molecules/FormInputs';
 
 interface PeopleManagerProps {
     people: Person[];

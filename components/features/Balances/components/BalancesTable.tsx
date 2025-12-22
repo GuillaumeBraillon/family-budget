@@ -1,8 +1,8 @@
 
 import React, { useState } from 'react';
-import { Card } from '../../ui/Card';
+import { Card } from '../../../ui/Card';
 import { Wallet, Pencil, Check, X, Users } from 'lucide-react';
-import { MobileTooltip } from '../../ui/MobileTooltip';
+import { MobileTooltip } from '../../../ui/MobileTooltip';
 
 export interface BalanceRow {
   id: string;

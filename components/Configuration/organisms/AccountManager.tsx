@@ -4,9 +4,10 @@ import { Trash2, CreditCard, Save, PiggyBank, Users, Wallet } from 'lucide-react
 import { Account, Person, AccountType } from '../../../types';
 import { ConfirmModal } from '../atoms/ConfirmModal';
 import { MobileTooltip } from '../../ui/MobileTooltip';
-import { DataList, DataListRow } from '../../molecules/DataList';
+import { DataList } from '../../ui/molecules/DataList';
+import { DataListRow } from '../../ui/molecules/DataListRow';
 import { Modal } from '../../ui/Modal';
-import { TextInput, SelectInput } from '../../molecules/FormInputs';
+import { TextInput, SelectInput } from '../../ui/molecules/FormInputs';
 
 interface AccountManagerProps {
     accounts: Account[];

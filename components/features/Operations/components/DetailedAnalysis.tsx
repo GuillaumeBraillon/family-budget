@@ -1,9 +1,9 @@
 
 import React from 'react';
-import { Users, Wallet, Check, TrendingUp, TrendingDown } from 'lucide-react';
-import { Card } from '../../ui/Card';
-import { Person, Account } from '../../../types';
-import { MobileTooltip } from '../../ui/MobileTooltip';
+import { Users, Wallet, TrendingUp, TrendingDown, Check } from 'lucide-react';
+import { Card } from '../../../ui/Card';
+import { Person, Account } from '../../../../types';
+import { MobileTooltip } from '../../../ui/MobileTooltip';
 
 interface DetailedAnalysisProps {
   stats: any;
@@ -55,7 +55,6 @@ export const DetailedAnalysis: React.FC<DetailedAnalysisProps> = ({ stats, peopl
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-      {/* TABLEAU PAR BÉNÉFICIAIRE */}
       <Card className="p-4 shadow-sm lg:col-span-2">
         <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-1.5">
           <Users size={12}/> Répartition par Bénéficiaire
@@ -65,15 +64,9 @@ export const DetailedAnalysis: React.FC<DetailedAnalysisProps> = ({ stats, peopl
             <thead>
               <tr className="text-slate-400 border-b border-slate-100">
                 <th className="text-left font-bold pb-2 uppercase tracking-tighter text-[9px]">Bénéficiaire</th>
-                <th className="text-right font-bold pb-2 uppercase tracking-tighter text-[9px]">
-                   Revenus <MobileTooltip text="Montants réellement perçus sur la période." iconSize={10} widthClass="w-48" />
-                </th>
-                <th className="text-right font-bold pb-2 uppercase tracking-tighter text-[9px]">
-                   Dépenses <MobileTooltip text="Montants réellement payés sur la période." iconSize={10} widthClass="w-48" />
-                </th>
-                <th className="text-right font-bold pb-2 uppercase tracking-tighter text-[9px]">
-                   Bilan <MobileTooltip text="Différence entre revenus et dépenses réels." iconSize={10} widthClass="w-48" />
-                </th>
+                <th className="text-right font-bold pb-2 uppercase tracking-tighter text-[9px]">Revenus <MobileTooltip text="Reel" widthClass="w-12"/></th>
+                <th className="text-right font-bold pb-2 uppercase tracking-tighter text-[9px]">Dépenses <MobileTooltip text="Reel" widthClass="w-12"/></th>
+                <th className="text-right font-bold pb-2 uppercase tracking-tighter text-[9px]">Bilan</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
@@ -89,7 +82,6 @@ export const DetailedAnalysis: React.FC<DetailedAnalysisProps> = ({ stats, peopl
                       <div className="font-bold text-emerald-600">{p.income.paid.toFixed(2)} €</div>
                       {hasDiff(p.income.paid, p.income.planned) && (
                         <div className="flex justify-end items-center gap-1 mt-0.5 opacity-60">
-                            <span className="text-[9px] text-slate-400 mr-1">Prévu:</span>
                             <span className="text-[9px] text-slate-400 line-through">{p.income.planned.toFixed(2)}</span>
                         </div>
                       )}
@@ -98,7 +90,6 @@ export const DetailedAnalysis: React.FC<DetailedAnalysisProps> = ({ stats, peopl
                       <div className="font-bold text-slate-800">{p.expense.paid.toFixed(2)} €</div>
                       {hasDiff(p.expense.paid, p.expense.planned) && (
                         <div className="flex justify-end items-center gap-1 mt-0.5">
-                             <span className="text-[9px] text-slate-400 mr-1">Prévu:</span>
                             <span className="text-[9px] text-slate-400 line-through">{p.expense.planned.toFixed(2)}</span>
                             {renderVariance(p.expense.paid, p.expense.planned, true)}
                         </div>
@@ -131,11 +122,9 @@ export const DetailedAnalysis: React.FC<DetailedAnalysisProps> = ({ stats, peopl
         </div>
       </Card>
 
-      {/* LISTE DES COMPTES (FLUX) */}
       <Card className="p-4 shadow-sm relative overflow-hidden">
         <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-1.5">
           <Wallet size={12}/> Flux par Compte
-          <MobileTooltip text="Total des mouvements (Entrées/Sorties) impactant chaque compte sur cette période." iconSize={10} widthClass="w-48" />
         </h3>
         <div className="space-y-4 relative z-10 max-h-[320px] overflow-y-auto pr-1 custom-scrollbar">
           {(!stats.byAccount || Object.keys(stats.byAccount).length === 0) && (
@@ -199,12 +188,11 @@ export const DetailedAnalysis: React.FC<DetailedAnalysisProps> = ({ stats, peopl
                            <span className="text-[9px] text-amber-600 font-bold bg-amber-50 px-1.5 py-0.5 rounded border border-amber-100/50">
                              DONT EN ATTENTE : {remaining.toFixed(2)} € <span className="text-amber-800">({pendingCount})</span>
                            </span>
-                           <MobileTooltip text={`${pendingCount} opération(s) non pointée(s) incluse(s) dans le total.`} iconSize={10} widthClass="w-48" />
                         </div>
                     ) : (
                         planned !== 0 && (
                             <span className="text-[9px] text-emerald-600 font-bold flex items-center gap-1">
-                                <Check size={10} strokeWidth={3}/> POINTAGE TERMINÉ
+                                <Check size={10} strokeWidth={3}/> TERMINÉ
                             </span>
                         )
                     )}

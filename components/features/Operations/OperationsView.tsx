@@ -4,15 +4,17 @@ import { usePlanner } from '../../../hooks/usePlanner';
 import { usePlannerUI } from '../../../hooks/usePlannerUI';
 import { ExpenseConfig, IncomeConfig, Account, Person, PaidItemDetails, PlannedItem, AppSettings, VariableTransaction, OperationFilters, SavingsTransaction } from '../../../types';
 
-// Imports UI Atomic
-import { OperationsList } from '../../ui/organisms/OperationsList';
-import { PlannerModals } from '../../ui/organisms/PlannerModals';
-import { VariableTransactionForm } from '../../ui/organisms/VariableTransactionForm';
+// Imports UI Atomic (Generic)
 import { MonthNavigator } from '../../ui/molecules/MonthNavigator';
 import { FilterBar } from '../../ui/molecules/FilterBar';
 import { WeekSelector } from '../../ui/molecules/WeekSelector';
 import { QuickPeriodSummary } from '../../ui/molecules/QuickPeriodSummary';
 import { SearchBar } from '../../ui/atoms/SearchBar';
+
+// Imports Feature-Specific Components
+import { OperationsList } from './components/OperationsList';
+import { PlannerModals } from './components/PlannerModals';
+import { VariableTransactionForm } from './components/VariableTransactionForm';
 
 interface OperationsViewProps {
   configs: ExpenseConfig[];
@@ -37,7 +39,6 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
   const [isVarFormOpen, setIsVarFormOpen] = useState(false);
   const [editingVar, setEditingVar] = useState<VariableTransaction | null>(null);
   
-  // Initialisation avec salary: 'EXCLUDE' (Masqué par défaut)
   const [filters, setFilters] = useState<OperationFilters>({
     flux: 'ALL', source: 'ALL', status: 'ALL', extra: 'ALL', transfer: 'EXCLUDE', salary: 'EXCLUDE', accountIds: [], beneficiaryIds: []
   });
@@ -50,11 +51,7 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
   const quickStats = useMemo(() => {
     const stats = { expenses: { real: 0, planned: 0, pending: 0, extra: 0 }, income: { real: 0, planned: 0, pending: 0, extra: 0 } };
     currentItems.forEach(item => {
-        // Exclure les virements internes des statistiques globales
         if (item.category === 'Virement Interne') return;
-
-        // Exclure UNIQUEMENT les revenus structurels (Salaires) des statistiques de la période
-        // Les autres revenus récurrents (CAF, Aides...) s'ajoutent au budget de la période
         if (item.type === 'INCOME' && item.isSalary) return;
 
         const target = item.type === 'INCOME' ? stats.income : stats.expenses;
@@ -66,7 +63,6 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
             if (item.isPaid) target.real += item.amount; else target.pending += item.amount;
         }
 
-        // Calcul commun pour Extra (Variable OU Récurrent)
         if (item.isExtra) {
             target.extra += item.amount;
         }

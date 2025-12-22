@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { CreditCard, User } from 'lucide-react';
-import { SelectInput } from '../atoms/Inputs';
+import { SelectInput } from './FormInputs';
 import { Account, Person } from '../../../types';
 
 interface AccountSelectorProps extends Omit<React.SelectHTMLAttributes<HTMLSelectElement>, 'children'> {

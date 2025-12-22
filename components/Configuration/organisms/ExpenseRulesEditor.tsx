@@ -2,10 +2,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Trash2, ArrowUp, ArrowDown, Save } from 'lucide-react';
 import { ExpenseConfig, CategoryDef, Person, Account } from '../../../types';
-import { CategorySelector } from '../../molecules/CategorySelector';
-import { TextInput, AmountInput } from '../../molecules/FormInputs';
-import { AccountSelector, BeneficiarySelector } from '../../molecules/SmartSelectors';
-import { DataList, DataListRow } from '../../molecules/DataList';
+import { CategorySelector } from '../../ui/molecules/CategorySelector';
+import { TextInput, AmountInput } from '../../ui/molecules/FormInputs';
+import { AccountSelector, BeneficiarySelector } from '../../ui/molecules/SmartSelectors';
+import { DataList } from '../../ui/molecules/DataList';
+import { DataListRow } from '../../ui/molecules/DataListRow';
 import { ConfirmModal } from '../atoms/ConfirmModal';
 import { Modal } from '../../ui/Modal';
 

@@ -1,9 +1,9 @@
 
 import React from 'react';
-import { Clock, Wallet, AlertCircle, ShoppingBag, TrendingUp, CalendarCheck } from 'lucide-react';
-import { StatCard } from '../../atoms/StatCard';
-import { Account } from '../../../types';
-import { MobileTooltip } from '../../ui/MobileTooltip';
+import { Clock, AlertCircle, ShoppingBag, TrendingUp, CalendarCheck } from 'lucide-react';
+import { StatCard } from '../../../ui/atoms/StatCard';
+import { Account } from '../../../../types';
+import { MobileTooltip } from '../../../ui/MobileTooltip';
 
 interface StatsSummaryProps {
   stats: any;
@@ -16,8 +16,6 @@ export const StatsSummary: React.FC<StatsSummaryProps> = ({ stats, accounts }) =
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      
-      {/* CARTE 1 : FACTURES & RECURRENTS (FIXED) */}
       <StatCard 
         title="Reste à payer (Factures)" 
         amount={stats.fixedToPay + stats.fixedDelays} 
@@ -54,7 +52,6 @@ export const StatsSummary: React.FC<StatsSummaryProps> = ({ stats, accounts }) =
         </div>
       </StatCard>
 
-      {/* CARTE 2 : ENVELOPPE VARIABLE (VARIABLE) */}
       <StatCard 
         title="Budget Variable" 
         amount={stats.varRemaining} 
@@ -63,7 +60,6 @@ export const StatsSummary: React.FC<StatsSummaryProps> = ({ stats, accounts }) =
         hideAmount
       >
         <div className="mt-4 space-y-4">
-          
           <div className={`p-3 rounded-xl border-2 flex items-center justify-between gap-3 ${isOver ? 'bg-rose-50 border-rose-200' : 'bg-emerald-50 border-emerald-200'}`}>
             <div>
                <p className="text-[10px] uppercase font-black tracking-wider opacity-60">Reste disponible</p>
@@ -92,7 +88,6 @@ export const StatsSummary: React.FC<StatsSummaryProps> = ({ stats, accounts }) =
           </div>
         </div>
       </StatCard>
-
     </div>
   );
 };

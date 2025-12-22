@@ -2,9 +2,9 @@
 import React, { useMemo } from 'react';
 import { Account, Person, ExpenseConfig, IncomeConfig, PaidItemDetails, AppSettings, VariableTransaction } from '../../../types';
 import { usePlanner } from '../../../hooks/usePlanner';
-import { BalancesHeader } from '../../Balances/molecules/BalancesHeader';
-import { BalancesTable, BalanceRow } from '../../Balances/organisms/BalancesTable';
-import { TransferSummaryCard } from '../../Balances/molecules/TransferSummaryCard';
+import { BalancesHeader } from './components/BalancesHeader';
+import { BalancesTable, BalanceRow } from './components/BalancesTable';
+import { TransferSummaryCard } from './components/TransferSummaryCard';
 
 interface BalancesViewProps {
   accounts: Account[];

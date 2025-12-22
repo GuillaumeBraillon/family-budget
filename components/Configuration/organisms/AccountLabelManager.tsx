@@ -4,9 +4,10 @@ import { Trash2, Save, Tag } from 'lucide-react';
 import { SavedLabel, AccountType } from '../../../types';
 import { ConfirmModal } from '../atoms/ConfirmModal';
 import { LabelTypeSelector } from '../molecules/LabelTypeSelector';
-import { DataList, DataListRow } from '../../molecules/DataList';
+import { DataList } from '../../ui/molecules/DataList';
+import { DataListRow } from '../../ui/molecules/DataListRow';
 import { Modal } from '../../ui/Modal';
-import { TextInput } from '../../molecules/FormInputs';
+import { TextInput } from '../../ui/molecules/FormInputs';
 
 interface AccountLabelManagerProps {
     labels: SavedLabel[];
@@ -46,8 +47,6 @@ export const AccountLabelManager: React.FC<AccountLabelManagerProps> = ({ labels
     const handleSubmit = () => {
         if (!name.trim()) return;
         
-        // Génération d'un UUID côté client pour être cohérent avec le type UUID en base
-        // Fallback sur Date.now() si crypto.randomUUID n'est pas dispo
         let newId = `lbl_${Date.now()}`;
         if (typeof crypto !== 'undefined' && crypto.randomUUID) {
             newId = crypto.randomUUID();
