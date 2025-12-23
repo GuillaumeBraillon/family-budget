@@ -57,9 +57,14 @@ export const resetSupabaseConfig = () => {
 };
 
 /**
- * Vérifie si la configuration minimale est présente.
+ * Vérifie si la configuration minimale est présente et valide (pas de placeholder).
  */
 export const isSupabaseConfigured = () => {
   const { url, key } = getSupabaseConfig();
-  return url.length > 10 && key.length > 10 && url.startsWith('http');
+  return (
+    url.length > 10 && 
+    key.length > 10 && 
+    url.startsWith('http') && 
+    !url.includes('placeholder.supabase.co')
+  );
 };

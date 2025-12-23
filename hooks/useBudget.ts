@@ -14,6 +14,7 @@ import {
   apiUpsertLabel, apiDeleteLabel,
   apiImportLabels
 } from '../services/api';
+import { isSupabaseConfigured } from '../services/supabase';
 
 const DEFAULT_SAVINGS_LABELS = [
   "Virement mensuel",
@@ -59,6 +60,12 @@ export const useBudget = () => {
   });
 
   const loadData = useCallback(async (silent = false) => {
+    // Si Supabase n'est pas configuré, on ne tente même pas le chargement
+    if (!isSupabaseConfigured()) {
+        setLoading(false);
+        return;
+    }
+
     try {
       if (!silent) setLoading(true);
       setError(null);

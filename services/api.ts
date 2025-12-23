@@ -1,6 +1,7 @@
 
-import { supabase } from './supabase';
+import { supabase, isSupabaseConfigured } from './supabase';
 import * as mappers from './apiMappers';
+import { AppSettings } from '../types';
 import { 
   apiUpsertPerson, apiDeletePerson, 
   apiUpsertAccount, apiDeleteAccount, 
@@ -20,6 +21,22 @@ import {
  * Délègue la conversion des données brutes aux fonctions de mapping.
  */
 export const fetchInitialData = async () => {
+  // PROTECTION : Si Supabase n'est pas configuré (ou placeholder), on ne lance pas les requêtes
+  if (!isSupabaseConfigured()) {
+    return { 
+        people: [], 
+        accounts: [], 
+        categories: [], 
+        configs: [], 
+        incomeConfigs: [], 
+        paidItems: {}, 
+        settings: { monthly_envelope: 2000, period_type: 'FIXED_DAYS', period_value: 7 } as AppSettings, 
+        savingsTransactions: [], 
+        variableTransactions: [], 
+        savedLabels: [] 
+    };
+  }
+
   const [
     peopleRes, 
     accountsRes, 
@@ -79,7 +96,7 @@ export const fetchInitialData = async () => {
             type: mapped.type,
             isWaiting: mapped.isWaiting,
             isExtra: mapped.isExtra,
-            comments: mapped.comments // FIX: Inclusion du commentaire pour l'état local
+            comments: mapped.comments
         });
     }
   });
