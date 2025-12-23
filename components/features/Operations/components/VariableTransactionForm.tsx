@@ -34,7 +34,6 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
   const [date, setDate] = useState(defaultDate);
   const [label, setLabel] = useState('');
   const [amount, setAmount] = useState<string>('');
-  const [isWaiting, setIsWaiting] = useState<boolean>(true);
   const [isExtra, setIsExtra] = useState<boolean>(false);
   const [comments, setComments] = useState<string>('');
   
@@ -60,7 +59,6 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
             setCategory(editingTransaction.category);
             setSubCategory(editingTransaction.subCategory || '');
             setBeneficiaryId(editingTransaction.beneficiaryId || defaultBeneficiary);
-            setIsWaiting(!!editingTransaction.isWaiting);
             setIsExtra(!!editingTransaction.isExtra);
             setComments(editingTransaction.comments || '');
         } else {
@@ -72,7 +70,6 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
             setSubCategory('');
             setBeneficiaryId(defaultBeneficiary);
             setType('EXPENSE');
-            setIsWaiting(true);
             setIsExtra(false);
             setComments('');
             if (!accountId && checkingAccounts.length > 0) setAccountId(checkingAccounts[0].id);
@@ -80,7 +77,7 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
     }
   }, [isOpen, editingTransaction, defaultDate, defaultBeneficiary]);
 
-  const handleSubmit = () => {
+  const handleSubmit = (targetIsWaiting: boolean) => {
     if (!label || !amount || !accountId) return;
 
     if (mode === 'TRANSFER') {
@@ -157,7 +154,7 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
             accountId,
             beneficiaryId,
             type,
-            isWaiting,
+            isWaiting: targetIsWaiting,
             isExtra,
             comments: comments.trim() || undefined
         });
@@ -211,45 +208,23 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
         {mode === 'STANDARD' ? (
             /* --- MODE STANDARD --- */
             <>
-                <div className="grid grid-cols-2 gap-2">
-                    <div>
-                        <label className="text-xs font-medium text-slate-500 uppercase block mb-1">Type de flux</label>
-                        <div className="flex bg-slate-100 p-1 rounded-lg">
-                            <button
-                                type="button"
-                                onClick={() => setType('EXPENSE')}
-                                className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm font-bold transition-all ${isExpense ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                            >
-                                <TrendingDown size={14}/> Dépense
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setType('INCOME')}
-                                className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm font-bold transition-all ${!isExpense ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                            >
-                                <TrendingUp size={14}/> Revenu
-                            </button>
-                        </div>
-                    </div>
-
-                    <div>
-                        <label className="text-xs font-medium text-slate-500 uppercase block mb-1">État du pointage</label>
-                        <div className="flex bg-slate-100 p-1 rounded-lg">
-                            <button
-                                type="button"
-                                onClick={() => setIsWaiting(false)}
-                                className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm font-bold transition-all ${!isWaiting ? 'bg-emerald-500 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                            >
-                                <CheckCircle2 size={14}/> Réel
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setIsWaiting(true)}
-                                className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm font-bold transition-all ${isWaiting ? 'bg-amber-500 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                            >
-                                <Clock size={14}/> Attente
-                            </button>
-                        </div>
+                <div className="mb-2">
+                    <label className="text-xs font-medium text-slate-500 uppercase block mb-1">Type de flux</label>
+                    <div className="flex bg-slate-100 p-1 rounded-lg">
+                        <button
+                            type="button"
+                            onClick={() => setType('EXPENSE')}
+                            className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm font-bold transition-all ${isExpense ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                        >
+                            <TrendingDown size={14}/> Dépense
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setType('INCOME')}
+                            className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm font-bold transition-all ${!isExpense ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                        >
+                            <TrendingUp size={14}/> Revenu
+                        </button>
                     </div>
                 </div>
 
@@ -332,15 +307,6 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
                     placeholder="Infos complémentaires..."
                     icon={MessageSquare}
                 />
-
-                {isWaiting && (
-                    <div className="bg-amber-50 p-3 rounded-xl border border-amber-200 flex items-start gap-3 animate-in slide-in-from-top-2">
-                        <Clock size={18} className="text-amber-500 mt-0.5" />
-                        <p className="text-[11px] text-amber-800 leading-tight">
-                            Cette opération apparaîtra en ambre dans l'échéancier. Vous pourrez la valider d'un clic lorsqu'elle sera visible sur votre compte bancaire.
-                        </p>
-                    </div>
-                )}
             </>
         ) : (
             /* --- MODE VIREMENT INTERNE --- */
@@ -418,12 +384,29 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
                 </button>
             )}
 
-            <button 
-                onClick={handleSubmit} 
-                className={`flex-1 text-white py-3 rounded-xl font-bold shadow-sm transition-colors flex items-center justify-center gap-2 ${editingTransaction ? 'bg-amber-600 hover:bg-amber-700' : (isExpense || mode === 'TRANSFER' ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-emerald-600 hover:bg-emerald-700')}`}
-            >
-                {editingTransaction ? <><Save size={18}/> Enregistrer</> : <><Save size={18}/> {mode === 'TRANSFER' ? 'Exécuter le virement' : (!isWaiting ? 'Ajouter au réel' : 'Saisir en attente')}</>}
-            </button>
+            {mode === 'TRANSFER' ? (
+                <button 
+                    onClick={() => handleSubmit(false)} 
+                    className={`flex-1 text-white py-3 rounded-xl font-bold shadow-sm transition-colors flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700`}
+                >
+                    <Save size={18}/> {editingTransaction ? 'Enregistrer' : 'Exécuter le virement'}
+                </button>
+            ) : (
+                <>
+                    <button 
+                        onClick={() => handleSubmit(true)} 
+                        className="flex-1 bg-amber-100 text-amber-700 hover:bg-amber-200 py-3 rounded-xl font-bold transition-colors flex items-center justify-center gap-2"
+                    >
+                        <Clock size={18}/> {editingTransaction ? 'Sauver (Attente)' : 'En Attente'}
+                    </button>
+                    <button 
+                        onClick={() => handleSubmit(false)} 
+                        className={`flex-1 text-white py-3 rounded-xl font-bold shadow-sm transition-colors flex items-center justify-center gap-2 ${isExpense ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-emerald-600 hover:bg-emerald-700'}`}
+                    >
+                        <CheckCircle2 size={18}/> {editingTransaction ? 'Sauver (Réel)' : 'Validé'}
+                    </button>
+                </>
+            )}
         </div>
       </div>
     </Modal>

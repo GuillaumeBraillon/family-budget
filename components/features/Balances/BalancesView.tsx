@@ -5,8 +5,7 @@ import { usePlanner } from '../../../hooks/usePlanner';
 import { BalancesHeader } from './components/BalancesHeader';
 import { BalancesTable, BalanceRow } from './components/BalancesTable';
 import { TransferSummaryCard } from './components/TransferSummaryCard';
-import { Info } from 'lucide-react';
-import { MobileTooltip } from '../../ui/MobileTooltip';
+import { BudgetDistributionSummary } from './components/BudgetDistributionSummary';
 
 interface BalancesViewProps {
   accounts: Account[];
@@ -68,6 +67,64 @@ export const BalancesView: React.FC<BalancesViewProps> = ({
   // Calculs pour le Header
   const realConsumption = varExpenses - varIncome;
   const distributableBalance = Math.max(0, budgetPeriodeGlobal - realConsumption);
+
+  // --- DÉTAILS PAR COMPTE ---
+
+  // 1. Opérations Variables En Attente
+  const pendingVariablesDetails = useMemo(() => {
+    return checkingAccounts.map(acc => {
+      const totalPending = filteredWeeks
+        .flatMap(w => w.items)
+        .filter(i => 
+          i.accountId === acc.id && 
+          i.source === 'VARIABLE' && 
+          i.type === 'EXPENSE' && 
+          !i.isPaid
+        )
+        .reduce((sum, i) => sum + i.amount, 0);
+      
+      return { name: acc.name, amount: totalPending };
+    }).filter(x => x.amount > 0);
+  }, [filteredWeeks, checkingAccounts]);
+
+  // 2. Opérations Récurrentes En Attente (Courant + Retards)
+  const pendingRecurringDetails = useMemo(() => {
+    const relevantItems = filteredWeeks
+      .filter(w => w.weekNumber <= activeWeek)
+      .flatMap(w => w.items)
+      .filter(i => 
+          i.source === 'RECURRING' && 
+          !i.isPaid && 
+          i.category !== 'Virement Interne' &&
+          i.type === 'EXPENSE'
+      );
+
+    return checkingAccounts.map(acc => {
+        const amount = relevantItems
+          .filter(i => i.accountId === acc.id)
+          .reduce((sum, i) => sum + i.amount, 0);
+        return { name: acc.name, amount };
+    }).filter(x => x.amount > 0);
+  }, [filteredWeeks, activeWeek, checkingAccounts]);
+
+  // 3. Total Dette (Reste à payer global)
+  const totalDebtDetails = useMemo(() => {
+    return checkingAccounts.map(acc => {
+        const remaining = stats.byAccount[acc.id]?.remaining || 0;
+        return { name: acc.name, amount: remaining };
+    }).filter(x => x.amount > 0);
+  }, [checkingAccounts, stats]);
+
+  // 4. Consommation Variable Réelle (Dépenses - Revenus variables sur la période)
+  const consumedDetails = useMemo(() => {
+    return checkingAccounts.map(acc => {
+        const items = variableItems.filter(i => i.accountId === acc.id);
+        const expense = items.filter(i => i.type === 'EXPENSE').reduce((sum, i) => sum + i.amount, 0);
+        const income = items.filter(i => i.type === 'INCOME').reduce((sum, i) => sum + i.amount, 0);
+        return { name: acc.name, amount: expense - income };
+    }).filter(x => Math.abs(x.amount) > 0.01);
+  }, [checkingAccounts, variableItems]);
+
 
   const { jointRows, personalRows, totalPersonalRow, virLddsTotal } = useMemo(() => {
     const jRows: BalanceRow[] = [];
@@ -180,15 +237,14 @@ export const BalancesView: React.FC<BalancesViewProps> = ({
       return sum + (stats.byAccount[acc.id]?.remaining || 0);
   }, 0);
 
-  // Helpers pour l'affichage (arrondis)
-  const roundTo0 = (amount: number) => Math.round(amount);
-  const roundTo5 = (amount: number) => Math.round(amount / 5) * 5;
-
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       <BalancesHeader 
         resteAPayer={totalPendingHeader}
         pendingRecurring={pendingRecurring}
+        pendingVariablesDetails={pendingVariablesDetails}
+        pendingRecurringDetails={pendingRecurringDetails}
+        totalDetails={totalDebtDetails}
       />
 
       {jointRows.length > 0 && (
@@ -200,82 +256,12 @@ export const BalancesView: React.FC<BalancesViewProps> = ({
       )}
 
       {/* SECTION RÉPARTITION BUDGÉTAIRE */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between hover:border-indigo-200 transition-colors">
-              <div className="flex justify-between items-start mb-2">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide leading-tight pr-1">
-                      Enveloppe Total
-                  </span>
-                  <div className="-mt-1 -mr-1">
-                      <MobileTooltip 
-                          text="Montant du budget variable alloué pour la période en cours." 
-                          icon={<Info size={14} className="text-slate-300 hover:text-indigo-500"/>}
-                          widthClass="w-48"
-                      />
-                  </div>
-              </div>
-              <div>
-                  <div className="text-xl font-black text-indigo-600">
-                      {roundTo5(budgetPeriodeGlobal)} €
-                  </div>
-                  {Math.abs(roundTo5(budgetPeriodeGlobal) - budgetPeriodeGlobal) > 0.01 && (
-                      <div className="text-[10px] font-bold text-slate-300">
-                          {budgetPeriodeGlobal.toFixed(2)} €
-                      </div>
-                  )}
-              </div>
-          </div>
-
-          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between hover:border-indigo-200 transition-colors">
-              <div className="flex justify-between items-start mb-2">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide leading-tight pr-1">
-                      Deja utilisé
-                  </span>
-                  <div className="-mt-1 -mr-1">
-                      <MobileTooltip 
-                          text="Dépenses variables standards nettes (Dépenses - Revenus variables) sur la période." 
-                          icon={<Info size={14} className="text-slate-300 hover:text-indigo-500"/>}
-                          widthClass="w-48"
-                      />
-                  </div>
-              </div>
-              <div>
-                  <div className="text-xl font-black text-rose-600">
-                      {-roundTo0(realConsumption)} €
-                  </div>
-                  {Math.abs(roundTo0(realConsumption) - realConsumption) > 0.01 && (
-                      <div className="text-[10px] font-bold text-slate-300">
-                          {(-realConsumption).toFixed(2)} €
-                      </div>
-                  )}
-              </div>
-          </div>
-
-          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between hover:border-indigo-200 transition-colors">
-              <div className="flex justify-between items-start mb-2">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide leading-tight pr-1">
-                      Reste à répartir
-                  </span>
-                  <div className="-mt-1 -mr-1">
-                      <MobileTooltip 
-                          text="Budget Période - Conso. Réelle. C'est le montant théorique disponible pour recharger les comptes persos." 
-                          icon={<Info size={14} className="text-slate-300 hover:text-indigo-500"/>}
-                          widthClass="w-48"
-                      />
-                  </div>
-              </div>
-              <div>
-                  <div className={`text-xl font-black ${distributableBalance >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                      {roundTo5(distributableBalance)} €
-                  </div>
-                  {Math.abs(roundTo5(distributableBalance) - distributableBalance) > 0.01 && (
-                      <div className="text-[10px] font-bold text-slate-300">
-                          {distributableBalance.toFixed(2)} €
-                      </div>
-                  )}
-              </div>
-          </div>
-      </div>
+      <BudgetDistributionSummary 
+        totalEnvelope={budgetPeriodeGlobal}
+        usedEnvelope={realConsumption}
+        distributable={distributableBalance}
+        consumedDetails={consumedDetails}
+      />
 
       <BalancesTable 
         title="Comptes Courants"

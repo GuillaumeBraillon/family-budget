@@ -65,7 +65,9 @@ export const DataListRow: React.FC<DataListRowProps> = ({
         <div className="flex items-center gap-2 sm:gap-3 text-[10px] sm:text-xs text-slate-500 flex-wrap leading-tight">
           {(category || subCategory) && (
             <span className="flex items-center gap-1 bg-white/60 px-1.5 py-0.5 rounded text-slate-600 border border-slate-200/50 truncate max-w-[110px] sm:max-w-none">
-                <Tag size={10}/> {category}{subCategory && <span className="opacity-70 hidden sm:inline"> &gt; {subCategory}</span>}
+                <Tag size={10}/> 
+                <span className="sm:hidden">{subCategory || category}</span>
+                <span className="hidden sm:inline">{category}{subCategory && <span className="opacity-70"> &gt; {subCategory}</span>}</span>
             </span>
           )}
           {beneficiary && (

@@ -4,7 +4,7 @@ import { createPortal } from 'react-dom';
 import { Info, X } from 'lucide-react';
 
 interface MobileTooltipProps {
-  text: string;
+  text: React.ReactNode;
   icon?: React.ReactNode;
   iconSize?: number;
   iconClassName?: string;
@@ -86,7 +86,7 @@ export const MobileTooltip: React.FC<MobileTooltipProps> = ({
                 onClick={(e) => e.stopPropagation()}
             >
                 <div className="flex justify-between items-start mb-1 font-bold border-b border-slate-700 pb-1">
-                    <span>Note</span>
+                    <span>Détails</span>
                     <X size={10} className="cursor-pointer hover:text-red-400" onClick={() => setIsOpen(false)} />
                 </div>
                 {text}

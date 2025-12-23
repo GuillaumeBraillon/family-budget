@@ -1,6 +1,6 @@
 
-import React, { useState } from 'react';
-import { CalendarClock, Split, TableProperties, Save } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { CalendarClock, Split, TableProperties, Save, Info, AlertTriangle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../ui/Card';
 import { AppSettings, PeriodType } from '../../../types';
 
@@ -11,16 +11,42 @@ interface PeriodSettingsCardProps {
 
 export const PeriodSettingsCard: React.FC<PeriodSettingsCardProps> = ({ settings, onUpdate }) => {
   const [type, setType] = useState<PeriodType>(settings.period_type || 'FIXED_DAYS');
-  const [val, setVal] = useState(settings.period_value || 7);
+  // Utilisation de string pour permettre de vider l'input (suppression caractère par caractère)
+  const [val, setVal] = useState<string>(String(settings.period_value || 7));
   const [isSaved, setIsSaved] = useState(false);
 
+  useEffect(() => {
+    // Synchronisation si les props changent (ex: après un reset global)
+    setType(settings.period_type || 'FIXED_DAYS');
+    setVal(String(settings.period_value || 7));
+  }, [settings]);
+
   const handleSave = () => {
-    onUpdate(type, val);
+    // Fallback de sécurité si l'input est vide
+    const defaultValue = type === 'FIXED_DAYS' ? 7 : 2;
+    const numValue = parseInt(val) || defaultValue;
+    
+    onUpdate(type, numValue);
+    setVal(String(numValue)); // On remet une valeur propre
+    
     setIsSaved(true);
     setTimeout(() => setIsSaved(false), 2000);
   };
 
-  const hasChanges = type !== settings.period_type || val !== settings.period_value;
+  const hasChanges = type !== settings.period_type || parseInt(val) !== settings.period_value;
+
+  // Réinitialisation de la valeur par défaut si changement de type drastique (optionnel mais meilleur UX)
+  const handleTypeChange = (newType: PeriodType) => {
+      setType(newType);
+      // Si on passe à Division et que la valeur est > 10, on remet à 2 pour éviter les incohérences
+      if (newType === 'CUSTOM_SPLIT' && parseInt(val) > 10) {
+          setVal("2");
+      }
+      // Si on passe à Jours Fixes et valeur < 1, on remet à 7
+      if (newType === 'FIXED_DAYS' && parseInt(val) < 1) {
+          setVal("7");
+      }
+  };
 
   return (
     <Card className="shadow-sm border-slate-200 h-full">
@@ -34,21 +60,21 @@ export const PeriodSettingsCard: React.FC<PeriodSettingsCardProps> = ({ settings
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <PeriodOption 
             active={type === 'FIXED_DAYS'} 
-            onClick={() => setType('FIXED_DAYS')}
+            onClick={() => handleTypeChange('FIXED_DAYS')}
             icon={<TableProperties size={20} />}
             label="Jours Fixes"
-            desc="Blocs de X jours"
+            desc="Blocs constants"
           />
           <PeriodOption 
             active={type === 'CALENDAR_WEEKS'} 
-            onClick={() => setType('CALENDAR_WEEKS')}
+            onClick={() => handleTypeChange('CALENDAR_WEEKS')}
             icon={<CalendarClock size={20} />}
             label="Calendrier"
-            desc="Semaines réelles"
+            desc="Lundi au Dimanche"
           />
           <PeriodOption 
             active={type === 'CUSTOM_SPLIT'} 
-            onClick={() => setType('CUSTOM_SPLIT')}
+            onClick={() => handleTypeChange('CUSTOM_SPLIT')}
             icon={<Split size={20} />}
             label="Division"
             desc="X parts égales"
@@ -57,36 +83,63 @@ export const PeriodSettingsCard: React.FC<PeriodSettingsCardProps> = ({ settings
 
         <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
           {type === 'FIXED_DAYS' && (
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-700 uppercase tracking-tight">Jours par période</label>
-              <input 
-                type="number" 
-                min="1" max="31"
-                value={val} 
-                onChange={e => setVal(parseInt(e.target.value) || 7)}
-                className="w-full p-2.5 border border-slate-300 rounded-lg text-sm bg-white outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-              <p className="text-[10px] text-slate-500 italic">Exemple : 7 jours = 4 périodes (le reste au dernier bloc).</p>
+            <div className="space-y-3">
+              <div className="flex items-start gap-2">
+                 <Info size={16} className="text-indigo-500 mt-0.5 flex-shrink-0" />
+                 <p className="text-xs text-slate-600 leading-relaxed">
+                    Découpe le mois en blocs de <strong>X jours</strong>, peu importe le jour de la semaine.<br/>
+                    <span className="italic text-slate-500">Exemple (7 jours) : Période 1 du 1er au 7, Période 2 du 8 au 14, etc.</span>
+                 </p>
+              </div>
+              <div className="pt-2 border-t border-slate-200/60">
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-tight">Durée d'une période (Jours)</label>
+                <input 
+                    type="number" 
+                    min="1" max="31"
+                    value={val} 
+                    onChange={e => setVal(e.target.value)}
+                    className="w-full p-2.5 mt-1 border border-slate-300 rounded-lg text-sm bg-white outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
             </div>
           )}
 
           {type === 'CALENDAR_WEEKS' && (
-            <p className="text-sm text-slate-600 leading-relaxed py-2">
-              L'échéancier suit les semaines du calendrier (lundi au dimanche). Idéal pour un suivi hebdomadaire classique.
-            </p>
+            <div className="space-y-3">
+                <div className="flex items-start gap-2">
+                    <Info size={16} className="text-indigo-500 mt-0.5 flex-shrink-0" />
+                    <p className="text-xs text-slate-600 leading-relaxed">
+                        Suit les semaines civiles du calendrier (Lundi au Dimanche). Idéal pour gérer vos courses hebdomadaires.
+                    </p>
+                </div>
+                <div className="flex items-start gap-2 bg-amber-50 p-2 rounded-lg border border-amber-100 text-amber-800">
+                    <AlertTriangle size={14} className="mt-0.5 flex-shrink-0" />
+                    <p className="text-[10px] leading-tight">
+                        <strong>Attention :</strong> La première et la dernière période du mois peuvent être incomplètes (ex: 2 jours si le mois commence un samedi), ce qui réduira proportionnellement leur budget alloué.
+                    </p>
+                </div>
+            </div>
           )}
 
           {type === 'CUSTOM_SPLIT' && (
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-700 uppercase tracking-tight">Nombre de divisions</label>
-              <input 
-                type="number" 
-                min="1" max="10"
-                value={val} 
-                onChange={e => setVal(parseInt(e.target.value) || 2)}
-                className="w-full p-2.5 border border-slate-300 rounded-lg text-sm bg-white outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-              <p className="text-[10px] text-slate-500 italic">Exemple : 2 parts = Le mois divisé en deux (quatorzaine).</p>
+            <div className="space-y-3">
+                <div className="flex items-start gap-2">
+                    <Info size={16} className="text-indigo-500 mt-0.5 flex-shrink-0" />
+                    <p className="text-xs text-slate-600 leading-relaxed">
+                        Divise le mois en <strong>X parties égales</strong> (autant que possible).<br/>
+                        <span className="italic text-slate-500">Exemple (2 parts) : Le mois est coupé en deux (quinzaine).</span>
+                    </p>
+                </div>
+                <div className="pt-2 border-t border-slate-200/60">
+                    <label className="text-xs font-bold text-slate-700 uppercase tracking-tight">Nombre de divisions</label>
+                    <input 
+                        type="number" 
+                        min="1" max="10"
+                        value={val} 
+                        onChange={e => setVal(e.target.value)}
+                        className="w-full p-2.5 mt-1 border border-slate-300 rounded-lg text-sm bg-white outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                </div>
             </div>
           )}
         </div>
