@@ -31,16 +31,16 @@ export const Header: React.FC<HeaderProps> = ({ currentView, onViewChange }) => 
             label="Dashboard" 
           />
           <NavBtn 
-            active={currentView === 'planner'} 
-            onClick={() => onViewChange('planner')} 
-            icon={<CalendarCheck size={16}/>} 
-            label="Opérations" 
-          />
-          <NavBtn 
             active={currentView === 'balances'} 
             onClick={() => onViewChange('balances')} 
             icon={<Calculator size={16}/>} 
             label="Soldes" 
+          />
+          <NavBtn 
+            active={currentView === 'planner'} 
+            onClick={() => onViewChange('planner')} 
+            icon={<CalendarCheck size={16}/>} 
+            label="Opérations" 
           />
           <NavBtn 
             active={currentView === 'savings'} 

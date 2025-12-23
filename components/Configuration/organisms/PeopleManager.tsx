@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Trash2, User, Users, Save, Baby } from 'lucide-react';
 import { Person } from '../../../types';
 import { ConfirmModal } from '../atoms/ConfirmModal';
@@ -22,6 +22,11 @@ export const PeopleManager: React.FC<PeopleManagerProps> = ({ people, onUpsertPe
     // Form State
     const [name, setName] = useState('');
     const [isChild, setIsChild] = useState(false);
+
+    // Tri alphabétique des bénéficiaires
+    const sortedPeople = useMemo(() => {
+        return [...people].sort((a, b) => a.name.localeCompare(b.name));
+    }, [people]);
 
     const resetForm = () => {
         setName('');
@@ -129,12 +134,12 @@ export const PeopleManager: React.FC<PeopleManagerProps> = ({ people, onUpsertPe
 
             <DataList 
                 title="Bénéficiaires du Foyer" 
-                count={people.length} 
+                count={sortedPeople.length} 
                 onAdd={handleAddClick} 
                 addButtonLabel="Ajouter un bénéficiaire"
                 emptyMessage="Aucun bénéficiaire défini."
             >
-                {people.map(p => (
+                {sortedPeople.map(p => (
                     <DataListRow 
                         key={p.id}
                         icon={p.isChild ? <Baby size={20} /> : <User size={20} />}

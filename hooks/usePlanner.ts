@@ -22,9 +22,12 @@ export const usePlanner = (
     const type = settings.period_type || 'FIXED_DAYS';
     const val = settings.period_value || 7;
 
-    const createPeriod = (start: number, end: number, num: number) => {
+    // Helper unifié pour créer une période avec une limite optionnelle
+    const createPeriod = (start: number, end: number, num: number, limitOverride?: number) => {
       const periodDays = end - start + 1;
-      const distributedLimit = (monthlyBudget / daysInMonth) * periodDays;
+      // Par défaut : Prorata temporis (Budget / Jours du mois * Jours de la période)
+      const distributedLimit = limitOverride ?? ((monthlyBudget / daysInMonth) * periodDays);
+      
       return {
         weekNumber: num,
         label: `Période ${num} (${start} au ${end})`,
@@ -58,10 +61,15 @@ export const usePlanner = (
       const parts = Math.max(1, Math.min(daysInMonth, val));
       const daysPerPart = Math.floor(daysInMonth / parts);
       
+      // MODE "PARTS ÉGALES" : On divise le budget par le nombre de parts exact
+      // Exemple : 2000 / 4 = 500€ par période, peu importe si elle fait 7 ou 10 jours.
+      const equalLimit = monthlyBudget / parts;
+
       for (let i = 0; i < parts; i++) {
         const start = i * daysPerPart + 1;
         const end = (i === parts - 1) ? daysInMonth : (i + 1) * daysPerPart;
-        res.push(createPeriod(start, end, i + 1));
+        // On force la limite égale
+        res.push(createPeriod(start, end, i + 1, equalLimit));
       }
     }
 

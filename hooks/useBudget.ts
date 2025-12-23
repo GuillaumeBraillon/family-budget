@@ -11,7 +11,8 @@ import {
   apiSetPaidStatus, apiUpdateSettings,
   apiUpsertSavingsTransaction, apiDeleteSavingsTransaction,
   apiUpsertVariableTransaction, apiDeleteVariableTransaction,
-  apiUpsertLabel, apiDeleteLabel
+  apiUpsertLabel, apiDeleteLabel,
+  apiImportLabels
 } from '../services/api';
 
 const DEFAULT_SAVINGS_LABELS = [
@@ -119,11 +120,13 @@ export const useBudget = () => {
 
   const wrapCrud = (fn: (...args: any[]) => Promise<any>) => async (...args: any[]) => {
     try {
-      const { error: apiErr } = await fn(...args);
-      if (apiErr) throw apiErr;
+      const res = await fn(...args);
+      if (res && res.error) throw res.error;
       await loadData(true);
+      return res;
     } catch (err: any) {
       setError(err.message || "Erreur lors de l'opération");
+      return { error: err };
     }
   };
 
@@ -175,7 +178,8 @@ export const useBudget = () => {
       upsertVariableTransaction: wrapCrud(apiUpsertVariableTransaction),
       deleteVariableTransaction: wrapCrud(apiDeleteVariableTransaction),
       upsertLabel: wrapCrud(apiUpsertLabel),
-      deleteLabel: wrapCrud(apiDeleteLabel)
+      deleteLabel: wrapCrud(apiDeleteLabel),
+      importLabels: wrapCrud(apiImportLabels)
     }
   };
 };

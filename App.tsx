@@ -17,7 +17,7 @@ type ViewState = 'dashboard' | 'balances' | 'planner' | 'savings' | 'config';
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<ViewState>('dashboard');
-  const [activeConfigTab, setActiveConfigTab] = useState<ConfigTab>('family');
+  const [activeConfigTab, setActiveConfigTab] = useState<ConfigTab>('general');
   const [configured, setConfigured] = useState(isSupabaseConfigured());
   
   const { 
@@ -162,7 +162,7 @@ const App: React.FC = () => {
         )}
 
         {currentView === 'config' && (
-          <ConfigurationView configs={configs} incomeConfigs={incomeConfigs} categories={categories} people={people} accounts={accounts} settings={settings} savedLabels={savedLabels} activeTab={activeConfigTab} setActiveTab={setActiveConfigTab} onUpdateCategories={actions.upsertCategory as any} onUpsertPerson={actions.upsertPerson} onDeletePerson={actions.deletePerson} onUpsertAccount={actions.upsertAccount} onDeleteAccount={actions.deleteAccount} onUpdateSettings={actions.updateSettings} onResetConnection={handleResetConnection} onUpsertLabel={actions.upsertLabel} onDeleteLabel={actions.deleteLabel} onAddConfig={actions.upsertConfig} onUpdateConfig={actions.upsertConfig} onDeleteConfig={actions.deleteConfig} onAddIncome={actions.upsertIncome} onUpdateIncome={actions.upsertIncome} onDeleteIncome={actions.deleteIncome} />
+          <ConfigurationView configs={configs} incomeConfigs={incomeConfigs} categories={categories} people={people} accounts={accounts} settings={settings} savedLabels={savedLabels} activeTab={activeConfigTab} setActiveTab={setActiveConfigTab} onUpdateCategories={actions.upsertCategory as any} onUpsertPerson={actions.upsertPerson} onDeletePerson={actions.deletePerson} onUpsertAccount={actions.upsertAccount} onDeleteAccount={actions.deleteAccount} onUpdateSettings={actions.updateSettings} onResetConnection={handleResetConnection} onUpsertLabel={actions.upsertLabel} onDeleteLabel={actions.deleteLabel} onAddConfig={actions.upsertConfig} onUpdateConfig={actions.upsertConfig} onDeleteConfig={actions.deleteConfig} onAddIncome={actions.upsertIncome} onUpdateIncome={actions.upsertIncome} onDeleteIncome={actions.deleteIncome} onImportLabels={actions.importLabels} />
         )}
       </main>
     </div>

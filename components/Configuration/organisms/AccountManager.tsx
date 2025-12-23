@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Trash2, CreditCard, Save, PiggyBank, Users, Wallet } from 'lucide-react';
 import { Account, Person, AccountType } from '../../../types';
 import { ConfirmModal } from '../atoms/ConfirmModal';
@@ -29,6 +29,11 @@ export const AccountManager: React.FC<AccountManagerProps> = ({ accounts, people
     const [isJoint, setIsJoint] = useState(false);
     const [targetRatio, setTargetRatio] = useState<string>('');
     const [targetCap, setTargetCap] = useState<string>('');
+
+    // Tri alphabétique des comptes
+    const sortedAccounts = useMemo(() => {
+        return [...accounts].sort((a, b) => a.name.localeCompare(b.name));
+    }, [accounts]);
 
     const resetForm = () => {
         setName('');
@@ -209,11 +214,11 @@ export const AccountManager: React.FC<AccountManagerProps> = ({ accounts, people
             
             <DataList 
                 title="Vos Comptes" 
-                count={accounts.length} 
+                count={sortedAccounts.length} 
                 onAdd={handleAddClick} 
                 addButtonLabel="Ajouter un compte"
             >
-                {accounts.map(acc => {
+                {sortedAccounts.map(acc => {
                     const owner = people.find(p => p.id === acc.ownerId)?.name || 'Inconnu';
                     let iconNode = <CreditCard size={20} />;
                     if (acc.type === AccountType.SAVINGS) iconNode = <PiggyBank size={20} />;

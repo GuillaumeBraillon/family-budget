@@ -5,6 +5,8 @@ import { usePlanner } from '../../../hooks/usePlanner';
 import { BalancesHeader } from './components/BalancesHeader';
 import { BalancesTable, BalanceRow } from './components/BalancesTable';
 import { TransferSummaryCard } from './components/TransferSummaryCard';
+import { Info } from 'lucide-react';
+import { MobileTooltip } from '../../ui/MobileTooltip';
 
 interface BalancesViewProps {
   accounts: Account[];
@@ -28,7 +30,6 @@ export const BalancesView: React.FC<BalancesViewProps> = ({
   onUpdateAccount
 }) => {
   const currentDate = new Date();
-  // On récupère filteredWeeks pour avoir accès aux items de la semaine (y compris variables en attente)
   const { getStats, filteredWeeks } = usePlanner(configs, incomeConfigs, paidItems, variableTransactions, currentDate, '', settings);
   
   const getWeekFromDate = (date: Date): number => {
@@ -44,6 +45,9 @@ export const BalancesView: React.FC<BalancesViewProps> = ({
   // Budget alloué pour la période
   const budgetPeriodeGlobal = stats.periodLimit;
 
+  // Calcul des opérations récurrentes en attente (Courant + Retard)
+  const pendingRecurring = stats.fixedToPay + stats.fixedDelays;
+
   // 1. Identification des comptes
   const checkingAccounts = useMemo(() => accounts.filter(a => a.type === 'COURANT'), [accounts]);
   const jointAccount = checkingAccounts.find(a => a.isJoint);
@@ -56,97 +60,112 @@ export const BalancesView: React.FC<BalancesViewProps> = ({
   const currentWeekData = filteredWeeks.find(w => w.weekNumber === (filteredWeeks.some(w => w.weekNumber === activeWeek) ? activeWeek : 1));
   const weekItems = currentWeekData?.items || [];
 
-  // Calcul de la consommation variable totale (Payé + En attente)
-  // On exclut les virements internes et les extras
-  const totalVariableConsumed = weekItems
-    .filter(i => i.source === 'VARIABLE' && !i.isExtra && i.category !== 'Virement Interne')
-    .reduce((acc, i) => acc + i.amount, 0);
+  // Calcul de la consommation variable totale (Payé + En attente) pour déterminer le reste de l'enveloppe
+  const variableItems = weekItems.filter(i => i.source === 'VARIABLE' && !i.isExtra && i.category !== 'Virement Interne');
+  const varExpenses = variableItems.filter(i => i.type === 'EXPENSE').reduce((acc, i) => acc + i.amount, 0);
+  const varIncome = variableItems.filter(i => i.type === 'INCOME').reduce((acc, i) => acc + i.amount, 0);
 
-  // Dépenses en attente sur le compte joint (Récurrentes + Variables)
-  const pendingOnJoint = weekItems
-    .filter(i => !i.isPaid && i.accountId === jointAccount?.id && i.category !== 'Virement Interne')
-    .reduce((acc, i) => acc + i.amount, 0);
+  // Calculs pour le Header
+  const realConsumption = varExpenses - varIncome;
+  const distributableBalance = Math.max(0, budgetPeriodeGlobal - realConsumption);
+
+  const { jointRows, personalRows, totalPersonalRow, virLddsTotal } = useMemo(() => {
+    const jRows: BalanceRow[] = [];
+    const pRows: BalanceRow[] = [];
     
-  // Ajout des retards passés (Fixed Delays) qui sont forcément dus
-  const totalJointLiability = pendingOnJoint + stats.fixedDelays;
+    // --- LOGIQUE COMPTES PERSONNELS (Méthode Enveloppe) ---
+    // 1. Calcul du Reste à Vivre Réel (Budget - Consommation)
+    const remainingBudget = distributableBalance;
 
-  const { rows, virLddsTotal } = useMemo(() => {
-    const r: BalanceRow[] = [];
-    
-    // -- A. CALCUL DU RESTE À VIVRE RÉEL --
-    // Budget Période - (Ce qu'on a déjà dépensé ou engagé en variable)
-    const remainingBudget = Math.max(0, budgetPeriodeGlobal - totalVariableConsumed);
-
-    // -- B. MONTANT NET À DISTRIBUER (TOP-UP) --
-    // Reste à vivre - Ce qu'ils ont déjà sur leurs comptes
+    // 2. Calcul du Montant Net à Distribuer (Reste à vivre - Ce qu'ils ont déjà)
     const netDistributable = Math.max(0, remainingBudget - totalPersonalBalance);
 
     let totalTransfersToPersonals = 0;
 
-    // -- C. CALCUL POUR CHAQUE COMPTE PERSO --
+    // Calcul pour chaque compte perso
     for (const acc of personalAccounts) {
         const owner = people.find(p => p.id === acc.ownerId);
         
         let transferAmount = 0;
         
-        // Si le compte a un ratio défini
+        // Application du Ratio sur le Net à Distribuer
         if (acc.targetRatio !== undefined) {
-            // Le ratio s'applique sur le montant NET à distribuer (le complément)
             const shareOfDistributable = netDistributable * (acc.targetRatio / 100);
-            
-            // Application du plafond (Cap) si défini
             const cap = acc.targetCap !== undefined ? acc.targetCap : Infinity;
             transferAmount = Math.min(shareOfDistributable, cap);
         }
 
-        // Cible = Solde Actuel + Virement calculé
-        // (C'est ce qu'ils auront à la fin pour finir la période)
+        // Cible = Solde Actuel + Virement (Ce qu'ils devraient avoir au final)
         const targetBalance = acc.currentBalance + transferAmount;
 
+        // On cumule les virements positifs uniquement pour la synthèse
         if (transferAmount > 0) {
             totalTransfersToPersonals += transferAmount;
         }
 
-        r.push({
+        pRows.push({
             id: acc.id,
             name: acc.name,
             owner: owner?.name || 'Inconnu',
             balance: acc.currentBalance,
             target: targetBalance,
-            transfer: transferAmount,
-            isJoint: false
+            transfer: transferAmount, // Peut être négatif si surplus (mais ignoré pour le global)
+            isJoint: false,
+            ratio: acc.targetRatio,
+            cap: acc.targetCap
         });
     }
 
-    // -- D. LOGIQUE COMPTE JOINT --
+    // --- LOGIQUE COMPTE JOINT (Méthode Couverture de Dettes) ---
     let jointTransferNeeded = 0;
     let jointTarget = 0;
 
     if (jointAccount) {
         const owner = people.find(p => p.id === jointAccount.ownerId);
         
-        // Besoin Joint = (Toutes les dettes en attente) + (Argent à envoyer aux comptes persos)
-        const totalNeedJoint = totalJointLiability + totalTransfersToPersonals;
-        
-        // Virement nécessaire = Besoin - Solde Actuel
-        jointTransferNeeded = totalNeedJoint - jointAccount.currentBalance;
-        jointTarget = totalNeedJoint; // La cible est d'avoir exactement de quoi tout payer
+        // Besoin Joint = Somme de toutes les dettes en attente sur ce compte (Récurrentes + Variables)
+        const jointStats = stats.byAccount[jointAccount.id];
+        const pendingOnJoint = jointStats ? jointStats.remaining : 0;
 
-        r.unshift({
+        // Le compte joint doit couvrir ses dettes.
+        jointTarget = pendingOnJoint;
+        
+        // Virement nécessaire = Dettes - Solde Actuel
+        const gap = pendingOnJoint - jointAccount.currentBalance;
+        
+        // Si le solde couvre les dettes (gap < 0), le virement est 0 pour la synthèse
+        jointTransferNeeded = Math.max(0, gap);
+
+        jRows.push({
             id: jointAccount.id,
             name: jointAccount.name,
             owner: owner?.name || 'Commun',
             balance: jointAccount.currentBalance,
             target: jointTarget,
-            transfer: jointTransferNeeded,
+            transfer: gap, // On affiche le vrai gap même si négatif (excédent)
             isJoint: true
         });
     }
 
-    return { rows: r, virLddsTotal: jointTransferNeeded };
+    // --- LIGNE DE TOTAL POUR COMPTES PERSONNELS ---
+    const totalPersonalRow: BalanceRow = {
+        id: 'total',
+        name: 'TOTAL',
+        owner: '',
+        balance: pRows.reduce((sum, r) => sum + r.balance, 0),
+        target: pRows.reduce((sum, r) => sum + r.target, 0),
+        transfer: pRows.reduce((sum, r) => sum + r.transfer, 0),
+        isJoint: false
+    };
+
+    // --- SYNTHÈSE GLOBALE ---
+    // Le virement du LDDS doit couvrir le trou du Compte Joint + les Top-ups des comptes persos
+    const globalTransfer = jointTransferNeeded + totalTransfersToPersonals;
+
+    return { jointRows: jRows, personalRows: pRows, totalPersonalRow, virLddsTotal: globalTransfer };
   }, [
-    accounts, people, budgetPeriodeGlobal, totalVariableConsumed, 
-    totalJointLiability, totalPersonalBalance, jointAccount, personalAccounts
+    accounts, people, budgetPeriodeGlobal, varExpenses, varIncome, 
+    totalPersonalBalance, jointAccount, personalAccounts, stats, distributableBalance
   ]);
 
   const handleUpdateBalance = (id: string, newBalance: number) => {
@@ -156,17 +175,113 @@ export const BalancesView: React.FC<BalancesViewProps> = ({
     }
   };
 
+  // Récupération de la dette totale pour l'affichage header
+  const totalPendingHeader = checkingAccounts.reduce((sum, acc) => {
+      return sum + (stats.byAccount[acc.id]?.remaining || 0);
+  }, 0);
+
+  // Helpers pour l'affichage (arrondis)
+  const roundTo0 = (amount: number) => Math.round(amount);
+  const roundTo5 = (amount: number) => Math.round(amount / 5) * 5;
+
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       <BalancesHeader 
-        budgetPeriodeGlobal={budgetPeriodeGlobal}
-        resteAPayer={totalJointLiability}
-        totalPersonalBalance={totalPersonalBalance}
+        resteAPayer={totalPendingHeader}
+        pendingRecurring={pendingRecurring}
       />
 
+      {jointRows.length > 0 && (
+          <BalancesTable 
+            title="Compte Pivot"
+            rows={jointRows} 
+            onUpdateBalance={handleUpdateBalance} 
+          />
+      )}
+
+      {/* SECTION RÉPARTITION BUDGÉTAIRE */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between hover:border-indigo-200 transition-colors">
+              <div className="flex justify-between items-start mb-2">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide leading-tight pr-1">
+                      Enveloppe Total
+                  </span>
+                  <div className="-mt-1 -mr-1">
+                      <MobileTooltip 
+                          text="Montant du budget variable alloué pour la période en cours." 
+                          icon={<Info size={14} className="text-slate-300 hover:text-indigo-500"/>}
+                          widthClass="w-48"
+                      />
+                  </div>
+              </div>
+              <div>
+                  <div className="text-xl font-black text-indigo-600">
+                      {roundTo5(budgetPeriodeGlobal)} €
+                  </div>
+                  {Math.abs(roundTo5(budgetPeriodeGlobal) - budgetPeriodeGlobal) > 0.01 && (
+                      <div className="text-[10px] font-bold text-slate-300">
+                          {budgetPeriodeGlobal.toFixed(2)} €
+                      </div>
+                  )}
+              </div>
+          </div>
+
+          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between hover:border-indigo-200 transition-colors">
+              <div className="flex justify-between items-start mb-2">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide leading-tight pr-1">
+                      Deja utilisé
+                  </span>
+                  <div className="-mt-1 -mr-1">
+                      <MobileTooltip 
+                          text="Dépenses variables standards nettes (Dépenses - Revenus variables) sur la période." 
+                          icon={<Info size={14} className="text-slate-300 hover:text-indigo-500"/>}
+                          widthClass="w-48"
+                      />
+                  </div>
+              </div>
+              <div>
+                  <div className="text-xl font-black text-rose-600">
+                      {-roundTo0(realConsumption)} €
+                  </div>
+                  {Math.abs(roundTo0(realConsumption) - realConsumption) > 0.01 && (
+                      <div className="text-[10px] font-bold text-slate-300">
+                          {(-realConsumption).toFixed(2)} €
+                      </div>
+                  )}
+              </div>
+          </div>
+
+          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between hover:border-indigo-200 transition-colors">
+              <div className="flex justify-between items-start mb-2">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide leading-tight pr-1">
+                      Reste à répartir
+                  </span>
+                  <div className="-mt-1 -mr-1">
+                      <MobileTooltip 
+                          text="Budget Période - Conso. Réelle. C'est le montant théorique disponible pour recharger les comptes persos." 
+                          icon={<Info size={14} className="text-slate-300 hover:text-indigo-500"/>}
+                          widthClass="w-48"
+                      />
+                  </div>
+              </div>
+              <div>
+                  <div className={`text-xl font-black ${distributableBalance >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                      {roundTo5(distributableBalance)} €
+                  </div>
+                  {Math.abs(roundTo5(distributableBalance) - distributableBalance) > 0.01 && (
+                      <div className="text-[10px] font-bold text-slate-300">
+                          {distributableBalance.toFixed(2)} €
+                      </div>
+                  )}
+              </div>
+          </div>
+      </div>
+
       <BalancesTable 
-        rows={rows} 
+        title="Comptes Courants"
+        rows={personalRows} 
         onUpdateBalance={handleUpdateBalance} 
+        totalRow={totalPersonalRow}
       />
 
       <TransferSummaryCard amount={virLddsTotal} />

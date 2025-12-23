@@ -65,6 +65,44 @@ export const apiUpsertLabel = async (label: SavedLabel) =>
 export const apiDeleteLabel = async (id: string) => 
   supabase.from('saved_labels').delete().eq('id', id);
 
+export const apiImportLabels = async () => {
+  // 1. Récupérer les libellés uniques de paid_items commençant par 'CB %'
+  const { data: items, error: fetchError } = await supabase
+      .from('paid_items')
+      .select('label')
+      .like('label', 'CB %');
+
+  if (fetchError) return { error: fetchError };
+
+  // 2. Récupérer les libellés déjà existants pour éviter les erreurs ou doublons
+  const { data: existing, error: existError } = await supabase
+      .from('saved_labels')
+      .select('name');
+
+  if (existError) return { error: existError };
+
+  const existingSet = new Set(existing?.map(e => e.name));
+  const distinctLabels = [...new Set(items?.map(i => i.label))];
+
+  // 3. Filtrer ceux qui n'existent pas encore
+  const toInsert = distinctLabels
+      .filter(l => l && !existingSet.has(l))
+      .map(l => ({
+          id: `lbl_imp_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+          name: l,
+          type: 'COURANT'
+      }));
+
+  if (toInsert.length === 0) return { count: 0 };
+
+  // 4. Insérer les nouveaux
+  const { error: insertError } = await supabase
+      .from('saved_labels')
+      .insert(toInsert);
+
+  return { error: insertError, count: toInsert.length };
+};
+
 /**
  * Opérations sur les Paramètres (Settings)
  */
