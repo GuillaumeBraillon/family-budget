@@ -49,6 +49,7 @@ export interface Transfer {
   amount: number;
   sourceAccountId: string;
   destinationAccountId: string;
+  createdAt?: string;
 }
 
 export interface SavingsTransaction {

@@ -82,7 +82,8 @@ export const mapDbTransfer = (t: any): Transfer => ({
   label: t.label,
   amount: Number(t.amount),
   sourceAccountId: t.source_account_id,
-  destinationAccountId: t.destination_account_id
+  destinationAccountId: t.destination_account_id,
+  createdAt: t.created_at
 });
 
 export const mapDbVariableTransaction = (t: any): VariableTransaction => ({

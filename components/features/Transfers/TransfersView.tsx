@@ -55,7 +55,13 @@ export const TransfersView: React.FC<TransfersViewProps> = ({
         if (selectedMotif) return t.label === selectedMotif;
         return true;
     })
-    .sort((a, b) => b.date.localeCompare(a.date)); // Plus récent en premier
+    .sort((a, b) => {
+        // Tri principal par Date (Récent -> Ancien)
+        const dateDiff = b.date.localeCompare(a.date);
+        if (dateDiff !== 0) return dateDiff;
+        // Tri secondaire par Heure de création (Récent -> Ancien)
+        return (b.createdAt || '').localeCompare(a.createdAt || '');
+    });
 
     // Extraction des motifs pour le filtre
     transfers.forEach(t => {
@@ -95,7 +101,6 @@ export const TransfersView: React.FC<TransfersViewProps> = ({
 
   const handleEdit = (t: Transfer) => {
       // Mapping Transfer -> VariableTransaction pour réutiliser le formulaire
-      // (On triche un peu sur les types pour éviter de dupliquer le formulaire)
       const mockTx: any = {
           id: t.id,
           date: t.date,

@@ -21,10 +21,17 @@ export const SavingsAccountView: React.FC<SavingsAccountViewProps> = ({ account,
 
   // Conversion Transfer -> HistoryItem avec signe +/-
   const history = useMemo(() => {
-    // 1. Trier chronologiquement croissant pour le calcul du solde
+    // 1. Trier chronologiquement croissant pour le calcul du solde (Ancien -> Récent)
     const sorted = [...transfers].sort((a, b) => {
         const timeDiff = new Date(a.date).getTime() - new Date(b.date).getTime();
         if (timeDiff !== 0) return timeDiff;
+        
+        // Tri secondaire par createdAt croissant pour l'ordre d'insertion
+        if (a.createdAt && b.createdAt) {
+            return a.createdAt.localeCompare(b.createdAt);
+        }
+        
+        // Fallback ID si pas de createdAt (aléatoire mais stable)
         return a.id.localeCompare(b.id);
     });
     
@@ -44,7 +51,7 @@ export const SavingsAccountView: React.FC<SavingsAccountViewProps> = ({ account,
       };
     });
 
-    // 2. Inverser pour affichage décroissant
+    // 2. Inverser pour affichage décroissant (Récent -> Ancien)
     return withBalance.reverse();
   }, [transfers, account.id]);
 
