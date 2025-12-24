@@ -1,7 +1,7 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Save, TrendingUp, TrendingDown, Calendar, Trash2, Clock, CheckCircle2, Star, MessageSquare, ArrowRightLeft, ArrowDown } from 'lucide-react';
-import { VariableTransaction, Account, CategoryDef, AccountType, Person, SavingsTransaction } from '../../../../types';
+import { VariableTransaction, Account, CategoryDef, AccountType, Person, SavingsTransaction, SavedLabel } from '../../../../types';
 import { CategorySelector } from '../../../ui/molecules/CategorySelector';
 import { TextInput, AmountInput, SearchableTextInput } from '../../../ui/molecules/FormInputs';
 import { AccountSelector, BeneficiarySelector } from '../../../ui/molecules/SmartSelectors';
@@ -19,11 +19,12 @@ interface VariableTransactionFormProps {
   onUpsertSavings?: (t: SavingsTransaction) => void;
   defaultDate: string;
   labelsSuggestions?: string[];
+  savedLabels?: SavedLabel[];
   editingTransaction?: VariableTransaction | null;
 }
 
 export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = ({ 
-  isOpen, onClose, accounts, categories, people, onAddTransaction, onDeleteTransaction, onUpsertSavings, defaultDate, labelsSuggestions = [], editingTransaction
+  isOpen, onClose, accounts, categories, people, onAddTransaction, onDeleteTransaction, onUpsertSavings, defaultDate, labelsSuggestions = [], savedLabels = [], editingTransaction
 }) => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   
@@ -46,6 +47,22 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
   
   const defaultBeneficiary = people.find(p => !p.isChild)?.id || people[0]?.id || '';
   const [beneficiaryId, setBeneficiaryId] = useState(defaultBeneficiary);
+
+  const isExpense = type === 'EXPENSE';
+
+  // Calcul des suggestions dynamiques
+  const currentSuggestions = useMemo(() => {
+    if (savedLabels.length > 0) {
+        // Si on a la liste d'objets riches, on filtre par type de compte et type de flux
+        return savedLabels
+            .filter(l => l.type === AccountType.CHECKING && l.isExpense === isExpense)
+            .map(l => l.name);
+    } else {
+        // Fallback vers la liste simple (legacy ou si savedLabels n'est pas passé)
+        // Dans ce cas, on ne peut pas distinguer dépense/revenu facilement, on rend tout.
+        return labelsSuggestions;
+    }
+  }, [savedLabels, labelsSuggestions, isExpense]);
 
   useEffect(() => {
     if (isOpen) {
@@ -170,7 +187,6 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
     }
   };
 
-  const isExpense = type === 'EXPENSE';
   const themeColor = mode === 'TRANSFER' ? 'indigo' : (isExpense ? 'indigo' : 'emerald');
 
   if (showDeleteConfirm) {
@@ -234,7 +250,7 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
                     onChange={e => setLabel(e.target.value)}
                     onSelectSuggestion={setLabel}
                     placeholder={isExpense ? "Ex: Courses Carrefour..." : "Ex: Vente Vinted..."}
-                    suggestions={isExpense ? labelsSuggestions : []}
+                    suggestions={currentSuggestions}
                     required
                     autoFocus={!editingTransaction}
                 />

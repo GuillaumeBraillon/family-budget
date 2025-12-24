@@ -1,7 +1,7 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Modal } from '../ui/Modal';
-import { SavingsTransaction, TransactionType } from '../../types';
+import { SavingsTransaction, TransactionType, SavedLabel, AccountType } from '../../types';
 import { Trash2 } from 'lucide-react';
 import { ConfirmModal } from '../Configuration/atoms/ConfirmModal';
 
@@ -11,8 +11,9 @@ interface EditTransactionModalProps {
   transaction?: SavingsTransaction | null;
   accountId: string;
   suggestions?: string[];
+  savedLabels?: SavedLabel[];
   onSave: (t: SavingsTransaction) => void;
-  onDelete?: (id: string) => void; // Nouveau prop
+  onDelete?: (id: string) => void; 
 }
 
 const DEFAULT_LABELS = [
@@ -24,14 +25,23 @@ const DEFAULT_LABELS = [
   "Régularisation"
 ];
 
-export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({ isOpen, onClose, transaction, accountId, suggestions, onSave, onDelete }) => {
+export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({ isOpen, onClose, transaction, accountId, suggestions, savedLabels, onSave, onDelete }) => {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [label, setLabel] = useState('');
   const [amount, setAmount] = useState(0);
   const [type, setType] = useState<TransactionType>(TransactionType.CREDIT);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  const labelsToUse = (suggestions && suggestions.length > 0) ? suggestions : DEFAULT_LABELS;
+  // Filtrage dynamique des suggestions en fonction du sens du mouvement (Crédit/Débit)
+  const labelsToUse = useMemo(() => {
+      if (savedLabels && savedLabels.length > 0) {
+          const isExpense = type === TransactionType.DEBIT;
+          return savedLabels
+            .filter(l => l.type === AccountType.SAVINGS && l.isExpense === isExpense)
+            .map(l => l.name);
+      }
+      return (suggestions && suggestions.length > 0) ? suggestions : DEFAULT_LABELS;
+  }, [savedLabels, suggestions, type]);
 
   useEffect(() => {
     if (transaction) {

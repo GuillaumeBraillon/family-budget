@@ -12,7 +12,8 @@ import {
   apiUpsertSavingsTransaction, apiDeleteSavingsTransaction,
   apiUpsertVariableTransaction, apiDeleteVariableTransaction,
   apiUpsertLabel, apiDeleteLabel,
-  apiImportLabels
+  apiImportLabels,
+  apiImportVirLabels
 } from '../services/api';
 import { isSupabaseConfigured } from '../services/supabase';
 
@@ -186,7 +187,8 @@ export const useBudget = () => {
       deleteVariableTransaction: wrapCrud(apiDeleteVariableTransaction),
       upsertLabel: wrapCrud(apiUpsertLabel),
       deleteLabel: wrapCrud(apiDeleteLabel),
-      importLabels: wrapCrud(apiImportLabels)
+      importLabels: wrapCrud(apiImportLabels),
+      importVirLabels: wrapCrud(apiImportVirLabels)
     }
   };
 };

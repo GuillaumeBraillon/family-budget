@@ -18,7 +18,8 @@ export const useLabelManager = (
     const newLabel: SavedLabel = {
       id: `lbl_${Date.now()}`,
       name: 'Nouveau libellé',
-      type: type
+      type: type,
+      isExpense: true // Default to true for new labels via this hook
     };
     onUpsertLabel(newLabel);
     setEditingId(newLabel.id);

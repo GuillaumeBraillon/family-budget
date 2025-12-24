@@ -2,7 +2,7 @@
 import React, { useState, useMemo } from 'react';
 import { usePlanner } from '../../../hooks/usePlanner';
 import { usePlannerUI } from '../../../hooks/usePlannerUI';
-import { ExpenseConfig, IncomeConfig, Account, Person, PaidItemDetails, PlannedItem, AppSettings, VariableTransaction, OperationFilters, SavingsTransaction } from '../../../types';
+import { ExpenseConfig, IncomeConfig, Account, Person, PaidItemDetails, PlannedItem, AppSettings, VariableTransaction, OperationFilters, SavingsTransaction, SavedLabel } from '../../../types';
 
 // Imports UI Atomic (Generic)
 import { MonthNavigator } from '../../ui/molecules/MonthNavigator';
@@ -25,6 +25,7 @@ interface OperationsViewProps {
   paidItems: Record<string, PaidItemDetails>; 
   settings: AppSettings;
   categories: any[];
+  savedLabels?: SavedLabel[]; // Liste complète des libellés
   onTogglePaid: (details: PaidItemDetails | null, instanceId: string) => void;
   onUpsertVariable: (t: VariableTransaction) => void;
   onDeleteVariable: (id: string) => void;
@@ -32,7 +33,7 @@ interface OperationsViewProps {
 }
 
 export const OperationsView: React.FC<OperationsViewProps> = ({ 
-  configs, incomeConfigs, variableTransactions, accounts, people, paidItems, settings, categories,
+  configs, incomeConfigs, variableTransactions, accounts, people, paidItems, settings, categories, savedLabels,
   onTogglePaid, onUpsertVariable, onDeleteVariable, onUpsertSavings
 }) => {
   const ui = usePlannerUI();
@@ -108,7 +109,20 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
           <OperationsList items={currentItems} monthShort={monthShort} people={people} accounts={accounts} currentDate={ui.currentDate} onItemClick={handleItemClick} onAddClick={() => { setEditingVar(null); setIsVarFormOpen(true); }} />
       </div>
       <PlannerModals confirmModal={ui.confirmModal} uncheckModal={ui.uncheckModal} accounts={accounts} onTogglePaid={onTogglePaid} onCloseConfirm={ui.closeConfirmModal} onCloseUncheck={ui.closeUncheckModal} setConfirmModal={ui.setConfirmModal} />
-      <VariableTransactionForm isOpen={isVarFormOpen} onClose={() => setIsVarFormOpen(false)} accounts={accounts} categories={categories} people={people} onAddTransaction={onUpsertVariable} onDeleteTransaction={onDeleteVariable} defaultDate={defaultVarDate} labelsSuggestions={settings.variable_labels} editingTransaction={editingVar} onUpsertSavings={onUpsertSavings} />
+      <VariableTransactionForm 
+        isOpen={isVarFormOpen} 
+        onClose={() => setIsVarFormOpen(false)} 
+        accounts={accounts} 
+        categories={categories} 
+        people={people} 
+        onAddTransaction={onUpsertVariable} 
+        onDeleteTransaction={onDeleteVariable} 
+        defaultDate={defaultVarDate} 
+        savedLabels={savedLabels} // Liste complète
+        labelsSuggestions={settings.variable_labels} // Fallback string[]
+        editingTransaction={editingVar} 
+        onUpsertSavings={onUpsertSavings} 
+      />
     </div>
   );
 };

@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo } from 'react';
-import { Account, AccountType, SavingsTransaction, AppSettings } from '../../../types';
+import { Account, AccountType, SavingsTransaction, AppSettings, SavedLabel } from '../../../types';
 import { PiggyBank, PlusCircle } from 'lucide-react';
 import { InfoBox } from '../../ui/InfoBox';
 import { SavingsAccountView } from '../../Savings/SavingsAccountView';
@@ -9,13 +9,14 @@ interface SavingsViewProps {
   accounts: Account[];
   savingsTransactions: SavingsTransaction[];
   settings: AppSettings;
+  savedLabels?: SavedLabel[];
   onUpsertTransaction: (t: SavingsTransaction) => void;
   onDeleteTransaction: (id: string) => void;
   onNavigateToConfig: () => void;
 }
 
 export const SavingsView: React.FC<SavingsViewProps> = ({ 
-  accounts, savingsTransactions, settings, onUpsertTransaction, onDeleteTransaction, onNavigateToConfig
+  accounts, savingsTransactions, settings, savedLabels, onUpsertTransaction, onDeleteTransaction, onNavigateToConfig
 }) => {
   const savingsAccounts = useMemo(() => accounts.filter(a => a.type === AccountType.SAVINGS), [accounts]);
   const [activeAccountId, setActiveAccountId] = useState<string>(savingsAccounts[0]?.id || '');
@@ -79,7 +80,8 @@ export const SavingsView: React.FC<SavingsViewProps> = ({
              <SavingsAccountView 
                 account={activeAccount}
                 transactions={activeTransactions}
-                availableLabels={settings.savings_labels}
+                availableLabels={settings.savings_labels} // Fallback string[]
+                savedLabels={savedLabels} // Liste riche
                 onAddTransaction={onUpsertTransaction}
                 onDeleteTransaction={onDeleteTransaction}
              />

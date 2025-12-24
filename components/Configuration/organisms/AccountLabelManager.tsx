@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Trash2, Save, Tag, DownloadCloud, Search, Check, Info } from 'lucide-react';
+import { Trash2, Save, Tag, DownloadCloud, Search, Check, Info, TrendingDown, TrendingUp } from 'lucide-react';
 import { SavedLabel, AccountType } from '../../../types';
 import { ConfirmModal } from '../atoms/ConfirmModal';
 import { LabelTypeSelector } from '../molecules/LabelTypeSelector';
@@ -14,10 +14,13 @@ interface AccountLabelManagerProps {
     onUpsertLabel: (l: SavedLabel) => void;
     onDeleteLabel: (id: string) => void;
     onImportLabels?: () => Promise<any> | void;
+    onImportVirLabels?: () => Promise<any> | void;
 }
 
-export const AccountLabelManager: React.FC<AccountLabelManagerProps> = ({ labels, onUpsertLabel, onDeleteLabel, onImportLabels }) => {
+export const AccountLabelManager: React.FC<AccountLabelManagerProps> = ({ labels, onUpsertLabel, onDeleteLabel, onImportLabels, onImportVirLabels }) => {
     const [type, setType] = useState<AccountType>(AccountType.CHECKING);
+    const [isExpenseMode, setIsExpenseMode] = useState(true);
+    
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingLabel, setEditingLabel] = useState<SavedLabel | null>(null);
     const [deleteConfirm, setDeleteConfirm] = useState<{ id: string, name: string } | null>(null);
@@ -28,7 +31,7 @@ export const AccountLabelManager: React.FC<AccountLabelManagerProps> = ({ labels
     const [importStatus, setImportStatus] = useState<{ type: 'success' | 'info' | 'error', message: string } | null>(null);
 
     const filteredList = labels
-        .filter(l => l.type === type)
+        .filter(l => l.type === type && l.isExpense === isExpenseMode)
         .filter(l => l.name.toLowerCase().includes(searchQuery.toLowerCase()))
         .sort((a, b) => a.name.localeCompare(b.name));
         
@@ -64,7 +67,8 @@ export const AccountLabelManager: React.FC<AccountLabelManagerProps> = ({ labels
         const label: SavedLabel = {
             id: editingLabel ? editingLabel.id : newId,
             name: name.trim(),
-            type: type
+            type: type,
+            isExpense: isExpenseMode
         };
         onUpsertLabel(label);
         resetForm();
@@ -77,22 +81,28 @@ export const AccountLabelManager: React.FC<AccountLabelManagerProps> = ({ labels
         }
     };
 
-    const handleImportClick = async () => {
-        if (!onImportLabels) return;
-        
-        const result = await onImportLabels();
+    const runImport = async (importFn: () => Promise<any> | void, sourceName: string) => {
+        const result = await importFn();
         
         if (result && typeof result.count === 'number') {
             if (result.count > 0) {
-                setImportStatus({ type: 'success', message: `${result.count} libellé${result.count > 1 ? 's' : ''} importé${result.count > 1 ? 's' : ''}.` });
+                setImportStatus({ type: 'success', message: `${result.count} libellé${result.count > 1 ? 's' : ''} (${sourceName}) importé${result.count > 1 ? 's' : ''}.` });
             } else {
-                setImportStatus({ type: 'info', message: "Aucun nouveau libellé à importer." });
+                setImportStatus({ type: 'info', message: `Aucun nouveau libellé ${sourceName} à importer.` });
             }
         } else if (result && result.error) {
              setImportStatus({ type: 'error', message: "Erreur lors de l'import." });
         }
 
         setTimeout(() => setImportStatus(null), 4000);
+    };
+
+    const handleImportCbClick = () => {
+        if (onImportLabels) runImport(onImportLabels, 'CB');
+    };
+
+    const handleImportVirClick = () => {
+        if (onImportVirLabels) runImport(onImportVirLabels, 'VIR');
     };
 
     return (
@@ -142,11 +152,29 @@ export const AccountLabelManager: React.FC<AccountLabelManagerProps> = ({ labels
 
              <LabelTypeSelector type={type} onChange={setType} />
 
-             {/* Bouton d'import spécifique aux comptes courants */}
-             {!isSavings && onImportLabels && (
-                <div className="flex justify-end mb-2">
+             {/* Selecteur de Flux (Dépense / Revenu) */}
+             <div className="flex justify-center mb-4">
+                <div className="flex bg-slate-100 p-1 rounded-lg">
+                    <button
+                        onClick={() => setIsExpenseMode(true)}
+                        className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all flex items-center gap-2 ${isExpenseMode ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                    >
+                        <TrendingDown size={14}/> Dépenses (Débits)
+                    </button>
+                    <button
+                        onClick={() => setIsExpenseMode(false)}
+                        className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all flex items-center gap-2 ${!isExpenseMode ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                    >
+                        <TrendingUp size={14}/> Revenus (Crédits)
+                    </button>
+                </div>
+             </div>
+
+             {/* Boutons d'import spécifiques aux comptes courants */}
+             {!isSavings && (
+                <div className="flex flex-col sm:flex-row justify-end items-end sm:items-center gap-2 mb-2">
                     {importStatus && (
-                        <div className={`mr-2 px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-2 animate-in fade-in slide-in-from-right-2 ${
+                        <div className={`px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-2 animate-in fade-in slide-in-from-right-2 ${
                             importStatus.type === 'success' ? 'bg-emerald-100 text-emerald-700' : 
                             importStatus.type === 'info' ? 'bg-slate-100 text-slate-600' : 'bg-red-100 text-red-700'
                         }`}>
@@ -155,13 +183,26 @@ export const AccountLabelManager: React.FC<AccountLabelManagerProps> = ({ labels
                             {importStatus.message}
                         </div>
                     )}
-                    <button 
-                        onClick={handleImportClick}
-                        className="text-xs font-medium text-slate-500 hover:text-indigo-600 flex items-center gap-1.5 transition-colors bg-white px-3 py-2 rounded-lg border border-slate-200 shadow-sm hover:border-indigo-200 active:scale-95"
-                        title="Importer les libellés 'CB %' depuis l'historique"
-                    >
-                        <DownloadCloud size={14} /> Importer depuis l'historique (CB)
-                    </button>
+                    <div className="flex gap-2">
+                        {isExpenseMode && onImportLabels && (
+                            <button 
+                                onClick={handleImportCbClick}
+                                className="text-xs font-medium text-slate-500 hover:text-indigo-600 flex items-center gap-1.5 transition-colors bg-white px-3 py-2 rounded-lg border border-slate-200 shadow-sm hover:border-indigo-200 active:scale-95"
+                                title="Importer les libellés 'CB %' depuis l'historique"
+                            >
+                                <DownloadCloud size={14} /> Import (CB)
+                            </button>
+                        )}
+                        {!isExpenseMode && onImportVirLabels && (
+                            <button 
+                                onClick={handleImportVirClick}
+                                className="text-xs font-medium text-slate-500 hover:text-indigo-600 flex items-center gap-1.5 transition-colors bg-white px-3 py-2 rounded-lg border border-slate-200 shadow-sm hover:border-indigo-200 active:scale-95"
+                                title="Importer les libellés 'VIR %' depuis l'historique"
+                            >
+                                <DownloadCloud size={14} /> Import (VIR)
+                            </button>
+                        )}
+                    </div>
                 </div>
              )}
 
@@ -178,7 +219,7 @@ export const AccountLabelManager: React.FC<AccountLabelManagerProps> = ({ labels
              </div>
 
             <DataList 
-                title={isSavings ? "Libellés Épargne" : "Libellés Courants"}
+                title={`${isSavings ? "Epargne" : "Courant"} - ${isExpenseMode ? "Débits" : "Crédits"}`}
                 count={filteredList.length} 
                 onAdd={handleAddClick} 
                 addButtonLabel="Ajouter un libellé"
@@ -187,7 +228,7 @@ export const AccountLabelManager: React.FC<AccountLabelManagerProps> = ({ labels
                 {filteredList.map(label => (
                     <DataListRow 
                         key={label.id}
-                        icon={<Tag size={20} className={isSavings ? "text-emerald-500" : "text-indigo-500"} />}
+                        icon={<Tag size={20} className={isExpenseMode ? (isSavings ? "text-red-500" : "text-indigo-500") : "text-emerald-500"} />}
                         label={label.name}
                         onClick={() => handleEditClick(label)}
                     />

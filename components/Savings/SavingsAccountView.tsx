@@ -1,6 +1,6 @@
 
 import React, { useMemo, useState } from 'react';
-import { Account, SavingsTransaction } from '../../types';
+import { Account, SavingsTransaction, SavedLabel } from '../../types';
 import { EditTransactionModal } from './EditTransactionModal';
 import { SavingsKPIs } from './molecules/SavingsKPIs';
 import { SavingsHistoryTable } from './molecules/SavingsHistoryTable';
@@ -9,11 +9,12 @@ interface SavingsAccountViewProps {
   account: Account;
   transactions: SavingsTransaction[];
   availableLabels?: string[];
+  savedLabels?: SavedLabel[];
   onAddTransaction: (t: SavingsTransaction) => void;
   onDeleteTransaction: (id: string) => void;
 }
 
-export const SavingsAccountView: React.FC<SavingsAccountViewProps> = ({ account, transactions, availableLabels, onAddTransaction, onDeleteTransaction }) => {
+export const SavingsAccountView: React.FC<SavingsAccountViewProps> = ({ account, transactions, availableLabels, savedLabels, onAddTransaction, onDeleteTransaction }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTx, setEditingTx] = useState<SavingsTransaction | null>(null);
 
@@ -96,6 +97,7 @@ export const SavingsAccountView: React.FC<SavingsAccountViewProps> = ({ account,
         transaction={editingTx}
         accountId={account.id}
         suggestions={availableLabels}
+        savedLabels={savedLabels}
         onSave={onAddTransaction}
         onDelete={onDeleteTransaction}
       />

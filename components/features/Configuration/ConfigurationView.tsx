@@ -39,6 +39,7 @@ interface ConfigurationViewProps {
   onUpdateIncome: (i: IncomeConfig) => void;
   onDeleteIncome: (id: string) => void;
   onImportLabels: () => Promise<any> | void;
+  onImportVirLabels: () => Promise<any> | void;
 }
 
 export const ConfigurationView: React.FC<ConfigurationViewProps> = ({ 
@@ -52,7 +53,7 @@ export const ConfigurationView: React.FC<ConfigurationViewProps> = ({
   onUpsertLabel, onDeleteLabel,
   onAddConfig, onUpdateConfig, onDeleteConfig,
   onAddIncome, onUpdateIncome, onDeleteIncome,
-  onImportLabels
+  onImportLabels, onImportVirLabels
 }) => {
   return (
     <div className="space-y-6">
@@ -127,6 +128,7 @@ export const ConfigurationView: React.FC<ConfigurationViewProps> = ({
                   onUpsertLabel={onUpsertLabel}
                   onDeleteLabel={onDeleteLabel}
                   onImportLabels={onImportLabels}
+                  onImportVirLabels={onImportVirLabels}
               />
             </>
         )}

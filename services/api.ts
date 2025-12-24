@@ -13,7 +13,8 @@ import {
   apiUpsertSavingsTransaction, apiDeleteSavingsTransaction,
   apiUpsertVariableTransaction, apiDeleteVariableTransaction,
   apiUpsertLabel, apiDeleteLabel,
-  apiImportLabels
+  apiImportLabels,
+  apiImportVirLabels
 } from './apiCrud';
 
 /**
@@ -116,5 +117,6 @@ export {
   apiUpsertSavingsTransaction, apiDeleteSavingsTransaction,
   apiUpsertVariableTransaction, apiDeleteVariableTransaction,
   apiUpsertLabel, apiDeleteLabel,
-  apiImportLabels
+  apiImportLabels,
+  apiImportVirLabels
 };

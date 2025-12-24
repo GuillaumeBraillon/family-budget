@@ -29,7 +29,8 @@ export const mapDbCategory = (c: any): CategoryDef => ({
 export const mapDbSavedLabel = (l: any): SavedLabel => ({
   id: l.id,
   name: l.name,
-  type: l.type
+  type: l.type,
+  isExpense: l.is_expense !== false // Default true si null/undefined pour rétrocompatibilité
 });
 
 export const mapDbExpenseConfig = (c: any): ExpenseConfig => ({

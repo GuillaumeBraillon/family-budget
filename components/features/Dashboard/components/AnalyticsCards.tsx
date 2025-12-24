@@ -1,8 +1,7 @@
 
-import React, { useState } from 'react';
-import { TrendingUp, TrendingDown, AlertTriangle, PiggyBank, ArrowUpRight, Wallet, PieChart as PieIcon, BarChart3, Star, CreditCard } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { TrendingUp, TrendingDown, AlertTriangle, ArrowUpRight, Wallet, PieChart as PieIcon, Star } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../ui/Card';
-import { MobileTooltip } from '../../../ui/MobileTooltip';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, Tooltip } from 'recharts';
 
 // --- TYPES ---
@@ -81,6 +80,13 @@ export const HealthCard: React.FC<AnalyticsProps> = ({ data, onNavigate }) => {
 
 // --- CARTE 2: FLUX DE TRÉSORERIE ---
 export const CashFlowCard: React.FC<AnalyticsProps> = ({ data, onNavigate }) => {
+    // Hack pour éviter le rendu Recharts avant que le DOM ne soit prêt
+    const [ready, setReady] = useState(false);
+    useEffect(() => {
+        const timer = requestAnimationFrame(() => setReady(true));
+        return () => cancelAnimationFrame(timer);
+    }, []);
+
     const chartData = [
         { name: 'Entrées', value: data.income, fill: '#10b981' },
         { name: 'Sorties', value: data.expenses, fill: '#ef4444' },
@@ -97,18 +103,20 @@ export const CashFlowCard: React.FC<AnalyticsProps> = ({ data, onNavigate }) => 
                 </CardTitle>
             </CardHeader>
             <CardContent className="flex-1 pt-0">
-                <div className="h-32 mb-4">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={chartData} layout="vertical" barSize={20}>
-                            <XAxis type="number" hide />
-                            <Tooltip 
-                                cursor={{fill: 'transparent'}} 
-                                contentStyle={{ borderRadius: '8px', fontSize: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                                formatter={(value: number) => [`${value.toFixed(0)} €`, '']}
-                            />
-                            <Bar dataKey="value" radius={[0, 4, 4, 0]} background={{ fill: '#f1f5f9' }} />
-                        </BarChart>
-                    </ResponsiveContainer>
+                <div className="h-32 mb-4 w-full relative min-h-[128px]">
+                    {ready && (
+                        <ResponsiveContainer width="99%" height="100%" minWidth={10}>
+                            <BarChart data={chartData} layout="vertical" barSize={20}>
+                                <XAxis type="number" hide />
+                                <Tooltip 
+                                    cursor={{fill: 'transparent'}} 
+                                    contentStyle={{ borderRadius: '8px', fontSize: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                                    formatter={(value: number) => [`${value.toFixed(0)} €`, '']}
+                                />
+                                <Bar dataKey="value" radius={[0, 4, 4, 0]} background={{ fill: '#f1f5f9' }} />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    )}
                 </div>
                 
                 <div className="space-y-2">
@@ -169,6 +177,12 @@ export const ExtrasCard: React.FC<AnalyticsProps> = ({ data, onNavigate }) => {
 // --- CARTE 4: TOP DÉPENSES ---
 export const TopExpensesCard: React.FC<AnalyticsProps> = ({ data, onNavigate }) => {
     const [mode, setMode] = useState<'CAT' | 'BEN'>('CAT');
+    // Hack pour éviter le rendu Recharts avant que le DOM ne soit prêt
+    const [ready, setReady] = useState(false);
+    useEffect(() => {
+        const timer = requestAnimationFrame(() => setReady(true));
+        return () => cancelAnimationFrame(timer);
+    }, []);
     
     const displayData = mode === 'CAT' ? data.topCategories : data.topBeneficiaries;
     const totalDisplayed = displayData.reduce((sum, item) => sum + item.value, 0);
@@ -186,23 +200,25 @@ export const TopExpensesCard: React.FC<AnalyticsProps> = ({ data, onNavigate }) 
             </CardHeader>
             <CardContent className="flex-1 pt-0 flex gap-4 items-center">
                 <div className="h-28 w-28 flex-shrink-0 relative">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                            <Pie
-                                data={displayData}
-                                cx="50%"
-                                cy="50%"
-                                innerRadius={35}
-                                outerRadius={50}
-                                paddingAngle={5}
-                                dataKey="value"
-                            >
-                                {displayData.map((entry, index) => (
-                                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                ))}
-                            </Pie>
-                        </PieChart>
-                    </ResponsiveContainer>
+                    {ready && (
+                        <ResponsiveContainer width="100%" height="100%" minWidth={10}>
+                            <PieChart>
+                                <Pie
+                                    data={displayData}
+                                    cx="50%"
+                                    cy="50%"
+                                    innerRadius={35}
+                                    outerRadius={50}
+                                    paddingAngle={5}
+                                    dataKey="value"
+                                >
+                                    {displayData.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                    ))}
+                                </Pie>
+                            </PieChart>
+                        </ResponsiveContainer>
+                    )}
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                         <span className="text-[10px] font-bold text-slate-400">Total<br/>{formatEuro(totalDisplayed)}</span>
                     </div>

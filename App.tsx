@@ -143,6 +143,7 @@ const App: React.FC = () => {
             accounts={accounts} 
             people={people} 
             categories={categories} 
+            savedLabels={savedLabels} // Passage des libellés complets
             onTogglePaid={actions.setPaidStatus} 
             onUpsertVariable={actions.upsertVariableTransaction} 
             onDeleteVariable={handleDeleteVariableWrapper} 
@@ -154,7 +155,8 @@ const App: React.FC = () => {
           <SavingsView 
             accounts={accounts} 
             savingsTransactions={savingsTransactions} 
-            settings={settings} 
+            settings={settings}
+            savedLabels={savedLabels} // Passage des libellés complets
             onUpsertTransaction={actions.upsertSavingsTransaction} 
             onDeleteTransaction={handleDeleteSavingsWrapper} 
             onNavigateToConfig={() => navigateToConfig('accounts')} 
@@ -162,7 +164,7 @@ const App: React.FC = () => {
         )}
 
         {currentView === 'config' && (
-          <ConfigurationView configs={configs} incomeConfigs={incomeConfigs} categories={categories} people={people} accounts={accounts} settings={settings} savedLabels={savedLabels} activeTab={activeConfigTab} setActiveTab={setActiveConfigTab} onUpdateCategories={actions.upsertCategory as any} onUpsertPerson={actions.upsertPerson} onDeletePerson={actions.deletePerson} onUpsertAccount={actions.upsertAccount} onDeleteAccount={actions.deleteAccount} onUpdateSettings={actions.updateSettings} onResetConnection={handleResetConnection} onUpsertLabel={actions.upsertLabel} onDeleteLabel={actions.deleteLabel} onAddConfig={actions.upsertConfig} onUpdateConfig={actions.upsertConfig} onDeleteConfig={actions.deleteConfig} onAddIncome={actions.upsertIncome} onUpdateIncome={actions.upsertIncome} onDeleteIncome={actions.deleteIncome} onImportLabels={actions.importLabels} />
+          <ConfigurationView configs={configs} incomeConfigs={incomeConfigs} categories={categories} people={people} accounts={accounts} settings={settings} savedLabels={savedLabels} activeTab={activeConfigTab} setActiveTab={setActiveConfigTab} onUpdateCategories={actions.upsertCategory as any} onUpsertPerson={actions.upsertPerson} onDeletePerson={actions.deletePerson} onUpsertAccount={actions.upsertAccount} onDeleteAccount={actions.deleteAccount} onUpdateSettings={actions.updateSettings} onResetConnection={handleResetConnection} onUpsertLabel={actions.upsertLabel} onDeleteLabel={actions.deleteLabel} onAddConfig={actions.upsertConfig} onUpdateConfig={actions.upsertConfig} onDeleteConfig={actions.deleteConfig} onAddIncome={actions.upsertIncome} onUpdateIncome={actions.upsertIncome} onDeleteIncome={actions.deleteIncome} onImportLabels={actions.importLabels} onImportVirLabels={actions.importVirLabels} />
         )}
       </main>
     </div>

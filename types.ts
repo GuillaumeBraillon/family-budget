@@ -33,6 +33,7 @@ export interface SavedLabel {
   id: string;
   name: string;
   type: AccountType;
+  isExpense: boolean;
 }
 
 export enum TransactionType {
