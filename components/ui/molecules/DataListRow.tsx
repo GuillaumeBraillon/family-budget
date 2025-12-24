@@ -25,12 +25,20 @@ export const DataListRow: React.FC<DataListRowProps> = ({
   date, icon, label, amount, originalAmount, isIncome, category, subCategory, 
   beneficiary, isChild, accountName, isPaid, onClick, badge, comments
 }) => {
+  // Si isPaid est false, c'est en attente.
   const isPending = isPaid === false;
-  const bgClass = isPending ? 'bg-amber-50/50 border-l-4 border-l-amber-400' : 'hover:bg-slate-50';
+  
+  // Styles conditionnels :
+  // - Pending : Fond ambré + Bordure gauche Orange (border-l-4)
+  // - Standard : Fond blanc + Bordure gauche Transparente (border-l-4) pour alignement
+  // border-b : Sépare les lignes (remplace le divide-y du parent)
+  const bgClass = isPending 
+    ? 'bg-amber-50 border-l-4 border-l-amber-400' 
+    : 'bg-white hover:bg-slate-50 border-l-4 border-l-transparent';
 
   return (
-    <div onClick={onClick} className={`p-3 sm:p-4 flex items-center gap-2 sm:gap-4 group transition-all cursor-pointer ${bgClass}`}>
-      {/* STATUS INDICATOR - Compact on mobile */}
+    <div onClick={onClick} className={`p-3 sm:p-4 flex items-center gap-2 sm:gap-4 group transition-all cursor-pointer border-b border-slate-100 last:border-0 ${bgClass}`}>
+      {/* STATUS INDICATOR */}
       <div className="flex-shrink-0 w-5 sm:w-8 flex items-center justify-center">
          {isPending ? 
             <Clock size={16} className="text-amber-500 animate-pulse sm:w-[18px] sm:h-[18px]" /> : 
@@ -38,7 +46,7 @@ export const DataListRow: React.FC<DataListRowProps> = ({
          }
       </div>
 
-      {/* DATE / ICON BOX - Compact on mobile */}
+      {/* DATE / ICON BOX */}
       {date ? (
         <div className={`flex-shrink-0 w-10 sm:w-12 text-center flex flex-col items-center justify-center rounded-lg py-1 sm:py-1.5 border ${isPending ? 'bg-amber-100 border-amber-200' : 'bg-slate-50 border-slate-100'}`}>
             <span className="text-sm sm:text-lg font-bold block text-slate-700 leading-none">{date.day}</span>
@@ -83,7 +91,7 @@ export const DataListRow: React.FC<DataListRowProps> = ({
         </div>
       </div>
 
-      {/* AMOUNT & ACTION - Compact on mobile */}
+      {/* AMOUNT & ACTION */}
       <div className="text-right flex items-center gap-1 sm:gap-3">
         {amount !== undefined && (
             <div>

@@ -5,7 +5,7 @@ import { CategoryDef } from '../../../types';
 
 interface CategorySelectorProps {
   categories: CategoryDef[];
-  type: 'EXPENSE' | 'INCOME';
+  type?: 'EXPENSE' | 'INCOME';
   selectedCategory: string;
   selectedSubCategory: string;
   onCategoryChange: (category: string) => void;
@@ -22,31 +22,37 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
   onCategoryChange,
   onSubCategoryChange
 }) => {
-  const filteredCategories = useMemo(() => {
-    return [...categories]
-      .filter(c => c.type === type)
-      .sort((a, b) => a.name.localeCompare(b.name));
-  }, [categories, type]);
+  // Séparation pour affichage groupé (OptGroup)
+  // On ne filtre plus par type pour permettre l'utilisation croisée (ex: Remboursement sur catégorie Dépense)
+  const { expenseCats, incomeCats } = useMemo(() => {
+    const sorted = [...categories].sort((a, b) => a.name.localeCompare(b.name));
+    return {
+        expenseCats: sorted.filter(c => c.type === 'EXPENSE'),
+        incomeCats: sorted.filter(c => c.type === 'INCOME')
+    };
+  }, [categories]);
 
+  // Liste plate pour la validation
+  const allCats = useMemo(() => [...expenseCats, ...incomeCats], [expenseCats, incomeCats]);
+
+  // Récupération des sous-catégories de la catégorie sélectionnée (quel que soit son type d'origine)
   const activeSubCats = useMemo(() => {
-    const subs = categories.find(c => c.name === selectedCategory)?.subCategories || [];
-    return [...subs].sort((a, b) => a.localeCompare(b));
+    const cat = categories.find(c => c.name === selectedCategory);
+    return cat ? [...cat.subCategories].sort((a, b) => a.localeCompare(b)) : [];
   }, [categories, selectedCategory]);
 
-  const focusRing = type === 'EXPENSE' ? 'focus:ring-indigo-500' : 'focus:ring-emerald-500';
+  const focusRing = type === 'INCOME' ? 'focus:ring-emerald-500' : 'focus:ring-indigo-500';
 
   useEffect(() => {
-    if (filteredCategories.length > 0) {
-      const isValid = filteredCategories.some(c => c.name === selectedCategory);
+    // Si la catégorie sélectionnée n'existe plus dans la liste globale (ex: supprimée), on reset
+    if (allCats.length > 0 && selectedCategory) {
+      const isValid = allCats.some(c => c.name === selectedCategory);
       if (!isValid) {
-        onCategoryChange(filteredCategories[0].name);
-        onSubCategoryChange('');
-      }
-    } else if (filteredCategories.length === 0 && selectedCategory !== '') {
         onCategoryChange('');
         onSubCategoryChange('');
+      }
     }
-  }, [type, filteredCategories, selectedCategory, onCategoryChange, onSubCategoryChange]);
+  }, [allCats, selectedCategory, onCategoryChange, onSubCategoryChange]);
 
   return (
     <>
@@ -62,12 +68,20 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
           }}
           className={`w-full p-2.5 rounded-lg border border-slate-300 bg-white text-slate-900 focus:ring-2 outline-none ${focusRing}`}
         >
-          {filteredCategories.length > 0 ? (
-            filteredCategories.map(c => (
-              <option key={c.id} value={c.name}>{c.name}</option>
-            ))
-          ) : (
-            <option value="">Aucune catégorie</option>
+          <option value="">Aucune catégorie</option>
+          {expenseCats.length > 0 && (
+              <optgroup label="Dépenses">
+                  {expenseCats.map(c => (
+                    <option key={c.id} value={c.name}>{c.name}</option>
+                  ))}
+              </optgroup>
+          )}
+          {incomeCats.length > 0 && (
+              <optgroup label="Revenus">
+                  {incomeCats.map(c => (
+                    <option key={c.id} value={c.name}>{c.name}</option>
+                  ))}
+              </optgroup>
           )}
         </select>
       </div>

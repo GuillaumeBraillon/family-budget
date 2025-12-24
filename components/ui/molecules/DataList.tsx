@@ -33,7 +33,8 @@ export const DataList: React.FC<DataListProps> = ({
         )}
       </div>
       
-      <div className="divide-y divide-slate-100 overflow-y-auto">
+      {/* Suppression de divide-y pour éviter les conflits de bordures sur les enfants */}
+      <div className="overflow-y-auto">
         {React.Children.count(children) > 0 ? children : (
             <div className="p-12 text-center text-slate-400 flex flex-col items-center">
                 <div className="bg-slate-50 p-4 rounded-full mb-3"><Calendar size={24} className="text-slate-300" /></div>

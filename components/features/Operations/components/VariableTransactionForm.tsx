@@ -217,9 +217,30 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
             {editingTransaction && onDeleteTransaction && (
                 <button type="button" onClick={() => setShowDeleteConfirm(true)} className="px-4 py-3 bg-red-50 text-red-600 rounded-xl font-bold hover:bg-red-100 transition-colors"><Trash2 size={18} /></button>
             )}
-            <button onClick={() => handleSubmit(false)} className={`flex-1 text-white py-3 rounded-xl font-bold shadow-sm transition-colors flex items-center justify-center gap-2 ${mode === 'TRANSFER' ? 'bg-indigo-600 hover:bg-indigo-700' : (isExpense ? 'bg-indigo-600' : 'bg-emerald-600')}`}>
-                <Save size={18}/> {editingTransaction ? 'Mettre à jour' : 'Enregistrer'}
-            </button>
+            
+            {mode === 'TRANSFER' ? (
+                <button 
+                    onClick={() => handleSubmit(false)} 
+                    className={`flex-1 text-white py-3 rounded-xl font-bold shadow-sm transition-colors flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700`}
+                >
+                    <Save size={18}/> {editingTransaction ? 'Mettre à jour' : 'Exécuter le virement'}
+                </button>
+            ) : (
+                <>
+                    <button 
+                        onClick={() => handleSubmit(true)} 
+                        className="flex-1 bg-amber-100 text-amber-700 hover:bg-amber-200 py-3 rounded-xl font-bold transition-colors flex items-center justify-center gap-2"
+                    >
+                        <Clock size={18}/> {editingTransaction ? 'Sauver (Attente)' : 'En Attente'}
+                    </button>
+                    <button 
+                        onClick={() => handleSubmit(false)} 
+                        className={`flex-1 text-white py-3 rounded-xl font-bold shadow-sm transition-colors flex items-center justify-center gap-2 ${isExpense ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-emerald-600 hover:bg-emerald-700'}`}
+                    >
+                        <CheckCircle2 size={18}/> {editingTransaction ? 'Sauver (Réel)' : 'Validé'}
+                    </button>
+                </>
+            )}
         </div>
       </div>
     </Modal>
