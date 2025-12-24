@@ -2,7 +2,7 @@
 import React, { useState, useMemo } from 'react';
 import { usePlanner } from '../../../hooks/usePlanner';
 import { usePlannerUI } from '../../../hooks/usePlannerUI';
-import { ExpenseConfig, IncomeConfig, Account, Person, PaidItemDetails, PlannedItem, AppSettings, VariableTransaction, OperationFilters, SavingsTransaction, SavedLabel } from '../../../types';
+import { ExpenseConfig, IncomeConfig, Account, Person, PaidItemDetails, PlannedItem, AppSettings, VariableTransaction, OperationFilters, SavedLabel } from '../../../types';
 
 // Imports UI Atomic (Generic)
 import { MonthNavigator } from '../../ui/molecules/MonthNavigator';
@@ -29,12 +29,11 @@ interface OperationsViewProps {
   onTogglePaid: (details: PaidItemDetails | null, instanceId: string) => void;
   onUpsertVariable: (t: VariableTransaction) => void;
   onDeleteVariable: (id: string) => void;
-  onUpsertSavings?: (t: SavingsTransaction) => void;
 }
 
 export const OperationsView: React.FC<OperationsViewProps> = ({ 
   configs, incomeConfigs, variableTransactions, accounts, people, paidItems, settings, categories, savedLabels,
-  onTogglePaid, onUpsertVariable, onDeleteVariable, onUpsertSavings
+  onTogglePaid, onUpsertVariable, onDeleteVariable
 }) => {
   const ui = usePlannerUI();
   const [isVarFormOpen, setIsVarFormOpen] = useState(false);
@@ -128,7 +127,6 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
         savedLabels={savedLabels} 
         labelsSuggestions={settings.variable_labels} 
         editingTransaction={editingVar} 
-        onUpsertSavings={onUpsertSavings} 
         initialMode="STANDARD"
         lockMode={true} // Force le mode standard
       />

@@ -1,5 +1,5 @@
 
-import { Person, Account, CategoryDef, ExpenseConfig, IncomeConfig, PaidItemDetails, AppSettings, AccountType, SavingsTransaction, VariableTransaction, SavedLabel } from '../types';
+import { Person, Account, CategoryDef, ExpenseConfig, IncomeConfig, PaidItemDetails, AppSettings, AccountType, VariableTransaction, SavedLabel, Transfer } from '../types';
 
 export const mapDbPerson = (p: any): Person => ({
   id: p.id,
@@ -76,12 +76,13 @@ export const mapDbPaidItem = (item: any): PaidItemDetails => ({
   comments: item.comments || undefined
 });
 
-export const mapDbSavingsTransaction = (t: any): SavingsTransaction => ({
+export const mapDbTransfer = (t: any): Transfer => ({
   id: t.id,
-  accountId: t.account_id,
   date: t.date,
   label: t.label,
-  amount: Number(t.amount)
+  amount: Number(t.amount),
+  sourceAccountId: t.source_account_id,
+  destinationAccountId: t.destination_account_id
 });
 
 export const mapDbVariableTransaction = (t: any): VariableTransaction => ({

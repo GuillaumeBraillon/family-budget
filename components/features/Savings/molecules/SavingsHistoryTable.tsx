@@ -1,17 +1,17 @@
 
 import React from 'react';
-import { SavingsTransaction } from '../../../types';
-import { DataList, DataListRow } from '../../molecules/DataList';
+import { Transfer } from '../../../../types';
+import { DataList } from '../../../ui/molecules/DataList';
+import { DataListRow } from '../../../ui/molecules/DataListRow';
 
-interface HistoryItem extends SavingsTransaction {
+interface HistoryItem extends Transfer {
   balanceAfter: number;
 }
 
 interface SavingsHistoryTableProps {
   history: HistoryItem[];
   onAddTransaction: () => void;
-  onEditTransaction: (tx: SavingsTransaction) => void;
-  onDeleteTransaction?: (id: string) => void; // Optionnel car géré dans la modale
+  onEditTransaction: (tx: Transfer) => void;
 }
 
 export const SavingsHistoryTable: React.FC<SavingsHistoryTableProps> = ({ 
@@ -32,7 +32,7 @@ export const SavingsHistoryTable: React.FC<SavingsHistoryTableProps> = ({
                 key={tx.id}
                 date={{ day: new Date(tx.date).getDate(), month: new Date(tx.date).toLocaleDateString('fr-FR', { month: 'short' }).toUpperCase() }}
                 label={tx.label}
-                amount={tx.amount}
+                amount={Math.abs(tx.amount)} // Affichage valeur absolue, le signe est géré par isIncome
                 isIncome={tx.amount > 0}
                 onClick={() => onEditTransaction(tx)}
                 badge={

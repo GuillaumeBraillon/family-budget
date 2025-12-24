@@ -1,33 +1,38 @@
 
 import React, { useMemo } from 'react';
 import { PiggyBank, Wallet, CreditCard, Landmark } from 'lucide-react';
-import { Account, SavingsTransaction, AccountType } from '../../../../types';
+import { Account, Transfer, AccountType } from '../../../../types';
 import { Card } from '../../../ui/Card';
 
 interface SavingsSummaryCardProps {
   accounts: Account[];
-  transactions: SavingsTransaction[];
+  transactions?: any[]; // Deprecated
+  transfers?: Transfer[];
 }
 
-export const SavingsSummaryCard: React.FC<SavingsSummaryCardProps> = ({ accounts, transactions }) => {
+export const SavingsSummaryCard: React.FC<SavingsSummaryCardProps> = ({ accounts, transfers = [] }) => {
   
-  // Calcul des soldes : 
-  // - Pour l'épargne : On recalcule via l'historique des transactions d'épargne pour être synchro avec la vue Épargne.
-  // - Pour le courant : On prend le solde actuel (currentBalance) géré dans la vue Soldes.
+  // Calcul des soldes d'épargne via les transferts (pour être synchro avec la vue Épargne)
   const balances: Record<string, number> = useMemo(() => {
     const map: Record<string, number> = {};
+    
     accounts.forEach(acc => {
         if (acc.type === AccountType.SAVINGS) {
-            const total = transactions
-                .filter(t => t.accountId === acc.id)
-                .reduce((sum, t) => sum + t.amount, 0);
+            // Pour l'épargne, on rejoue l'historique des transferts
+            // + si destination, - si source
+            const total = transfers.reduce((sum, t) => {
+                if (t.destinationAccountId === acc.id) return sum + t.amount;
+                if (t.sourceAccountId === acc.id) return sum - t.amount;
+                return sum;
+            }, 0);
             map[acc.id] = total;
         } else {
+            // Pour le courant, on utilise le solde courant (géré dans BalancesView/BDD)
             map[acc.id] = acc.currentBalance;
         }
     });
     return map;
-  }, [accounts, transactions]);
+  }, [accounts, transfers]);
 
   const totalWealth = Object.values(balances).reduce((acc: number, val: number) => acc + val, 0);
   const savingsTotal = accounts.filter(a => a.type === AccountType.SAVINGS).reduce((acc, a) => acc + (balances[a.id] || 0), 0);

@@ -42,25 +42,21 @@ export enum TransactionType {
   CREDIT = 'CREDIT'
 }
 
-export interface Transaction {
+export interface Transfer {
   id: string;
   date: string;
-  description: string;
+  label: string;
   amount: number;
-  category: string;
-  subCategory?: string;
-  beneficiaryId: string;
-  accountId: string;
-  type: TransactionType;
-  initiatedBy: string;
+  sourceAccountId: string;
+  destinationAccountId: string;
 }
 
 export interface SavingsTransaction {
   id: string;
-  accountId: string;
   date: string;
   label: string;
   amount: number;
+  accountId: string;
 }
 
 export interface VariableTransaction {

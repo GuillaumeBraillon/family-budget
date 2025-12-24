@@ -10,7 +10,7 @@ import {
   apiUpsertConfig, apiDeleteConfig, 
   apiUpsertIncome, apiDeleteIncome, 
   apiSetPaidStatus,
-  apiUpsertSavingsTransaction, apiDeleteSavingsTransaction,
+  apiUpsertTransfer, apiDeleteTransfer,
   apiUpsertVariableTransaction, apiDeleteVariableTransaction,
   apiUpsertLabel, apiDeleteLabel,
   apiImportLabels,
@@ -32,7 +32,7 @@ export const fetchInitialData = async () => {
         incomeConfigs: [], 
         paidItems: {}, 
         settings: { monthly_envelope: 2000, period_type: 'FIXED_DAYS', period_value: 7 } as AppSettings, 
-        savingsTransactions: [], 
+        transfers: [],
         variableTransactions: [], 
         savedLabels: [] 
     };
@@ -46,7 +46,7 @@ export const fetchInitialData = async () => {
     incomesRes, 
     paidItemsRes, 
     settingsRes,
-    savingsRes,
+    transfersRes,
     savedLabelsRes
   ] = await Promise.all([
     supabase.from('people').select('*'),
@@ -56,11 +56,11 @@ export const fetchInitialData = async () => {
     supabase.from('income_configs').select('*'),
     supabase.from('paid_items').select('*'),
     supabase.from('app_settings').select('*').maybeSingle(),
-    supabase.from('savings_transactions').select('*').order('date', { ascending: false }),
+    supabase.from('transfers').select('*').order('date', { ascending: false }),
     supabase.from('saved_labels').select('*')
   ]);
 
-  const responses = [peopleRes, accountsRes, categoriesRes, configsRes, incomesRes, paidItemsRes, settingsRes, savingsRes, savedLabelsRes];
+  const responses = [peopleRes, accountsRes, categoriesRes, configsRes, incomesRes, paidItemsRes, settingsRes, transfersRes, savedLabelsRes];
   const errors = responses.map(r => r.error).filter(e => e !== null);
   
   if (errors.length > 0) {
@@ -73,7 +73,7 @@ export const fetchInitialData = async () => {
   const configs = (configsRes.data || []).map(mappers.mapDbExpenseConfig);
   const incomeConfigs = (incomesRes.data || []).map(mappers.mapDbIncomeConfig);
   const settings = mappers.mapDbSettings(settingsRes.data);
-  const savingsTransactions = (savingsRes.data || []).map(mappers.mapDbSavingsTransaction);
+  const transfers = (transfersRes.data || []).map(mappers.mapDbTransfer);
   const savedLabels = (savedLabelsRes.data || []).map(mappers.mapDbSavedLabel);
 
   const paidItems: Record<string, any> = {};
@@ -102,7 +102,7 @@ export const fetchInitialData = async () => {
     }
   });
 
-  return { people, accounts, categories, configs, incomeConfigs, paidItems, settings, savingsTransactions, variableTransactions, savedLabels };
+  return { people, accounts, categories, configs, incomeConfigs, paidItems, settings, transfers, variableTransactions, savedLabels };
 };
 
 // Ré-exports explicites
@@ -114,7 +114,7 @@ export {
   apiUpsertConfig, apiDeleteConfig,
   apiUpsertIncome, apiDeleteIncome,
   apiSetPaidStatus,
-  apiUpsertSavingsTransaction, apiDeleteSavingsTransaction,
+  apiUpsertTransfer, apiDeleteTransfer,
   apiUpsertVariableTransaction, apiDeleteVariableTransaction,
   apiUpsertLabel, apiDeleteLabel,
   apiImportLabels,

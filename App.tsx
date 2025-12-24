@@ -22,7 +22,7 @@ const App: React.FC = () => {
   const [configured, setConfigured] = useState(isSupabaseConfigured());
   
   const { 
-    accounts, configs, incomeConfigs, categories, people, paidItems, settings, savingsTransactions, variableTransactions, savedLabels,
+    accounts, configs, incomeConfigs, categories, people, paidItems, settings, transfers, variableTransactions, savedLabels,
     loading, error, isDbEmpty, actions 
   } = useBudget();
 
@@ -46,43 +46,6 @@ const App: React.FC = () => {
   const navigateToConfig = (tab: ConfigTab) => {
     setCurrentView('config');
     setActiveConfigTab(tab);
-  };
-
-  // --- LOGIQUE DE SUPPRESSION EN CASCADE ---
-
-  // Suppression d'une opération (Variable) -> Vérifie si une ligne d'épargne associée existe
-  const handleDeleteVariableWrapper = async (id: string) => {
-    // 1. Supprimer l'opération visée
-    await actions.deleteVariableTransaction(id);
-
-    // 2. Vérifier si c'est un virement lié à l'épargne (Pattern: var_tr_XXX_TIMESTAMP)
-    if (id.startsWith('var_tr_')) {
-        // On remplace 'var_tr_' par 'sav_auto_' pour trouver l'équivalent côté épargne
-        // Ex: var_tr_out_1715000 -> sav_auto_out_1715000
-        const linkedSavingsId = id.replace('var_tr_', 'sav_auto_');
-        
-        // Si cette transaction existe dans l'épargne, on la supprime aussi
-        if (savingsTransactions.some(t => t.id === linkedSavingsId)) {
-            await actions.deleteSavingsTransaction(linkedSavingsId);
-        }
-    }
-  };
-
-  // Suppression d'une ligne d'épargne -> Vérifie si une opération associée existe
-  const handleDeleteSavingsWrapper = async (id: string) => {
-    // 1. Supprimer la ligne d'épargne
-    await actions.deleteSavingsTransaction(id);
-
-    // 2. Vérifier si c'est un virement généré automatiquement (Pattern: sav_auto_XXX_TIMESTAMP)
-    if (id.startsWith('sav_auto_')) {
-        // On remplace 'sav_auto_' par 'var_tr_' pour trouver l'équivalent côté opérations
-        const linkedVariableId = id.replace('sav_auto_', 'var_tr_');
-
-        // Si cette transaction existe dans les opérations, on la supprime aussi
-        if (variableTransactions.some(t => t.id === linkedVariableId)) {
-            await actions.deleteVariableTransaction(linkedVariableId);
-        }
-    }
   };
 
   if (!configured) {
@@ -125,7 +88,7 @@ const App: React.FC = () => {
         {currentView === 'dashboard' && (
           <DashboardView 
             accounts={accounts} people={people} configs={configs} incomeConfigs={incomeConfigs} paidItems={paidItems} 
-            settings={settings} savingsTransactions={savingsTransactions} variableTransactions={variableTransactions}
+            settings={settings} transfers={transfers} variableTransactions={variableTransactions}
             onNavigateToPlanner={() => setCurrentView('planner')} onNavigateToConfig={() => navigateToConfig('general')}
           />
         )}
@@ -147,37 +110,31 @@ const App: React.FC = () => {
             savedLabels={savedLabels} 
             onTogglePaid={actions.setPaidStatus} 
             onUpsertVariable={actions.upsertVariableTransaction} 
-            onDeleteVariable={handleDeleteVariableWrapper} 
-            onUpsertSavings={actions.upsertSavingsTransaction} 
+            onDeleteVariable={actions.deleteVariableTransaction} 
           />
         )}
 
         {currentView === 'transfers' && (
           <TransfersView 
-            configs={configs} 
-            incomeConfigs={incomeConfigs} 
-            variableTransactions={variableTransactions} 
-            paidItems={paidItems} 
-            settings={settings} 
+            transfers={transfers}
             accounts={accounts} 
             people={people} 
+            settings={settings} 
             categories={categories} 
             savedLabels={savedLabels} 
-            onTogglePaid={actions.setPaidStatus} 
-            onUpsertVariable={actions.upsertVariableTransaction} 
-            onDeleteVariable={handleDeleteVariableWrapper} 
-            onUpsertSavings={actions.upsertSavingsTransaction} 
+            onUpsertTransfer={actions.upsertTransfer}
+            onDeleteTransfer={actions.deleteTransfer}
           />
         )}
 
         {currentView === 'savings' && (
           <SavingsView 
             accounts={accounts} 
-            savingsTransactions={savingsTransactions} 
+            transfers={transfers}
             settings={settings}
             savedLabels={savedLabels} 
-            onUpsertTransaction={actions.upsertSavingsTransaction} 
-            onDeleteTransaction={handleDeleteSavingsWrapper} 
+            onUpsertTransfer={actions.upsertTransfer} 
+            onDeleteTransfer={actions.deleteTransfer} 
             onNavigateToConfig={() => navigateToConfig('accounts')} 
           />
         )}

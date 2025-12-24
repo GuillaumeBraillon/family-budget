@@ -1,8 +1,8 @@
 
 import React from 'react';
 import { Wallet, TrendingUp, TrendingDown, Calendar } from 'lucide-react';
-import { Card } from '../../ui/Card';
-import { MobileTooltip } from '../../ui/MobileTooltip';
+import { Card } from '../../../ui/Card';
+import { MobileTooltip } from '../../../ui/MobileTooltip';
 
 interface SavingsStats {
   totalCredit: number;

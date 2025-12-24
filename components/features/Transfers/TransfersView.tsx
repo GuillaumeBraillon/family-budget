@@ -1,166 +1,125 @@
 
 import React, { useState, useMemo } from 'react';
-import { usePlanner } from '../../../hooks/usePlanner';
 import { usePlannerUI } from '../../../hooks/usePlannerUI';
-import { ExpenseConfig, IncomeConfig, Account, Person, PaidItemDetails, PlannedItem, AppSettings, VariableTransaction, OperationFilters, SavingsTransaction, SavedLabel, AccountType } from '../../../types';
-import { ArrowRightLeft, Filter, X } from 'lucide-react';
+import { Account, Person, Transfer, AppSettings, SavedLabel, AccountType } from '../../../types';
+import { ArrowRightLeft, Filter, X, ArrowRight, Calendar } from 'lucide-react';
 
 // Imports UI Atomic
 import { MonthNavigator } from '../../ui/molecules/MonthNavigator';
-import { WeekSelector } from '../../ui/molecules/WeekSelector';
 import { SearchBar } from '../../ui/atoms/SearchBar';
 import { InfoBox } from '../../ui/InfoBox';
+import { DataList } from '../../ui/molecules/DataList';
 
 // Imports Feature Components
-import { TransfersList, TransferPair } from './components/TransfersList';
 import { VariableTransactionForm } from '../Operations/components/VariableTransactionForm';
 import { TransfersKPIs } from './components/TransfersKPIs';
 
 interface TransfersViewProps {
-  configs: ExpenseConfig[];
-  incomeConfigs: IncomeConfig[]; 
-  variableTransactions: VariableTransaction[];
+  transfers: Transfer[];
   accounts: Account[];
   people: Person[]; 
-  paidItems: Record<string, PaidItemDetails>; 
   settings: AppSettings;
   categories: any[];
   savedLabels?: SavedLabel[]; 
-  onTogglePaid: (details: PaidItemDetails | null, instanceId: string) => void;
-  onUpsertVariable: (t: VariableTransaction) => void;
-  onDeleteVariable: (id: string) => void;
-  onUpsertSavings?: (t: SavingsTransaction) => void;
+  onUpsertTransfer: (t: Transfer) => void;
+  onDeleteTransfer: (id: string) => void;
 }
 
 export const TransfersView: React.FC<TransfersViewProps> = ({ 
-  configs, incomeConfigs, variableTransactions, accounts, people, paidItems, settings, categories, savedLabels,
-  onUpsertVariable, onDeleteVariable, onUpsertSavings
+  transfers, accounts, people, settings, categories, savedLabels,
+  onUpsertTransfer, onDeleteTransfer
 }) => {
   const ui = usePlannerUI();
-  const [isVarFormOpen, setIsVarFormOpen] = useState(false);
-  const [editingVar, setEditingVar] = useState<VariableTransaction | null>(null);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingTransfer, setEditingTransfer] = useState<Transfer | null>(null);
   const [selectedMotif, setSelectedMotif] = useState<string | null>(null);
   
-  // Filtres de base pour usePlanner : on ne filtre que sur "Virement Interne"
-  // On ignore flux/source/status/etc car non pertinents ici selon demande utilisateur
-  const filters: OperationFilters = {
-    flux: 'ALL', 
-    source: 'ALL', 
-    status: 'ALL', 
-    extra: 'ALL', 
-    transfer: 'ONLY', 
-    salary: 'ALL', 
-    accountIds: [], 
-    beneficiaryIds: []
-  };
-  
-  const { filteredWeeks } = usePlanner(configs, incomeConfigs, paidItems, variableTransactions, ui.currentDate, ui.searchQuery, settings, filters);
-  const currentWeekIndex = filteredWeeks.some(w => w.weekNumber === ui.activeWeek) ? ui.activeWeek : 1;
-  const currentWeekData = filteredWeeks.find(w => w.weekNumber === currentWeekIndex);
-  const currentItems = currentWeekData?.items || [];
-
-  // --- CONSTRUCTION DES PAIRES & EXTRACTION DES MOTIFS ---
-  const { pairs, motifs } = useMemo(() => {
-    const pairsMap = new Map<string, TransferPair>();
-    const monthShort = new Intl.DateTimeFormat('fr-FR', { month: 'short' }).format(ui.currentDate);
+  // --- FILTRAGE ET TRI DES TRANSFERTS ---
+  const { currentTransfers, motifs } = useMemo(() => {
+    const currentMonth = ui.currentDate.getMonth();
+    const currentYear = ui.currentDate.getFullYear();
     const foundMotifs = new Set<string>();
 
-    // 1. Regroupement
-    currentItems.forEach(item => {
-        const match = item.instanceId.match(/var_tr_(in|out)_(\d+)/);
-        let key = item.instanceId;
-        let type: 'in' | 'out' = item.type === 'INCOME' ? 'in' : 'out';
-
-        if (match) {
-            key = match[2];
-            type = match[1] as 'in' | 'out';
+    const filtered = transfers.filter(t => {
+        const d = new Date(t.date);
+        return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+    })
+    .filter(t => {
+        if (ui.searchQuery) {
+            const q = ui.searchQuery.toLowerCase();
+            return t.label.toLowerCase().includes(q) || t.amount.toString().includes(q);
         }
+        return true;
+    })
+    .filter(t => {
+        if (selectedMotif) return t.label === selectedMotif;
+        return true;
+    })
+    .sort((a, b) => b.date.localeCompare(a.date)); // Plus récent en premier
 
-        const current = pairsMap.get(key) || {
-            id: key,
-            date: item.day,
-            monthShort,
-            amount: item.amount,
-            label: item.label,
-            from: undefined,
-            to: undefined
-        };
-
-        if (type === 'out') current.from = item;
-        else current.to = item;
-
-        // Extraction du motif propre
-        // Format attendu : "Virement interne : Source => Dest (Motif)"
-        const labelMatch = item.label.match(/\((.*?)\)$/);
-        const motif = labelMatch ? labelMatch[1] : item.label.replace('Virement interne : ', '');
-        
-        // On met à jour le label affichable dans l'objet pair directement pour simplifier
-        // Note: On stocke le motif brut dans une propriété temporaire pour le filtrage
-        (current as any).rawMotif = motif;
-        foundMotifs.add(motif);
-
-        // Mise à jour si orphelin trouvé
-        if (!current.label && item.label) current.label = item.label;
-
-        pairsMap.set(key, current);
+    // Extraction des motifs pour le filtre
+    transfers.forEach(t => {
+        const d = new Date(t.date);
+        if (d.getMonth() === currentMonth && d.getFullYear() === currentYear) {
+            foundMotifs.add(t.label);
+        }
     });
 
-    // 2. Conversion en tableau
-    let allPairs = Array.from(pairsMap.values());
+    return { currentTransfers: filtered, motifs: Array.from(foundMotifs).sort() };
+  }, [transfers, ui.currentDate, ui.searchQuery, selectedMotif]);
 
-    // 3. Filtrage par Motif (si sélectionné)
-    if (selectedMotif) {
-        allPairs = allPairs.filter(p => (p as any).rawMotif === selectedMotif);
-    }
-
-    // 4. Tri Chronologique
-    allPairs.sort((a, b) => {
-        if (a.date !== b.date) return a.date - b.date;
-        return b.id.localeCompare(a.id);
-    });
-
-    return { 
-        pairs: allPairs, 
-        motifs: Array.from(foundMotifs).sort() 
-    };
-  }, [currentItems, ui.currentDate, selectedMotif]);
-
-  // --- CALCUL DES INDICATEURS ANALYTIQUES ---
+  // --- CALCUL DES INDICATEURS ---
   const stats = useMemo(() => {
     let toSavings = 0;
     let fromSavings = 0;
     let internalChecking = 0;
 
-    pairs.forEach(pair => {
-        const fromAcc = accounts.find(a => a.id === pair.from?.accountId);
-        const toAcc = accounts.find(a => a.id === pair.to?.accountId);
+    currentTransfers.forEach(t => {
+        const source = accounts.find(a => a.id === t.sourceAccountId);
+        const dest = accounts.find(a => a.id === t.destinationAccountId);
 
-        const isFromSavings = fromAcc?.type === AccountType.SAVINGS;
-        const isToSavings = toAcc?.type === AccountType.SAVINGS;
+        const isSourceSavings = source?.type === AccountType.SAVINGS;
+        const isDestSavings = dest?.type === AccountType.SAVINGS;
 
-        if (isToSavings && !isFromSavings) {
-            toSavings += pair.amount;
-        } else if (isFromSavings && !isToSavings) {
-            fromSavings += pair.amount;
-        } else if (!isFromSavings && !isToSavings) {
-            internalChecking += pair.amount;
+        if (isDestSavings && !isSourceSavings) {
+            toSavings += t.amount;
+        } else if (isSourceSavings && !isDestSavings) {
+            fromSavings += t.amount;
+        } else if (!isSourceSavings && !isDestSavings) {
+            internalChecking += t.amount;
         }
     });
 
     return { toSavings, fromSavings, internalChecking };
-  }, [pairs, accounts]);
+  }, [currentTransfers, accounts]);
 
-  const handleItemClick = (item: PlannedItem) => {
-    const tx = variableTransactions.find(t => t.id === item.instanceId);
-    if (tx) { setEditingVar(tx); setIsVarFormOpen(true); }
+  const handleEdit = (t: Transfer) => {
+      // Mapping Transfer -> VariableTransaction pour réutiliser le formulaire
+      // (On triche un peu sur les types pour éviter de dupliquer le formulaire)
+      const mockTx: any = {
+          id: t.id,
+          date: t.date,
+          label: t.label,
+          amount: t.amount,
+          category: 'Virement Interne',
+          accountId: t.sourceAccountId, // Source par défaut pour l'édition
+          isWaiting: false,
+          isExtra: false,
+          type: 'EXPENSE',
+          // On utilise comments pour passer l'ID de destination au formulaire via le mode 'TRANSFER'
+          comments: t.destinationAccountId 
+      };
+      setEditingTransfer(t); // On garde le vrai objet pour la suppression
+      setEditingVar(mockTx); 
+      setIsFormOpen(true);
   };
 
-  const defaultVarDate = (() => {
-      const today = new Date();
-      if (today.getMonth() === ui.currentDate.getMonth() && today.getFullYear() === ui.currentDate.getFullYear()) return today.toISOString().split('T')[0];
-      if (currentWeekData) return new Date(ui.currentDate.getFullYear(), ui.currentDate.getMonth(), currentWeekData.startDate, 12).toISOString().split('T')[0];
-      return new Date().toISOString().split('T')[0];
-  })();
+  // State temporaire pour le formulaire (VariableTransaction est attendu par le form existant)
+  const [editingVar, setEditingVar] = useState<any | null>(null);
+
+  const defaultDate = new Date().toISOString().split('T')[0];
+
+  const getAccountName = (id: string) => accounts.find(a => a.id === id)?.name || 'Inconnu';
 
   return (
     <div className="space-y-6">
@@ -175,13 +134,6 @@ export const TransfersView: React.FC<TransfersViewProps> = ({
             <MonthNavigator date={ui.currentDate} onPrev={ui.handlePrevMonth} onNext={ui.handleNextMonth} />
             <SearchBar value={ui.searchQuery} onChange={ui.setSearchQuery} />
           </div>
-          
-          <WeekSelector 
-            weeks={filteredWeeks} 
-            activeWeek={currentWeekIndex} 
-            onSelect={ui.setActiveWeek} 
-            searchQuery={ui.searchQuery}
-          />
 
           <TransfersKPIs stats={stats} />
 
@@ -222,29 +174,64 @@ export const TransfersView: React.FC<TransfersViewProps> = ({
               )}
           </div>
 
-          <TransfersList 
-            pairs={pairs}
-            accounts={accounts}
-            onItemClick={handleItemClick}
-            onAddClick={() => { setEditingVar(null); setIsVarFormOpen(true); }}
-          />
+          <DataList 
+            title="Historique des Virements" 
+            count={currentTransfers.length} 
+            onAdd={() => { setEditingTransfer(null); setEditingVar(null); setIsFormOpen(true); }}
+            addButtonLabel="Nouveau virement" 
+            emptyMessage="Aucun virement trouvé pour cette période."
+          >
+            {currentTransfers.map(t => (
+                <div 
+                    key={t.id} 
+                    onClick={() => handleEdit(t)}
+                    className="p-4 flex items-center gap-4 group transition-all cursor-pointer border-b border-slate-100 last:border-0 hover:bg-slate-50"
+                >
+                    <div className="flex-shrink-0 w-12 text-center flex flex-col items-center justify-center rounded-lg py-1 border bg-slate-50 border-slate-100">
+                        <span className="text-sm font-bold block text-slate-700 leading-none">{new Date(t.date).getDate()}</span>
+                        <span className="text-[9px] text-slate-400 uppercase font-black tracking-wider leading-none mt-0.5">
+                            {new Date(t.date).toLocaleDateString('fr-FR', { month: 'short' })}
+                        </span>
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                        <div className="font-bold text-slate-900 truncate mb-1">{t.label}</div>
+                        <div className="flex items-center gap-2 text-xs">
+                            <span className="px-2 py-0.5 rounded bg-red-50 text-red-600 border border-red-100 font-medium">
+                                {getAccountName(t.sourceAccountId)}
+                            </span>
+                            <ArrowRight size={12} className="text-slate-400" />
+                            <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-600 border border-emerald-100 font-medium">
+                                {getAccountName(t.destinationAccountId)}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div className="text-right font-black text-base text-indigo-700">
+                        {t.amount.toFixed(2)} €
+                    </div>
+                </div>
+            ))}
+          </DataList>
       </div>
 
       <VariableTransactionForm 
-        isOpen={isVarFormOpen} 
-        onClose={() => setIsVarFormOpen(false)} 
+        isOpen={isFormOpen} 
+        onClose={() => setIsFormOpen(false)} 
         accounts={accounts} 
         categories={categories} 
         people={people} 
-        onAddTransaction={onUpsertVariable} 
-        onDeleteTransaction={onDeleteVariable} 
-        defaultDate={defaultVarDate} 
+        onAddTransaction={() => {}} // Non utilisé en mode Transfer pur (géré par onUpsertTransfer dans le form)
+        onUpsertTransfer={onUpsertTransfer}
+        onDeleteTransaction={() => {
+            if(editingTransfer) onDeleteTransfer(editingTransfer.id);
+        }}
+        defaultDate={defaultDate} 
         savedLabels={savedLabels} 
         labelsSuggestions={settings.variable_labels} 
-        editingTransaction={editingVar} 
-        onUpsertSavings={onUpsertSavings} 
+        editingTransaction={editingVar} // Mock passé pour pré-remplir
         initialMode="TRANSFER"
-        lockMode={true} // Force le mode virement
+        lockMode={true} 
       />
     </div>
   );

@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
-import { Account, ExpenseConfig, IncomeConfig, CategoryDef, Person, PaidItemDetails, AppSettings, SavingsTransaction, VariableTransaction, SavedLabel, AccountType } from '../types';
+import { Account, ExpenseConfig, IncomeConfig, CategoryDef, Person, PaidItemDetails, AppSettings, Transfer, VariableTransaction, SavedLabel, AccountType } from '../types';
 import { 
   fetchInitialData, 
   apiUpsertConfig, apiDeleteConfig, 
@@ -9,7 +9,7 @@ import {
   apiUpsertPerson, apiDeletePerson, 
   apiUpsertAccount, apiDeleteAccount, 
   apiSetPaidStatus, apiUpdateSettings,
-  apiUpsertSavingsTransaction, apiDeleteSavingsTransaction,
+  apiUpsertTransfer, apiDeleteTransfer,
   apiUpsertVariableTransaction, apiDeleteVariableTransaction,
   apiUpsertLabel, apiDeleteLabel,
   apiImportLabels,
@@ -55,7 +55,7 @@ export const useBudget = () => {
       period_type: 'FIXED_DAYS',
       period_value: 7
     } as AppSettings,
-    savingsTransactions: [] as SavingsTransaction[],
+    transfers: [] as Transfer[],
     variableTransactions: [] as VariableTransaction[],
     savedLabels: [] as SavedLabel[]
   });
@@ -82,7 +82,7 @@ export const useBudget = () => {
         people: res.people,
         paidItems: res.paidItems,
         settings: res.settings,
-        savingsTransactions: res.savingsTransactions,
+        transfers: res.transfers,
         variableTransactions: res.variableTransactions,
         savedLabels: res.savedLabels
       });
@@ -181,8 +181,8 @@ export const useBudget = () => {
       deletePerson: wrapCrud(apiDeletePerson),
       upsertAccount: wrapCrud(apiUpsertAccount),
       deleteAccount: wrapCrud(apiDeleteAccount),
-      upsertSavingsTransaction: wrapCrud(apiUpsertSavingsTransaction),
-      deleteSavingsTransaction: wrapCrud(apiDeleteSavingsTransaction),
+      upsertTransfer: wrapCrud(apiUpsertTransfer),
+      deleteTransfer: wrapCrud(apiDeleteTransfer),
       upsertVariableTransaction: wrapCrud(apiUpsertVariableTransaction),
       deleteVariableTransaction: wrapCrud(apiDeleteVariableTransaction),
       upsertLabel: wrapCrud(apiUpsertLabel),

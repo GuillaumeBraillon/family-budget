@@ -1,22 +1,22 @@
 
 import React, { useState, useMemo } from 'react';
-import { Account, AccountType, SavingsTransaction, AppSettings, SavedLabel } from '../../../types';
+import { Account, AccountType, Transfer, AppSettings, SavedLabel } from '../../../types';
 import { PiggyBank, PlusCircle } from 'lucide-react';
 import { InfoBox } from '../../ui/InfoBox';
-import { SavingsAccountView } from '../../Savings/SavingsAccountView';
+import { SavingsAccountView } from './SavingsAccountView';
 
 interface SavingsViewProps {
   accounts: Account[];
-  savingsTransactions: SavingsTransaction[];
+  transfers: Transfer[]; // Changement ici : SavingsTransaction -> Transfer
   settings: AppSettings;
   savedLabels?: SavedLabel[];
-  onUpsertTransaction: (t: SavingsTransaction) => void;
-  onDeleteTransaction: (id: string) => void;
+  onUpsertTransfer: (t: Transfer) => void;
+  onDeleteTransfer: (id: string) => void;
   onNavigateToConfig: () => void;
 }
 
 export const SavingsView: React.FC<SavingsViewProps> = ({ 
-  accounts, savingsTransactions, settings, savedLabels, onUpsertTransaction, onDeleteTransaction, onNavigateToConfig
+  accounts, transfers, settings, savedLabels, onUpsertTransfer, onDeleteTransfer, onNavigateToConfig
 }) => {
   const savingsAccounts = useMemo(() => accounts.filter(a => a.type === AccountType.SAVINGS), [accounts]);
   const [activeAccountId, setActiveAccountId] = useState<string>(savingsAccounts[0]?.id || '');
@@ -26,9 +26,11 @@ export const SavingsView: React.FC<SavingsViewProps> = ({
   }
 
   const activeAccount = savingsAccounts.find(a => a.id === activeAccountId);
+  
+  // Filtrer les transferts qui concernent ce compte (en entrée ou en sortie)
   const activeTransactions = useMemo(() => 
-    savingsTransactions.filter(t => t.accountId === activeAccountId), 
-  [savingsTransactions, activeAccountId]);
+    transfers.filter(t => t.sourceAccountId === activeAccountId || t.destinationAccountId === activeAccountId), 
+  [transfers, activeAccountId]);
 
   if (savingsAccounts.length === 0) {
     return (
@@ -38,7 +40,7 @@ export const SavingsView: React.FC<SavingsViewProps> = ({
         </div>
         <h3 className="text-xl font-bold text-slate-900">Aucun compte d'épargne</h3>
         <p className="text-slate-500 max-w-md mx-auto">
-           Pour suivre votre épargne (Livret A, LDD...), commencez par ajouter un compte de type "Épargne" dans les paramètres.
+           Pour suivre votre épargne, commencez par ajouter un compte de type "Épargne" dans les paramètres.
         </p>
         <button 
           onClick={onNavigateToConfig}
@@ -54,7 +56,7 @@ export const SavingsView: React.FC<SavingsViewProps> = ({
     <div className="space-y-6 animate-in fade-in duration-500">
        <InfoBox 
          title="Suivi de l'Épargne"
-         description="Consultez l'historique et l'évolution de vos livrets d'épargne. Ce tableau reproduit vos relevés pour un suivi précis des intérêts et versements."
+         description="Consultez l'historique de vos livrets. Les mouvements sont désormais gérés via les virements (entrée/sortie)."
          icon={<PiggyBank size={18} />}
        />
 
@@ -79,11 +81,11 @@ export const SavingsView: React.FC<SavingsViewProps> = ({
           <div className="animate-in slide-in-from-bottom-2 duration-300">
              <SavingsAccountView 
                 account={activeAccount}
-                transactions={activeTransactions}
-                availableLabels={settings.savings_labels} // Fallback string[]
-                savedLabels={savedLabels} // Liste riche
-                onAddTransaction={onUpsertTransaction}
-                onDeleteTransaction={onDeleteTransaction}
+                transfers={activeTransactions}
+                allAccounts={accounts} // Pour avoir le nom du compte source/dest
+                savedLabels={savedLabels}
+                onUpsertTransfer={onUpsertTransfer}
+                onDeleteTransfer={onDeleteTransfer}
              />
           </div>
        )}

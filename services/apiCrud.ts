@@ -1,6 +1,6 @@
 
 import { supabase } from './supabase';
-import { Person, Account, CategoryDef, ExpenseConfig, IncomeConfig, PaidItemDetails, AppSettings, SavingsTransaction, VariableTransaction, SavedLabel } from '../types';
+import { Person, Account, CategoryDef, ExpenseConfig, IncomeConfig, PaidItemDetails, AppSettings, Transfer, VariableTransaction, SavedLabel } from '../types';
 
 /**
  * Opérations sur les Membres (People)
@@ -67,7 +67,6 @@ export const apiDeleteLabel = async (id: string) =>
   supabase.from('saved_labels').delete().eq('id', id);
 
 export const apiImportLabels = async () => {
-  // 1. Récupérer les libellés uniques de paid_items commençant par 'CB %' (insensible à la casse)
   const { data: items, error: fetchError } = await supabase
       .from('paid_items')
       .select('label')
@@ -75,7 +74,6 @@ export const apiImportLabels = async () => {
 
   if (fetchError) return { error: fetchError };
 
-  // 2. Récupérer les libellés déjà existants pour éviter les erreurs ou doublons
   const { data: existing, error: existError } = await supabase
       .from('saved_labels')
       .select('name');
@@ -85,19 +83,17 @@ export const apiImportLabels = async () => {
   const existingSet = new Set(existing?.map(e => e.name));
   const distinctLabels = [...new Set(items?.map(i => i.label))];
 
-  // 3. Filtrer ceux qui n'existent pas encore
   const toInsert = distinctLabels
       .filter(l => l && !existingSet.has(l))
       .map(l => ({
           id: `lbl_imp_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
           name: l,
           type: 'COURANT',
-          is_expense: true // Par défaut, les imports CB sont des dépenses
+          is_expense: true
       }));
 
   if (toInsert.length === 0) return { count: 0 };
 
-  // 4. Insérer les nouveaux
   const { error: insertError } = await supabase
       .from('saved_labels')
       .insert(toInsert);
@@ -106,7 +102,6 @@ export const apiImportLabels = async () => {
 };
 
 export const apiImportVirLabels = async () => {
-  // 1. Récupérer les libellés uniques de paid_items commençant par 'VIR %' (insensible à la casse)
   const { data: items, error: fetchError } = await supabase
       .from('paid_items')
       .select('label')
@@ -114,7 +109,6 @@ export const apiImportVirLabels = async () => {
 
   if (fetchError) return { error: fetchError };
 
-  // 2. Récupérer les libellés déjà existants
   const { data: existing, error: existError } = await supabase
       .from('saved_labels')
       .select('name');
@@ -124,19 +118,17 @@ export const apiImportVirLabels = async () => {
   const existingSet = new Set(existing?.map(e => e.name));
   const distinctLabels = [...new Set(items?.map(i => i.label))];
 
-  // 3. Filtrer ceux qui n'existent pas encore
   const toInsert = distinctLabels
       .filter(l => l && !existingSet.has(l))
       .map(l => ({
           id: `lbl_vir_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
           name: l,
           type: 'COURANT',
-          is_expense: false // Import VIR = Revenus
+          is_expense: false
       }));
 
   if (toInsert.length === 0) return { count: 0 };
 
-  // 4. Insérer les nouveaux
   const { error: insertError } = await supabase
       .from('saved_labels')
       .insert(toInsert);
@@ -222,19 +214,20 @@ export const apiSetPaidStatus = async (details: PaidItemDetails | null, instance
 };
 
 /**
- * Opérations sur les Transactions d'Épargne
+ * Opérations sur les Virements (Transfers)
  */
-export const apiUpsertSavingsTransaction = async (tx: SavingsTransaction) => 
-  supabase.from('savings_transactions').upsert({
-    id: tx.id,
-    account_id: tx.accountId,
-    date: tx.date,
-    label: tx.label,
-    amount: tx.amount
+export const apiUpsertTransfer = async (t: Transfer) => 
+  supabase.from('transfers').upsert({
+    id: t.id,
+    date: t.date,
+    label: t.label,
+    amount: t.amount,
+    source_account_id: t.sourceAccountId,
+    destination_account_id: t.destinationAccountId
   });
 
-export const apiDeleteSavingsTransaction = async (id: string) => 
-  supabase.from('savings_transactions').delete().eq('id', id);
+export const apiDeleteTransfer = async (id: string) => 
+  supabase.from('transfers').delete().eq('id', id);
 
 /**
  * Opérations sur les Transactions Variables (Suivi Réel)
