@@ -4,6 +4,7 @@ import { useBudget } from './hooks/useBudget';
 import { WelcomeEmptyState } from './components/features/Dashboard/components/WelcomeEmptyState';
 import { DashboardView } from './components/features/Dashboard/DashboardView';
 import { OperationsView } from './components/features/Operations/OperationsView';
+import { TransfersView } from './components/features/Transfers/TransfersView';
 import { BalancesView } from './components/features/Balances/BalancesView';
 import { ConfigurationView } from './components/features/Configuration/ConfigurationView';
 import { SavingsView } from './components/features/Savings/SavingsView';
@@ -13,7 +14,7 @@ import { SupabaseSetup } from './components/Configuration/SupabaseSetup';
 import { isSupabaseConfigured, resetSupabaseConfig } from './services/supabase';
 import { Loader2, AlertTriangle } from 'lucide-react';
 
-type ViewState = 'dashboard' | 'balances' | 'planner' | 'savings' | 'config';
+type ViewState = 'dashboard' | 'balances' | 'planner' | 'transfers' | 'savings' | 'config';
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<ViewState>('dashboard');
@@ -143,7 +144,25 @@ const App: React.FC = () => {
             accounts={accounts} 
             people={people} 
             categories={categories} 
-            savedLabels={savedLabels} // Passage des libellés complets
+            savedLabels={savedLabels} 
+            onTogglePaid={actions.setPaidStatus} 
+            onUpsertVariable={actions.upsertVariableTransaction} 
+            onDeleteVariable={handleDeleteVariableWrapper} 
+            onUpsertSavings={actions.upsertSavingsTransaction} 
+          />
+        )}
+
+        {currentView === 'transfers' && (
+          <TransfersView 
+            configs={configs} 
+            incomeConfigs={incomeConfigs} 
+            variableTransactions={variableTransactions} 
+            paidItems={paidItems} 
+            settings={settings} 
+            accounts={accounts} 
+            people={people} 
+            categories={categories} 
+            savedLabels={savedLabels} 
             onTogglePaid={actions.setPaidStatus} 
             onUpsertVariable={actions.upsertVariableTransaction} 
             onDeleteVariable={handleDeleteVariableWrapper} 
@@ -156,7 +175,7 @@ const App: React.FC = () => {
             accounts={accounts} 
             savingsTransactions={savingsTransactions} 
             settings={settings}
-            savedLabels={savedLabels} // Passage des libellés complets
+            savedLabels={savedLabels} 
             onUpsertTransaction={actions.upsertSavingsTransaction} 
             onDeleteTransaction={handleDeleteSavingsWrapper} 
             onNavigateToConfig={() => navigateToConfig('accounts')} 

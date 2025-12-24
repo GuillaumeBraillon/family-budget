@@ -40,6 +40,7 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
   const [isVarFormOpen, setIsVarFormOpen] = useState(false);
   const [editingVar, setEditingVar] = useState<VariableTransaction | null>(null);
   
+  // Par défaut, on masque les virements internes car ils ont leur propre vue
   const [filters, setFilters] = useState<OperationFilters>({
     flux: 'ALL', source: 'ALL', status: 'ALL', extra: 'ALL', transfer: 'EXCLUDE', salary: 'EXCLUDE', accountIds: [], beneficiaryIds: []
   });
@@ -104,7 +105,13 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
           />
           <QuickPeriodSummary expenses={quickStats.expenses} income={quickStats.income} />
           <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-              <FilterBar filters={filters} onFilterChange={setFilters} accounts={accounts} people={people} />
+              <FilterBar 
+                filters={filters} 
+                onFilterChange={setFilters} 
+                accounts={accounts} 
+                people={people}
+                hiddenFilters={['transfer']} 
+              />
           </div>
           <OperationsList items={currentItems} monthShort={monthShort} people={people} accounts={accounts} currentDate={ui.currentDate} onItemClick={handleItemClick} onAddClick={() => { setEditingVar(null); setIsVarFormOpen(true); }} />
       </div>
@@ -118,10 +125,12 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
         onAddTransaction={onUpsertVariable} 
         onDeleteTransaction={onDeleteVariable} 
         defaultDate={defaultVarDate} 
-        savedLabels={savedLabels} // Liste complète
-        labelsSuggestions={settings.variable_labels} // Fallback string[]
+        savedLabels={savedLabels} 
+        labelsSuggestions={settings.variable_labels} 
         editingTransaction={editingVar} 
         onUpsertSavings={onUpsertSavings} 
+        initialMode="STANDARD"
+        lockMode={true} // Force le mode standard
       />
     </div>
   );

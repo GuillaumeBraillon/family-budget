@@ -67,11 +67,11 @@ export const apiDeleteLabel = async (id: string) =>
   supabase.from('saved_labels').delete().eq('id', id);
 
 export const apiImportLabels = async () => {
-  // 1. Récupérer les libellés uniques de paid_items commençant par 'CB %'
+  // 1. Récupérer les libellés uniques de paid_items commençant par 'CB %' (insensible à la casse)
   const { data: items, error: fetchError } = await supabase
       .from('paid_items')
       .select('label')
-      .like('label', 'CB %');
+      .ilike('label', 'CB %');
 
   if (fetchError) return { error: fetchError };
 
@@ -106,11 +106,11 @@ export const apiImportLabels = async () => {
 };
 
 export const apiImportVirLabels = async () => {
-  // 1. Récupérer les libellés uniques de paid_items commençant par 'VIR %'
+  // 1. Récupérer les libellés uniques de paid_items commençant par 'VIR %' (insensible à la casse)
   const { data: items, error: fetchError } = await supabase
       .from('paid_items')
       .select('label')
-      .like('label', 'VIR %');
+      .ilike('label', 'VIR %');
 
   if (fetchError) return { error: fetchError };
 
@@ -188,8 +188,8 @@ export const apiUpsertIncome = async (income: IncomeConfig) =>
     beneficiary_id: income.beneficiaryId, 
     day_of_month: income.dayOfMonth, 
     category: income.category, 
-    sub_category: income.subCategory,
-    is_extra: income.isExtra,
+    sub_category: income.subCategory, 
+    is_extra: income.isExtra, 
     is_salary: income.isSalary
   });
 

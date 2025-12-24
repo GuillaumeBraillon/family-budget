@@ -1,8 +1,8 @@
 
 import React from 'react';
-import { WalletCards, LayoutDashboard, CalendarCheck, Settings, PiggyBank, Calculator } from 'lucide-react';
+import { WalletCards, LayoutDashboard, CalendarCheck, Settings, PiggyBank, Calculator, ArrowRightLeft } from 'lucide-react';
 
-type ViewState = 'dashboard' | 'balances' | 'planner' | 'savings' | 'config';
+type ViewState = 'dashboard' | 'balances' | 'planner' | 'transfers' | 'savings' | 'config';
 
 interface HeaderProps {
   currentView: ViewState;
@@ -41,6 +41,12 @@ export const Header: React.FC<HeaderProps> = ({ currentView, onViewChange }) => 
             onClick={() => onViewChange('planner')} 
             icon={<CalendarCheck size={16}/>} 
             label="Opérations" 
+          />
+          <NavBtn 
+            active={currentView === 'transfers'} 
+            onClick={() => onViewChange('transfers')} 
+            icon={<ArrowRightLeft size={16}/>} 
+            label="Virements" 
           />
           <NavBtn 
             active={currentView === 'savings'} 

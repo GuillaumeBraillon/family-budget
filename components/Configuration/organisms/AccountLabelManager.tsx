@@ -1,9 +1,8 @@
 
 import React, { useState } from 'react';
-import { Trash2, Save, Tag, DownloadCloud, Search, Check, Info, TrendingDown, TrendingUp } from 'lucide-react';
+import { Trash2, Save, Tag, DownloadCloud, Search, Check, Info, TrendingDown, TrendingUp, ArrowRightLeft, PiggyBank, CreditCard } from 'lucide-react';
 import { SavedLabel, AccountType } from '../../../types';
 import { ConfirmModal } from '../atoms/ConfirmModal';
-import { LabelTypeSelector } from '../molecules/LabelTypeSelector';
 import { DataList } from '../../ui/molecules/DataList';
 import { DataListRow } from '../../ui/molecules/DataListRow';
 import { Modal } from '../../ui/Modal';
@@ -17,9 +16,12 @@ interface AccountLabelManagerProps {
     onImportVirLabels?: () => Promise<any> | void;
 }
 
+// Utilisation directe des types pour les onglets
+type ManagerTab = AccountType;
+
 export const AccountLabelManager: React.FC<AccountLabelManagerProps> = ({ labels, onUpsertLabel, onDeleteLabel, onImportLabels, onImportVirLabels }) => {
-    const [type, setType] = useState<AccountType>(AccountType.CHECKING);
-    const [isExpenseMode, setIsExpenseMode] = useState(true);
+    const [currentTab, setCurrentTab] = useState<ManagerTab>(AccountType.CHECKING);
+    const [isExpenseMode, setIsExpenseMode] = useState(true); // Utilisé uniquement pour l'onglet CHECKING
     
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingLabel, setEditingLabel] = useState<SavedLabel | null>(null);
@@ -30,12 +32,16 @@ export const AccountLabelManager: React.FC<AccountLabelManagerProps> = ({ labels
     const [searchQuery, setSearchQuery] = useState('');
     const [importStatus, setImportStatus] = useState<{ type: 'success' | 'info' | 'error', message: string } | null>(null);
 
-    const filteredList = labels
-        .filter(l => l.type === type && l.isExpense === isExpenseMode)
-        .filter(l => l.name.toLowerCase().includes(searchQuery.toLowerCase()))
-        .sort((a, b) => a.name.localeCompare(b.name));
-        
-    const isSavings = type === AccountType.SAVINGS;
+    // LOGIQUE DE FILTRAGE
+    const filteredList = labels.filter(l => {
+        if (currentTab === AccountType.CHECKING) {
+            return l.type === AccountType.CHECKING && l.isExpense === isExpenseMode;
+        }
+        // Pour les autres types (EPARGNE, VIREMENT), on prend tout le type sans distinction isExpense
+        return l.type === currentTab;
+    })
+    .filter(l => l.name.toLowerCase().includes(searchQuery.toLowerCase()))
+    .sort((a, b) => a.name.localeCompare(b.name));
 
     const resetForm = () => {
         setName('');
@@ -64,11 +70,17 @@ export const AccountLabelManager: React.FC<AccountLabelManagerProps> = ({ labels
             newId = crypto.randomUUID();
         }
 
+        // DÉTERMINATION DU TYPE ET DU FLAG IS_EXPENSE
+        const targetType = currentTab;
+        
+        // Pour checking, on suit le mode expense/income. Pour le reste, peu importe (true par défaut)
+        const targetIsExpense = currentTab === AccountType.CHECKING ? isExpenseMode : true;
+
         const label: SavedLabel = {
             id: editingLabel ? editingLabel.id : newId,
             name: name.trim(),
-            type: type,
-            isExpense: isExpenseMode
+            type: targetType,
+            isExpense: targetIsExpense
         };
         onUpsertLabel(label);
         resetForm();
@@ -97,12 +109,22 @@ export const AccountLabelManager: React.FC<AccountLabelManagerProps> = ({ labels
         setTimeout(() => setImportStatus(null), 4000);
     };
 
-    const handleImportCbClick = () => {
-        if (onImportLabels) runImport(onImportLabels, 'CB');
+    const getPlaceholder = () => {
+        if (currentTab === AccountType.TRANSFER) return "Ex: Épargne, Remboursement, Apport...";
+        if (currentTab === AccountType.SAVINGS) return "Ex: Intérêts annuels, Prime...";
+        return "Ex: Courses, Carrefour, EDF...";
     };
 
-    const handleImportVirClick = () => {
-        if (onImportVirLabels) runImport(onImportVirLabels, 'VIR');
+    const getListTitle = () => {
+        if (currentTab === AccountType.TRANSFER) return "Motifs de Virement";
+        if (currentTab === AccountType.SAVINGS) return "Libellés Épargne";
+        return `Opérations Courantes (${isExpenseMode ? 'Débits' : 'Crédits'})`;
+    };
+
+    const getIconColor = () => {
+        if (currentTab === AccountType.TRANSFER) return "text-indigo-500";
+        if (currentTab === AccountType.SAVINGS) return "text-emerald-500";
+        return isExpenseMode ? "text-indigo-500" : "text-emerald-500";
     };
 
     return (
@@ -117,7 +139,7 @@ export const AccountLabelManager: React.FC<AccountLabelManagerProps> = ({ labels
                         label="Libellé" 
                         value={name} 
                         onChange={e => setName(e.target.value)} 
-                        placeholder={isSavings ? "Ex: Virement Épargne..." : "Ex: Courses..."}
+                        placeholder={getPlaceholder()}
                         required 
                         autoFocus
                     />
@@ -150,60 +172,83 @@ export const AccountLabelManager: React.FC<AccountLabelManagerProps> = ({ labels
                 onCancel={() => setDeleteConfirm(null)}
              />
 
-             <LabelTypeSelector type={type} onChange={setType} />
-
-             {/* Selecteur de Flux (Dépense / Revenu) */}
-             <div className="flex justify-center mb-4">
-                <div className="flex bg-slate-100 p-1 rounded-lg">
-                    <button
-                        onClick={() => setIsExpenseMode(true)}
-                        className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all flex items-center gap-2 ${isExpenseMode ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+             {/* NAVIGATION DES ONGLETS */}
+             <div className="flex justify-center mb-6">
+                <div className="flex bg-slate-100 p-1 rounded-lg overflow-x-auto">
+                    <button 
+                        onClick={() => setCurrentTab(AccountType.CHECKING)}
+                        className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-all whitespace-nowrap ${currentTab === AccountType.CHECKING ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                     >
-                        <TrendingDown size={14}/> Dépenses (Débits)
+                        <CreditCard size={14}/> Courant
                     </button>
-                    <button
-                        onClick={() => setIsExpenseMode(false)}
-                        className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all flex items-center gap-2 ${!isExpenseMode ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                    <button 
+                        onClick={() => setCurrentTab(AccountType.TRANSFER)}
+                        className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-all whitespace-nowrap ${currentTab === AccountType.TRANSFER ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                     >
-                        <TrendingUp size={14}/> Revenus (Crédits)
+                        <ArrowRightLeft size={14}/> Virements
+                    </button>
+                    <button 
+                        onClick={() => setCurrentTab(AccountType.SAVINGS)}
+                        className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-all whitespace-nowrap ${currentTab === AccountType.SAVINGS ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                    >
+                        <PiggyBank size={14}/> Épargne
                     </button>
                 </div>
              </div>
 
-             {/* Boutons d'import spécifiques aux comptes courants */}
-             {!isSavings && (
-                <div className="flex flex-col sm:flex-row justify-end items-end sm:items-center gap-2 mb-2">
-                    {importStatus && (
-                        <div className={`px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-2 animate-in fade-in slide-in-from-right-2 ${
-                            importStatus.type === 'success' ? 'bg-emerald-100 text-emerald-700' : 
-                            importStatus.type === 'info' ? 'bg-slate-100 text-slate-600' : 'bg-red-100 text-red-700'
-                        }`}>
-                            {importStatus.type === 'success' && <Check size={14} />}
-                            {importStatus.type === 'info' && <Info size={14} />}
-                            {importStatus.message}
+             {/* SOUS-MENU POUR LES COMPTES COURANTS UNIQUEMENT */}
+             {currentTab === AccountType.CHECKING && (
+                 <div className="flex flex-col gap-4 animate-in slide-in-from-top-2 duration-300">
+                    <div className="flex justify-center">
+                        <div className="flex bg-slate-50 p-1 rounded-lg border border-slate-200">
+                            <button
+                                onClick={() => setIsExpenseMode(true)}
+                                className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all flex items-center gap-2 ${isExpenseMode ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                            >
+                                <TrendingDown size={14}/> Dépenses (Débits)
+                            </button>
+                            <button
+                                onClick={() => setIsExpenseMode(false)}
+                                className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all flex items-center gap-2 ${!isExpenseMode ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                            >
+                                <TrendingUp size={14}/> Revenus (Crédits)
+                            </button>
                         </div>
-                    )}
-                    <div className="flex gap-2">
-                        {isExpenseMode && onImportLabels && (
-                            <button 
-                                onClick={handleImportCbClick}
-                                className="text-xs font-medium text-slate-500 hover:text-indigo-600 flex items-center gap-1.5 transition-colors bg-white px-3 py-2 rounded-lg border border-slate-200 shadow-sm hover:border-indigo-200 active:scale-95"
-                                title="Importer les libellés 'CB %' depuis l'historique"
-                            >
-                                <DownloadCloud size={14} /> Import (CB)
-                            </button>
-                        )}
-                        {!isExpenseMode && onImportVirLabels && (
-                            <button 
-                                onClick={handleImportVirClick}
-                                className="text-xs font-medium text-slate-500 hover:text-indigo-600 flex items-center gap-1.5 transition-colors bg-white px-3 py-2 rounded-lg border border-slate-200 shadow-sm hover:border-indigo-200 active:scale-95"
-                                title="Importer les libellés 'VIR %' depuis l'historique"
-                            >
-                                <DownloadCloud size={14} /> Import (VIR)
-                            </button>
-                        )}
                     </div>
-                </div>
+
+                    <div className="flex flex-col sm:flex-row justify-end items-end sm:items-center gap-2">
+                        {importStatus && (
+                            <div className={`px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-2 ${
+                                importStatus.type === 'success' ? 'bg-emerald-100 text-emerald-700' : 
+                                importStatus.type === 'info' ? 'bg-slate-100 text-slate-600' : 'bg-red-100 text-red-700'
+                            }`}>
+                                {importStatus.type === 'success' && <Check size={14} />}
+                                {importStatus.type === 'info' && <Info size={14} />}
+                                {importStatus.message}
+                            </div>
+                        )}
+                        <div className="flex gap-2">
+                            {isExpenseMode && onImportLabels && (
+                                <button 
+                                    onClick={() => runImport(onImportLabels!, 'CB')}
+                                    className="text-xs font-medium text-slate-500 hover:text-indigo-600 flex items-center gap-1.5 transition-colors bg-white px-3 py-2 rounded-lg border border-slate-200 shadow-sm hover:border-indigo-200 active:scale-95"
+                                    title="Importer les libellés 'CB %' depuis l'historique"
+                                >
+                                    <DownloadCloud size={14} /> Import (CB)
+                                </button>
+                            )}
+                            {!isExpenseMode && onImportVirLabels && (
+                                <button 
+                                    onClick={() => runImport(onImportVirLabels!, 'VIR')}
+                                    className="text-xs font-medium text-slate-500 hover:text-indigo-600 flex items-center gap-1.5 transition-colors bg-white px-3 py-2 rounded-lg border border-slate-200 shadow-sm hover:border-indigo-200 active:scale-95"
+                                    title="Importer les libellés 'VIR %' depuis l'historique"
+                                >
+                                    <DownloadCloud size={14} /> Import (VIR)
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                 </div>
              )}
 
              {/* Barre de Recherche */}
@@ -219,7 +264,7 @@ export const AccountLabelManager: React.FC<AccountLabelManagerProps> = ({ labels
              </div>
 
             <DataList 
-                title={`${isSavings ? "Epargne" : "Courant"} - ${isExpenseMode ? "Débits" : "Crédits"}`}
+                title={getListTitle()}
                 count={filteredList.length} 
                 onAdd={handleAddClick} 
                 addButtonLabel="Ajouter un libellé"
@@ -228,7 +273,7 @@ export const AccountLabelManager: React.FC<AccountLabelManagerProps> = ({ labels
                 {filteredList.map(label => (
                     <DataListRow 
                         key={label.id}
-                        icon={<Tag size={20} className={isExpenseMode ? (isSavings ? "text-red-500" : "text-indigo-500") : "text-emerald-500"} />}
+                        icon={<Tag size={20} className={getIconColor()} />}
                         label={label.name}
                         onClick={() => handleEditClick(label)}
                     />

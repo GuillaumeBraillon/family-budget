@@ -177,7 +177,13 @@ export const usePlanner = (
         });
     });
 
-    res.forEach(w => w.items.sort((a, b) => a.day - b.day));
+    // Tri : Par jour, puis par ID (timestamp) pour garder l'ordre chronologique exact
+    res.forEach(w => w.items.sort((a, b) => {
+        const dayDiff = a.day - b.day;
+        if (dayDiff !== 0) return dayDiff;
+        // Si même jour, on utilise l'ID qui contient souvent un timestamp (ex: var_timestamp)
+        return a.instanceId.localeCompare(b.instanceId);
+    }));
     return res;
   }, [configs, incomeConfigs, paidItems, variableTransactions, currentMonthKey, settings, currentDate, daysInMonth, monthlyBudget]);
 

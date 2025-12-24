@@ -21,15 +21,17 @@ interface VariableTransactionFormProps {
   labelsSuggestions?: string[];
   savedLabels?: SavedLabel[];
   editingTransaction?: VariableTransaction | null;
+  initialMode?: 'STANDARD' | 'TRANSFER';
+  lockMode?: boolean; // Nouvelle prop pour empêcher le changement de mode
 }
 
 export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = ({ 
-  isOpen, onClose, accounts, categories, people, onAddTransaction, onDeleteTransaction, onUpsertSavings, defaultDate, labelsSuggestions = [], savedLabels = [], editingTransaction
+  isOpen, onClose, accounts, categories, people, onAddTransaction, onDeleteTransaction, onUpsertSavings, defaultDate, labelsSuggestions = [], savedLabels = [], editingTransaction, initialMode = 'STANDARD', lockMode = false
 }) => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   
   // Mode switch: 'STANDARD' vs 'TRANSFER'
-  const [mode, setMode] = useState<'STANDARD' | 'TRANSFER'>('STANDARD');
+  const [mode, setMode] = useState<'STANDARD' | 'TRANSFER'>(initialMode);
 
   const [type, setType] = useState<'EXPENSE' | 'INCOME'>('EXPENSE');
   const [date, setDate] = useState(defaultDate);
@@ -50,38 +52,79 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
 
   const isExpense = type === 'EXPENSE';
 
-  // Calcul des suggestions dynamiques
-  const currentSuggestions = useMemo(() => {
+  // Calcul des suggestions dynamiques pour Opérations Standard
+  const standardSuggestions = useMemo(() => {
     if (savedLabels.length > 0) {
-        // Si on a la liste d'objets riches, on filtre par type de compte et type de flux
         return savedLabels
             .filter(l => l.type === AccountType.CHECKING && l.isExpense === isExpense)
             .map(l => l.name);
     } else {
-        // Fallback vers la liste simple (legacy ou si savedLabels n'est pas passé)
-        // Dans ce cas, on ne peut pas distinguer dépense/revenu facilement, on rend tout.
         return labelsSuggestions;
     }
   }, [savedLabels, labelsSuggestions, isExpense]);
 
+  // Calcul des suggestions pour Virements (Utilise AccountType.TRANSFER)
+  const transferSuggestions = useMemo(() => {
+      // Uniquement les libellés sauvegardés spécifiquement pour les virements
+      return savedLabels
+        .filter(l => l.type === AccountType.TRANSFER)
+        .map(l => l.name);
+  }, [savedLabels]);
+
   useEffect(() => {
     if (isOpen) {
         if (editingTransaction) {
-            setMode('STANDARD');
+            // Si on édite, on détermine le mode en fonction du libellé ou d'une autre prop si dispo
+            // Pour simplifier, si catégorie est Virement Interne -> TRANSFER
+            const isTransfer = editingTransaction.category === 'Virement Interne';
+            setMode(isTransfer ? 'TRANSFER' : 'STANDARD');
+            
             setType(editingTransaction.type || 'EXPENSE');
             setDate(editingTransaction.date);
-            setLabel(editingTransaction.label);
+            // Nettoyage du libellé pour l'affichage si c'est un virement auto-généré
+            let cleanLabel = editingTransaction.label;
+            if (isTransfer) {
+                const match = cleanLabel.match(/\((.*?)\)$/); // Extrait ce qu'il y a entre parenthèses à la fin
+                if (match) cleanLabel = match[1];
+            }
+            setLabel(cleanLabel);
+            
             setAmount(editingTransaction.amount.toString());
-            setAccountId(editingTransaction.accountId);
+            
+            if (isTransfer) {
+                // En mode virement, on utilise le commentaire (qui stocke le nom du compte lié) pour retrouver la paire
+                const otherAccountName = editingTransaction.comments; 
+                const otherAccount = accounts.find(a => a.name === otherAccountName);
+
+                if (editingTransaction.type === 'INCOME') {
+                    // Transaction actuelle = Destination (Crédit)
+                    setDestAccountId(editingTransaction.accountId);
+                    // Le commentaire contient normalement le nom de la Source
+                    if (otherAccount) {
+                        setAccountId(otherAccount.id);
+                    }
+                } else {
+                    // Transaction actuelle = Source (Débit)
+                    setAccountId(editingTransaction.accountId);
+                    // Le commentaire contient normalement le nom de la Destination
+                    if (otherAccount) {
+                        setDestAccountId(otherAccount.id);
+                    }
+                }
+            } else {
+                setAccountId(editingTransaction.accountId);
+            }
+
             setCategory(editingTransaction.category);
             setSubCategory(editingTransaction.subCategory || '');
             setBeneficiaryId(editingTransaction.beneficiaryId || defaultBeneficiary);
             setIsExtra(!!editingTransaction.isExtra);
             setComments(editingTransaction.comments || '');
         } else {
-            setMode('STANDARD');
+            // Nouveau : On utilise le mode initial passé en props
+            setMode(initialMode);
             setDate(defaultDate);
-            setLabel('');
+            setLabel(''); // Reset label à vide pour permettre la suggestion
             setAmount('');
             setCategory('');
             setSubCategory('');
@@ -92,7 +135,7 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
             if (!accountId && checkingAccounts.length > 0) setAccountId(checkingAccounts[0].id);
         }
     }
-  }, [isOpen, editingTransaction, defaultDate, defaultBeneficiary]);
+  }, [isOpen, editingTransaction, defaultDate, defaultBeneficiary, initialMode, accounts]);
 
   const handleSubmit = (targetIsWaiting: boolean) => {
     if (!label || !amount || !accountId) return;
@@ -106,9 +149,18 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
         
         const transferLabel = `Virement interne : ${sourceAcc?.name || '?'} => ${destAcc?.name || '?'} (${label})`;
         
+        // Logique de préservation de l'ID pour maintenir l'ordre de tri en cas d'édition
+        let baseTimestamp = Date.now();
+        if (editingTransaction && editingTransaction.category === 'Virement Interne') {
+             const match = editingTransaction.id.match(/var_tr_(?:in|out)_(\d+)/);
+             if (match) {
+                 baseTimestamp = parseInt(match[1], 10);
+             }
+        }
+
         // 1. Débit (Source)
         onAddTransaction({
-            id: `var_tr_out_${Date.now()}`,
+            id: `var_tr_out_${baseTimestamp}`,
             date,
             label: transferLabel,
             amount: amountNum,
@@ -119,13 +171,13 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
             type: 'EXPENSE',
             isWaiting: false, // Virement immédiat
             isExtra: false,   // Ne compte pas dans le budget
-            comments: `Vers ${destAcc?.name}`
+            comments: destAcc?.name // STOCKAGE NOM BRUT DESTINATION
         });
 
         // 1b. Si Source = EPARGNE
         if (sourceAcc?.type === AccountType.SAVINGS && onUpsertSavings) {
             onUpsertSavings({
-                id: `sav_auto_out_${Date.now()}`,
+                id: `sav_auto_out_${baseTimestamp}`,
                 accountId: accountId,
                 date: date,
                 label: `Virement vers ${destAcc?.name} (${label})`,
@@ -135,7 +187,7 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
 
         // 2. Crédit (Destination)
         onAddTransaction({
-            id: `var_tr_in_${Date.now()}`,
+            id: `var_tr_in_${baseTimestamp}`,
             date,
             label: transferLabel,
             amount: amountNum,
@@ -146,13 +198,13 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
             type: 'INCOME',
             isWaiting: false,
             isExtra: false,
-            comments: `De ${sourceAcc?.name}`
+            comments: sourceAcc?.name // STOCKAGE NOM BRUT SOURCE
         });
 
         // 2b. Si Dest = EPARGNE
         if (destAcc?.type === AccountType.SAVINGS && onUpsertSavings) {
             onUpsertSavings({
-                id: `sav_auto_in_${Date.now()}`,
+                id: `sav_auto_in_${baseTimestamp}`,
                 accountId: destAccountId,
                 date: date,
                 label: `Virement depuis ${sourceAcc?.name} (${label})`,
@@ -197,12 +249,12 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
     <Modal 
         isOpen={isOpen} 
         onClose={onClose} 
-        title={editingTransaction ? "Modifier l'opération" : "Nouvelle opération"}
+        title={editingTransaction ? "Modifier l'opération" : (mode === 'TRANSFER' ? "Nouveau virement" : "Nouvelle opération")}
     >
       <div className="space-y-4">
         
-        {/* SÉLECTEUR DE MODE */}
-        {!editingTransaction && (
+        {/* SÉLECTEUR DE MODE (Visible uniquement si non locké et nouvelle opération) */}
+        {!editingTransaction && !lockMode && (
             <div className="flex bg-slate-100 p-1 rounded-lg mb-2">
                 <button
                     type="button"
@@ -213,7 +265,7 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
                 </button>
                 <button
                     type="button"
-                    onClick={() => { setMode('TRANSFER'); setLabel('Virement interne'); }}
+                    onClick={() => { setMode('TRANSFER'); setLabel(''); }}
                     className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-xs font-bold transition-all ${mode === 'TRANSFER' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                 >
                     <ArrowRightLeft size={12}/> Virement Interne
@@ -250,7 +302,7 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
                     onChange={e => setLabel(e.target.value)}
                     onSelectSuggestion={setLabel}
                     placeholder={isExpense ? "Ex: Courses Carrefour..." : "Ex: Vente Vinted..."}
-                    suggestions={currentSuggestions}
+                    suggestions={standardSuggestions}
                     required
                     autoFocus={!editingTransaction}
                 />
@@ -330,7 +382,7 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
                 <div className="bg-indigo-50 border border-indigo-100 p-4 rounded-xl flex items-start gap-3">
                     <ArrowRightLeft className="text-indigo-600 mt-1" size={20} />
                     <p className="text-xs text-indigo-800 leading-relaxed">
-                        Ce mode crée automatiquement deux opérations (un débit et un crédit) pour équilibrer vos comptes. Ces mouvements ne seront pas comptabilisés comme des dépenses ou des revenus dans votre budget.
+                        Ce mode crée automatiquement deux opérations (un débit et un crédit) pour équilibrer vos comptes.
                     </p>
                 </div>
 
@@ -379,11 +431,13 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
                     required
                 />
 
-                <TextInput 
-                    label="Raison du virement" 
+                <SearchableTextInput 
+                    label="Motif du virement" 
                     value={label} 
                     onChange={e => setLabel(e.target.value)}
-                    placeholder="Ex: Épargne, Remboursement..."
+                    onSelectSuggestion={setLabel}
+                    placeholder="Ex: Épargne, Remboursement, Apport..."
+                    suggestions={transferSuggestions}
                     required
                 />
             </div>

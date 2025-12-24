@@ -8,9 +8,10 @@ interface FilterBarProps {
   onFilterChange: (filters: OperationFilters) => void;
   accounts: Account[];
   people: Person[];
+  hiddenFilters?: ('flux' | 'source' | 'status' | 'extra' | 'transfer' | 'salary' | 'accounts' | 'beneficiaries')[];
 }
 
-export const FilterBar: React.FC<FilterBarProps> = ({ filters, onFilterChange, accounts, people }) => {
+export const FilterBar: React.FC<FilterBarProps> = ({ filters, onFilterChange, accounts, people, hiddenFilters = [] }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
   const toggleMulti = (key: 'accountIds' | 'beneficiaryIds', value: string) => {
@@ -46,8 +47,8 @@ export const FilterBar: React.FC<FilterBarProps> = ({ filters, onFilterChange, a
       onFilterChange({ ...filters, transfer: nextValue });
   };
 
-  const toggleSalary = (val: 'ALL' | 'ONLY') => {
-      const nextValue = filters.salary === val ? 'EXCLUDE' : val;
+  const toggleSalary = (val: 'ALL' | 'ONLY' | 'EXCLUDE') => {
+      const nextValue = filters.salary === val ? 'ALL' : val;
       onFilterChange({ ...filters, salary: nextValue });
   };
 
@@ -58,7 +59,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({ filters, onFilterChange, a
         status: 'ALL',
         extra: 'ALL',
         transfer: 'EXCLUDE',
-        salary: 'EXCLUDE',
+        salary: 'ALL',
         accountIds: [],
         beneficiaryIds: []
     });
@@ -70,7 +71,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({ filters, onFilterChange, a
     filters.status !== 'ALL',
     filters.extra !== 'ALL',
     filters.transfer !== 'EXCLUDE',
-    filters.salary !== 'EXCLUDE',
+    filters.salary !== 'ALL',
     filters.accountIds.length > 0,
     filters.beneficiaryIds.length > 0
   ].filter(Boolean).length;
@@ -110,42 +111,9 @@ export const FilterBar: React.FC<FilterBarProps> = ({ filters, onFilterChange, a
 
       {/* FILTRES TOUJOURS VISIBLES */}
       <div className="flex flex-wrap gap-3">
-          {/* ÉTAT */}
-          <FilterGroup label="État">
-              <FilterChip 
-                  label="Réel" 
-                  icon={<CheckCircle2 size={10} />}
-                  active={filters.status === 'REAL'} 
-                  onClick={() => toggleStatus('REAL')} 
-                  color="emerald"
-              />
-              <FilterChip 
-                  label="Attente" 
-                  icon={<Clock size={10} />}
-                  active={filters.status === 'WAITING'} 
-                  onClick={() => toggleStatus('WAITING')} 
-                  color="amber"
-              />
-          </FilterGroup>
-
-          {/* COMPTES */}
-          <FilterGroup label="Comptes">
-              {checkingAccounts.map(acc => (
-                  <FilterChip 
-                      key={acc.id}
-                      label={acc.name} 
-                      active={filters.accountIds.includes(acc.id)} 
-                      onClick={() => toggleMulti('accountIds', acc.id)} 
-                  />
-              ))}
-          </FilterGroup>
-      </div>
-
-      {/* FILTRES REPLIABLES */}
-      {isExpanded && (
-        <div className="flex flex-wrap gap-3 pb-2 pt-2 border-t border-slate-100 animate-in slide-in-from-top-2 duration-300">
-            {/* FLUX */}
-            <FilterGroup label="Flux">
+          {/* FLUX (Promu au premier niveau si non masqué) */}
+          {!hiddenFilters.includes('flux') && (
+             <FilterGroup label="Flux">
                 <FilterChip 
                     label="Dépenses" 
                     active={filters.flux === 'EXPENSE'} 
@@ -158,88 +126,138 @@ export const FilterBar: React.FC<FilterBarProps> = ({ filters, onFilterChange, a
                     onClick={() => toggleFlux('INCOME')} 
                     color="emerald"
                 />
-            </FilterGroup>
+             </FilterGroup>
+          )}
 
-            {/* SOURCE */}
-            <FilterGroup label="Source">
+          {/* ÉTAT */}
+          {!hiddenFilters.includes('status') && (
+            <FilterGroup label="État">
                 <FilterChip 
-                    label="Récurrent" 
-                    icon={<CalendarClock size={10} />}
-                    active={filters.source === 'RECURRING'} 
-                    onClick={() => toggleSource('RECURRING')} 
-                    color="indigo"
-                />
-                <FilterChip 
-                    label="Variable" 
-                    icon={<ShoppingBag size={10} />}
-                    active={filters.source === 'VARIABLE'} 
-                    onClick={() => toggleSource('VARIABLE')} 
-                    color="indigo"
-                />
-            </FilterGroup>
-
-            {/* SALAIRES */}
-            <FilterGroup label="Salaires">
-                <FilterChip 
-                    label="Afficher" 
-                    active={filters.salary === 'ALL'} 
-                    onClick={() => toggleSalary('ALL')} 
-                    color="indigo"
-                />
-                <FilterChip 
-                    label="Uniquement" 
-                    icon={<Briefcase size={10} />}
-                    active={filters.salary === 'ONLY'} 
-                    onClick={() => toggleSalary('ONLY')} 
+                    label="Réel" 
+                    icon={<CheckCircle2 size={10} />}
+                    active={filters.status === 'REAL'} 
+                    onClick={() => toggleStatus('REAL')} 
                     color="emerald"
                 />
-            </FilterGroup>
-
-            {/* VIREMENTS */}
-            <FilterGroup label="Virements">
                 <FilterChip 
-                    label="Afficher" 
-                    active={filters.transfer === 'ALL'} 
-                    onClick={() => toggleTransfer('ALL')} 
-                    color="indigo"
-                />
-                <FilterChip 
-                    label="Uniquement" 
-                    icon={<ArrowRightLeft size={10} />}
-                    active={filters.transfer === 'ONLY'} 
-                    onClick={() => toggleTransfer('ONLY')} 
-                    color="indigo"
-                />
-            </FilterGroup>
-
-            {/* NATURE */}
-            <FilterGroup label="Nature">
-                <FilterChip 
-                    label="Standard" 
-                    active={filters.extra === 'EXCLUDE'} 
-                    onClick={() => toggleExtra('EXCLUDE')} 
-                    color="indigo"
-                />
-                <FilterChip 
-                    label="Extras" 
-                    icon={<Star size={10} />}
-                    active={filters.extra === 'ONLY'} 
-                    onClick={() => toggleExtra('ONLY')} 
+                    label="Attente" 
+                    icon={<Clock size={10} />}
+                    active={filters.status === 'WAITING'} 
+                    onClick={() => toggleStatus('WAITING')} 
                     color="amber"
                 />
             </FilterGroup>
+          )}
 
-            {/* BÉNÉFICIAIRES */}
-            <FilterGroup label="Bénéficiaires">
-                {people.map(p => (
+          {/* COMPTES */}
+          {!hiddenFilters.includes('accounts') && (
+            <FilterGroup label="Comptes">
+                {checkingAccounts.map(acc => (
                     <FilterChip 
-                        key={p.id}
-                        label={p.name} 
-                        active={filters.beneficiaryIds.includes(p.id)} 
-                        onClick={() => toggleMulti('beneficiaryIds', p.id)} 
+                        key={acc.id}
+                        label={acc.name} 
+                        active={filters.accountIds.includes(acc.id)} 
+                        onClick={() => toggleMulti('accountIds', acc.id)} 
                     />
                 ))}
             </FilterGroup>
+          )}
+      </div>
+
+      {/* FILTRES REPLIABLES */}
+      {isExpanded && (
+        <div className="flex flex-wrap gap-3 pb-2 pt-2 border-t border-slate-100 animate-in slide-in-from-top-2 duration-300">
+            
+            {/* SOURCE */}
+            {!hiddenFilters.includes('source') && (
+                <FilterGroup label="Source">
+                    <FilterChip 
+                        label="Récurrent" 
+                        icon={<CalendarClock size={10} />}
+                        active={filters.source === 'RECURRING'} 
+                        onClick={() => toggleSource('RECURRING')} 
+                        color="indigo"
+                    />
+                    <FilterChip 
+                        label="Variable" 
+                        icon={<ShoppingBag size={10} />}
+                        active={filters.source === 'VARIABLE'} 
+                        onClick={() => toggleSource('VARIABLE')} 
+                        color="indigo"
+                    />
+                </FilterGroup>
+            )}
+
+            {/* SALAIRES */}
+            {!hiddenFilters.includes('salary') && (
+                <FilterGroup label="Salaires">
+                    <FilterChip 
+                        label="Uniquement" 
+                        icon={<Briefcase size={10} />}
+                        active={filters.salary === 'ONLY'} 
+                        onClick={() => toggleSalary('ONLY')} 
+                        color="emerald"
+                    />
+                    <FilterChip 
+                        label="Masquer" 
+                        active={filters.salary === 'EXCLUDE'} 
+                        onClick={() => toggleSalary('EXCLUDE')} 
+                        color="indigo"
+                    />
+                </FilterGroup>
+            )}
+
+            {/* VIREMENTS */}
+            {!hiddenFilters.includes('transfer') && (
+                <FilterGroup label="Virements">
+                    <FilterChip 
+                        label="Afficher" 
+                        active={filters.transfer === 'ALL'} 
+                        onClick={() => toggleTransfer('ALL')} 
+                        color="indigo"
+                    />
+                    <FilterChip 
+                        label="Uniquement" 
+                        icon={<ArrowRightLeft size={10} />}
+                        active={filters.transfer === 'ONLY'} 
+                        onClick={() => toggleTransfer('ONLY')} 
+                        color="indigo"
+                    />
+                </FilterGroup>
+            )}
+
+            {/* NATURE */}
+            {!hiddenFilters.includes('extra') && (
+                <FilterGroup label="Nature">
+                    <FilterChip 
+                        label="Standard" 
+                        active={filters.extra === 'EXCLUDE'} 
+                        onClick={() => toggleExtra('EXCLUDE')} 
+                        color="indigo"
+                    />
+                    <FilterChip 
+                        label="Extras" 
+                        icon={<Star size={10} />}
+                        active={filters.extra === 'ONLY'} 
+                        onClick={() => toggleExtra('ONLY')} 
+                        color="amber"
+                    />
+                </FilterGroup>
+            )}
+
+            {/* BÉNÉFICIAIRES */}
+            {!hiddenFilters.includes('beneficiaries') && (
+                <FilterGroup label="Bénéficiaires">
+                    {people.map(p => (
+                        <FilterChip 
+                            key={p.id}
+                            label={p.name} 
+                            active={filters.beneficiaryIds.includes(p.id)} 
+                            onClick={() => toggleMulti('beneficiaryIds', p.id)} 
+                        />
+                    ))}
+                </FilterGroup>
+            )}
         </div>
       )}
     </div>

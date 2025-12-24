@@ -1,7 +1,8 @@
 
 export enum AccountType {
   CHECKING = 'COURANT',
-  SAVINGS = 'EPARGNE'
+  SAVINGS = 'EPARGNE',
+  TRANSFER = 'VIREMENT'
 }
 
 export interface Person {

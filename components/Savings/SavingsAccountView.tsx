@@ -21,7 +21,12 @@ export const SavingsAccountView: React.FC<SavingsAccountViewProps> = ({ account,
   // Calcul de l'historique avec solde progressif
   const history = useMemo(() => {
     // 1. Trier par date croissante pour calculer le solde
-    const sorted = [...transactions].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    const sorted = [...transactions].sort((a, b) => {
+        const timeDiff = new Date(a.date).getTime() - new Date(b.date).getTime();
+        if (timeDiff !== 0) return timeDiff;
+        // Si même date (souvent YYYY-MM-DD), on trie par ID (qui contient le timestamp) pour la précision
+        return a.id.localeCompare(b.id);
+    });
     
     let runningBalance = 0; 
     

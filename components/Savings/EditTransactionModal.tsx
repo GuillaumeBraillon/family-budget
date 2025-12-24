@@ -32,16 +32,16 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({ isOp
   const [type, setType] = useState<TransactionType>(TransactionType.CREDIT);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  // Filtrage dynamique des suggestions en fonction du sens du mouvement (Crédit/Débit)
+  // Filtrage dynamique des suggestions
   const labelsToUse = useMemo(() => {
       if (savedLabels && savedLabels.length > 0) {
-          const isExpense = type === TransactionType.DEBIT;
+          // On filtre simplement par type EPARGNE pour ce modal
           return savedLabels
-            .filter(l => l.type === AccountType.SAVINGS && l.isExpense === isExpense)
+            .filter(l => l.type === AccountType.SAVINGS)
             .map(l => l.name);
       }
       return (suggestions && suggestions.length > 0) ? suggestions : DEFAULT_LABELS;
-  }, [savedLabels, suggestions, type]);
+  }, [savedLabels, suggestions]);
 
   useEffect(() => {
     if (transaction) {
