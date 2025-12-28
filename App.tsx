@@ -16,10 +16,17 @@ import { Loader2, AlertTriangle } from 'lucide-react';
 
 type ViewState = 'dashboard' | 'balances' | 'planner' | 'transfers' | 'savings' | 'config';
 
+// Ordre de navigation pour le swipe
+const VIEW_ORDER: ViewState[] = ['dashboard', 'balances', 'planner', 'transfers', 'savings', 'config'];
+
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<ViewState>('dashboard');
   const [activeConfigTab, setActiveConfigTab] = useState<ConfigTab>('general');
   const [configured, setConfigured] = useState(isSupabaseConfigured());
+  
+  // États pour la gestion du Swipe
+  const [touchStart, setTouchStart] = useState<{x: number, y: number} | null>(null);
+  const [touchEnd, setTouchEnd] = useState<{x: number, y: number} | null>(null);
   
   const { 
     accounts, configs, incomeConfigs, categories, people, paidItems, settings, transfers, variableTransactions, savedLabels,
@@ -48,6 +55,53 @@ const App: React.FC = () => {
     setActiveConfigTab(tab);
   };
 
+  // --- LOGIQUE DU SWIPE ---
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null);
+    setTouchStart({
+        x: e.targetTouches[0].clientX,
+        y: e.targetTouches[0].clientY
+    });
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd({
+        x: e.targetTouches[0].clientX,
+        y: e.targetTouches[0].clientY
+    });
+  };
+
+  const handleTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    
+    const distanceX = touchStart.x - touchEnd.x;
+    const distanceY = touchStart.y - touchEnd.y;
+    
+    // Critères pour valider un swipe intentionnel :
+    // 1. Distance horizontale significative (> 75px)
+    // 2. Geste horizontal dominant (X > Y * 1.5) pour éviter les diagonales ou scrolls verticaux imprécis
+    const isHorizontalSwipe = Math.abs(distanceX) > Math.abs(distanceY) * 1.5;
+    const isSignificant = Math.abs(distanceX) > 75;
+
+    if (isHorizontalSwipe && isSignificant) {
+        const currentIndex = VIEW_ORDER.indexOf(currentView);
+        if (distanceX > 0) {
+            // Swipe Gauche (Suivant)
+            if (currentIndex < VIEW_ORDER.length - 1) {
+              setCurrentView(VIEW_ORDER[currentIndex + 1]);
+              // Reset scroll haut de page
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        } else {
+            // Swipe Droite (Précédent)
+            if (currentIndex > 0) {
+              setCurrentView(VIEW_ORDER[currentIndex - 1]);
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        }
+    }
+  };
+
   if (!configured) {
     return <SupabaseSetup onConfigured={handleConfigured} />;
   }
@@ -64,7 +118,12 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-20">
+    <div 
+      className="min-h-screen bg-slate-50 pb-20 transition-all duration-300"
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
       <Header currentView={currentView} onViewChange={setCurrentView} />
 
       <main className="max-w-7xl mx-auto px-4 py-8">
