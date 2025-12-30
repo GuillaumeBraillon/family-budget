@@ -1,6 +1,6 @@
 
-import React from 'react';
-import { Filter, Star, Clock, CalendarClock, CheckCircle2, ArrowRightLeft, Briefcase, Tag, Ban, ListFilter, TrendingDown, TrendingUp, CreditCard, Users, List, RefreshCw, Circle, Wallet, Layers, ShoppingBag } from 'lucide-react';
+import React, { useState } from 'react';
+import { Filter, Star, Clock, CalendarClock, CheckCircle2, ArrowRightLeft, Briefcase, Tag, Ban, ListFilter, TrendingDown, TrendingUp, CreditCard, Users, List, RefreshCw, Circle, Wallet, Layers, ShoppingBag, Plus, SlidersHorizontal, X } from 'lucide-react';
 import { OperationFilters, Account, Person, AccountType, Tag as TagType } from '../../../types';
 import { FilterDropdown, FilterOption } from './FilterDropdown';
 
@@ -14,6 +14,7 @@ interface FilterBarProps {
 }
 
 export const FilterBar: React.FC<FilterBarProps> = ({ filters, onFilterChange, accounts, people, tags = [], hiddenFilters = [] }) => {
+  const [showAllFilters, setShowAllFilters] = useState(false);
 
   const update = (key: keyof OperationFilters, value: any) => {
       onFilterChange({ ...filters, [key]: value });
@@ -26,10 +27,9 @@ export const FilterBar: React.FC<FilterBarProps> = ({ filters, onFilterChange, a
         status: 'ALL',
         extra: 'ALL',
         transfer: 'EXCLUDE',
-        salary: 'ALL',
+        salary: 'EXCLUDE', // Remet à EXCLUDE pour masquer par défaut
         accountIds: [],
         beneficiaryIds: [],
-        // Reset Tags
         includedTagIds: [],
         excludedTagIds: [],
         tagPresence: 'ALL'
@@ -54,10 +54,8 @@ export const FilterBar: React.FC<FilterBarProps> = ({ filters, onFilterChange, a
     .filter(a => a.type === AccountType.CHECKING)
     .map(a => ({ id: a.id, label: a.name }));
   const allAccountIds = accountOptions.map(o => o.id);
-  // État visuel : Si vide en base (Tout), on coche tout visuellement
   const visualAccountIds = filters.accountIds.length === 0 ? allAccountIds : filters.accountIds;
   const handleAccountChange = (ids: string[]) => {
-      // Si l'utilisateur coche tout, on repasse en mode "ALL" (tableau vide)
       if (ids.length === allAccountIds.length) update('accountIds', []);
       else update('accountIds', ids);
   };
@@ -74,13 +72,11 @@ export const FilterBar: React.FC<FilterBarProps> = ({ filters, onFilterChange, a
       let newIncluded = [...filters.includedTagIds];
       let newExcluded = [...filters.excludedTagIds];
 
-      // Nettoyage préalable
       newIncluded = newIncluded.filter(tid => tid !== id);
       newExcluded = newExcluded.filter(tid => tid !== id);
 
       if (state === 'INCLUDE') {
           newIncluded.push(id);
-          // Si on inclut explicitement un tag, on bascule probablement en mode "Avec Tag" implicitement si on était en "Sans Tag"
           if (filters.tagPresence === 'WITHOUT_TAGS') update('tagPresence', 'WITH_TAGS');
       } else if (state === 'EXCLUDE') {
           newExcluded.push(id);
@@ -97,8 +93,6 @@ export const FilterBar: React.FC<FilterBarProps> = ({ filters, onFilterChange, a
       onFilterChange({
           ...filters,
           tagPresence: mode,
-          // Optionnel : Reset des sélections individuelles si on passe en mode "Sans Tags" ?
-          // Non, on garde la sélection en mémoire, mais le filtrage global prendra le dessus
           includedTagIds: mode === 'WITHOUT_TAGS' ? [] : filters.includedTagIds
       });
   };
@@ -143,7 +137,6 @@ export const FilterBar: React.FC<FilterBarProps> = ({ filters, onFilterChange, a
       { id: 'STANDARD', label: 'Standard', icon: <Circle size={14} className="text-slate-400" /> },
       { id: 'EXTRA', label: 'Extra', icon: <Star size={14} className="text-amber-500" /> }
   ];
-  // Logic: ALL = Standard + Extra, ONLY = Extra, EXCLUDE = Standard
   const selectedNature = filters.extra === 'ALL' ? ['STANDARD', 'EXTRA'] : (filters.extra === 'ONLY' ? ['EXTRA'] : ['STANDARD']);
   const handleNatureChange = (ids: string[]) => {
       if (ids.length === 2 || ids.length === 0) update('extra', 'ALL');
@@ -168,7 +161,6 @@ export const FilterBar: React.FC<FilterBarProps> = ({ filters, onFilterChange, a
       { id: 'STANDARD', label: 'Opérations', icon: <Layers size={14} className="text-slate-400" /> },
       { id: 'TRANSFER', label: 'Virements', icon: <ArrowRightLeft size={14} className="text-indigo-500" /> }
   ];
-  // Logic: Default is EXCLUDE (Standard only). ALL = Standard + Transfer. ONLY = Transfer.
   const selectedTransfer = filters.transfer === 'ALL' ? ['STANDARD', 'TRANSFER'] : (filters.transfer === 'ONLY' ? ['TRANSFER'] : ['STANDARD']);
   const handleTransferChange = (ids: string[]) => {
       if (ids.length === 2 || ids.length === 0) update('transfer', 'ALL');
@@ -176,37 +168,41 @@ export const FilterBar: React.FC<FilterBarProps> = ({ filters, onFilterChange, a
       else update('transfer', 'EXCLUDE');
   };
 
+  // --- LOGIQUE D'ACTIVITÉ ---
+  const isTagsActive = filters.includedTagIds.length > 0 || filters.excludedTagIds.length > 0 || filters.tagPresence !== 'ALL';
+  const isExtraActive = filters.extra !== 'ALL';
+  const isSalaryActive = filters.salary !== 'EXCLUDE'; // Défaut EXCLUDE
+  const isBenActive = filters.beneficiaryIds.length > 0;
+  const isSourceActive = filters.source !== 'ALL';
+  const isTransferActive = filters.transfer !== 'EXCLUDE'; // Défaut EXCLUDE
+
+  const hasActiveSecondary = isTagsActive || isExtraActive || isSalaryActive || isBenActive || isSourceActive || isTransferActive;
+  
+  // Total des filtres actifs pour le badge global
   const activeFiltersCount = [
     filters.flux !== 'ALL',
-    filters.source !== 'ALL',
     filters.status !== 'ALL',
-    filters.extra !== 'ALL',
-    filters.transfer !== 'EXCLUDE',
-    filters.salary !== 'ALL',
     filters.accountIds.length > 0,
-    filters.beneficiaryIds.length > 0,
-    filters.includedTagIds.length > 0,
-    filters.excludedTagIds.length > 0,
-    filters.tagPresence !== 'ALL'
+    hasActiveSecondary
   ].filter(Boolean).length;
 
   return (
     <div className="flex flex-col gap-3">
-        {/* BARRE PRINCIPALE */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar mask-gradient-right">
+        {/* HEADER BAR AVEC WRAP */}
+        <div className="flex flex-wrap items-center gap-2">
             
-            {/* Indicateur de filtre */}
-            <div className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest mr-2 flex-shrink-0">
+            {/* LABEL FILTRES */}
+            <div className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest mr-2 flex-shrink-0 h-8">
                 <Filter size={14} /> 
                 <span className="hidden sm:inline">Filtres</span>
                 {activeFiltersCount > 0 && (
                     <span className="bg-indigo-600 text-white text-[9px] w-5 h-5 flex items-center justify-center rounded-full shadow-sm animate-in zoom-in">
-                        {activeFiltersCount}
+                        !
                     </span>
                 )}
             </div>
 
-            {/* FLUX */}
+            {/* FILTRES PRIMAIRES (Toujours visibles) */}
             {!hiddenFilters.includes('flux') && (
                 <FilterDropdown 
                     label="Flux"
@@ -218,7 +214,6 @@ export const FilterBar: React.FC<FilterBarProps> = ({ filters, onFilterChange, a
                 />
             )}
 
-            {/* COMPTES */}
             {!hiddenFilters.includes('accounts') && (
                 <FilterDropdown 
                     label="Comptes"
@@ -226,12 +221,10 @@ export const FilterBar: React.FC<FilterBarProps> = ({ filters, onFilterChange, a
                     options={accountOptions}
                     selectedValues={visualAccountIds}
                     onChange={handleAccountChange}
-                    onSelectAll={() => update('accountIds', [])} // [] = Tout
-                    onSolo={(id) => update('accountIds', [id])}
+                    onSelectAll={() => update('accountIds', [])}
                 />
             )}
 
-            {/* STATUT */}
             {!hiddenFilters.includes('status') && (
                 <FilterDropdown 
                     label="Statut"
@@ -244,118 +237,124 @@ export const FilterBar: React.FC<FilterBarProps> = ({ filters, onFilterChange, a
                 />
             )}
 
-            {/* TAGS (NOUVEAU) */}
-            {!hiddenFilters.includes('tags') && tags.length > 0 && (
-                <FilterDropdown 
-                    label="Tags"
-                    icon={<Tag size={14} />}
-                    options={tagOptions}
-                    selectedValues={[]} // Non utilisé en mode Tri-State
-                    onChange={() => {}} // Non utilisé
-                    triStateMode={true}
-                    includedValues={filters.includedTagIds}
-                    excludedValues={filters.excludedTagIds}
-                    onTriStateChange={handleTagTriStateChange}
-                    onClear={() => onFilterChange({ ...filters, includedTagIds: [], excludedTagIds: [], tagPresence: 'ALL' })}
-                    headerContent={
-                        <div className="flex bg-slate-100 p-0.5 rounded-lg mb-2">
-                            <button 
-                                onClick={() => handleTagPresenceChange('ALL')}
-                                className={`flex-1 py-1 rounded text-[9px] font-bold text-center transition-all ${filters.tagPresence === 'ALL' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400'}`}
-                            >
-                                Tous
-                            </button>
-                            <button 
-                                onClick={() => handleTagPresenceChange('WITH_TAGS')}
-                                className={`flex-1 py-1 rounded text-[9px] font-bold text-center transition-all ${filters.tagPresence === 'WITH_TAGS' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400'}`}
-                            >
-                                Avec Tags
-                            </button>
-                            <button 
-                                onClick={() => handleTagPresenceChange('WITHOUT_TAGS')}
-                                className={`flex-1 py-1 rounded text-[9px] font-bold text-center transition-all ${filters.tagPresence === 'WITHOUT_TAGS' ? 'bg-white text-rose-600 shadow-sm' : 'text-slate-400'}`}
-                            >
-                                Sans Tags
-                            </button>
-                        </div>
-                    }
-                />
-            )}
+            {/* BOUTON TOGGLE "PLUS DE FILTRES" */}
+            <button
+                onClick={() => setShowAllFilters(!showAllFilters)}
+                className={`h-[30px] px-3 rounded-lg border text-xs font-bold transition-all flex items-center gap-1.5 ${
+                    showAllFilters 
+                    ? 'bg-slate-800 text-white border-slate-800' 
+                    : (hasActiveSecondary ? 'bg-indigo-50 text-indigo-600 border-indigo-200' : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300')
+                }`}
+            >
+                {showAllFilters ? <X size={14} /> : <SlidersHorizontal size={14} />}
+                <span className="hidden sm:inline">{showAllFilters ? 'Fermer' : 'Plus de filtres'}</span>
+                {!showAllFilters && hasActiveSecondary && <span className="w-2 h-2 rounded-full bg-indigo-500 ml-0.5"></span>}
+            </button>
 
-            {/* NATURE (EXTRAS) */}
-            {!hiddenFilters.includes('extra') && (
-                <FilterDropdown 
-                    label="Nature"
-                    icon={<Star size={14} />}
-                    options={natureOptions}
-                    selectedValues={selectedNature}
-                    onChange={handleNatureChange}
-                    onSelectAll={() => update('extra', 'ALL')}
-                    color="amber"
-                />
-            )}
-
-            {/* SALAIRES */}
-            {!hiddenFilters.includes('salary') && (
-                <FilterDropdown 
-                    label="Type"
-                    icon={<Briefcase size={14} />}
-                    options={salaryOptions}
-                    selectedValues={selectedSalary}
-                    onChange={handleSalaryChange}
-                    onSelectAll={() => update('salary', 'ALL')}
-                    color="emerald"
-                />
-            )}
-
-            {/* BÉNÉFICIAIRES */}
-            {!hiddenFilters.includes('beneficiaries') && (
-                <FilterDropdown 
-                    label="Bénéficiaires"
-                    icon={<Users size={14} />}
-                    options={benOptions}
-                    selectedValues={visualBenIds}
-                    onChange={handleBenChange}
-                    onSelectAll={() => update('beneficiaryIds', [])} // [] = Tout
-                    onSolo={(id) => update('beneficiaryIds', [id])}
-                />
-            )}
-
-            {/* SOURCE */}
-            {!hiddenFilters.includes('source') && (
-                <FilterDropdown 
-                    label="Source"
-                    icon={<List size={14} />}
-                    options={sourceOptions}
-                    selectedValues={selectedSource}
-                    onChange={handleSourceChange}
-                    onSelectAll={() => update('source', 'ALL')}
-                />
-            )}
-
-            {/* VIREMENTS */}
-            {!hiddenFilters.includes('transfer') && (
-                <FilterDropdown 
-                    label="Ops."
-                    icon={<ArrowRightLeft size={14} />}
-                    options={transferOptions}
-                    selectedValues={selectedTransfer}
-                    onChange={handleTransferChange}
-                    onSelectAll={() => update('transfer', 'ALL')}
-                    color="slate"
-                />
-            )}
-
-            {/* BOUTON RESET */}
-            {activeFiltersCount > 0 && (
+            {/* BOUTON RESET (Si filtres actifs) */}
+            {(activeFiltersCount > 0 || hasActiveSecondary) && (
                 <button 
                     onClick={clear}
-                    className="ml-auto text-[10px] font-black text-rose-500 hover:text-rose-600 flex items-center gap-1 uppercase transition-colors whitespace-nowrap bg-rose-50 px-3 py-1.5 rounded-lg border border-rose-100 hover:border-rose-200"
+                    className="ml-auto sm:ml-0 h-[30px] px-3 rounded-lg border border-rose-100 bg-rose-50 text-rose-500 hover:text-rose-700 hover:border-rose-200 text-[10px] font-black uppercase transition-colors flex items-center gap-1"
+                    title="Réinitialiser tous les filtres"
                 >
-                    <RefreshCw size={12} /> <span className="hidden sm:inline">Réinitialiser</span>
+                    <RefreshCw size={12} /> <span className="hidden sm:inline">Reset</span>
                 </button>
             )}
         </div>
+
+        {/* FILTRES SECONDAIRES (Repliables) */}
+        {(showAllFilters || hasActiveSecondary) && (
+            <div className={`flex flex-wrap items-center gap-2 p-3 bg-slate-50 rounded-xl border border-slate-100 animate-in slide-in-from-top-1 duration-200 ${!showAllFilters ? 'hidden sm:flex' : ''}`}>
+                <span className="text-[9px] font-bold text-slate-400 uppercase mr-1">Avancé :</span>
+                
+                {/* TAGS */}
+                {(!hiddenFilters.includes('tags') && tags.length > 0) && (showAllFilters || isTagsActive) && (
+                    <FilterDropdown 
+                        label="Tags"
+                        icon={<Tag size={14} />}
+                        options={tagOptions}
+                        selectedValues={[]} 
+                        onChange={() => {}} 
+                        triStateMode={true}
+                        includedValues={filters.includedTagIds}
+                        excludedValues={filters.excludedTagIds}
+                        onTriStateChange={handleTagTriStateChange}
+                        onClear={() => onFilterChange({ ...filters, includedTagIds: [], excludedTagIds: [], tagPresence: 'ALL' })}
+                        headerContent={
+                            <div className="flex bg-slate-100 p-0.5 rounded-lg mb-2">
+                                <button onClick={() => handleTagPresenceChange('ALL')} className={`flex-1 py-1 rounded text-[9px] font-bold text-center transition-all ${filters.tagPresence === 'ALL' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400'}`}>Tous</button>
+                                <button onClick={() => handleTagPresenceChange('WITH_TAGS')} className={`flex-1 py-1 rounded text-[9px] font-bold text-center transition-all ${filters.tagPresence === 'WITH_TAGS' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400'}`}>Avec</button>
+                                <button onClick={() => handleTagPresenceChange('WITHOUT_TAGS')} className={`flex-1 py-1 rounded text-[9px] font-bold text-center transition-all ${filters.tagPresence === 'WITHOUT_TAGS' ? 'bg-white text-rose-600 shadow-sm' : 'text-slate-400'}`}>Sans</button>
+                            </div>
+                        }
+                    />
+                )}
+
+                {/* NATURE */}
+                {(!hiddenFilters.includes('extra')) && (showAllFilters || isExtraActive) && (
+                    <FilterDropdown 
+                        label="Nature"
+                        icon={<Star size={14} />}
+                        options={natureOptions}
+                        selectedValues={selectedNature}
+                        onChange={handleNatureChange}
+                        onSelectAll={() => update('extra', 'ALL')}
+                        color="amber"
+                    />
+                )}
+
+                {/* SALAIRES */}
+                {(!hiddenFilters.includes('salary')) && (showAllFilters || isSalaryActive) && (
+                    <FilterDropdown 
+                        label="Salaires"
+                        icon={<Briefcase size={14} />}
+                        options={salaryOptions}
+                        selectedValues={selectedSalary}
+                        onChange={handleSalaryChange}
+                        onSelectAll={() => update('salary', 'ALL')} // Note: onSelectAll ici remettra 'ALL', l'utilisateur devra recliquer EXCLUDE si voulu
+                        color="emerald"
+                    />
+                )}
+
+                {/* BÉNÉFICIAIRES */}
+                {(!hiddenFilters.includes('beneficiaries')) && (showAllFilters || isBenActive) && (
+                    <FilterDropdown 
+                        label="Bénéficiaires"
+                        icon={<Users size={14} />}
+                        options={benOptions}
+                        selectedValues={visualBenIds}
+                        onChange={handleBenChange}
+                        onSelectAll={() => update('beneficiaryIds', [])}
+                    />
+                )}
+
+                {/* SOURCE */}
+                {(!hiddenFilters.includes('source')) && (showAllFilters || isSourceActive) && (
+                    <FilterDropdown 
+                        label="Source"
+                        icon={<List size={14} />}
+                        options={sourceOptions}
+                        selectedValues={selectedSource}
+                        onChange={handleSourceChange}
+                        onSelectAll={() => update('source', 'ALL')}
+                    />
+                )}
+
+                {/* VIREMENTS */}
+                {(!hiddenFilters.includes('transfer')) && (showAllFilters || isTransferActive) && (
+                    <FilterDropdown 
+                        label="Virements"
+                        icon={<ArrowRightLeft size={14} />}
+                        options={transferOptions}
+                        selectedValues={selectedTransfer}
+                        onChange={handleTransferChange}
+                        onSelectAll={() => update('transfer', 'ALL')}
+                        color="slate"
+                    />
+                )}
+            </div>
+        )}
     </div>
   );
 };

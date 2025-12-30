@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronDown, CheckSquare, Square, Target, PlusCircle, MinusCircle, Circle } from 'lucide-react';
+import { ChevronDown, CheckSquare, Square, PlusCircle, MinusCircle, Circle } from 'lucide-react';
 
 export interface FilterOption {
   id: string;
@@ -25,7 +25,6 @@ interface FilterDropdownProps {
 
   onClear?: () => void;
   onSelectAll?: () => void;
-  onSolo?: (id: string) => void;
   color?: 'indigo' | 'emerald' | 'amber' | 'slate';
   headerContent?: React.ReactNode; 
   singleSelect?: boolean;
@@ -43,7 +42,6 @@ export const FilterDropdown: React.FC<FilterDropdownProps> = ({
   onTriStateChange,
   onClear,
   onSelectAll,
-  onSolo,
   color = 'indigo',
   headerContent,
   singleSelect = false
@@ -110,15 +108,6 @@ export const FilterDropdown: React.FC<FilterDropdownProps> = ({
             onChange(newValues);
         }
     }
-  };
-
-  const handleSoloClick = (e: React.MouseEvent, id: string) => {
-      e.stopPropagation();
-      if (onSolo) {
-          onSolo(id);
-      } else {
-          onChange([id]);
-      }
   };
 
   // Calcul du label affiché sur le bouton
@@ -271,15 +260,6 @@ export const FilterDropdown: React.FC<FilterDropdownProps> = ({
                                 </div>
                                 {opt.icon && <span className="text-slate-400 scale-75">{opt.icon}</span>}
 
-                                {!singleSelect && !triStateMode && (
-                                    <button
-                                        onClick={(e) => handleSoloClick(e, opt.id)}
-                                        className="absolute right-10 hidden group-hover:flex items-center gap-1 bg-slate-800 text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow-sm z-10 hover:bg-slate-700 animate-in zoom-in duration-200"
-                                        title="Sélectionner uniquement celui-ci"
-                                    >
-                                        <Target size={10} /> SOLO
-                                    </button>
-                                )}
                                 {triStateMode && state !== 'NEUTRAL' && (
                                     <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded uppercase ml-2 ${
                                         state === 'INCLUDE' ? 'bg-emerald-200 text-emerald-800' : 'bg-rose-200 text-rose-800'
