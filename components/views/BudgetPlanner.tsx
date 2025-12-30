@@ -40,10 +40,11 @@ export const BudgetPlanner: React.FC<BudgetPlannerProps> = ({
   const [isVarFormOpen, setIsVarFormOpen] = useState(false);
   const [editingVar, setEditingVar] = useState<VariableTransaction | null>(null);
   const [filters, setFilters] = useState<OperationFilters>({
-    flux: 'ALL', source: 'ALL', status: 'ALL', extra: 'ALL', transfer: 'EXCLUDE', salary: 'EXCLUDE', accountIds: [], beneficiaryIds: []
+    flux: 'ALL', source: 'ALL', status: 'ALL', extra: 'ALL', transfer: 'EXCLUDE', salary: 'EXCLUDE', accountIds: [], beneficiaryIds: [],
+    includedTagIds: [], excludedTagIds: [], tagPresence: 'ALL'
   });
   
-  const { filteredWeeks } = usePlanner(configs, incomeConfigs, paidItems, variableTransactions, ui.currentDate, ui.searchQuery, settings, filters);
+  const { filteredWeeks } = usePlanner(configs, incomeConfigs, paidItems, variableTransactions, ui.currentDate, ui.searchQuery, settings, categories, filters);
   const currentWeekIndex = filteredWeeks.some(w => w.weekNumber === ui.activeWeek) ? ui.activeWeek : 1;
   const currentWeekData = filteredWeeks.find(w => w.weekNumber === currentWeekIndex);
   const currentItems = currentWeekData?.items || [];

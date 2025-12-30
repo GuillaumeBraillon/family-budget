@@ -209,19 +209,29 @@ export const usePlanner = (
             if (filters.accountIds.length > 0) items = items.filter(i => filters.accountIds.includes(i.accountId));
             if (filters.beneficiaryIds.length > 0) items = items.filter(i => filters.beneficiaryIds.includes(i.beneficiaryId));
             
-            if (filters.tagIds && filters.tagIds.length > 0) {
-                // LOGIQUE DE FILTRAGE DES TAGS
-                if (filters.tagMode === 'EXCLUDE') {
-                    // MODE EXCLUSION : On retire l'item si il possède l'un des tags sélectionnés
-                    items = items.filter(i => {
-                        if (!i.tagIds || i.tagIds.length === 0) return true; // Pas de tags = on garde
-                        // Si aucun tag de l'item n'est dans la liste des tags exclus, on garde
-                        return !i.tagIds.some(tagId => filters.tagIds.includes(tagId));
-                    });
-                } else {
-                    // MODE INCLUSION (Defaut) : On garde l'item si il possède l'un des tags sélectionnés
-                    items = items.filter(i => i.tagIds && i.tagIds.some(tagId => filters.tagIds.includes(tagId)));
-                }
+            // --- NOUVELLE LOGIQUE TAGS ---
+            
+            // 1. Filtre de Présence Globale (Avec/Sans tags)
+            if (filters.tagPresence === 'WITH_TAGS') {
+                items = items.filter(i => i.tagIds && i.tagIds.length > 0);
+            } else if (filters.tagPresence === 'WITHOUT_TAGS') {
+                items = items.filter(i => !i.tagIds || i.tagIds.length === 0);
+            }
+
+            // 2. Filtre d'Exclusion (Prioritaire) : Si l'item a UN SEUL des tags exclus, on le cache
+            if (filters.excludedTagIds && filters.excludedTagIds.length > 0) {
+                items = items.filter(i => {
+                    if (!i.tagIds || i.tagIds.length === 0) return true; // Pas de tags = pas exclus
+                    return !i.tagIds.some(t => filters.excludedTagIds.includes(t));
+                });
+            }
+
+            // 3. Filtre d'Inclusion : L'item doit avoir AU MOINS UN des tags inclus
+            if (filters.includedTagIds && filters.includedTagIds.length > 0) {
+                items = items.filter(i => {
+                    if (!i.tagIds || i.tagIds.length === 0) return false; // Pas de tags = pas inclus
+                    return i.tagIds.some(t => filters.includedTagIds.includes(t));
+                });
             }
         }
 

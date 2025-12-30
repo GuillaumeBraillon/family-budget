@@ -51,8 +51,9 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
     salary: 'EXCLUDE', 
     accountIds: [], 
     beneficiaryIds: [], 
-    tagIds: [],
-    tagMode: 'INCLUDE'
+    includedTagIds: [],
+    excludedTagIds: [],
+    tagPresence: 'ALL'
   });
   
   const { filteredWeeks } = usePlanner(configs, incomeConfigs, paidItems, variableTransactions, ui.currentDate, ui.searchQuery, settings, categories, filters);

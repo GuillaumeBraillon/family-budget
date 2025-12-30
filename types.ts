@@ -182,6 +182,8 @@ export interface OperationFilters {
   salary: 'ALL' | 'ONLY' | 'EXCLUDE';
   accountIds: string[];
   beneficiaryIds: string[];
-  tagIds: string[];
-  tagMode: 'INCLUDE' | 'EXCLUDE';
+  // Nouveau système de Tags
+  includedTagIds: string[];
+  excludedTagIds: string[];
+  tagPresence: 'ALL' | 'WITH_TAGS' | 'WITHOUT_TAGS';
 }
