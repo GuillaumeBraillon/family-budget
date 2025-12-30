@@ -1,6 +1,6 @@
 
 import React, { useMemo } from 'react';
-import { Account, Person, ExpenseConfig, IncomeConfig, PaidItemDetails, AppSettings, VariableTransaction } from '../../../types';
+import { Account, Person, ExpenseConfig, IncomeConfig, PaidItemDetails, AppSettings, VariableTransaction, CategoryDef } from '../../../types';
 import { usePlanner } from '../../../hooks/usePlanner';
 import { BalancesHeader } from './components/BalancesHeader';
 import { BalancesTable, BalanceRow } from './components/BalancesTable';
@@ -15,6 +15,7 @@ interface BalancesViewProps {
   paidItems: Record<string, PaidItemDetails>;
   variableTransactions: VariableTransaction[];
   settings: AppSettings;
+  categories: CategoryDef[];
   onUpdateAccount: (account: Account) => void;
 }
 
@@ -26,10 +27,11 @@ export const BalancesView: React.FC<BalancesViewProps> = ({
   paidItems,
   variableTransactions,
   settings,
+  categories,
   onUpdateAccount
 }) => {
   const currentDate = new Date();
-  const { getStats, filteredWeeks } = usePlanner(configs, incomeConfigs, paidItems, variableTransactions, currentDate, '', settings);
+  const { getStats, filteredWeeks } = usePlanner(configs, incomeConfigs, paidItems, variableTransactions, currentDate, '', settings, categories);
   
   const getWeekFromDate = (date: Date): number => {
     const day = date.getDate();
@@ -59,10 +61,29 @@ export const BalancesView: React.FC<BalancesViewProps> = ({
   const currentWeekData = filteredWeeks.find(w => w.weekNumber === (filteredWeeks.some(w => w.weekNumber === activeWeek) ? activeWeek : 1));
   const weekItems = currentWeekData?.items || [];
 
-  // Calcul de la consommation variable totale (Payé + En attente) pour déterminer le reste de l'enveloppe
+  // Calcul de la consommation variable totale (Payé + En attente)
   const variableItems = weekItems.filter(i => i.source === 'VARIABLE' && !i.isExtra && i.category !== 'Virement Interne');
-  const varExpenses = variableItems.filter(i => i.type === 'EXPENSE').reduce((acc, i) => acc + i.amount, 0);
-  const varIncome = variableItems.filter(i => i.type === 'INCOME').reduce((acc, i) => acc + i.amount, 0);
+  
+  // LOGIQUE DE CALCUL DE LA CONSOMMATION RÉELLE AVEC REMBOURSEMENTS
+  let varExpenses = 0;
+  let varIncome = 0;
+
+  variableItems.forEach(i => {
+      if (i.type === 'EXPENSE') {
+          varExpenses += i.amount;
+      } else if (i.type === 'INCOME') {
+          // Si catégorie de type Dépense, c'est un remboursement
+          const isRefund = i.category === 'Dépenses' || 
+                           i.category === 'Remboursement' ||
+                           categories.find(c => c.name === i.category)?.type === 'EXPENSE';
+
+          if (isRefund) {
+              varExpenses -= i.amount; // On déduit le remboursement de la dépense
+          } else {
+              varIncome += i.amount;
+          }
+      }
+  });
 
   // Calculs pour le Header
   const realConsumption = varExpenses - varIncome;
@@ -115,15 +136,32 @@ export const BalancesView: React.FC<BalancesViewProps> = ({
     }).filter(x => x.amount > 0);
   }, [checkingAccounts, stats]);
 
-  // 4. Consommation Variable Réelle (Dépenses - Revenus variables sur la période)
+  // 4. Consommation Variable Réelle par compte (Avec logique remboursement)
   const consumedDetails = useMemo(() => {
     return checkingAccounts.map(acc => {
         const items = variableItems.filter(i => i.accountId === acc.id);
-        const expense = items.filter(i => i.type === 'EXPENSE').reduce((sum, i) => sum + i.amount, 0);
-        const income = items.filter(i => i.type === 'INCOME').reduce((sum, i) => sum + i.amount, 0);
+        
+        let expense = 0;
+        let income = 0;
+
+        items.forEach(i => {
+            if (i.type === 'EXPENSE') {
+                expense += i.amount;
+            } else if (i.type === 'INCOME') {
+                const isRefund = i.category === 'Dépenses' || 
+                                 i.category === 'Remboursement' ||
+                                 categories.find(c => c.name === i.category)?.type === 'EXPENSE';
+                if (isRefund) {
+                    expense -= i.amount; // Remboursement
+                } else {
+                    income += i.amount;
+                }
+            }
+        });
+
         return { name: acc.name, amount: expense - income };
     }).filter(x => Math.abs(x.amount) > 0.01);
-  }, [checkingAccounts, variableItems]);
+  }, [checkingAccounts, variableItems, categories]);
 
 
   const { jointRows, personalRows, totalPersonalRow, virLddsTotal } = useMemo(() => {

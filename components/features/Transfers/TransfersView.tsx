@@ -34,6 +34,23 @@ export const TransfersView: React.FC<TransfersViewProps> = ({
   const [editingTransfer, setEditingTransfer] = useState<Transfer | null>(null);
   const [selectedMotif, setSelectedMotif] = useState<string | null>(null);
   
+  // --- CALCUL DES SOLDES EFFECTIFS (EPARGNE) ---
+  // Les comptes d'épargne ne stockent pas leur solde dans .currentBalance mais sont calculés via l'historique des transferts.
+  // On injecte ici le solde calculé pour l'affichage dans le formulaire.
+  const accountsWithBalances = useMemo(() => {
+    return accounts.map(acc => {
+        if (acc.type === AccountType.SAVINGS) {
+            const balance = transfers.reduce((sum, t) => {
+                if (t.destinationAccountId === acc.id) return sum + t.amount;
+                if (t.sourceAccountId === acc.id) return sum - t.amount;
+                return sum;
+            }, 0);
+            return { ...acc, currentBalance: balance };
+        }
+        return acc;
+    });
+  }, [accounts, transfers]);
+
   // --- FILTRAGE ET TRI DES TRANSFERTS ---
   const { currentTransfers, motifs } = useMemo(() => {
     const currentMonth = ui.currentDate.getMonth();
@@ -223,7 +240,7 @@ export const TransfersView: React.FC<TransfersViewProps> = ({
       <VariableTransactionForm 
         isOpen={isFormOpen} 
         onClose={() => setIsFormOpen(false)} 
-        accounts={accounts} 
+        accounts={accountsWithBalances} 
         categories={categories} 
         people={people} 
         onAddTransaction={() => {}} // Non utilisé en mode Transfer pur (géré par onUpsertTransfer dans le form)

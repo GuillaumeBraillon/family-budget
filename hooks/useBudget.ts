@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
-import { Account, ExpenseConfig, IncomeConfig, CategoryDef, Person, PaidItemDetails, AppSettings, Transfer, VariableTransaction, SavedLabel, AccountType } from '../types';
+import { Account, ExpenseConfig, IncomeConfig, CategoryDef, Person, PaidItemDetails, AppSettings, Transfer, VariableTransaction, SavedLabel, AccountType, Tag } from '../types';
 import { 
   fetchInitialData, 
   apiUpsertConfig, apiDeleteConfig, 
@@ -13,7 +13,8 @@ import {
   apiUpsertVariableTransaction, apiDeleteVariableTransaction,
   apiUpsertLabel, apiDeleteLabel,
   apiImportLabels,
-  apiImportVirLabels
+  apiImportVirLabels,
+  apiUpsertTag, apiDeleteTag
 } from '../services/api';
 import { isSupabaseConfigured } from '../services/supabase';
 
@@ -57,7 +58,8 @@ export const useBudget = () => {
     } as AppSettings,
     transfers: [] as Transfer[],
     variableTransactions: [] as VariableTransaction[],
-    savedLabels: [] as SavedLabel[]
+    savedLabels: [] as SavedLabel[],
+    tags: [] as Tag[]
   });
 
   const loadData = useCallback(async (silent = false) => {
@@ -84,7 +86,8 @@ export const useBudget = () => {
         settings: res.settings,
         transfers: res.transfers,
         variableTransactions: res.variableTransactions,
-        savedLabels: res.savedLabels
+        savedLabels: res.savedLabels,
+        tags: res.tags
       });
     } catch (err: any) {
       setError(err.message || "Erreur lors du chargement des données");
@@ -139,21 +142,17 @@ export const useBudget = () => {
   };
 
   // Helpers pour dériver les listes de suggestions pour l'UI existante
-  // EPARGNE correspond aux anciens SAVINGS_LABELS
   const savingsSuggestions = data.savedLabels
     .filter(l => l.type === AccountType.SAVINGS)
     .map(l => l.name);
 
-  // COURANT correspond aux anciens VARIABLE_LABELS
   const variableSuggestions = data.savedLabels
     .filter(l => l.type === AccountType.CHECKING)
     .map(l => l.name);
 
-  // Si vide, on utilise les défauts (visuel uniquement, ne persiste pas en BDD sauf si utilisateur ajoute)
   const finalSavingsSuggestions = savingsSuggestions.length > 0 ? savingsSuggestions : DEFAULT_SAVINGS_LABELS;
   const finalVariableSuggestions = variableSuggestions.length > 0 ? variableSuggestions : DEFAULT_VARIABLE_LABELS;
 
-  // Surcharge pour l'UI qui attendait ces champs dans settings
   const settingsWithLabels = {
       ...data.settings,
       savings_labels: finalSavingsSuggestions,
@@ -162,8 +161,9 @@ export const useBudget = () => {
 
   return {
     ...data,
-    settings: settingsWithLabels, // Rétro-compatibilité pour l'UI
-    savedLabels: data.savedLabels, // Accès direct aux objets complets
+    settings: settingsWithLabels, 
+    savedLabels: data.savedLabels, 
+    tags: data.tags,
     loading,
     error,
     isDbEmpty,
@@ -188,7 +188,9 @@ export const useBudget = () => {
       upsertLabel: wrapCrud(apiUpsertLabel),
       deleteLabel: wrapCrud(apiDeleteLabel),
       importLabels: wrapCrud(apiImportLabels),
-      importVirLabels: wrapCrud(apiImportVirLabels)
+      importVirLabels: wrapCrud(apiImportVirLabels),
+      upsertTag: wrapCrud(apiUpsertTag),
+      deleteTag: wrapCrud(apiDeleteTag)
     }
   };
 };

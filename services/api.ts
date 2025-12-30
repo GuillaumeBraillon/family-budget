@@ -14,7 +14,8 @@ import {
   apiUpsertVariableTransaction, apiDeleteVariableTransaction,
   apiUpsertLabel, apiDeleteLabel,
   apiImportLabels,
-  apiImportVirLabels
+  apiImportVirLabels,
+  apiUpsertTag, apiDeleteTag
 } from './apiCrud';
 
 /**
@@ -34,7 +35,8 @@ export const fetchInitialData = async () => {
         settings: { monthly_envelope: 2000, period_type: 'FIXED_DAYS', period_value: 7 } as AppSettings, 
         transfers: [],
         variableTransactions: [], 
-        savedLabels: [] 
+        savedLabels: [],
+        tags: []
     };
   }
 
@@ -47,7 +49,8 @@ export const fetchInitialData = async () => {
     paidItemsRes, 
     settingsRes,
     transfersRes,
-    savedLabelsRes
+    savedLabelsRes,
+    tagsRes
   ] = await Promise.all([
     supabase.from('people').select('*'),
     supabase.from('accounts').select('*'),
@@ -57,10 +60,11 @@ export const fetchInitialData = async () => {
     supabase.from('paid_items').select('*'),
     supabase.from('app_settings').select('*').maybeSingle(),
     supabase.from('transfers').select('*').order('date', { ascending: false }),
-    supabase.from('saved_labels').select('*')
+    supabase.from('saved_labels').select('*'),
+    supabase.from('tags').select('*')
   ]);
 
-  const responses = [peopleRes, accountsRes, categoriesRes, configsRes, incomesRes, paidItemsRes, settingsRes, transfersRes, savedLabelsRes];
+  const responses = [peopleRes, accountsRes, categoriesRes, configsRes, incomesRes, paidItemsRes, settingsRes, transfersRes, savedLabelsRes, tagsRes];
   const errors = responses.map(r => r.error).filter(e => e !== null);
   
   if (errors.length > 0) {
@@ -75,6 +79,7 @@ export const fetchInitialData = async () => {
   const settings = mappers.mapDbSettings(settingsRes.data);
   const transfers = (transfersRes.data || []).map(mappers.mapDbTransfer);
   const savedLabels = (savedLabelsRes.data || []).map(mappers.mapDbSavedLabel);
+  const tags = (tagsRes.data || []).map(mappers.mapDbTag);
 
   const paidItems: Record<string, any> = {};
   const variableTransactions: any[] = []; 
@@ -97,12 +102,13 @@ export const fetchInitialData = async () => {
             type: mapped.type,
             isWaiting: mapped.isWaiting,
             isExtra: mapped.isExtra,
-            comments: mapped.comments
+            comments: mapped.comments,
+            tagIds: mapped.tagIds
         });
     }
   });
 
-  return { people, accounts, categories, configs, incomeConfigs, paidItems, settings, transfers, variableTransactions, savedLabels };
+  return { people, accounts, categories, configs, incomeConfigs, paidItems, settings, transfers, variableTransactions, savedLabels, tags };
 };
 
 // Ré-exports explicites
@@ -118,5 +124,6 @@ export {
   apiUpsertVariableTransaction, apiDeleteVariableTransaction,
   apiUpsertLabel, apiDeleteLabel,
   apiImportLabels,
-  apiImportVirLabels
+  apiImportVirLabels,
+  apiUpsertTag, apiDeleteTag
 };

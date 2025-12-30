@@ -1,7 +1,7 @@
 
 import { useMemo } from 'react';
 import { startOfMonth, endOfMonth, eachWeekOfInterval, getDate, getDaysInMonth } from 'date-fns';
-import { ExpenseConfig, IncomeConfig, PaidItemDetails, PlannedItem, WeeklyBudget, AppSettings, VariableTransaction, OperationFilters } from '../types';
+import { ExpenseConfig, IncomeConfig, PaidItemDetails, PlannedItem, WeeklyBudget, AppSettings, VariableTransaction, OperationFilters, CategoryDef } from '../types';
 
 export const usePlanner = (
   configs: ExpenseConfig[],
@@ -11,6 +11,7 @@ export const usePlanner = (
   currentDate: Date,
   searchQuery: string,
   settings: AppSettings,
+  categories: CategoryDef[],
   filters?: OperationFilters 
 ) => {
   const currentMonthKey = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
@@ -22,10 +23,8 @@ export const usePlanner = (
     const type = settings.period_type || 'FIXED_DAYS';
     const val = settings.period_value || 7;
 
-    // Helper unifié pour créer une période avec une limite optionnelle
     const createPeriod = (start: number, end: number, num: number, limitOverride?: number) => {
       const periodDays = end - start + 1;
-      // Par défaut : Prorata temporis (Budget / Jours du mois * Jours de la période)
       const distributedLimit = limitOverride ?? ((monthlyBudget / daysInMonth) * periodDays);
       
       return {
@@ -60,15 +59,11 @@ export const usePlanner = (
     } else if (type === 'CUSTOM_SPLIT') {
       const parts = Math.max(1, Math.min(daysInMonth, val));
       const daysPerPart = Math.floor(daysInMonth / parts);
-      
-      // MODE "PARTS ÉGALES" : On divise le budget par le nombre de parts exact
-      // Exemple : 2000 / 4 = 500€ par période, peu importe si elle fait 7 ou 10 jours.
       const equalLimit = monthlyBudget / parts;
 
       for (let i = 0; i < parts; i++) {
         const start = i * daysPerPart + 1;
         const end = (i === parts - 1) ? daysInMonth : (i + 1) * daysPerPart;
-        // On force la limite égale
         res.push(createPeriod(start, end, i + 1, equalLimit));
       }
     }
@@ -78,7 +73,6 @@ export const usePlanner = (
       if (period) period.items.push(item);
     };
 
-    // Helper pour extraire le jour du mois sans problème de timezone
     const getDayFromDateStr = (dateStr?: string, defaultDay?: number) => {
         if (!dateStr) return defaultDay || 1;
         const parts = dateStr.split('-');
@@ -86,7 +80,6 @@ export const usePlanner = (
         return new Date(dateStr).getDate();
     };
 
-    // 1. Assigner les Opérations Récurrentes
     configs.filter(conf => {
       if (!conf.startMonth) return true;
       if (currentMonthKey < conf.startMonth) return false;
@@ -96,8 +89,6 @@ export const usePlanner = (
       const instanceId = `${conf.id}-${currentMonthKey}`;
       const paid = paidItems[instanceId];
       const isActuallyPaid = paid ? !paid.isWaiting : false;
-      
-      // Utiliser la date de paiement réelle si disponible
       const day = paid ? getDayFromDateStr(paid.paymentDate, conf.dayOfMonth) : conf.dayOfMonth;
 
       assignToPeriod({
@@ -117,7 +108,8 @@ export const usePlanner = (
         isPaid: isActuallyPaid,
         isWaiting: !isActuallyPaid,
         paidDetails: paid,
-        comments: paid?.comments || ''
+        comments: paid?.comments || '',
+        tagIds: paid ? (paid.tagIds || []) : (conf.tagIds || [])
       });
     });
 
@@ -125,8 +117,6 @@ export const usePlanner = (
       const instanceId = `${inc.id}-${currentMonthKey}`;
       const paid = paidItems[instanceId];
       const isActuallyPaid = paid ? !paid.isWaiting : false;
-
-      // Utiliser la date de paiement réelle si disponible
       const day = paid ? getDayFromDateStr(paid.paymentDate, inc.dayOfMonth) : inc.dayOfMonth;
 
       assignToPeriod({
@@ -146,12 +136,12 @@ export const usePlanner = (
         isWaiting: !isActuallyPaid,
         paidDetails: paid,
         isExtra: !!(paid ? paid.isExtra : inc.isExtra),
-        isSalary: !!inc.isSalary, // Passage de l'info structurelle
-        comments: paid?.comments || ''
+        isSalary: !!inc.isSalary,
+        comments: paid?.comments || '',
+        tagIds: paid ? (paid.tagIds || []) : (inc.tagIds || [])
       });
     });
 
-    // 2. Assigner les Opérations Variables
     variableTransactions.filter(vt => {
         const d = new Date(vt.date);
         return d.getMonth() === currentDate.getMonth() && d.getFullYear() === currentDate.getFullYear();
@@ -173,15 +163,14 @@ export const usePlanner = (
             isPaid: !vt.isWaiting,
             isWaiting: !!vt.isWaiting,
             isExtra: !!vt.isExtra,
-            comments: vt.comments || ''
+            comments: vt.comments || '',
+            tagIds: vt.tagIds || []
         });
     });
 
-    // Tri : Par jour, puis par ID (timestamp) pour garder l'ordre chronologique exact
     res.forEach(w => w.items.sort((a, b) => {
         const dayDiff = a.day - b.day;
         if (dayDiff !== 0) return dayDiff;
-        // Si même jour, on utilise l'ID qui contient souvent un timestamp (ex: var_timestamp)
         return a.instanceId.localeCompare(b.instanceId);
     }));
     return res;
@@ -202,36 +191,37 @@ export const usePlanner = (
         }
 
         if (filters) {
-            if (filters.flux !== 'ALL') {
-                items = items.filter(i => i.type === filters.flux);
-            }
-            if (filters.source !== 'ALL') {
-                items = items.filter(i => i.source === filters.source);
-            }
+            if (filters.flux !== 'ALL') items = items.filter(i => i.type === filters.flux);
+            if (filters.source !== 'ALL') items = items.filter(i => i.source === filters.source);
             if (filters.status !== 'ALL') {
                 const wantWaiting = filters.status === 'WAITING';
                 items = items.filter(i => i.isWaiting === wantWaiting);
             }
-            if (filters.extra === 'ONLY') {
-                items = items.filter(i => i.isExtra === true);
-            } else if (filters.extra === 'EXCLUDE') {
-                items = items.filter(i => i.isExtra === false);
-            }
-            if (filters.transfer === 'ONLY') {
-                items = items.filter(i => i.category === 'Virement Interne');
-            } else if (filters.transfer === 'EXCLUDE') {
-                items = items.filter(i => i.category !== 'Virement Interne');
-            }
-            if (filters.salary === 'ONLY') {
-                items = items.filter(i => i.isSalary === true);
-            } else if (filters.salary === 'EXCLUDE') {
-                items = items.filter(i => !i.isSalary);
-            }
-            if (filters.accountIds.length > 0) {
-                items = items.filter(i => filters.accountIds.includes(i.accountId));
-            }
-            if (filters.beneficiaryIds.length > 0) {
-                items = items.filter(i => filters.beneficiaryIds.includes(i.beneficiaryId));
+            if (filters.extra === 'ONLY') items = items.filter(i => i.isExtra === true);
+            else if (filters.extra === 'EXCLUDE') items = items.filter(i => i.isExtra === false);
+            
+            if (filters.transfer === 'ONLY') items = items.filter(i => i.category === 'Virement Interne');
+            else if (filters.transfer === 'EXCLUDE') items = items.filter(i => i.category !== 'Virement Interne');
+            
+            if (filters.salary === 'ONLY') items = items.filter(i => i.isSalary === true);
+            else if (filters.salary === 'EXCLUDE') items = items.filter(i => !i.isSalary);
+            
+            if (filters.accountIds.length > 0) items = items.filter(i => filters.accountIds.includes(i.accountId));
+            if (filters.beneficiaryIds.length > 0) items = items.filter(i => filters.beneficiaryIds.includes(i.beneficiaryId));
+            
+            if (filters.tagIds && filters.tagIds.length > 0) {
+                // LOGIQUE DE FILTRAGE DES TAGS
+                if (filters.tagMode === 'EXCLUDE') {
+                    // MODE EXCLUSION : On retire l'item si il possède l'un des tags sélectionnés
+                    items = items.filter(i => {
+                        if (!i.tagIds || i.tagIds.length === 0) return true; // Pas de tags = on garde
+                        // Si aucun tag de l'item n'est dans la liste des tags exclus, on garde
+                        return !i.tagIds.some(tagId => filters.tagIds.includes(tagId));
+                    });
+                } else {
+                    // MODE INCLUSION (Defaut) : On garde l'item si il possède l'un des tags sélectionnés
+                    items = items.filter(i => i.tagIds && i.tagIds.some(tagId => filters.tagIds.includes(tagId)));
+                }
             }
         }
 
@@ -248,6 +238,21 @@ export const usePlanner = (
         .flatMap(w => w.items)
         .filter(i => !i.isPaid);
 
+    // Fonction utilitaire pour détecter les remboursements
+    // Un remboursement est un CRÉDIT (Income) sur une catégorie de type DÉPENSE (ou nommée explicitement remboursement)
+    const isRefund = (item: PlannedItem) => {
+        if (item.type !== 'INCOME') return false;
+        
+        // 1. Cas Explicites
+        if (item.category === 'Dépenses' || item.category === 'Remboursement') return true;
+
+        // 2. Vérification via la définition de catégorie
+        const catDef = categories.find(c => c.name === item.category);
+        if (catDef && catDef.type === 'EXPENSE') return true;
+
+        return false;
+    };
+
     const sum = (items: PlannedItem[], type: 'EXPENSE' | 'INCOME', useOriginal = false) => 
         items.filter(i => i.type === type).reduce((acc, i) => acc + (useOriginal ? i.originalAmount : i.amount), 0);
 
@@ -256,7 +261,6 @@ export const usePlanner = (
     const incByBeneficiary: Record<string, any> = {};
 
     [...currentItems, ...previousUnpaidItems].forEach(item => {
-      // 1. Calcul des Soldes de Compte
       if (!byAccount[item.accountId]) byAccount[item.accountId] = { paid: 0, remaining: 0, planned: 0, pendingCount: 0 };
       const val = item.amount;
       const originalVal = item.originalAmount;
@@ -272,7 +276,6 @@ export const usePlanner = (
           byAccount[item.accountId].planned += (item.type === 'EXPENSE' ? originalVal : -originalVal);
       }
 
-      // 2. Calcul des KPI d'Équité
       if (item.category !== 'Virement Interne') {
           if (item.isPaid) {
               if (!incByBeneficiary[item.beneficiaryId]) incByBeneficiary[item.beneficiaryId] = { paid: 0, planned: 0 };
@@ -295,15 +298,23 @@ export const usePlanner = (
     });
 
     const periodLimit = currentWeek?.periodLimit || 0;
+    const budgetVariableItems = currentItems.filter(i => i.source === 'VARIABLE' && !i.isExtra && !i.isWaiting && i.category !== 'Virement Interne');
     
-    const budgetVariableItems = currentItems.filter(i => 
-        i.source === 'VARIABLE' && 
-        !i.isExtra && 
-        !i.isWaiting && 
-        i.category !== 'Virement Interne'
-    );
-    const varExpenses = sum(budgetVariableItems, 'EXPENSE');
-    const varIncome = sum(budgetVariableItems, 'INCOME');
+    // Calcul intelligent : Déduire les remboursements des dépenses au lieu de les ajouter aux revenus
+    let varExpenses = 0;
+    let varIncome = 0;
+
+    budgetVariableItems.forEach(item => {
+        if (item.type === 'EXPENSE') {
+            varExpenses += item.amount;
+        } else if (item.type === 'INCOME') {
+            if (isRefund(item)) {
+                varExpenses -= item.amount; // On déduit le remboursement des dépenses
+            } else {
+                varIncome += item.amount; // Vrai revenu
+            }
+        }
+    });
 
     return {
       fixedPaid: sum(currentItems.filter(i => i.source === 'RECURRING' && i.isPaid && i.category !== 'Virement Interne'), 'EXPENSE'),

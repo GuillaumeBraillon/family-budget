@@ -10,14 +10,15 @@ interface DataListProps {
   children: React.ReactNode;
   emptyMessage?: string;
   className?: string;
+  headerActions?: React.ReactNode;
 }
 
 export const DataList: React.FC<DataListProps> = ({ 
-  title, count, onAdd, addButtonLabel = "Ajouter", children, emptyMessage = "Aucun élément.", className = ""
+  title, count, onAdd, addButtonLabel = "Ajouter", children, emptyMessage = "Aucun élément.", className = "", headerActions
 }) => {
   return (
     <div className={`bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden flex flex-col ${className}`}>
-      <div className="px-6 py-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center flex-shrink-0">
+      <div className="px-6 py-4 border-b border-slate-100 bg-slate-50 flex flex-wrap gap-2 justify-between items-center flex-shrink-0">
         <h3 className="font-semibold text-slate-900 flex items-center gap-2">
           {title}
           {count !== undefined && (
@@ -26,11 +27,14 @@ export const DataList: React.FC<DataListProps> = ({
             </span>
           )}
         </h3>
-        {onAdd && (
-          <button onClick={onAdd} className="flex items-center gap-2 bg-indigo-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-indigo-700 transition-colors shadow-sm">
-            <Plus size={14} /> {addButtonLabel}
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+            {headerActions}
+            {onAdd && (
+                <button onClick={onAdd} className="flex items-center gap-2 bg-indigo-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-indigo-700 transition-colors shadow-sm">
+                    <Plus size={14} /> {addButtonLabel}
+                </button>
+            )}
+        </div>
       </div>
       
       {/* Suppression de divide-y pour éviter les conflits de bordures sur les enfants */}

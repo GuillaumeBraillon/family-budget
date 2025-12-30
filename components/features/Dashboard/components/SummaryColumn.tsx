@@ -23,8 +23,19 @@ export const SummaryColumn: React.FC<SummaryColumnProps> = ({
   
   const realTransactions = transactions.filter(t => t.category !== 'Virement Interne');
 
-  const totalExpensesMonth = realTransactions.filter(t => t.type !== 'INCOME').reduce((acc, t) => acc + t.amount, 0);
-  const totalVarIncomeMonth = realTransactions.filter(t => t.type === 'INCOME').reduce((acc, t) => acc + t.amount, 0);
+  const isRefund = (t: VariableTransaction) => t.type === 'INCOME' && (t.category === 'Dépenses' || t.category === 'Remboursement');
+
+  // Calcul des dépenses en tenant compte des remboursements
+  const totalExpensesMonth = realTransactions.reduce((acc, t) => {
+      if (t.type === 'EXPENSE') return acc + t.amount;
+      if (isRefund(t)) return acc - t.amount;
+      return acc;
+  }, 0);
+
+  // Revenus variables purs (hors remboursements)
+  const totalVarIncomeMonth = realTransactions
+    .filter(t => t.type === 'INCOME' && !isRefund(t))
+    .reduce((acc, t) => acc + t.amount, 0);
   
   const salaries: Record<string, { amount: number, isReal: boolean }> = useMemo(() => {
     const map: Record<string, { amount: number, isReal: boolean }> = {};
@@ -66,8 +77,13 @@ export const SummaryColumn: React.FC<SummaryColumnProps> = ({
                        return d >= week.startDate && d <= week.endDate;
                    });
                    
-                   const weekExpenses = txInWeek.filter(t => t.type !== 'INCOME').reduce((sum, t) => sum + t.amount, 0);
-                   const weekIncome = txInWeek.filter(t => t.type === 'INCOME').reduce((sum, t) => sum + t.amount, 0);
+                   const weekExpenses = txInWeek.reduce((sum, t) => {
+                       if (t.type === 'EXPENSE') return sum + t.amount;
+                       if (isRefund(t)) return sum - t.amount;
+                       return sum;
+                   }, 0);
+
+                   const weekIncome = txInWeek.filter(t => t.type === 'INCOME' && !isRefund(t)).reduce((sum, t) => sum + t.amount, 0);
                    
                    const weekBudget = week.periodLimit || 0;
                    const weekRemaining = (weekBudget + weekIncome) - weekExpenses;

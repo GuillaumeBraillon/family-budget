@@ -4,7 +4,7 @@ import { usePlanner } from '../../../hooks/usePlanner';
 import { DashboardHeader } from './components/DashboardHeader';
 import { SavingsSummaryCard } from './components/SavingsSummaryCard';
 import { HealthCard, CashFlowCard, ExtrasCard, TopExpensesCard } from './components/AnalyticsCards';
-import { Account, Person, ExpenseConfig, IncomeConfig, PaidItemDetails, AppSettings, Transfer, VariableTransaction, PlannedItem } from '../../../types';
+import { Account, Person, ExpenseConfig, IncomeConfig, PaidItemDetails, AppSettings, Transfer, VariableTransaction, PlannedItem, CategoryDef } from '../../../types';
 
 interface DashboardViewProps {
   accounts: Account[];
@@ -15,19 +15,20 @@ interface DashboardViewProps {
   settings: AppSettings;
   transfers: Transfer[];
   variableTransactions?: VariableTransaction[];
+  categories: CategoryDef[];
   onNavigateToPlanner: () => void;
   onNavigateToConfig: () => void;
 }
 
 export const DashboardView: React.FC<DashboardViewProps> = ({ 
-  accounts, people, configs, incomeConfigs, paidItems, settings, transfers, variableTransactions = [],
+  accounts, people, configs, incomeConfigs, paidItems, settings, transfers, variableTransactions = [], categories,
   onNavigateToPlanner, 
   onNavigateToConfig 
 }) => {
   const currentDate = new Date();
   const [scope, setScope] = useState<'MONTH' | 'PERIOD'>('MONTH');
   
-  const { filteredWeeks } = usePlanner(configs, incomeConfigs, paidItems, variableTransactions, currentDate, '', settings);
+  const { filteredWeeks } = usePlanner(configs, incomeConfigs, paidItems, variableTransactions, currentDate, '', settings, categories);
   
   const currentDay = currentDate.getDate();
   const currentPeriod = useMemo(() => {
@@ -58,6 +59,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           const amount = item.amount;
           const isExpense = item.type === 'EXPENSE';
           const isReal = item.isPaid;
+          
+          // Détection des remboursements via le type de catégorie
+          const isRefund = item.type === 'INCOME' && (
+              item.category === 'Dépenses' || 
+              item.category === 'Remboursement' ||
+              categories.find(c => c.name === item.category)?.type === 'EXPENSE'
+          );
 
           if (isExpense) {
               if (isReal) expenses += amount;
@@ -71,20 +79,36 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               const ben = people.find(p => p.id === item.beneficiaryId)?.name || 'Commun';
               if (isReal) benMap[ben] = (benMap[ben] || 0) + amount;
 
+          } else if (isRefund) {
+              // C'est un remboursement : on déduit des dépenses réelles
+              if (isReal) {
+                  expenses -= amount;
+                  // On réduit aussi le montant dans les stats par catégorie
+                  const cat = item.category === 'Dépenses' ? 'Remboursement' : item.category;
+                  // Si c'est une catégorie connue, on déduit le montant des stats de cette catégorie
+                  if (catMap[cat] !== undefined) {
+                      catMap[cat] -= amount;
+                  }
+              }
           } else {
+              // Vrai revenu
               if (isReal) income += amount;
           }
 
+          // Stats par compte
+          const accName = accounts.find(a => a.id === item.accountId)?.name || 'N/A';
+          if (!accMap[accName]) accMap[accName] = { real: 0, planned: 0 };
+
           if (isExpense) {
-              const accName = accounts.find(a => a.id === item.accountId)?.name || 'N/A';
-              if (!accMap[accName]) accMap[accName] = { real: 0, planned: 0 };
-              
               if (item.source === 'RECURRING') {
                   accMap[accName].planned += item.originalAmount;
               }
               if (isReal) {
                   accMap[accName].real += amount;
               }
+          } else if (isRefund && isReal) {
+              // Pour un remboursement, on crédite le "réel dépensé" (ça diminue la dépense nette)
+              accMap[accName].real -= amount;
           }
       });
 
@@ -115,7 +139,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           topBeneficiaries,
           byAccount
       };
-  }, [relevantItems, people, accounts]);
+  }, [relevantItems, people, accounts, categories]);
 
   const periodLimit = scope === 'MONTH' ? settings.monthly_envelope : (currentPeriod?.periodLimit || 0); 
   analytics.plannedExpenses += periodLimit; 

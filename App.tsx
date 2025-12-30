@@ -29,7 +29,7 @@ const App: React.FC = () => {
   const [touchEnd, setTouchEnd] = useState<{x: number, y: number} | null>(null);
   
   const { 
-    accounts, configs, incomeConfigs, categories, people, paidItems, settings, transfers, variableTransactions, savedLabels,
+    accounts, configs, incomeConfigs, categories, people, paidItems, settings, transfers, variableTransactions, savedLabels, tags,
     loading, error, isDbEmpty, actions 
   } = useBudget();
 
@@ -147,13 +147,13 @@ const App: React.FC = () => {
         {currentView === 'dashboard' && (
           <DashboardView 
             accounts={accounts} people={people} configs={configs} incomeConfigs={incomeConfigs} paidItems={paidItems} 
-            settings={settings} transfers={transfers} variableTransactions={variableTransactions}
+            settings={settings} transfers={transfers} variableTransactions={variableTransactions} categories={categories}
             onNavigateToPlanner={() => setCurrentView('planner')} onNavigateToConfig={() => navigateToConfig('general')}
           />
         )}
         
         {currentView === 'balances' && (
-          <BalancesView accounts={accounts} people={people} configs={configs} incomeConfigs={incomeConfigs} paidItems={paidItems} variableTransactions={variableTransactions} settings={settings} onUpdateAccount={actions.upsertAccount} />
+          <BalancesView accounts={accounts} people={people} configs={configs} incomeConfigs={incomeConfigs} paidItems={paidItems} variableTransactions={variableTransactions} settings={settings} categories={categories} onUpdateAccount={actions.upsertAccount} />
         )}
 
         {currentView === 'planner' && (
@@ -166,7 +166,8 @@ const App: React.FC = () => {
             accounts={accounts} 
             people={people} 
             categories={categories} 
-            savedLabels={savedLabels} 
+            savedLabels={savedLabels}
+            tags={tags}
             onTogglePaid={actions.setPaidStatus} 
             onUpsertVariable={actions.upsertVariableTransaction} 
             onDeleteVariable={actions.deleteVariableTransaction} 
@@ -199,7 +200,7 @@ const App: React.FC = () => {
         )}
 
         {currentView === 'config' && (
-          <ConfigurationView configs={configs} incomeConfigs={incomeConfigs} categories={categories} people={people} accounts={accounts} settings={settings} savedLabels={savedLabels} activeTab={activeConfigTab} setActiveTab={setActiveConfigTab} onUpdateCategories={actions.upsertCategory as any} onUpsertPerson={actions.upsertPerson} onDeletePerson={actions.deletePerson} onUpsertAccount={actions.upsertAccount} onDeleteAccount={actions.deleteAccount} onUpdateSettings={actions.updateSettings} onResetConnection={handleResetConnection} onUpsertLabel={actions.upsertLabel} onDeleteLabel={actions.deleteLabel} onAddConfig={actions.upsertConfig} onUpdateConfig={actions.upsertConfig} onDeleteConfig={actions.deleteConfig} onAddIncome={actions.upsertIncome} onUpdateIncome={actions.upsertIncome} onDeleteIncome={actions.deleteIncome} onImportLabels={actions.importLabels} onImportVirLabels={actions.importVirLabels} />
+          <ConfigurationView configs={configs} incomeConfigs={incomeConfigs} categories={categories} people={people} accounts={accounts} settings={settings} savedLabels={savedLabels} tags={tags} activeTab={activeConfigTab} setActiveTab={setActiveConfigTab} onUpdateCategories={actions.upsertCategory as any} onUpsertPerson={actions.upsertPerson} onDeletePerson={actions.deletePerson} onUpsertAccount={actions.upsertAccount} onDeleteAccount={actions.deleteAccount} onUpdateSettings={actions.updateSettings} onResetConnection={handleResetConnection} onUpsertLabel={actions.upsertLabel} onDeleteLabel={actions.deleteLabel} onAddConfig={actions.upsertConfig} onUpdateConfig={actions.upsertConfig} onDeleteConfig={actions.deleteConfig} onAddIncome={actions.upsertIncome} onUpdateIncome={actions.upsertIncome} onDeleteIncome={actions.deleteIncome} onImportLabels={actions.importLabels} onImportVirLabels={actions.importVirLabels} onUpsertTag={actions.upsertTag} onDeleteTag={actions.deleteTag} />
         )}
       </main>
     </div>

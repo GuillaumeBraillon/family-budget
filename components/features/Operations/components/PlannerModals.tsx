@@ -1,13 +1,15 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Check, MessageSquare } from 'lucide-react';
 import { Modal } from '../../../ui/Modal';
-import { PlannedItem, Account, PaidItemDetails } from '../../../../types';
+import { PlannedItem, Account, PaidItemDetails, Tag } from '../../../../types';
+import { TagSelector } from '../../../ui/molecules/TagSelector';
 
 interface PlannerModalsProps {
   confirmModal: any;
   uncheckModal: any;
   accounts: Account[];
+  tags?: Tag[];
   onTogglePaid: (details: PaidItemDetails | null, instanceId: string) => void;
   onCloseConfirm: () => void;
   onCloseUncheck: () => void;
@@ -15,8 +17,21 @@ interface PlannerModalsProps {
 }
 
 export const PlannerModals: React.FC<PlannerModalsProps> = ({
-  confirmModal, uncheckModal, accounts, onTogglePaid, onCloseConfirm, onCloseUncheck, setConfirmModal
+  confirmModal, uncheckModal, accounts, tags = [], onTogglePaid, onCloseConfirm, onCloseUncheck, setConfirmModal
 }) => {
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+
+  // Synchronisation des tags existants à l'ouverture
+  useEffect(() => {
+      if (confirmModal.isOpen && confirmModal.item) {
+          setSelectedTags(confirmModal.item.tagIds || []);
+      }
+  }, [confirmModal.isOpen, confirmModal.item]);
+
+  const toggleTag = (tagId: string) => {
+      setSelectedTags(prev => prev.includes(tagId) ? prev.filter(id => id !== tagId) : [...prev, tagId]);
+  };
+
   return (
     <>
       {confirmModal.isOpen && (
@@ -43,6 +58,9 @@ export const PlannerModals: React.FC<PlannerModalsProps> = ({
                   {accounts.map(acc => <option key={acc.id} value={acc.id}>{acc.name} ({acc.type})</option>)}
                 </select>
               </FormField>
+              
+              <TagSelector tags={tags} selectedTagIds={selectedTags} onToggleTag={toggleTag} />
+
               <FormField label="Note / Commentaire">
                 <div className="relative">
                   <MessageSquare size={14} className="absolute left-3 top-3 text-slate-400" />
@@ -60,7 +78,8 @@ export const PlannerModals: React.FC<PlannerModalsProps> = ({
                       label: confirmModal.label, 
                       comments: confirmModal.comments.trim() || undefined,
                       isWaiting: false,
-                      isVariable: false
+                      isVariable: false,
+                      tagIds: selectedTags
                     } as any, confirmModal.item.instanceId); 
                   } 
                   onCloseConfirm(); 

@@ -1,25 +1,31 @@
 
 import React, { useState } from 'react';
-import { Filter, X, ShoppingBag, Star, Clock, CalendarClock, CheckCircle2, ChevronDown, ChevronUp, ArrowRightLeft, Briefcase } from 'lucide-react';
-import { OperationFilters, Account, Person, AccountType } from '../../../types';
+import { Filter, X, ShoppingBag, Star, Clock, CalendarClock, CheckCircle2, ChevronDown, ChevronUp, ArrowRightLeft, Briefcase, Tag, Ban, ListFilter } from 'lucide-react';
+import { OperationFilters, Account, Person, AccountType, Tag as TagType } from '../../../types';
 
 interface FilterBarProps {
   filters: OperationFilters;
   onFilterChange: (filters: OperationFilters) => void;
   accounts: Account[];
   people: Person[];
-  hiddenFilters?: ('flux' | 'source' | 'status' | 'extra' | 'transfer' | 'salary' | 'accounts' | 'beneficiaries')[];
+  tags?: TagType[];
+  hiddenFilters?: ('flux' | 'source' | 'status' | 'extra' | 'transfer' | 'salary' | 'accounts' | 'beneficiaries' | 'tags')[];
 }
 
-export const FilterBar: React.FC<FilterBarProps> = ({ filters, onFilterChange, accounts, people, hiddenFilters = [] }) => {
+export const FilterBar: React.FC<FilterBarProps> = ({ filters, onFilterChange, accounts, people, tags = [], hiddenFilters = [] }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const toggleMulti = (key: 'accountIds' | 'beneficiaryIds', value: string) => {
-    const current = filters[key];
+  const toggleMulti = (key: 'accountIds' | 'beneficiaryIds' | 'tagIds', value: string) => {
+    const current = filters[key] || [];
     const next = current.includes(value) 
         ? current.filter(v => v !== value) 
         : [...current, value];
     onFilterChange({ ...filters, [key]: next });
+  };
+
+  const toggleTagMode = () => {
+      const nextMode = filters.tagMode === 'EXCLUDE' ? 'INCLUDE' : 'EXCLUDE';
+      onFilterChange({ ...filters, tagMode: nextMode });
   };
 
   const toggleFlux = (type: 'EXPENSE' | 'INCOME') => {
@@ -61,7 +67,9 @@ export const FilterBar: React.FC<FilterBarProps> = ({ filters, onFilterChange, a
         transfer: 'EXCLUDE',
         salary: 'ALL',
         accountIds: [],
-        beneficiaryIds: []
+        beneficiaryIds: [],
+        tagIds: [],
+        tagMode: 'INCLUDE'
     });
   };
 
@@ -73,7 +81,8 @@ export const FilterBar: React.FC<FilterBarProps> = ({ filters, onFilterChange, a
     filters.transfer !== 'EXCLUDE',
     filters.salary !== 'ALL',
     filters.accountIds.length > 0,
-    filters.beneficiaryIds.length > 0
+    filters.beneficiaryIds.length > 0,
+    (filters.tagIds || []).length > 0
   ].filter(Boolean).length;
 
   const checkingAccounts = accounts.filter(acc => acc.type === AccountType.CHECKING);
@@ -188,6 +197,37 @@ export const FilterBar: React.FC<FilterBarProps> = ({ filters, onFilterChange, a
                 </FilterGroup>
             )}
 
+            {/* TAGS */}
+            {!hiddenFilters.includes('tags') && tags.length > 0 && (
+                <FilterGroup label="Tags">
+                    {/* BOUTON TOGGLE MODE */}
+                    <button 
+                        onClick={(e) => { e.stopPropagation(); toggleTagMode(); }}
+                        className={`mr-1 px-1.5 py-1 rounded text-[9px] font-black uppercase flex items-center gap-1 transition-all ${
+                            filters.tagMode === 'EXCLUDE' 
+                                ? 'bg-red-50 text-red-600 border border-red-100' 
+                                : 'bg-slate-100 text-slate-500 border border-slate-200 hover:text-indigo-600'
+                        }`}
+                        title={filters.tagMode === 'EXCLUDE' ? "Mode Exclusion : Les opérations contenant ces tags sont masquées" : "Mode Inclusion : Seules les opérations contenant ces tags sont affichées"}
+                    >
+                        {filters.tagMode === 'EXCLUDE' ? <Ban size={10} /> : <ListFilter size={10} />}
+                        {filters.tagMode === 'EXCLUDE' ? 'Exclure' : 'Inclure'}
+                    </button>
+
+                    {tags.map(t => (
+                        <FilterChip 
+                            key={t.id}
+                            label={t.name}
+                            icon={<Tag size={10} />}
+                            active={(filters.tagIds || []).includes(t.id)} 
+                            onClick={() => toggleMulti('tagIds', t.id)} 
+                            color={filters.tagMode === 'EXCLUDE' ? 'red' : 'custom'}
+                            customColor={filters.tagMode === 'EXCLUDE' ? undefined : t.color}
+                        />
+                    ))}
+                </FilterGroup>
+            )}
+
             {/* SALAIRES */}
             {!hiddenFilters.includes('salary') && (
                 <FilterGroup label="Salaires">
@@ -267,7 +307,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({ filters, onFilterChange, a
 const FilterGroup: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
     <div className="flex items-center gap-1.5 bg-slate-100/50 p-1 rounded-lg border border-slate-200/50">
         <span className="text-[9px] font-black text-slate-400 uppercase px-1.5 border-r border-slate-200">{label}</span>
-        <div className="flex gap-1">
+        <div className="flex flex-wrap gap-1 items-center">
             {children}
         </div>
     </div>
@@ -277,14 +317,24 @@ const FilterChip: React.FC<{
     label: string; 
     active: boolean; 
     onClick: () => void; 
-    color?: 'indigo' | 'emerald' | 'amber';
+    color?: 'indigo' | 'emerald' | 'amber' | 'custom' | 'red';
+    customColor?: string;
     icon?: React.ReactNode;
-}> = ({ label, active, onClick, color = 'indigo', icon }) => {
+}> = ({ label, active, onClick, color = 'indigo', customColor, icon }) => {
     let activeClass = '';
-    switch(color) {
-        case 'emerald': activeClass = 'bg-emerald-600 text-white border-emerald-600 shadow-sm'; break;
-        case 'amber': activeClass = 'bg-amber-500 text-white border-amber-500 shadow-sm'; break;
-        default: activeClass = 'bg-indigo-600 text-white border-indigo-600 shadow-sm';
+    let style = {};
+
+    if (color === 'custom' && customColor) {
+        if (active) {
+            style = { backgroundColor: customColor, borderColor: customColor, color: 'white' };
+        } 
+    } else {
+        switch(color) {
+            case 'emerald': activeClass = 'bg-emerald-600 text-white border-emerald-600 shadow-sm'; break;
+            case 'amber': activeClass = 'bg-amber-500 text-white border-amber-500 shadow-sm'; break;
+            case 'red': activeClass = 'bg-red-500 text-white border-red-500 shadow-sm line-through decoration-white/50'; break;
+            default: activeClass = 'bg-indigo-600 text-white border-indigo-600 shadow-sm';
+        }
     }
     
     const inactiveClass = 'bg-white text-slate-500 border-slate-200 hover:border-slate-300 hover:text-slate-700';
@@ -293,6 +343,7 @@ const FilterChip: React.FC<{
         <button 
             onClick={(e) => { e.stopPropagation(); onClick(); }}
             className={`px-2 py-1 rounded-md text-[10px] font-bold border transition-all flex items-center gap-1.5 ${active ? activeClass : inactiveClass}`}
+            style={style}
         >
             {icon}
             {label}

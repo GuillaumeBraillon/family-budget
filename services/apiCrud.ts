@@ -1,6 +1,15 @@
 
 import { supabase } from './supabase';
-import { Person, Account, CategoryDef, ExpenseConfig, IncomeConfig, PaidItemDetails, AppSettings, Transfer, VariableTransaction, SavedLabel } from '../types';
+import { Person, Account, CategoryDef, ExpenseConfig, IncomeConfig, PaidItemDetails, AppSettings, Transfer, VariableTransaction, SavedLabel, Tag } from '../types';
+
+/**
+ * Opérations sur les Tags
+ */
+export const apiUpsertTag = async (tag: Tag) => 
+  supabase.from('tags').upsert({ id: tag.id, name: tag.name, color: tag.color });
+
+export const apiDeleteTag = async (id: string) => 
+  supabase.from('tags').delete().eq('id', id);
 
 /**
  * Opérations sur les Membres (People)
@@ -162,7 +171,8 @@ export const apiUpsertConfig = async (config: ExpenseConfig) =>
     day_of_month: config.dayOfMonth, 
     start_month: config.startMonth, 
     end_month: config.endMonth, 
-    is_extra: config.isExtra 
+    is_extra: config.isExtra,
+    tag_ids: config.tagIds || []
   });
 
 export const apiDeleteConfig = async (id: string) => 
@@ -182,7 +192,8 @@ export const apiUpsertIncome = async (income: IncomeConfig) =>
     category: income.category, 
     sub_category: income.subCategory, 
     is_extra: income.isExtra, 
-    is_salary: income.isSalary
+    is_salary: income.isSalary,
+    tag_ids: income.tagIds || []
   });
 
 export const apiDeleteIncome = async (id: string) => 
@@ -206,7 +217,8 @@ export const apiSetPaidStatus = async (details: PaidItemDetails | null, instance
       is_variable: !!details.isVariable,
       is_waiting: !!details.isWaiting, // False si pointé
       is_extra: !!details.isExtra,
-      comments: details.comments || null
+      comments: details.comments || null,
+      tag_ids: details.tagIds || []
     });
   } else {
     return supabase.from('paid_items').delete().eq('instance_id', instanceId);
@@ -246,7 +258,8 @@ export const apiUpsertVariableTransaction = async (tx: VariableTransaction) =>
     is_variable: true,
     is_waiting: !!tx.isWaiting,
     is_extra: !!tx.isExtra,
-    comments: tx.comments || null
+    comments: tx.comments || null,
+    tag_ids: tx.tagIds || []
   });
 
 export const apiDeleteVariableTransaction = async (id: string) => 

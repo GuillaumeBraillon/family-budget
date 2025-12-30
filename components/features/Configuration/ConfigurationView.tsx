@@ -1,8 +1,8 @@
 
 import React from 'react';
-import { Settings, UserCircle, CreditCard, Tag, Sliders, List, CalendarRange } from 'lucide-react';
+import { Settings, UserCircle, CreditCard, Tag, Sliders, List, CalendarRange, Bookmark } from 'lucide-react';
 import { ConfigTab } from '../../../hooks/useConfigurationUI';
-import { ExpenseConfig, IncomeConfig, CategoryDef, Person, Account, AppSettings, SavedLabel } from '../../../types';
+import { ExpenseConfig, IncomeConfig, CategoryDef, Person, Account, AppSettings, SavedLabel, Tag as TagType } from '../../../types';
 import { InfoBox } from '../../ui/InfoBox';
 
 import { ConfigurationTabs } from '../../Configuration/molecules/ConfigurationTabs';
@@ -12,6 +12,7 @@ import { AccountManager } from '../../Configuration/organisms/AccountManager';
 import { GlobalSettings } from '../../Configuration/organisms/GlobalSettings';
 import { AccountLabelManager } from '../../Configuration/organisms/AccountLabelManager';
 import { OperationsManager } from '../../Configuration/organisms/OperationsManager';
+import { TagManager } from '../../Configuration/organisms/TagManager';
 
 interface ConfigurationViewProps {
   configs: ExpenseConfig[];
@@ -21,6 +22,7 @@ interface ConfigurationViewProps {
   accounts: Account[];
   settings: AppSettings;
   savedLabels: SavedLabel[];
+  tags?: TagType[];
   activeTab: ConfigTab;
   setActiveTab: (tab: ConfigTab) => void;
   onUpdateCategories: (newCategories: CategoryDef[]) => void;
@@ -40,10 +42,12 @@ interface ConfigurationViewProps {
   onDeleteIncome: (id: string) => void;
   onImportLabels: () => Promise<any> | void;
   onImportVirLabels: () => Promise<any> | void;
+  onUpsertTag?: (t: TagType) => void;
+  onDeleteTag?: (id: string) => void;
 }
 
 export const ConfigurationView: React.FC<ConfigurationViewProps> = ({ 
-  configs, incomeConfigs, categories, people, accounts, settings, savedLabels,
+  configs, incomeConfigs, categories, people, accounts, settings, savedLabels, tags = [],
   activeTab, setActiveTab,
   onUpdateCategories,
   onUpsertPerson, onDeletePerson,
@@ -53,7 +57,8 @@ export const ConfigurationView: React.FC<ConfigurationViewProps> = ({
   onUpsertLabel, onDeleteLabel,
   onAddConfig, onUpdateConfig, onDeleteConfig,
   onAddIncome, onUpdateIncome, onDeleteIncome,
-  onImportLabels, onImportVirLabels
+  onImportLabels, onImportVirLabels,
+  onUpsertTag, onDeleteTag
 }) => {
   return (
     <div className="space-y-6">
@@ -119,8 +124,8 @@ export const ConfigurationView: React.FC<ConfigurationViewProps> = ({
         {activeTab === 'labels' && (
             <>
               <InfoBox 
-                title="Libellés de compte"
-                description="Gérez les listes de libellés pré-définis pour vos opérations (virements d'épargne, dépenses courantes) afin d'accélérer la saisie lors de l'ajout de transactions."
+                title="Libellés & Autocomplétion"
+                description="Gérez les listes de libellés pré-définis pour vos opérations. Ces libellés servent à accélérer la saisie lors de l'ajout de transactions manuelles."
                 icon={<List size={18} />}
               />
               <AccountLabelManager 
@@ -129,6 +134,20 @@ export const ConfigurationView: React.FC<ConfigurationViewProps> = ({
                   onDeleteLabel={onDeleteLabel}
                   onImportLabels={onImportLabels}
                   onImportVirLabels={onImportVirLabels}
+              />
+            </>
+        )}
+        {activeTab === 'tags' && onUpsertTag && onDeleteTag && (
+            <>
+              <InfoBox 
+                title="Tags & Étiquettes"
+                description="Créez des tags colorés pour regrouper vos opérations par thèmes transverses (ex: #Vacances, #Noël, #Travaux) indépendamment des catégories."
+                icon={<Bookmark size={18} />}
+              />
+              <TagManager 
+                tags={tags}
+                onUpsertTag={onUpsertTag}
+                onDeleteTag={onDeleteTag}
               />
             </>
         )}

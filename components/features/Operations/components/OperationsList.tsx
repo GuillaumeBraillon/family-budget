@@ -1,22 +1,24 @@
 
 import React from 'react';
-import { PlannedItem, Person, Account } from '../../../../types';
+import { PlannedItem, Person, Account, Tag } from '../../../../types';
 import { DataList } from '../../../ui/molecules/DataList';
 import { DataListRow } from '../../../ui/molecules/DataListRow';
-import { ShoppingBag, CalendarClock, Plus, Briefcase } from 'lucide-react';
+import { ShoppingBag, CalendarClock, Plus, Briefcase, Download } from 'lucide-react';
 
 interface OperationsListProps {
   items: PlannedItem[];
   monthShort: string;
   people: Person[];
   accounts: Account[];
+  tags: Tag[];
   currentDate: Date;
   onItemClick: (item: PlannedItem) => void;
   onAddClick: () => void;
+  onExport?: () => void;
 }
 
 export const OperationsList: React.FC<OperationsListProps> = ({
-  items, monthShort, people, accounts, currentDate, onItemClick, onAddClick
+  items, monthShort, people, accounts, tags, currentDate, onItemClick, onAddClick, onExport
 }) => {
   const getExtraProgress = (item: PlannedItem) => {
     if (!item.isExtra || !item.startMonth || !item.endMonth) return null;
@@ -28,14 +30,34 @@ export const OperationsList: React.FC<OperationsListProps> = ({
     return { text: `${currentMonthIndex}/${totalMonths}`, isLast: currentMonthIndex === totalMonths };
   };
 
+  const headerActions = onExport && items.length > 0 ? (
+      <button 
+        onClick={onExport}
+        className="flex items-center gap-2 bg-white border border-slate-200 text-slate-600 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-slate-50 hover:text-indigo-600 transition-colors shadow-sm"
+        title="Exporter en CSV"
+      >
+          <Download size={14} /> <span className="hidden sm:inline">Export CSV</span>
+      </button>
+  ) : null;
+
   return (
     <div className="space-y-4">
-      <DataList title="Détail des opérations" count={items.length} onAdd={onAddClick} addButtonLabel="Ajouter" emptyMessage="Aucune opération ne correspond à vos filtres pour cette période.">
+      <DataList 
+        title="Détail des opérations" 
+        count={items.length} 
+        onAdd={onAddClick} 
+        addButtonLabel="Ajouter" 
+        emptyMessage="Aucune opération ne correspond à vos filtres pour cette période."
+        headerActions={headerActions}
+      >
           {items.map(item => {
                const progress = getExtraProgress(item);
                const person = people.find(p => p.id === item.beneficiaryId);
                const account = accounts.find(a => a.id === item.accountId);
                const isVariable = item.source === 'VARIABLE';
+               
+               const itemTags = item.tagIds ? tags.filter(t => item.tagIds?.includes(t.id)) : [];
+
                return (
                   <DataListRow
                       key={item.instanceId}
@@ -52,6 +74,7 @@ export const OperationsList: React.FC<OperationsListProps> = ({
                       isPaid={!!item.isPaid}
                       onClick={() => onItemClick(item)}
                       comments={item.comments}
+                      tags={itemTags}
                       badge={
                           <div className="flex gap-1 items-center">
                               {isVariable ? (

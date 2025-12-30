@@ -11,6 +11,12 @@ export interface Person {
   isChild?: boolean;
 }
 
+export interface Tag {
+  id: string;
+  name: string;
+  color: string;
+}
+
 export interface Account {
   id: string;
   name: string;
@@ -73,6 +79,7 @@ export interface VariableTransaction {
   isWaiting: boolean; // True = En attente, False = Pointé
   isExtra: boolean;   // True = Hors budget
   comments?: string;
+  tagIds?: string[];
 }
 
 export type PeriodType = 'FIXED_DAYS' | 'CALENDAR_WEEKS' | 'CUSTOM_SPLIT';
@@ -97,6 +104,7 @@ export interface ExpenseConfig {
   startMonth?: string;
   endMonth?: string;
   isExtra?: boolean;
+  tagIds?: string[];
 }
 
 export interface IncomeConfig {
@@ -110,6 +118,7 @@ export interface IncomeConfig {
   subCategory?: string;
   isExtra?: boolean;
   isSalary?: boolean; // Nouveau champ pour identifier les revenus structurels
+  tagIds?: string[];
 }
 
 export interface PaidItemDetails {
@@ -126,6 +135,7 @@ export interface PaidItemDetails {
   isWaiting: boolean;
   isExtra: boolean;
   comments?: string;
+  tagIds?: string[];
 }
 
 export type PlannedItemType = 'EXPENSE' | 'INCOME';
@@ -151,6 +161,7 @@ export interface PlannedItem {
   startMonth?: string;
   endMonth?: string;
   comments?: string;
+  tagIds?: string[];
 }
 
 export interface WeeklyBudget {
@@ -171,4 +182,6 @@ export interface OperationFilters {
   salary: 'ALL' | 'ONLY' | 'EXCLUDE';
   accountIds: string[];
   beneficiaryIds: string[];
+  tagIds: string[];
+  tagMode: 'INCLUDE' | 'EXCLUDE';
 }

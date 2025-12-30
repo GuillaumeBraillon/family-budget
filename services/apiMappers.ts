@@ -1,10 +1,16 @@
 
-import { Person, Account, CategoryDef, ExpenseConfig, IncomeConfig, PaidItemDetails, AppSettings, AccountType, VariableTransaction, SavedLabel, Transfer } from '../types';
+import { Person, Account, CategoryDef, ExpenseConfig, IncomeConfig, PaidItemDetails, AppSettings, AccountType, VariableTransaction, SavedLabel, Transfer, Tag } from '../types';
 
 export const mapDbPerson = (p: any): Person => ({
   id: p.id,
   name: p.name,
   isChild: p.is_child
+});
+
+export const mapDbTag = (t: any): Tag => ({
+  id: t.id,
+  name: t.name,
+  color: t.color
 });
 
 export const mapDbAccount = (a: any): Account => ({
@@ -44,7 +50,8 @@ export const mapDbExpenseConfig = (c: any): ExpenseConfig => ({
   dayOfMonth: c.day_of_month,
   startMonth: c.start_month,
   endMonth: c.end_month,
-  isExtra: !!c.is_extra
+  isExtra: !!c.is_extra,
+  tagIds: c.tag_ids || []
 });
 
 export const mapDbIncomeConfig = (i: any): IncomeConfig => ({
@@ -57,7 +64,8 @@ export const mapDbIncomeConfig = (i: any): IncomeConfig => ({
   category: i.category,
   subCategory: i.sub_category,
   isExtra: !!i.is_extra,
-  isSalary: !!i.is_salary
+  isSalary: !!i.is_salary,
+  tagIds: i.tag_ids || []
 });
 
 export const mapDbPaidItem = (item: any): PaidItemDetails => ({
@@ -73,7 +81,8 @@ export const mapDbPaidItem = (item: any): PaidItemDetails => ({
   isVariable: !!item.is_variable,
   isWaiting: !!item.is_waiting,
   isExtra: !!item.is_extra,
-  comments: item.comments || undefined
+  comments: item.comments || undefined,
+  tagIds: item.tag_ids || []
 });
 
 export const mapDbTransfer = (t: any): Transfer => ({
@@ -98,7 +107,8 @@ export const mapDbVariableTransaction = (t: any): VariableTransaction => ({
   type: t.type || 'EXPENSE',
   isWaiting: !!t.is_waiting,
   isExtra: !!t.is_extra,
-  comments: t.comments || undefined
+  comments: t.comments || undefined,
+  tagIds: t.tag_ids || []
 });
 
 export const mapDbSettings = (data: any): AppSettings => {

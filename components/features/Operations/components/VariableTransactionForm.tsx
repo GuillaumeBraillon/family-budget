@@ -1,12 +1,13 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { Save, TrendingUp, TrendingDown, Calendar, Trash2, Clock, CheckCircle2, Star, MessageSquare, ArrowRightLeft, ArrowDown } from 'lucide-react';
-import { VariableTransaction, Account, CategoryDef, AccountType, Person, Transfer, SavedLabel } from '../../../../types';
+import { VariableTransaction, Account, CategoryDef, AccountType, Person, Transfer, SavedLabel, Tag } from '../../../../types';
 import { CategorySelector } from '../../../ui/molecules/CategorySelector';
 import { TextInput, AmountInput, SearchableTextInput } from '../../../ui/molecules/FormInputs';
 import { AccountSelector, BeneficiarySelector } from '../../../ui/molecules/SmartSelectors';
 import { ConfirmModal } from '../../../ui/atoms/ConfirmModal';
 import { Modal } from '../../../ui/Modal';
+import { TagSelector } from '../../../ui/molecules/TagSelector';
 
 interface VariableTransactionFormProps {
   isOpen: boolean;
@@ -14,6 +15,7 @@ interface VariableTransactionFormProps {
   accounts: Account[];
   categories: CategoryDef[];
   people: Person[]; 
+  tags?: Tag[];
   onAddTransaction: (t: VariableTransaction) => void;
   onDeleteTransaction?: (id: string) => void;
   onUpsertTransfer?: (t: Transfer) => void;
@@ -26,7 +28,7 @@ interface VariableTransactionFormProps {
 }
 
 export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = ({ 
-  isOpen, onClose, accounts, categories, people, onAddTransaction, onDeleteTransaction, onUpsertTransfer, defaultDate, labelsSuggestions = [], savedLabels = [], editingTransaction, initialMode = 'STANDARD', lockMode = false
+  isOpen, onClose, accounts, categories, people, tags = [], onAddTransaction, onDeleteTransaction, onUpsertTransfer, defaultDate, labelsSuggestions = [], savedLabels = [], editingTransaction, initialMode = 'STANDARD', lockMode = false
 }) => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [mode, setMode] = useState<'STANDARD' | 'TRANSFER'>(initialMode);
@@ -37,6 +39,7 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
   const [amount, setAmount] = useState<string>('');
   const [isExtra, setIsExtra] = useState<boolean>(false);
   const [comments, setComments] = useState<string>('');
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   
   const checkingAccounts = accounts.filter(a => a.type === AccountType.CHECKING);
   const [accountId, setAccountId] = useState(checkingAccounts[0]?.id || '');
@@ -83,6 +86,7 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
             } else {
                 setAccountId(editingTransaction.accountId);
                 setComments(editingTransaction.comments || '');
+                setSelectedTagIds(editingTransaction.tagIds || []);
             }
 
             setCategory(editingTransaction.category);
@@ -100,10 +104,15 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
             setType('EXPENSE');
             setIsExtra(false);
             setComments('');
+            setSelectedTagIds([]);
             if (!accountId && checkingAccounts.length > 0) setAccountId(checkingAccounts[0].id);
         }
     }
   }, [isOpen, editingTransaction, defaultDate, defaultBeneficiary, initialMode, accounts]);
+
+  const toggleTag = (tagId: string) => {
+      setSelectedTagIds(prev => prev.includes(tagId) ? prev.filter(id => id !== tagId) : [...prev, tagId]);
+  };
 
   const handleSubmit = (targetIsWaiting: boolean) => {
     if (!label || !amount || !accountId) return;
@@ -133,7 +142,8 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
             type,
             isWaiting: targetIsWaiting,
             isExtra,
-            comments: comments.trim() || undefined
+            comments: comments.trim() || undefined,
+            tagIds: selectedTagIds
         });
     }
     onClose();
@@ -180,6 +190,7 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
                 <SearchableTextInput label="Libellé" value={label} onChange={e => setLabel(e.target.value)} onSelectSuggestion={setLabel} placeholder={isExpense ? "Ex: Courses Carrefour..." : "Ex: Vente Vinted..."} suggestions={standardSuggestions} required autoFocus={!editingTransaction} />
                 <AmountInput label="Montant" value={amount} onChange={e => setAmount(e.target.value)} color={themeColor} required />
                 <TextInput label="Date" type="date" icon={Calendar} value={date} onChange={e => setDate(e.target.value)} required />
+                
                 <div className={`p-3 rounded-xl border-2 transition-all ${isExtra ? 'bg-amber-50 border-amber-300 shadow-sm' : 'bg-slate-50 border-slate-200'}`}>
                     <label className="flex items-center gap-3 cursor-pointer">
                         <input type="checkbox" checked={isExtra} onChange={e => setIsExtra(e.target.checked)} className="h-5 w-5 text-amber-600 rounded" />
@@ -188,6 +199,9 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
                         </div>
                     </label>
                 </div>
+
+                <TagSelector tags={tags} selectedTagIds={selectedTagIds} onToggleTag={toggleTag} />
+
                 <AccountSelector label={isExpense ? 'Compte débité' : 'Compte crédité'} accounts={checkingAccounts} value={accountId} onChange={e => setAccountId(e.target.value)} color={themeColor} />
                 <CategorySelector categories={categories} type={type} selectedCategory={category} selectedSubCategory={subCategory} onCategoryChange={setCategory} onSubCategoryChange={setSubCategory} />
                 <BeneficiarySelector people={people} value={beneficiaryId} onChange={e => setBeneficiaryId(e.target.value)} color={themeColor} label="Bénéficiaires" />

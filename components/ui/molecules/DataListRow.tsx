@@ -1,7 +1,8 @@
 
 import React from 'react';
-import { ChevronRight, Tag, User, Users, CreditCard, Clock, CheckCircle2, Info } from 'lucide-react';
+import { ChevronRight, Tag as TagIcon, User, Users, CreditCard, Clock, CheckCircle2, Info } from 'lucide-react';
 import { MobileTooltip } from '../MobileTooltip';
+import { Tag } from '../../../types';
 
 interface DataListRowProps {
   date?: { day: string | number; month: string };
@@ -19,19 +20,15 @@ interface DataListRowProps {
   onClick?: () => void;
   badge?: React.ReactNode;
   comments?: string;
+  tags?: Tag[];
 }
 
 export const DataListRow: React.FC<DataListRowProps> = ({
   date, icon, label, amount, originalAmount, isIncome, category, subCategory, 
-  beneficiary, isChild, accountName, isPaid, onClick, badge, comments
+  beneficiary, isChild, accountName, isPaid, onClick, badge, comments, tags = []
 }) => {
-  // Si isPaid est false, c'est en attente.
   const isPending = isPaid === false;
   
-  // Styles conditionnels :
-  // - Pending : Fond ambré + Bordure gauche Orange (border-l-4)
-  // - Standard : Fond blanc + Bordure gauche Transparente (border-l-4) pour alignement
-  // border-b : Sépare les lignes (remplace le divide-y du parent)
   const bgClass = isPending 
     ? 'bg-amber-50 border-l-4 border-l-amber-400' 
     : 'bg-white hover:bg-slate-50 border-l-4 border-l-transparent';
@@ -54,7 +51,6 @@ export const DataListRow: React.FC<DataListRowProps> = ({
         </div>
       ) : icon ? (
         <div className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center bg-indigo-50 text-indigo-600 rounded-lg border border-indigo-100">
-            {/* Clone l'icone pour ajuster la taille si nécessaire */}
             {React.isValidElement(icon) ? React.cloneElement(icon as React.ReactElement<any>, { size: 20 }) : icon}
         </div>
       ) : null}
@@ -73,7 +69,7 @@ export const DataListRow: React.FC<DataListRowProps> = ({
         <div className="flex items-center gap-2 sm:gap-3 text-[10px] sm:text-xs text-slate-500 flex-wrap leading-tight">
           {(category || subCategory) && (
             <span className="flex items-center gap-1 bg-white/60 px-1.5 py-0.5 rounded text-slate-600 border border-slate-200/50 truncate max-w-[110px] sm:max-w-none">
-                <Tag size={10}/> 
+                <TagIcon size={10}/> 
                 <span className="sm:hidden">{subCategory || category}</span>
                 <span className="hidden sm:inline">{category}{subCategory && <span className="opacity-70"> &gt; {subCategory}</span>}</span>
             </span>
@@ -87,6 +83,16 @@ export const DataListRow: React.FC<DataListRowProps> = ({
             <span className="hidden sm:flex items-center gap-1 text-slate-400 font-medium px-1.5 py-0.5 rounded whitespace-nowrap">
                 <CreditCard size={10} /> {accountName}
             </span>
+          )}
+          {/* TAGS */}
+          {tags.length > 0 && (
+              <div className="flex gap-1">
+                  {tags.map(tag => (
+                      <span key={tag.id} className="px-1.5 py-0.5 rounded text-[9px] font-bold text-white whitespace-nowrap" style={{ backgroundColor: tag.color }}>
+                          {tag.name}
+                      </span>
+                  ))}
+              </div>
           )}
         </div>
       </div>
