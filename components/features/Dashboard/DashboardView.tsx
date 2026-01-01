@@ -98,18 +98,19 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             const instanceId = `${inc.id}-${monthKey}`;
             const paid = paidItems[instanceId];
             
-            // Si l'item est pointé (payé), on utilise le montant réel.
-            // Sinon, on utilise le montant prévu.
-            const amount = paid ? paid.amount : inc.amount;
-            
-            // Parsing sécurisé de la date de paiement si disponible
-            let day = inc.dayOfMonth;
-            if (paid && paid.paymentDate) {
-                const parts = paid.paymentDate.split('-').map(Number);
-                if (parts.length === 3) day = parts[2];
+            // MODIFICATION CRITIQUE : 
+            // On inclut le revenu SEULEMENT s'il est présent dans paid_items ET pointé (!isWaiting).
+            // On n'utilise PLUS inc.amount comme valeur par défaut pour éviter les projections.
+            if (paid && !paid.isWaiting) {
+                // Parsing sécurisé de la date de paiement
+                let day = inc.dayOfMonth;
+                if (paid.paymentDate) {
+                    const parts = paid.paymentDate.split('-').map(Number);
+                    if (parts.length === 3) day = parts[2];
+                }
+                
+                addToPeriod(day, paid.amount, 'recurring');
             }
-            
-            addToPeriod(day, amount, 'recurring');
         });
 
         // -> Transactions Variables
@@ -124,10 +125,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 // CORRECTION : On inclut TOUS les revenus (type INCOME), quelle que soit la catégorie (même Remboursement/Dépenses)
                 // Seule exclusion : les virements internes pour éviter les doublons de trésorerie.
                 if (tx.type === 'INCOME' && tx.category !== 'Virement Interne') {
-                    if (tx.isExtra) {
-                        addToPeriod(d, tx.amount, 'variable');
-                    } else {
-                        addToPeriod(d, tx.amount, 'variable');
+                    // Pour les variables, on vérifie aussi qu'elles ne sont pas en attente (bien que normalement variableTransactions contient déjà paidItems, on assure le coup)
+                    if (!tx.isWaiting) {
+                        if (tx.isExtra) {
+                            addToPeriod(d, tx.amount, 'variable');
+                        } else {
+                            addToPeriod(d, tx.amount, 'variable');
+                        }
                     }
                 }
             }
@@ -157,7 +161,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       <SavingsSummaryCard 
         accounts={accounts} 
         transfers={transfers} 
-        variableTransactions={variableTransactions}
+        paidItems={paidItems}
       />
 
       <DashboardHeader 

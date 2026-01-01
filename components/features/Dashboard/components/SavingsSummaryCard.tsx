@@ -1,21 +1,24 @@
 
 import React, { useMemo } from 'react';
 import { PiggyBank, Wallet, CreditCard, Landmark } from 'lucide-react';
-import { Account, Transfer, AccountType, VariableTransaction } from '../../../../types';
+import { Account, Transfer, AccountType, PaidItemDetails } from '../../../../types';
 import { Card } from '../../../ui/Card';
 
 interface SavingsSummaryCardProps {
   accounts: Account[];
   transfers?: Transfer[];
-  variableTransactions?: VariableTransaction[];
+  paidItems: Record<string, PaidItemDetails>;
 }
 
-export const SavingsSummaryCard: React.FC<SavingsSummaryCardProps> = ({ accounts, transfers = [], variableTransactions = [] }) => {
+export const SavingsSummaryCard: React.FC<SavingsSummaryCardProps> = ({ accounts, transfers = [], paidItems = {} }) => {
   
   // Calcul des soldes d'épargne via les transferts ET les opérations directes (intérêts)
   const balances: Record<string, number> = useMemo(() => {
     const map: Record<string, number> = {};
     
+    // On convertit la map en tableau pour faciliter le filtrage
+    const allPaidItems = Object.values(paidItems);
+
     accounts.forEach(acc => {
         if (acc.type === AccountType.SAVINGS) {
             // 1. Virements (Interne)
@@ -26,8 +29,10 @@ export const SavingsSummaryCard: React.FC<SavingsSummaryCardProps> = ({ accounts
             }, 0);
 
             // 2. Opérations directes (Intérêts, Frais, Apports externes)
-            // On filtre les transactions liées à ce compte d'épargne
-            const directOps = variableTransactions.filter(t => t.accountId === acc.id);
+            // On prend TOUT ce qui est dans paid_items (donc réel ou marqué comme tel)
+            // Et on filtre explicitement isWaiting = false pour être sûr (cas des variables en attente)
+            const directOps = allPaidItems.filter(t => t.accountId === acc.id && !t.isWaiting);
+            
             total += directOps.reduce((sum, t) => {
                 if (t.type === 'INCOME') return sum + t.amount; // Intérêts (+)
                 if (t.type === 'EXPENSE') return sum - t.amount; // Frais (-)
@@ -41,7 +46,7 @@ export const SavingsSummaryCard: React.FC<SavingsSummaryCardProps> = ({ accounts
         }
     });
     return map;
-  }, [accounts, transfers, variableTransactions]);
+  }, [accounts, transfers, paidItems]);
 
   const totalWealth = Object.values(balances).reduce((acc: number, val: number) => acc + val, 0);
   const savingsTotal = accounts.filter(a => a.type === AccountType.SAVINGS).reduce((acc, a) => acc + (balances[a.id] || 0), 0);
