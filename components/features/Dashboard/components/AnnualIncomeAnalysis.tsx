@@ -1,7 +1,7 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Card } from '../../../ui/Card';
-import { TrendingUp, ChevronDown, ChevronRight, Calendar, ChevronLeft } from 'lucide-react';
+import { TrendingUp, ChevronLeft, ChevronRight, CalendarClock, ShoppingBag } from 'lucide-react';
 import { OperationFilters } from '../../../../types';
 
 interface PeriodIncome {
@@ -30,34 +30,31 @@ interface AnnualIncomeAnalysisProps {
 }
 
 export const AnnualIncomeAnalysis: React.FC<AnnualIncomeAnalysisProps> = ({ data, year, onYearChange, onNavigateToPlanner }) => {
-    // Par défaut, on ouvre le mois en cours
-    const currentMonthIndex = new Date().getFullYear() === year ? new Date().getMonth() : 0;
-    const [openMonths, setOpenMonths] = useState<number[]>([currentMonthIndex]);
+    
+    // Détermination du nombre max de périodes pour structurer les colonnes
+    const maxPeriods = data.reduce((max, m) => Math.max(max, m.periods.length), 0) || 4;
+    const periodsHeader = Array.from({ length: maxPeriods }, (_, i) => i + 1);
 
-    const toggleMonth = (idx: number) => {
-        setOpenMonths(prev => prev.includes(idx) ? prev.filter(i => i !== idx) : [...prev, idx]);
-    };
-
-    const handleAmountClick = (e: React.MouseEvent, monthDate: Date, periodId: number, sourceType: 'RECURRING' | 'VARIABLE' | 'ALL') => {
+    const handleAmountClick = (e: React.MouseEvent, monthDate: Date, periodId: number | undefined, sourceType: 'RECURRING' | 'VARIABLE' | 'ALL') => {
         e.stopPropagation();
         onNavigateToPlanner(
             monthDate, 
             {
                 flux: 'INCOME',
-                source: sourceType,
-                status: 'ALL',
+                source: sourceType === 'ALL' ? 'ALL' : sourceType,
+                status: 'REAL', // On ne montre que le réel ici
                 extra: 'ALL', 
-                salary: 'EXCLUDE' // IMPORTANT : On garde les salaires exclus pour matcher les montants affichés dans ce tableau
+                salary: 'EXCLUDE'
             },
-            periodId
+            periodId // Si undefined, le planner gère la semaine par défaut ou via date
         );
     };
 
     return (
-        <div className="space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-4 px-2">
-                <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
-                    <TrendingUp size={16} /> Analyse détaillée des revenus (Hors Salaires)
+        <Card className="border-slate-200 shadow-sm overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b border-slate-100 bg-slate-50/50">
+                <h3 className="text-sm font-bold text-slate-700 uppercase tracking-widest flex items-center gap-2">
+                    <TrendingUp size={16} className="text-emerald-600" /> Analyse des Revenus (Réel)
                 </h3>
                 
                 <div className="flex items-center gap-2 bg-white rounded-lg p-1 border border-slate-200 shadow-sm">
@@ -77,106 +74,125 @@ export const AnnualIncomeAnalysis: React.FC<AnnualIncomeAnalysisProps> = ({ data
                 </div>
             </div>
 
-            <div className="grid gap-3">
-                {data.map((month) => {
-                    const isOpen = openMonths.includes(month.monthIndex);
-                    const totalMonth = month.totals.income;
+            <div className="overflow-x-auto">
+                <table className="w-full text-xs text-left">
+                    <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200 uppercase tracking-wider">
+                        <tr>
+                            <th className="px-4 py-3 w-40">Mois</th>
+                            <th className="px-3 py-3 w-28">Type</th>
+                            {periodsHeader.map(p => (
+                                <th key={p} className="px-3 py-3 text-right min-w-[80px]">Période {p}</th>
+                            ))}
+                            <th className="px-4 py-3 text-right bg-slate-100 w-32">Cumul Mensuel</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                        {data.map((month) => {
+                            const monthTotalRecurring = month.periods.reduce((acc, p) => acc + p.income.recurring, 0);
+                            const monthTotalVariable = month.periods.reduce((acc, p) => acc + p.income.variable, 0);
+                            const monthTotal = month.totals.income;
 
-                    return (
-                        <Card key={month.monthIndex} className={`border transition-all duration-300 ${isOpen ? 'border-indigo-200 ring-2 ring-indigo-50 shadow-md' : 'border-slate-200 shadow-sm hover:border-indigo-200'}`}>
-                            <div 
-                                onClick={() => toggleMonth(month.monthIndex)}
-                                className="flex items-center justify-between p-4 cursor-pointer"
-                            >
-                                <div className="flex items-center gap-4">
-                                    <div className={`p-2 rounded-lg transition-colors ${isOpen ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500 group-hover:text-indigo-600'}`}>
-                                        <Calendar size={20} />
-                                    </div>
-                                    <div>
-                                        <h4 className="font-bold text-slate-900 capitalize text-lg">{month.monthName}</h4>
-                                        <p className="text-xs text-slate-500">{month.periods.length} périodes</p>
-                                    </div>
-                                </div>
-                                
-                                <div className="flex items-center gap-6">
-                                    <div className="text-right hidden sm:block">
-                                        <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Revenus</span>
-                                        <span className="block text-xl font-black text-emerald-600">+{totalMonth.toFixed(2)} €</span>
-                                    </div>
-                                    <div className="text-slate-300">
-                                        {isOpen ? <ChevronDown size={24} /> : <ChevronRight size={24} />}
-                                    </div>
-                                </div>
-                            </div>
+                            // Skip les mois futurs ou vides si 0 revenus (optionnel, ici on affiche tout pour la structure)
+                            const isEmpty = monthTotal === 0;
 
-                            {isOpen && (
-                                <div className="border-t border-slate-100 bg-slate-50/50 p-4 animate-in slide-in-from-top-2 duration-200">
-                                    <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
-                                        <table className="w-full text-sm text-left">
-                                            <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200 text-xs uppercase tracking-wider">
-                                                <tr>
-                                                    <th className="px-4 py-3">Période</th>
-                                                    <th className="px-4 py-3 text-right text-slate-600">Récurrent</th>
-                                                    <th className="px-4 py-3 text-right text-indigo-600">Variable</th>
-                                                    <th className="px-4 py-3 text-right bg-slate-100 font-black text-slate-900">Total</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody className="divide-y divide-slate-100">
-                                                {month.periods.map((p, idx) => (
-                                                    <tr key={idx} className="hover:bg-slate-50 transition-colors">
-                                                        <td className="px-4 py-3 font-medium text-slate-700">
-                                                            {p.period.label} 
-                                                            <span className="text-[10px] text-slate-400 font-normal ml-2">({p.period.start}-{p.period.end})</span>
-                                                        </td>
-                                                        <td className="px-4 py-3 text-right">
-                                                            <button 
-                                                                onClick={(e) => handleAmountClick(e, month.dateObj, p.period.id, 'RECURRING')}
-                                                                className="text-slate-600 font-medium hover:text-indigo-600 hover:underline decoration-indigo-300 underline-offset-2 transition-all"
-                                                            >
-                                                                {p.income.recurring > 0 ? p.income.recurring.toFixed(2) + ' €' : '-'}
-                                                            </button>
-                                                        </td>
-                                                        <td className="px-4 py-3 text-right">
-                                                            <button 
-                                                                onClick={(e) => handleAmountClick(e, month.dateObj, p.period.id, 'VARIABLE')}
-                                                                className="text-indigo-600 font-medium hover:text-indigo-800 hover:underline decoration-indigo-300 underline-offset-2 transition-all"
-                                                            >
-                                                                {p.income.variable > 0 ? p.income.variable.toFixed(2) + ' €' : '-'}
-                                                            </button>
-                                                        </td>
-                                                        <td className="px-4 py-3 text-right font-bold bg-slate-50/50 text-emerald-600">
-                                                            <button 
-                                                                onClick={(e) => handleAmountClick(e, month.dateObj, p.period.id, 'ALL')}
-                                                                className="hover:text-emerald-800 hover:underline decoration-emerald-300 underline-offset-2 transition-all"
-                                                            >
-                                                                {p.income.total.toFixed(2)} €
-                                                            </button>
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                            <tfoot className="bg-slate-100 font-bold text-slate-800 border-t border-slate-200">
-                                                <tr>
-                                                    <td className="px-4 py-3 uppercase text-xs tracking-wider">Cumul Mensuel</td>
-                                                    <td className="px-4 py-3 text-right">
-                                                        {month.periods.reduce((acc, p) => acc + p.income.recurring, 0).toFixed(2)} €
-                                                    </td>
-                                                    <td className="px-4 py-3 text-right text-indigo-700">
-                                                        {month.periods.reduce((acc, p) => acc + p.income.variable, 0).toFixed(2)} €
-                                                    </td>
-                                                    <td className="px-4 py-3 text-right text-emerald-700 bg-slate-200/50">
-                                                        {totalMonth.toFixed(2)} €
-                                                    </td>
-                                                </tr>
-                                            </tfoot>
-                                        </table>
-                                    </div>
-                                </div>
-                            )}
-                        </Card>
-                    );
-                })}
+                            return (
+                                <React.Fragment key={month.monthIndex}>
+                                    {/* LIGNE 1 : RÉCURRENT */}
+                                    <tr className={`group hover:bg-slate-50/50 transition-colors ${isEmpty ? 'opacity-50 grayscale' : ''}`}>
+                                        <td rowSpan={3} className="px-4 py-3 align-top bg-white border-r border-slate-100">
+                                            <div className="flex flex-col sticky left-0">
+                                                <span className="font-bold text-slate-900 capitalize text-sm">{month.monthName}</span>
+                                                <span className="text-[10px] text-slate-400 font-medium">{year}</span>
+                                            </div>
+                                        </td>
+                                        <td className="px-3 py-2 border-r border-slate-50">
+                                            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-slate-100 text-slate-600 font-bold text-[10px] w-full">
+                                                <CalendarClock size={10} /> Récurrent
+                                            </span>
+                                        </td>
+                                        {periodsHeader.map((p, idx) => {
+                                            const val = month.periods[idx]?.income.recurring || 0;
+                                            return (
+                                                <td key={idx} className="px-3 py-2 text-right">
+                                                    {val > 0 ? (
+                                                        <button 
+                                                            onClick={(e) => handleAmountClick(e, month.dateObj, month.periods[idx]?.period.id, 'RECURRING')}
+                                                            className="font-medium text-slate-600 hover:text-indigo-600 hover:underline transition-colors"
+                                                        >
+                                                            {val.toFixed(2)} €
+                                                        </button>
+                                                    ) : (
+                                                        <span className="text-slate-300">-</span>
+                                                    )}
+                                                </td>
+                                            );
+                                        })}
+                                        <td className="px-4 py-2 text-right bg-slate-50/30 font-medium text-slate-600 border-l border-slate-100">
+                                            {monthTotalRecurring.toFixed(2)} €
+                                        </td>
+                                    </tr>
+
+                                    {/* LIGNE 2 : VARIABLE */}
+                                    <tr className={`group hover:bg-slate-50/50 transition-colors ${isEmpty ? 'opacity-50 grayscale' : ''}`}>
+                                        <td className="px-3 py-2 border-r border-slate-50">
+                                            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-indigo-50 text-indigo-600 font-bold text-[10px] w-full">
+                                                <ShoppingBag size={10} /> Variable
+                                            </span>
+                                        </td>
+                                        {periodsHeader.map((p, idx) => {
+                                            const val = month.periods[idx]?.income.variable || 0;
+                                            return (
+                                                <td key={idx} className="px-3 py-2 text-right">
+                                                    {val > 0 ? (
+                                                        <button 
+                                                            onClick={(e) => handleAmountClick(e, month.dateObj, month.periods[idx]?.period.id, 'VARIABLE')}
+                                                            className="font-medium text-indigo-600 hover:text-indigo-800 hover:underline transition-colors"
+                                                        >
+                                                            {val.toFixed(2)} €
+                                                        </button>
+                                                    ) : (
+                                                        <span className="text-slate-300">-</span>
+                                                    )}
+                                                </td>
+                                            );
+                                        })}
+                                        <td className="px-4 py-2 text-right bg-slate-50/30 font-medium text-indigo-600 border-l border-slate-100">
+                                            {monthTotalVariable.toFixed(2)} €
+                                        </td>
+                                    </tr>
+
+                                    {/* LIGNE 3 : TOTAL (Border Bottom séparateur de mois) */}
+                                    <tr className={`group hover:bg-slate-50 transition-colors border-b border-slate-200 last:border-0 ${isEmpty ? 'opacity-50 grayscale' : ''}`}>
+                                        <td className="px-3 py-2 border-r border-slate-50">
+                                            <span className="font-black text-slate-900 text-[10px] uppercase tracking-wider pl-1">Total</span>
+                                        </td>
+                                        {periodsHeader.map((p, idx) => {
+                                            const val = month.periods[idx]?.income.total || 0;
+                                            return (
+                                                <td key={idx} className="px-3 py-2 text-right font-bold text-slate-800">
+                                                    {val > 0 ? (
+                                                        <button 
+                                                            onClick={(e) => handleAmountClick(e, month.dateObj, month.periods[idx]?.period.id, 'ALL')}
+                                                            className="hover:text-emerald-600 transition-colors"
+                                                        >
+                                                            {val.toFixed(2)} €
+                                                        </button>
+                                                    ) : (
+                                                        <span className="text-slate-300 font-normal">-</span>
+                                                    )}
+                                                </td>
+                                            );
+                                        })}
+                                        <td className="px-4 py-2 text-right bg-slate-100 font-black text-emerald-600 border-l border-slate-200">
+                                            {monthTotal.toFixed(2)} €
+                                        </td>
+                                    </tr>
+                                </React.Fragment>
+                            );
+                        })}
+                    </tbody>
+                </table>
             </div>
-        </div>
+        </Card>
     );
 };

@@ -79,7 +79,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 if (type === 'expense') {
                     periodData[pIndex].expenses.total += amount;
                 } else {
-                    // FUSION EXTRA VERS VARIABLE
+                    // FUSION EXTRA VERS VARIABLE POUR L'AFFICHAGE
                     const targetType = type === 'extra' ? 'variable' : type;
                     periodData[pIndex].income[targetType] += amount;
                     periodData[pIndex].income.total += amount;
@@ -89,7 +89,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
         // -> Revenus Récurrents (EXCLURE SALAIRES pour correspondre à la vue Opérations par défaut)
         incomeConfigs.forEach(inc => {
-            if (inc.isSalary) return; // Alignement avec le filtre par défaut 'salary: EXCLUDE'
+            if (inc.isSalary) return; 
 
             // Vérif validité config pour ce mois
             if (inc.startMonth && monthKey < inc.startMonth) return;
@@ -98,40 +98,28 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             const instanceId = `${inc.id}-${monthKey}`;
             const paid = paidItems[instanceId];
             
-            // MODIFICATION CRITIQUE : 
-            // On inclut le revenu SEULEMENT s'il est présent dans paid_items ET pointé (!isWaiting).
-            // On n'utilise PLUS inc.amount comme valeur par défaut pour éviter les projections.
+            // STRICT CASHFLOW : On ne prend que ce qui est réellement payé (pas d'attente, pas de prévisionnel)
             if (paid && !paid.isWaiting) {
-                // Parsing sécurisé de la date de paiement
                 let day = inc.dayOfMonth;
                 if (paid.paymentDate) {
                     const parts = paid.paymentDate.split('-').map(Number);
                     if (parts.length === 3) day = parts[2];
                 }
-                
                 addToPeriod(day, paid.amount, 'recurring');
             }
         });
 
         // -> Transactions Variables
         variableTransactions.forEach(tx => {
-            // Filtrage : On ne prend que les opérations des comptes COURANTS. 
-            // Les intérêts des comptes EPARGNE sont exclus du budget opérationnel.
             if (!checkingAccountIds.includes(tx.accountId)) return;
 
             const [y, m, d] = tx.date.split('-').map(Number);
             
             if (y === selectedYear && (m - 1) === month) {
-                // CORRECTION : On inclut TOUS les revenus (type INCOME), quelle que soit la catégorie (même Remboursement/Dépenses)
-                // Seule exclusion : les virements internes pour éviter les doublons de trésorerie.
                 if (tx.type === 'INCOME' && tx.category !== 'Virement Interne') {
-                    // Pour les variables, on vérifie aussi qu'elles ne sont pas en attente (bien que normalement variableTransactions contient déjà paidItems, on assure le coup)
+                    // STRICT CASHFLOW : Exclusion des variables en attente
                     if (!tx.isWaiting) {
-                        if (tx.isExtra) {
-                            addToPeriod(d, tx.amount, 'variable');
-                        } else {
-                            addToPeriod(d, tx.amount, 'variable');
-                        }
+                        addToPeriod(d, tx.amount, tx.isExtra ? 'variable' : 'variable');
                     }
                 }
             }
@@ -152,7 +140,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         });
     }
 
-    return monthsData;
+    // On inverse pour avoir les mois récents en premier, ou on garde l'ordre chrono selon la préférence
+    return monthsData.reverse(); 
   }, [selectedYear, configs, incomeConfigs, paidItems, variableTransactions, settings, categories, checkingAccountIds]);
 
   return (
