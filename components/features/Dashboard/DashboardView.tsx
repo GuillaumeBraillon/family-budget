@@ -25,7 +25,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onNavigateToPlanner 
 }) => {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-  const [scope, setScope] = useState<'MONTH' | 'PERIOD'>('MONTH'); 
 
   // Identification des comptes courants (pour exclure les intérêts des livrets du budget opérationnel)
   const checkingAccountIds = useMemo(() => 
@@ -158,13 +157,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       <SavingsSummaryCard 
         accounts={accounts} 
         transfers={transfers} 
+        variableTransactions={variableTransactions}
       />
 
       <DashboardHeader 
         currentDate={new Date()} 
         onNavigateToPlanner={() => onNavigateToPlanner(new Date())} 
-        scope={scope}
-        setScope={setScope}
       />
       
       {/* SECTION ANALYSE REVENUS DÉTAILLÉE */}

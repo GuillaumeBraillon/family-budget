@@ -1,30 +1,39 @@
 
 import React, { useMemo } from 'react';
 import { PiggyBank, Wallet, CreditCard, Landmark } from 'lucide-react';
-import { Account, Transfer, AccountType } from '../../../../types';
+import { Account, Transfer, AccountType, VariableTransaction } from '../../../../types';
 import { Card } from '../../../ui/Card';
 
 interface SavingsSummaryCardProps {
   accounts: Account[];
-  transactions?: any[]; // Deprecated
   transfers?: Transfer[];
+  variableTransactions?: VariableTransaction[];
 }
 
-export const SavingsSummaryCard: React.FC<SavingsSummaryCardProps> = ({ accounts, transfers = [] }) => {
+export const SavingsSummaryCard: React.FC<SavingsSummaryCardProps> = ({ accounts, transfers = [], variableTransactions = [] }) => {
   
-  // Calcul des soldes d'épargne via les transferts (pour être synchro avec la vue Épargne)
+  // Calcul des soldes d'épargne via les transferts ET les opérations directes (intérêts)
   const balances: Record<string, number> = useMemo(() => {
     const map: Record<string, number> = {};
     
     accounts.forEach(acc => {
         if (acc.type === AccountType.SAVINGS) {
-            // Pour l'épargne, on rejoue l'historique des transferts
-            // + si destination, - si source
-            const total = transfers.reduce((sum, t) => {
+            // 1. Virements (Interne)
+            let total = transfers.reduce((sum, t) => {
                 if (t.destinationAccountId === acc.id) return sum + t.amount;
                 if (t.sourceAccountId === acc.id) return sum - t.amount;
                 return sum;
             }, 0);
+
+            // 2. Opérations directes (Intérêts, Frais, Apports externes)
+            // On filtre les transactions liées à ce compte d'épargne
+            const directOps = variableTransactions.filter(t => t.accountId === acc.id);
+            total += directOps.reduce((sum, t) => {
+                if (t.type === 'INCOME') return sum + t.amount; // Intérêts (+)
+                if (t.type === 'EXPENSE') return sum - t.amount; // Frais (-)
+                return sum;
+            }, 0);
+
             map[acc.id] = total;
         } else {
             // Pour le courant, on utilise le solde courant (géré dans BalancesView/BDD)
@@ -32,7 +41,7 @@ export const SavingsSummaryCard: React.FC<SavingsSummaryCardProps> = ({ accounts
         }
     });
     return map;
-  }, [accounts, transfers]);
+  }, [accounts, transfers, variableTransactions]);
 
   const totalWealth = Object.values(balances).reduce((acc: number, val: number) => acc + val, 0);
   const savingsTotal = accounts.filter(a => a.type === AccountType.SAVINGS).reduce((acc, a) => acc + (balances[a.id] || 0), 0);
