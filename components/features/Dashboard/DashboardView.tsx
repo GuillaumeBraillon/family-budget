@@ -26,7 +26,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 }) => {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
-  // Identification des comptes courants (pour exclure les intérêts des livrets du budget opérationnel)
+  // Identification des comptes courants
   const checkingAccountIds = useMemo(() => 
     accounts.filter(a => a.type === AccountType.CHECKING).map(a => a.id),
   [accounts]);
@@ -35,7 +35,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const annualData = useMemo(() => {
     const monthsData = [];
 
-    // On parcourt les 12 mois de l'année sélectionnée
     for (let month = 0; month < 12; month++) {
         const currentMonthDate = new Date(selectedYear, month, 1);
         const monthKey = `${selectedYear}-${String(month + 1).padStart(2, '0')}`;
@@ -69,58 +68,85 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         // 2. AGRÉGATION DES DONNÉES PAR PÉRIODE
         const periodData = periods.map(p => ({
             period: p,
-            income: { recurring: 0, variable: 0, extra: 0, total: 0 },
-            expenses: { total: 0 }
+            income: { recurring: 0, variable: 0, total: 0 },
+            expenses: { recurring: 0, variable: 0, total: 0 },
+            balance: 0
         }));
 
-        const addToPeriod = (day: number, amount: number, type: 'recurring' | 'variable' | 'extra' | 'expense') => {
+        const addToPeriod = (day: number, amount: number, type: 'income_recurring' | 'income_variable' | 'expense_recurring' | 'expense_variable') => {
             const pIndex = periods.findIndex(p => day >= p.start && day <= p.end);
             if (pIndex !== -1) {
-                if (type === 'expense') {
-                    periodData[pIndex].expenses.total += amount;
-                } else {
-                    // FUSION EXTRA VERS VARIABLE POUR L'AFFICHAGE
-                    const targetType = type === 'extra' ? 'variable' : type;
-                    periodData[pIndex].income[targetType] += amount;
+                if (type === 'income_recurring') {
+                    periodData[pIndex].income.recurring += amount;
                     periodData[pIndex].income.total += amount;
+                    periodData[pIndex].balance += amount;
+                } else if (type === 'income_variable') {
+                    periodData[pIndex].income.variable += amount;
+                    periodData[pIndex].income.total += amount;
+                    periodData[pIndex].balance += amount;
+                } else if (type === 'expense_recurring') {
+                    periodData[pIndex].expenses.recurring += amount;
+                    periodData[pIndex].expenses.total += amount;
+                    periodData[pIndex].balance -= amount;
+                } else if (type === 'expense_variable') {
+                    periodData[pIndex].expenses.variable += amount;
+                    periodData[pIndex].expenses.total += amount;
+                    periodData[pIndex].balance -= amount;
                 }
             }
         };
 
-        // -> Revenus Récurrents (EXCLURE SALAIRES pour correspondre à la vue Opérations par défaut)
+        // -> REVENUS RÉCURRENTS (Réel uniquement)
         incomeConfigs.forEach(inc => {
             if (inc.isSalary) return; 
-
-            // Vérif validité config pour ce mois
             if (inc.startMonth && monthKey < inc.startMonth) return;
             if (inc.endMonth && monthKey > inc.endMonth) return;
 
             const instanceId = `${inc.id}-${monthKey}`;
             const paid = paidItems[instanceId];
             
-            // STRICT CASHFLOW : On ne prend que ce qui est réellement payé (pas d'attente, pas de prévisionnel)
             if (paid && !paid.isWaiting) {
                 let day = inc.dayOfMonth;
                 if (paid.paymentDate) {
                     const parts = paid.paymentDate.split('-').map(Number);
                     if (parts.length === 3) day = parts[2];
                 }
-                addToPeriod(day, paid.amount, 'recurring');
+                addToPeriod(day, paid.amount, 'income_recurring');
             }
         });
 
-        // -> Transactions Variables
+        // -> DÉPENSES RÉCURRENTES (Réel uniquement)
+        configs.forEach(conf => {
+            if (conf.startMonth && monthKey < conf.startMonth) return;
+            if (conf.endMonth && monthKey > conf.endMonth) return;
+
+            const instanceId = `${conf.id}-${monthKey}`;
+            const paid = paidItems[instanceId];
+
+            if (paid && !paid.isWaiting) {
+                let day = conf.dayOfMonth;
+                if (paid.paymentDate) {
+                    const parts = paid.paymentDate.split('-').map(Number);
+                    if (parts.length === 3) day = parts[2];
+                }
+                addToPeriod(day, paid.amount, 'expense_recurring');
+            }
+        });
+
+        // -> TRANSACTIONS VARIABLES (Réel uniquement)
         variableTransactions.forEach(tx => {
             if (!checkingAccountIds.includes(tx.accountId)) return;
 
             const [y, m, d] = tx.date.split('-').map(Number);
             
             if (y === selectedYear && (m - 1) === month) {
-                if (tx.type === 'INCOME' && tx.category !== 'Virement Interne') {
-                    // STRICT CASHFLOW : Exclusion des variables en attente
-                    if (!tx.isWaiting) {
-                        addToPeriod(d, tx.amount, tx.isExtra ? 'variable' : 'variable');
-                    }
+                if (tx.isWaiting) return; // Exclusion stricte du prévisionnel
+                if (tx.category === 'Virement Interne') return;
+
+                if (tx.type === 'INCOME') {
+                    addToPeriod(d, tx.amount, 'income_variable');
+                } else {
+                    addToPeriod(d, tx.amount, 'expense_variable');
                 }
             }
         });
@@ -128,8 +154,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         // Totaux Mensuels
         const monthTotals = periodData.reduce((acc, p) => ({
             income: acc.income + p.income.total,
-            expenses: acc.expenses + p.expenses.total
-        }), { income: 0, expenses: 0 });
+            expenses: acc.expenses + p.expenses.total,
+            balance: acc.balance + p.balance
+        }), { income: 0, expenses: 0, balance: 0 });
 
         monthsData.push({
             monthName: new Intl.DateTimeFormat('fr-FR', { month: 'long' }).format(currentMonthDate),
@@ -140,7 +167,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         });
     }
 
-    // On inverse pour avoir les mois récents en premier, ou on garde l'ordre chrono selon la préférence
     return monthsData.reverse(); 
   }, [selectedYear, configs, incomeConfigs, paidItems, variableTransactions, settings, categories, checkingAccountIds]);
 
@@ -158,7 +184,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         onNavigateToPlanner={() => onNavigateToPlanner(new Date())} 
       />
       
-      {/* SECTION ANALYSE REVENUS DÉTAILLÉE */}
+      {/* SECTION ANALYSE FLUX DÉTAILLÉE */}
       <AnnualIncomeAnalysis 
         data={annualData} 
         year={selectedYear}
