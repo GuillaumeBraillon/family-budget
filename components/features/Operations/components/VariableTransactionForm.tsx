@@ -41,9 +41,11 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
   const [comments, setComments] = useState<string>('');
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   
-  const checkingAccounts = accounts.filter(a => a.type === AccountType.CHECKING);
-  const [accountId, setAccountId] = useState(checkingAccounts[0]?.id || '');
-  const [destAccountId, setDestAccountId] = useState(checkingAccounts[1]?.id || checkingAccounts[0]?.id || '');
+  // Utilisation de tous les comptes fournis, sans filtrage forcé ici.
+  // C'est au parent de décider quels comptes passer.
+  // Pour le mode Virement, on garde la logique source/dest.
+  const [accountId, setAccountId] = useState(accounts[0]?.id || '');
+  const [destAccountId, setDestAccountId] = useState(accounts[1]?.id || accounts[0]?.id || '');
   
   const [category, setCategory] = useState('');
   const [subCategory, setSubCategory] = useState('');
@@ -79,7 +81,6 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
             
             if (initialMode === 'TRANSFER') {
                 setAccountId(editingTransaction.accountId); // Source
-                // On utilise le champ comments comme "Destination Account ID" pour le pre-fill lors de l'edit depuis TransfersView
                 if (editingTransaction.comments && accounts.some(a => a.id === editingTransaction.comments)) {
                     setDestAccountId(editingTransaction.comments);
                 }
@@ -105,7 +106,8 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
             setIsExtra(false);
             setComments('');
             setSelectedTagIds([]);
-            if (!accountId && checkingAccounts.length > 0) setAccountId(checkingAccounts[0].id);
+            // Reset account to first available if new
+            if (accounts.length > 0) setAccountId(accounts[0].id);
         }
     }
   }, [isOpen, editingTransaction, defaultDate, defaultBeneficiary, initialMode, accounts]);
@@ -187,24 +189,15 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
                         <button type="button" onClick={() => setType('INCOME')} className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm font-bold transition-all ${!isExpense ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}><TrendingUp size={14}/> Revenu</button>
                     </div>
                 </div>
-                <SearchableTextInput label="Libellé" value={label} onChange={e => setLabel(e.target.value)} onSelectSuggestion={setLabel} placeholder={isExpense ? "Ex: Courses Carrefour..." : "Ex: Vente Vinted..."} suggestions={standardSuggestions} required autoFocus={!editingTransaction} />
+                <SearchableTextInput label="Libellé" value={label} onChange={e => setLabel(e.target.value)} onSelectSuggestion={setLabel} placeholder={isExpense ? "Ex: Frais bancaires..." : "Ex: Intérêts annuels..."} suggestions={standardSuggestions} required autoFocus={!editingTransaction} />
                 <AmountInput label="Montant" value={amount} onChange={e => setAmount(e.target.value)} color={themeColor} required />
                 <TextInput label="Date" type="date" icon={Calendar} value={date} onChange={e => setDate(e.target.value)} required />
                 
-                <div className={`p-3 rounded-xl border-2 transition-all ${isExtra ? 'bg-amber-50 border-amber-300 shadow-sm' : 'bg-slate-50 border-slate-200'}`}>
-                    <label className="flex items-center gap-3 cursor-pointer">
-                        <input type="checkbox" checked={isExtra} onChange={e => setIsExtra(e.target.checked)} className="h-5 w-5 text-amber-600 rounded" />
-                        <div className="flex flex-col">
-                            <span className="text-sm font-bold text-slate-700 flex items-center gap-1.5"><Star size={14} className={isExtra ? 'text-amber-500' : 'text-slate-400'} /> Hors budget</span>
-                        </div>
-                    </label>
-                </div>
-
+                <AccountSelector label={isExpense ? 'Compte débité' : 'Compte crédité'} accounts={accounts} value={accountId} onChange={e => setAccountId(e.target.value)} color={themeColor} />
+                
+                <div className="border-t border-slate-100 pt-3"></div>
+                
                 <TagSelector tags={tags} selectedTagIds={selectedTagIds} onToggleTag={toggleTag} />
-
-                <AccountSelector label={isExpense ? 'Compte débité' : 'Compte crédité'} accounts={checkingAccounts} value={accountId} onChange={e => setAccountId(e.target.value)} color={themeColor} />
-                <CategorySelector categories={categories} type={type} selectedCategory={category} selectedSubCategory={subCategory} onCategoryChange={setCategory} onSubCategoryChange={setSubCategory} />
-                <BeneficiarySelector people={people} value={beneficiaryId} onChange={e => setBeneficiaryId(e.target.value)} color={themeColor} label="Bénéficiaires" />
                 <TextInput label="Note / Commentaire" value={comments} onChange={e => setComments(e.target.value)} placeholder="Infos complémentaires..." icon={MessageSquare} />
             </>
         ) : (
@@ -223,7 +216,7 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
                     </div>
                 </div>
                 <TextInput label="Date" type="date" icon={Calendar} value={date} onChange={e => setDate(e.target.value)} required />
-                <SearchableTextInput label="Motif" value={label} onChange={e => setLabel(e.target.value)} onSelectSuggestion={setLabel} placeholder="Ex: Épargne, Remboursement..." suggestions={transferSuggestions} required />
+                <TextInput label="Motif" value={label} onChange={e => setLabel(e.target.value)} placeholder="Ex: Épargne, Remboursement..." required />
             </div>
         )}
 
@@ -240,20 +233,12 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
                     <Save size={18}/> {editingTransaction ? 'Mettre à jour' : 'Exécuter le virement'}
                 </button>
             ) : (
-                <>
-                    <button 
-                        onClick={() => handleSubmit(true)} 
-                        className="flex-1 bg-amber-100 text-amber-700 hover:bg-amber-200 py-3 rounded-xl font-bold transition-colors flex items-center justify-center gap-2"
-                    >
-                        <Clock size={18}/> {editingTransaction ? 'Sauver (Attente)' : 'En Attente'}
-                    </button>
-                    <button 
-                        onClick={() => handleSubmit(false)} 
-                        className={`flex-1 text-white py-3 rounded-xl font-bold shadow-sm transition-colors flex items-center justify-center gap-2 ${isExpense ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-emerald-600 hover:bg-emerald-700'}`}
-                    >
-                        <CheckCircle2 size={18}/> {editingTransaction ? 'Sauver (Réel)' : 'Validé'}
-                    </button>
-                </>
+                <button 
+                    onClick={() => handleSubmit(false)} 
+                    className={`flex-1 text-white py-3 rounded-xl font-bold shadow-sm transition-colors flex items-center justify-center gap-2 ${isExpense ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-emerald-600 hover:bg-emerald-700'}`}
+                >
+                    <CheckCircle2 size={18}/> {editingTransaction ? 'Enregistrer' : 'Valider'}
+                </button>
             )}
         </div>
       </div>

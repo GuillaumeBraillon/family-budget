@@ -60,7 +60,10 @@ export const FilterBar: React.FC<FilterBarProps> = ({ filters, onFilterChange, a
         transfer: 'EXCLUDE',
         salary: 'ALL',
         accountIds: [],
-        beneficiaryIds: []
+        beneficiaryIds: [],
+        includedTagIds: [],
+        excludedTagIds: [],
+        tagPresence: 'ALL'
     });
   };
 

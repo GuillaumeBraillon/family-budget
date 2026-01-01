@@ -1,6 +1,6 @@
 
-import React, { useState, useMemo } from 'react';
-import { Trash2, ArrowUp, ArrowDown, Save, Briefcase } from 'lucide-react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { Trash2, Save, Briefcase } from 'lucide-react';
 import { IncomeConfig, CategoryDef, Person, Account } from '../../../types';
 import { CategorySelector } from '../../ui/molecules/CategorySelector';
 import { TextInput, AmountInput } from '../../ui/molecules/FormInputs';
@@ -9,6 +9,7 @@ import { DataList } from '../../ui/molecules/DataList';
 import { DataListRow } from '../../ui/molecules/DataListRow';
 import { ConfirmModal } from '../atoms/ConfirmModal';
 import { Modal } from '../../ui/Modal';
+import { ListSorter, SortOrder } from '../../ui/molecules/ListSorter';
 
 interface IncomeEditorProps {
     incomeConfigs: IncomeConfig[];
@@ -20,9 +21,6 @@ interface IncomeEditorProps {
     onDeleteIncome: (id: string) => void;
 }
 
-type SortKey = 'dayOfMonth' | 'label' | 'amount';
-type SortOrder = 'asc' | 'desc';
-
 export const IncomeEditor: React.FC<IncomeEditorProps> = ({ 
     incomeConfigs, people, categories, accounts, onAddIncome, onUpdateIncome, onDeleteIncome 
 }) => {
@@ -30,7 +28,7 @@ export const IncomeEditor: React.FC<IncomeEditorProps> = ({
     const [editingId, setEditingId] = useState<string | null>(null);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-    const [sortKey, setSortKey] = useState<SortKey>('dayOfMonth');
+    const [sortKey, setSortKey] = useState<string>('dayOfMonth');
     const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
     
     const defaultAccount = accounts[0]?.id || '';
@@ -42,8 +40,30 @@ export const IncomeEditor: React.FC<IncomeEditorProps> = ({
         category: '',
         subCategory: '',
         isExtra: false,
-        isSalary: false
+        isSalary: false,
+        startMonth: '', 
+        endMonth: ''
     });
+
+    const [durationMode, setDurationMode] = useState<'dates' | 'duration'>('duration');
+    const [durationMonths, setDurationMonths] = useState<number>(3);
+
+    useEffect(() => {
+        if (formData.isExtra && durationMode === 'duration' && formData.startMonth && durationMonths > 0) {
+            const [year, month] = formData.startMonth.split('-').map(Number);
+            const startDate = new Date(year, month - 1);
+            const endDate = new Date(startDate);
+            endDate.setMonth(startDate.getMonth() + durationMonths - 1);
+            
+            const endYear = endDate.getFullYear();
+            const endMonth = String(endDate.getMonth() + 1).padStart(2, '0');
+            const calculatedEnd = `${endYear}-${endMonth}`;
+            
+            if (formData.endMonth !== calculatedEnd) {
+                setFormData(prev => ({ ...prev, endMonth: calculatedEnd }));
+            }
+        }
+    }, [formData.startMonth, durationMonths, durationMode, formData.isExtra, formData.endMonth]);
 
     const resetForm = () => {
         setFormData({ 
@@ -53,8 +73,12 @@ export const IncomeEditor: React.FC<IncomeEditorProps> = ({
             category: '',
             subCategory: '',
             isExtra: false,
-            isSalary: false
+            isSalary: false,
+            startMonth: '', 
+            endMonth: ''
         });
+        setDurationMode('duration');
+        setDurationMonths(3);
         setEditingId(null);
         setIsFormOpen(false);
         setShowDeleteConfirm(false);
@@ -64,6 +88,7 @@ export const IncomeEditor: React.FC<IncomeEditorProps> = ({
         setFormData(inc);
         setEditingId(inc.id);
         setIsFormOpen(true);
+        setDurationMode('dates');
     };
 
     const handleAddClick = () => {
@@ -71,11 +96,13 @@ export const IncomeEditor: React.FC<IncomeEditorProps> = ({
         setFormData({ 
             label: '', amount: 0, dayOfMonth: 1, 
             accountId: accounts[0]?.id || '', 
-            beneficiaryId: people[0]?.id,
+            beneficiaryId: people[0]?.id, 
             category: '',
             subCategory: '',
             isExtra: false,
-            isSalary: false
+            isSalary: false,
+            startMonth: '', 
+            endMonth: ''
         });
         setIsFormOpen(true);
     }
@@ -97,21 +124,13 @@ export const IncomeEditor: React.FC<IncomeEditorProps> = ({
         }
     }
 
-    const toggleSort = (key: SortKey) => {
-        if (sortKey === key) {
-            setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-        } else {
-            setSortKey(key);
-            setSortOrder('asc');
-        }
-    };
-
     const sortedIncomes = useMemo(() => {
         return [...incomeConfigs].sort((a, b) => {
             let res = 0;
             if (sortKey === 'label') {
                 res = a.label.localeCompare(b.label);
             } else {
+                // @ts-ignore
                 res = (a[sortKey] as number) - (b[sortKey] as number);
             }
             return sortOrder === 'asc' ? res : -res;
@@ -130,15 +149,21 @@ export const IncomeEditor: React.FC<IncomeEditorProps> = ({
         );
    }
 
+   const sortOptions = [
+       { key: 'dayOfMonth', label: 'Date' },
+       { key: 'label', label: 'Libellé' },
+       { key: 'amount', label: 'Montant' }
+   ];
+
     return (
         <div className="space-y-4 animate-in fade-in duration-300">
              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2">
-                <div className="flex items-center gap-2 bg-white p-1.5 rounded-lg border border-slate-200 shadow-sm">
-                    <span className="text-xs font-medium text-slate-500 px-2 uppercase">Trier :</span>
-                    <button onClick={() => toggleSort('dayOfMonth')} className={`px-3 py-1.5 rounded text-xs font-medium flex items-center gap-1 transition-colors ${sortKey === 'dayOfMonth' ? 'bg-emerald-100 text-emerald-700' : 'hover:bg-slate-100 text-slate-600'}`}>Date {sortKey === 'dayOfMonth' && (sortOrder === 'asc' ? <ArrowUp size={12}/> : <ArrowDown size={12}/>)}</button>
-                    <button onClick={() => toggleSort('label')} className={`px-3 py-1.5 rounded text-xs font-medium flex items-center gap-1 transition-colors ${sortKey === 'label' ? 'bg-emerald-100 text-emerald-700' : 'hover:bg-slate-100 text-slate-600'}`}>Libellé {sortKey === 'label' && (sortOrder === 'asc' ? <ArrowUp size={12}/> : <ArrowDown size={12}/>)}</button>
-                    <button onClick={() => toggleSort('amount')} className={`px-3 py-1.5 rounded text-xs font-medium flex items-center gap-1 transition-colors ${sortKey === 'amount' ? 'bg-emerald-100 text-emerald-700' : 'hover:bg-slate-100 text-slate-600'}`}>Montant {sortKey === 'amount' && (sortOrder === 'asc' ? <ArrowUp size={12}/> : <ArrowDown size={12}/>)}</button>
-                </div>
+                <ListSorter 
+                    options={sortOptions} 
+                    currentSort={sortKey} 
+                    currentOrder={sortOrder} 
+                    onSortChange={(k, o) => { setSortKey(k); setSortOrder(o); }} 
+                />
             </div>
 
             <Modal
@@ -252,6 +277,56 @@ export const IncomeEditor: React.FC<IncomeEditorProps> = ({
                                 </span>
                             </div>
                         </div>
+
+                        {formData.isExtra && (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2 pt-2 border-t border-slate-200">
+                                <TextInput 
+                                    label="Mois de début"
+                                    type="month"
+                                    value={formData.startMonth}
+                                    onChange={e => {
+                                        const val = e.target.value;
+                                        setFormData(prev => ({ ...prev, startMonth: val }));
+                                    }}
+                                    required={formData.isExtra}
+                                />
+                                
+                                <div className="flex flex-col gap-2">
+                                    <div className="flex gap-2 text-xs mb-1">
+                                        <button type="button" onClick={() => setDurationMode('duration')} className={`px-2 py-1 rounded ${durationMode === 'duration' ? 'bg-indigo-100 text-indigo-700 font-medium' : 'text-slate-500 hover:bg-slate-100'}`}>Par durée</button>
+                                        <button type="button" onClick={() => setDurationMode('dates')} className={`px-2 py-1 rounded ${durationMode === 'dates' ? 'bg-indigo-100 text-indigo-700 font-medium' : 'text-slate-500 hover:bg-slate-100'}`}>Par date de fin</button>
+                                    </div>
+                                    {durationMode === 'duration' ? (
+                                        <div>
+                                            <label className="text-xs font-medium text-slate-500 uppercase block mb-1">Durée (Mois)</label>
+                                            <div className="flex items-center gap-2">
+                                                <input 
+                                                    type="number" min="1" 
+                                                    value={durationMonths} 
+                                                    onChange={e => setDurationMonths(parseInt(e.target.value) || 1)} 
+                                                    className="w-full p-2 rounded-lg border border-slate-300 bg-white text-slate-900" 
+                                                />
+                                                <span className="text-xs text-slate-500 whitespace-nowrap bg-slate-100 px-2 py-2 rounded">
+                                                    Fin : {formData.endMonth || '?'}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <TextInput 
+                                            label="Mois de fin"
+                                            type="month"
+                                            value={formData.endMonth}
+                                            onChange={e => {
+                                                const val = e.target.value;
+                                                setDurationMonths(0);
+                                                setFormData(prev => ({ ...prev, endMonth: val }));
+                                            }}
+                                            required={formData.isExtra}
+                                        />
+                                    )}
+                                </div>
+                            </div>
+                        )}
                     </div>
                     
                     <div className="flex gap-3 pt-2">

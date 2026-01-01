@@ -14,10 +14,10 @@ const getWeekFromDate = (date: Date): number => {
   return 4;
 };
 
-export const usePlannerUI = (initialDate: Date = new Date()) => {
+export const usePlannerUI = (initialDate: Date = new Date(), initialWeek?: number) => {
   const [currentDate, setCurrentDate] = useState(initialDate);
-  // On initialise la semaine active en fonction de la date du jour
-  const [activeWeek, setActiveWeek] = useState(() => getWeekFromDate(initialDate));
+  // On initialise la semaine active : soit forcée par props (navigation dashboard), soit calculée via la date
+  const [activeWeek, setActiveWeek] = useState(() => initialWeek ?? getWeekFromDate(initialDate));
   const [searchQuery, setSearchQuery] = useState('');
 
   // États des modales

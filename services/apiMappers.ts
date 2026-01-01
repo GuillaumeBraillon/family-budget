@@ -48,8 +48,8 @@ export const mapDbExpenseConfig = (c: any): ExpenseConfig => ({
   beneficiaryId: c.beneficiary_id,
   accountId: c.account_id,
   dayOfMonth: c.day_of_month,
-  startMonth: c.start_month,
-  endMonth: c.end_month,
+  startMonth: c.start_month || undefined,
+  endMonth: c.end_month || undefined,
   isExtra: !!c.is_extra,
   tagIds: c.tag_ids || []
 });
@@ -65,6 +65,8 @@ export const mapDbIncomeConfig = (i: any): IncomeConfig => ({
   subCategory: i.sub_category,
   isExtra: !!i.is_extra,
   isSalary: !!i.is_salary,
+  startMonth: i.start_month || undefined,
+  endMonth: i.end_month || undefined,
   tagIds: i.tag_ids || []
 });
 

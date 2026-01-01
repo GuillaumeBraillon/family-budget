@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Trash2, ArrowUp, ArrowDown, Save } from 'lucide-react';
+import { Trash2, Save } from 'lucide-react';
 import { ExpenseConfig, CategoryDef, Person, Account } from '../../../types';
 import { CategorySelector } from '../../ui/molecules/CategorySelector';
 import { TextInput, AmountInput } from '../../ui/molecules/FormInputs';
@@ -9,6 +9,7 @@ import { DataList } from '../../ui/molecules/DataList';
 import { DataListRow } from '../../ui/molecules/DataListRow';
 import { ConfirmModal } from '../atoms/ConfirmModal';
 import { Modal } from '../../ui/Modal';
+import { ListSorter, SortOrder } from '../../ui/molecules/ListSorter';
 
 interface ExpenseRulesEditorProps {
     configs: ExpenseConfig[];
@@ -20,9 +21,6 @@ interface ExpenseRulesEditorProps {
     onDeleteConfig: (id: string) => void;
 }
 
-type SortKey = 'dayOfMonth' | 'label' | 'amount';
-type SortOrder = 'asc' | 'desc';
-
 export const ExpenseRulesEditor: React.FC<ExpenseRulesEditorProps> = ({ 
     configs, categories, people, accounts, onAddConfig, onUpdateConfig, onDeleteConfig 
 }) => {
@@ -30,7 +28,7 @@ export const ExpenseRulesEditor: React.FC<ExpenseRulesEditorProps> = ({
     const [editingId, setEditingId] = useState<string | null>(null);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     
-    const [sortKey, setSortKey] = useState<SortKey>('dayOfMonth');
+    const [sortKey, setSortKey] = useState<string>('dayOfMonth');
     const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
     
     const defaultAccount = accounts[0]?.id || '';
@@ -113,21 +111,13 @@ export const ExpenseRulesEditor: React.FC<ExpenseRulesEditorProps> = ({
         }
     }
 
-    const toggleSort = (key: SortKey) => {
-        if (sortKey === key) {
-            setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-        } else {
-            setSortKey(key);
-            setSortOrder('asc');
-        }
-    };
-
     const sortedConfigs = useMemo(() => {
         return [...configs].sort((a, b) => {
             let res = 0;
             if (sortKey === 'label') {
                 res = a.label.localeCompare(b.label);
             } else {
+                // @ts-ignore
                 res = (a[sortKey] as number) - (b[sortKey] as number);
             }
             return sortOrder === 'asc' ? res : -res;
@@ -146,15 +136,21 @@ export const ExpenseRulesEditor: React.FC<ExpenseRulesEditorProps> = ({
          );
     }
 
+    const sortOptions = [
+        { key: 'dayOfMonth', label: 'Date' },
+        { key: 'label', label: 'Libellé' },
+        { key: 'amount', label: 'Montant' }
+    ];
+
     return (
         <div className="space-y-4 animate-in fade-in duration-300">
              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2">
-                <div className="flex items-center gap-2 bg-white p-1.5 rounded-lg border border-slate-200 shadow-sm">
-                    <span className="text-xs font-medium text-slate-500 px-2 uppercase">Trier :</span>
-                    <button onClick={() => toggleSort('dayOfMonth')} className={`px-3 py-1.5 rounded text-xs font-medium flex items-center gap-1 transition-colors ${sortKey === 'dayOfMonth' ? 'bg-indigo-100 text-indigo-700' : 'hover:bg-slate-100 text-slate-600'}`}>Date {sortKey === 'dayOfMonth' && (sortOrder === 'asc' ? <ArrowUp size={12}/> : <ArrowDown size={12}/>)}</button>
-                    <button onClick={() => toggleSort('label')} className={`px-3 py-1.5 rounded text-xs font-medium flex items-center gap-1 transition-colors ${sortKey === 'label' ? 'bg-indigo-100 text-indigo-700' : 'hover:bg-slate-100 text-slate-600'}`}>Libellé {sortKey === 'label' && (sortOrder === 'asc' ? <ArrowUp size={12}/> : <ArrowDown size={12}/>)}</button>
-                    <button onClick={() => toggleSort('amount')} className={`px-3 py-1.5 rounded text-xs font-medium flex items-center gap-1 transition-colors ${sortKey === 'amount' ? 'bg-indigo-100 text-indigo-700' : 'hover:bg-slate-100 text-slate-600'}`}>Montant {sortKey === 'amount' && (sortOrder === 'asc' ? <ArrowUp size={12}/> : <ArrowDown size={12}/>)}</button>
-                </div>
+                <ListSorter 
+                    options={sortOptions} 
+                    currentSort={sortKey} 
+                    currentOrder={sortOrder} 
+                    onSortChange={(k, o) => { setSortKey(k); setSortOrder(o); }} 
+                />
             </div>
 
             <Modal 

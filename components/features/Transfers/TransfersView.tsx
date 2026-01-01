@@ -2,13 +2,14 @@
 import React, { useState, useMemo } from 'react';
 import { usePlannerUI } from '../../../hooks/usePlannerUI';
 import { Account, Person, Transfer, AppSettings, SavedLabel, AccountType } from '../../../types';
-import { ArrowRightLeft, Filter, X, ArrowRight, Calendar } from 'lucide-react';
+import { ArrowRightLeft, Filter, X, ArrowRight } from 'lucide-react';
 
 // Imports UI Atomic
 import { MonthNavigator } from '../../ui/molecules/MonthNavigator';
 import { SearchBar } from '../../ui/atoms/SearchBar';
 import { InfoBox } from '../../ui/InfoBox';
 import { DataList } from '../../ui/molecules/DataList';
+import { ListSorter, SortOrder } from '../../ui/molecules/ListSorter';
 
 // Imports Feature Components
 import { VariableTransactionForm } from '../Operations/components/VariableTransactionForm';
@@ -34,9 +35,11 @@ export const TransfersView: React.FC<TransfersViewProps> = ({
   const [editingTransfer, setEditingTransfer] = useState<Transfer | null>(null);
   const [selectedMotif, setSelectedMotif] = useState<string | null>(null);
   
+  // Tri
+  const [sortKey, setSortKey] = useState<string>('date');
+  const [sortOrder, setSortOrder] = useState<SortOrder>('desc'); // Plus récent par défaut
+
   // --- CALCUL DES SOLDES EFFECTIFS (EPARGNE) ---
-  // Les comptes d'épargne ne stockent pas leur solde dans .currentBalance mais sont calculés via l'historique des transferts.
-  // On injecte ici le solde calculé pour l'affichage dans le formulaire.
   const accountsWithBalances = useMemo(() => {
     return accounts.map(acc => {
         if (acc.type === AccountType.SAVINGS) {
@@ -73,14 +76,21 @@ export const TransfersView: React.FC<TransfersViewProps> = ({
         return true;
     })
     .sort((a, b) => {
-        // Tri principal par Date (Récent -> Ancien)
-        const dateDiff = b.date.localeCompare(a.date);
-        if (dateDiff !== 0) return dateDiff;
-        // Tri secondaire par Heure de création (Récent -> Ancien)
-        return (b.createdAt || '').localeCompare(a.createdAt || '');
+        let res = 0;
+        if (sortKey === 'amount') {
+            res = a.amount - b.amount;
+        } else if (sortKey === 'label') {
+            res = a.label.localeCompare(b.label);
+        } else {
+            // Par défaut 'date'
+            const dateDiff = new Date(a.date).getTime() - new Date(b.date).getTime();
+            if (dateDiff !== 0) res = dateDiff;
+            else res = (a.createdAt || '').localeCompare(b.createdAt || '');
+        }
+        return sortOrder === 'asc' ? res : -res;
     });
 
-    // Extraction des motifs pour le filtre
+    // Extraction des motifs pour le filtre (sur la base non filtrée pour avoir toutes les options possibles du mois)
     transfers.forEach(t => {
         const d = new Date(t.date);
         if (d.getMonth() === currentMonth && d.getFullYear() === currentYear) {
@@ -89,7 +99,7 @@ export const TransfersView: React.FC<TransfersViewProps> = ({
     });
 
     return { currentTransfers: filtered, motifs: Array.from(foundMotifs).sort() };
-  }, [transfers, ui.currentDate, ui.searchQuery, selectedMotif]);
+  }, [transfers, ui.currentDate, ui.searchQuery, selectedMotif, sortKey, sortOrder]);
 
   // --- CALCUL DES INDICATEURS ---
   const stats = useMemo(() => {
@@ -143,6 +153,12 @@ export const TransfersView: React.FC<TransfersViewProps> = ({
 
   const getAccountName = (id: string) => accounts.find(a => a.id === id)?.name || 'Inconnu';
 
+  const sortOptions = [
+      { key: 'date', label: 'Date' },
+      { key: 'amount', label: 'Montant' },
+      { key: 'label', label: 'Motif' }
+  ];
+
   return (
     <div className="space-y-6">
       <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -160,40 +176,51 @@ export const TransfersView: React.FC<TransfersViewProps> = ({
           <TransfersKPIs stats={stats} />
 
           {/* BARRE DE FILTRES MOTIFS */}
-          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-2">
-              <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                      <Filter size={14} /> Filtrer par Motif
-                  </span>
-                  {selectedMotif && (
-                      <button 
-                          onClick={() => setSelectedMotif(null)} 
-                          className="text-[10px] font-bold text-rose-500 hover:text-rose-700 flex items-center gap-1 uppercase transition-colors"
-                      >
-                          <X size={12} /> Effacer filtre
-                      </button>
-                  )}
+          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-4">
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                        <Filter size={14} /> Filtrer par Motif
+                    </span>
+                    {selectedMotif && (
+                        <button 
+                            onClick={() => setSelectedMotif(null)} 
+                            className="text-[10px] font-bold text-rose-500 hover:text-rose-700 flex items-center gap-1 uppercase transition-colors"
+                        >
+                            <X size={12} /> Effacer filtre
+                        </button>
+                    )}
+                </div>
+                
+                {motifs.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                        {motifs.map(motif => (
+                            <button
+                                key={motif}
+                                onClick={() => setSelectedMotif(selectedMotif === motif ? null : motif)}
+                                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${
+                                    selectedMotif === motif
+                                        ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
+                                        : 'bg-slate-50 text-slate-600 border-slate-200 hover:border-indigo-300 hover:text-indigo-600'
+                                }`}
+                            >
+                                {motif}
+                            </button>
+                        ))}
+                    </div>
+                ) : (
+                    <p className="text-xs text-slate-400 italic">Aucun virement ce mois-ci.</p>
+                )}
               </div>
-              
-              {motifs.length > 0 ? (
-                  <div className="flex flex-wrap gap-2">
-                      {motifs.map(motif => (
-                          <button
-                              key={motif}
-                              onClick={() => setSelectedMotif(selectedMotif === motif ? null : motif)}
-                              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${
-                                  selectedMotif === motif
-                                      ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
-                                      : 'bg-slate-50 text-slate-600 border-slate-200 hover:border-indigo-300 hover:text-indigo-600'
-                              }`}
-                          >
-                              {motif}
-                          </button>
-                      ))}
-                  </div>
-              ) : (
-                  <p className="text-xs text-slate-400 italic">Aucun virement ce mois-ci.</p>
-              )}
+
+              <div className="pt-2 border-t border-slate-100 flex justify-end">
+                  <ListSorter 
+                    options={sortOptions} 
+                    currentSort={sortKey} 
+                    currentOrder={sortOrder} 
+                    onSortChange={(k, o) => { setSortKey(k); setSortOrder(o); }} 
+                  />
+              </div>
           </div>
 
           <DataList 

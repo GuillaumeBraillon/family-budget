@@ -1,8 +1,8 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { usePlanner } from '../../../hooks/usePlanner';
 import { usePlannerUI } from '../../../hooks/usePlannerUI';
-import { ExpenseConfig, IncomeConfig, Account, Person, PaidItemDetails, PlannedItem, AppSettings, VariableTransaction, OperationFilters, SavedLabel, Tag, CategoryDef } from '../../../types';
+import { ExpenseConfig, IncomeConfig, Account, Person, PaidItemDetails, PlannedItem, AppSettings, VariableTransaction, OperationFilters, SavedLabel, Tag, CategoryDef, AccountType } from '../../../types';
 import { Calendar, CalendarRange } from 'lucide-react';
 
 // Imports UI Atomic (Generic)
@@ -11,6 +11,7 @@ import { FilterBar } from '../../ui/molecules/FilterBar';
 import { WeekSelector } from '../../ui/molecules/WeekSelector';
 import { QuickPeriodSummary } from '../../ui/molecules/QuickPeriodSummary';
 import { SearchBar } from '../../ui/atoms/SearchBar';
+import { ListSorter, SortOrder } from '../../ui/molecules/ListSorter';
 
 // Imports Feature-Specific Components
 import { OperationsList } from './components/OperationsList';
@@ -18,6 +19,9 @@ import { PlannerModals } from './components/PlannerModals';
 import { VariableTransactionForm } from './components/VariableTransactionForm';
 
 interface OperationsViewProps {
+  initialDate?: Date;
+  initialWeek?: number;
+  initialFilters?: Partial<OperationFilters>;
   configs: ExpenseConfig[];
   incomeConfigs: IncomeConfig[]; 
   variableTransactions: VariableTransaction[];
@@ -34,14 +38,19 @@ interface OperationsViewProps {
 }
 
 export const OperationsView: React.FC<OperationsViewProps> = ({ 
+  initialDate, initialWeek, initialFilters,
   configs, incomeConfigs, variableTransactions, accounts, people, paidItems, settings, categories, savedLabels, tags = [],
   onTogglePaid, onUpsertVariable, onDeleteVariable
 }) => {
-  const ui = usePlannerUI();
+  const ui = usePlannerUI(initialDate, initialWeek);
   const [scope, setScope] = useState<'MONTH' | 'PERIOD'>('PERIOD');
   const [isVarFormOpen, setIsVarFormOpen] = useState(false);
   const [editingVar, setEditingVar] = useState<VariableTransaction | null>(null);
   
+  // Tri
+  const [sortKey, setSortKey] = useState<string>('date');
+  const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
+
   const [filters, setFilters] = useState<OperationFilters>({
     flux: 'ALL', 
     source: 'ALL', 
@@ -55,29 +64,63 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
     excludedTagIds: [],
     tagPresence: 'ALL'
   });
+
+  // Application des filtres initiaux si présents (Navigation depuis Dashboard)
+  useEffect(() => {
+    if (initialFilters) {
+        setFilters(prev => ({ ...prev, ...initialFilters }));
+    }
+  }, [initialFilters]);
+
+  // --- FILTRAGE STRICT DES DONNÉES (Uniquement Comptes Courants) ---
+  const checkingAccountIds = useMemo(() => 
+    accounts.filter(a => a.type === AccountType.CHECKING).map(a => a.id),
+  [accounts]);
+
+  const checkingTransactions = useMemo(() => 
+    variableTransactions.filter(t => checkingAccountIds.includes(t.accountId)),
+  [variableTransactions, checkingAccountIds]);
+
+  const checkingConfigs = useMemo(() => 
+    configs.filter(c => checkingAccountIds.includes(c.accountId)),
+  [configs, checkingAccountIds]);
+
+  const checkingIncomes = useMemo(() => 
+    incomeConfigs.filter(i => checkingAccountIds.includes(i.accountId)),
+  [incomeConfigs, checkingAccountIds]);
   
-  const { filteredWeeks } = usePlanner(configs, incomeConfigs, paidItems, variableTransactions, ui.currentDate, ui.searchQuery, settings, categories, filters);
-  const currentWeekIndex = filteredWeeks.some(w => w.weekNumber === ui.activeWeek) ? ui.activeWeek : 1;
+  const { filteredWeeks } = usePlanner(checkingConfigs, checkingIncomes, paidItems, checkingTransactions, ui.currentDate, ui.searchQuery, settings, categories, filters);
+  
+  // Utilisation de la semaine active de l'UI (initialisée correctement via props)
+  const currentWeekIndex = ui.activeWeek;
   const currentWeekData = filteredWeeks.find(w => w.weekNumber === currentWeekIndex);
   
+  const unsortedItems = scope === 'MONTH' 
+    ? filteredWeeks.flatMap(w => w.items) 
+    : (currentWeekData?.items || []);
+
   const currentItems = useMemo(() => {
-    if (scope === 'MONTH') {
-        return filteredWeeks.flatMap(w => w.items).sort((a, b) => {
-             const dayDiff = a.day - b.day;
-             if (dayDiff !== 0) return dayDiff;
-             return a.instanceId.localeCompare(b.instanceId);
-        });
-    }
-    return currentWeekData?.items || [];
-  }, [scope, filteredWeeks, currentWeekData]);
+    return [...unsortedItems].sort((a, b) => {
+        let res = 0;
+        if (sortKey === 'amount') {
+            res = a.amount - b.amount;
+        } else if (sortKey === 'label') {
+            res = a.label.localeCompare(b.label);
+        } else {
+            // Default to date
+            const dayDiff = a.day - b.day;
+            if (dayDiff !== 0) return dayDiff;
+            return a.instanceId.localeCompare(b.instanceId);
+        }
+        return sortOrder === 'asc' ? res : -res;
+    });
+  }, [unsortedItems, sortKey, sortOrder]);
 
   const quickStats = useMemo(() => {
     const stats = { expenses: { real: 0, planned: 0, pending: 0, extra: 0 }, income: { real: 0, planned: 0, pending: 0, extra: 0 } };
     currentItems.forEach(item => {
         if (item.category === 'Virement Interne') return;
         
-        // Détection intelligente du remboursement
-        // Si c'est un revenu (Crédit) MAIS que la catégorie est de type Dépense = Remboursement
         const isRefund = item.type === 'INCOME' && (
             item.category === 'Dépenses' || 
             item.category === 'Remboursement' ||
@@ -90,7 +133,6 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
         if (item.type === 'EXPENSE') {
             target = stats.expenses;
         } else if (isRefund) {
-            // C'est un remboursement : on le traite comme une dépense NÉGATIVE
             target = stats.expenses;
             amount = -item.amount;
         } else {
@@ -100,7 +142,6 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
         if (item.source === 'VARIABLE') {
             if (item.isPaid) target.real += amount; else target.pending += amount;
         } else {
-            // Pour les remboursements récurrents (rare mais possible), on ajuste le planifié
             const plannedAmount = (item.type === 'INCOME' && isRefund) ? -item.originalAmount : item.originalAmount;
             target.planned += plannedAmount;
             if (item.isPaid) target.real += amount; else target.pending += amount;
@@ -179,6 +220,12 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
       return new Date().toISOString().split('T')[0];
   })();
 
+  const sortOptions = [
+      { key: 'date', label: 'Date' },
+      { key: 'label', label: 'Libellé' },
+      { key: 'amount', label: 'Montant' }
+  ];
+
   return (
     <div className="space-y-6">
       <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -215,7 +262,7 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
 
           <QuickPeriodSummary expenses={quickStats.expenses} income={quickStats.income} />
           
-          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-4">
               <FilterBar 
                 filters={filters} 
                 onFilterChange={setFilters} 
@@ -224,6 +271,14 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
                 hiddenFilters={['transfer']}
                 tags={tags}
               />
+              <div className="pt-2 border-t border-slate-100 flex justify-end">
+                  <ListSorter 
+                    options={sortOptions} 
+                    currentSort={sortKey} 
+                    currentOrder={sortOrder} 
+                    onSortChange={(k, o) => { setSortKey(k); setSortOrder(o); }} 
+                  />
+              </div>
           </div>
           
           <OperationsList 

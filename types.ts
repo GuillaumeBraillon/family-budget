@@ -118,6 +118,8 @@ export interface IncomeConfig {
   subCategory?: string;
   isExtra?: boolean;
   isSalary?: boolean; // Nouveau champ pour identifier les revenus structurels
+  startMonth?: string;
+  endMonth?: string;
   tagIds?: string[];
 }
 

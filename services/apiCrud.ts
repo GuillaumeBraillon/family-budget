@@ -193,6 +193,8 @@ export const apiUpsertIncome = async (income: IncomeConfig) =>
     sub_category: income.subCategory, 
     is_extra: income.isExtra, 
     is_salary: income.isSalary,
+    start_month: income.startMonth,
+    end_month: income.endMonth,
     tag_ids: income.tagIds || []
   });
 
