@@ -47,6 +47,9 @@ export const AnnualIncomeAnalysis: React.FC<AnnualIncomeAnalysisProps> = ({ data
         );
     };
 
+    // Vérification s'il y a des données à afficher cette année
+    const hasData = data.some(m => Math.abs(m.totals.income) > 0.01 || Math.abs(m.totals.expenses) > 0.01);
+
     return (
         <Card className="border-slate-200 shadow-sm overflow-hidden">
             <div className="flex items-center justify-between p-4 border-b border-slate-100 bg-slate-50/50">
@@ -84,6 +87,13 @@ export const AnnualIncomeAnalysis: React.FC<AnnualIncomeAnalysisProps> = ({ data
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
+                        {!hasData && (
+                            <tr>
+                                <td colSpan={3 + periodsHeader.length} className="px-4 py-8 text-center text-slate-400 italic">
+                                    Aucune donnée financière pour l'année {year}.
+                                </td>
+                            </tr>
+                        )}
                         {data.map((month) => {
                             // Calcul des totaux mensuels pour affichage colonne cumul
                             const totIncRec = month.periods.reduce((acc, p) => acc + p.income.recurring, 0);
@@ -96,12 +106,14 @@ export const AnnualIncomeAnalysis: React.FC<AnnualIncomeAnalysisProps> = ({ data
 
                             const totBal = month.totals.balance;
                             
-                            const isEmpty = totInc === 0 && totExp === 0;
+                            // Si le mois est vide (pas de revenus ni de dépenses), on ne l'affiche pas
+                            const isEmpty = Math.abs(totInc) < 0.01 && Math.abs(totExp) < 0.01;
+                            if (isEmpty) return null;
 
                             return (
                                 <React.Fragment key={month.monthIndex}>
                                     {/* LIGNE 1 : REVENUS RÉCURRENTS */}
-                                    <tr className={`group hover:bg-emerald-50/20 transition-colors ${isEmpty ? 'opacity-50 grayscale' : ''} border-t-2 border-slate-100`}>
+                                    <tr className="group hover:bg-emerald-50/20 transition-colors border-t-2 border-slate-100">
                                         <td rowSpan={7} className="px-4 py-3 align-top bg-white border-r border-slate-100">
                                             <div className="flex flex-col sticky left-0">
                                                 <span className="font-bold text-slate-900 capitalize text-sm">{month.monthName}</span>
@@ -122,7 +134,7 @@ export const AnnualIncomeAnalysis: React.FC<AnnualIncomeAnalysisProps> = ({ data
                                     </tr>
 
                                     {/* LIGNE 2 : REVENUS VARIABLES */}
-                                    <tr className={`group hover:bg-emerald-50/20 transition-colors ${isEmpty ? 'opacity-50 grayscale' : ''}`}>
+                                    <tr className="group hover:bg-emerald-50/20 transition-colors">
                                         <td className="px-3 py-1.5 border-r border-slate-50">
                                             <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-emerald-600/70 font-medium text-[10px] w-full">
                                                 <ShoppingBag size={10} /> Rev. Variables
@@ -137,7 +149,7 @@ export const AnnualIncomeAnalysis: React.FC<AnnualIncomeAnalysisProps> = ({ data
                                     </tr>
 
                                     {/* LIGNE 3 : TOTAL REVENUS */}
-                                    <tr className={`group bg-emerald-50/30 hover:bg-emerald-50/50 transition-colors ${isEmpty ? 'opacity-50 grayscale' : ''}`}>
+                                    <tr className="group bg-emerald-50/30 hover:bg-emerald-50/50 transition-colors">
                                         <td className="px-3 py-2 border-r border-slate-50">
                                             <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-emerald-700 font-bold text-[10px] w-full uppercase tracking-wide">
                                                 <ArrowUpRight size={10} /> Total Revenus
@@ -152,7 +164,7 @@ export const AnnualIncomeAnalysis: React.FC<AnnualIncomeAnalysisProps> = ({ data
                                     </tr>
 
                                     {/* LIGNE 4 : DÉPENSES FIXES */}
-                                    <tr className={`group hover:bg-rose-50/10 transition-colors ${isEmpty ? 'opacity-50 grayscale' : ''}`}>
+                                    <tr className="group hover:bg-rose-50/10 transition-colors">
                                         <td className="px-3 py-1.5 border-r border-slate-50">
                                             <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-slate-500 font-medium text-[10px] w-full">
                                                 <CalendarClock size={10} /> Dép. Fixes
@@ -167,7 +179,7 @@ export const AnnualIncomeAnalysis: React.FC<AnnualIncomeAnalysisProps> = ({ data
                                     </tr>
 
                                     {/* LIGNE 5 : DÉPENSES VARIABLES */}
-                                    <tr className={`group hover:bg-rose-50/10 transition-colors ${isEmpty ? 'opacity-50 grayscale' : ''}`}>
+                                    <tr className="group hover:bg-rose-50/10 transition-colors">
                                         <td className="px-3 py-1.5 border-r border-slate-50">
                                             <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-indigo-500 font-medium text-[10px] w-full">
                                                 <ShoppingBag size={10} /> Dép. Variables
@@ -182,7 +194,7 @@ export const AnnualIncomeAnalysis: React.FC<AnnualIncomeAnalysisProps> = ({ data
                                     </tr>
 
                                     {/* LIGNE 6 : TOTAL DÉPENSES */}
-                                    <tr className={`group bg-rose-50/20 hover:bg-rose-50/40 transition-colors ${isEmpty ? 'opacity-50 grayscale' : ''}`}>
+                                    <tr className="group bg-rose-50/20 hover:bg-rose-50/40 transition-colors">
                                         <td className="px-3 py-2 border-r border-slate-50">
                                             <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-rose-700 font-bold text-[10px] w-full uppercase tracking-wide">
                                                 <ArrowDownLeft size={10} /> Total Dépenses
@@ -197,7 +209,7 @@ export const AnnualIncomeAnalysis: React.FC<AnnualIncomeAnalysisProps> = ({ data
                                     </tr>
 
                                     {/* LIGNE 7 : SOLDE (Border Bottom séparateur) */}
-                                    <tr className={`group bg-slate-50 transition-colors border-b border-slate-200 last:border-0 ${isEmpty ? 'opacity-50 grayscale' : ''}`}>
+                                    <tr className="group bg-slate-50 transition-colors border-b border-slate-200 last:border-0">
                                         <td className="px-3 py-2 border-r border-slate-50">
                                             <span className="font-black text-slate-900 text-[10px] uppercase tracking-wider pl-1 flex items-center gap-1">
                                                 <Scale size={10} /> Solde Net

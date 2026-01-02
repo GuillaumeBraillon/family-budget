@@ -216,7 +216,15 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
                     </div>
                 </div>
                 <TextInput label="Date" type="date" icon={Calendar} value={date} onChange={e => setDate(e.target.value)} required />
-                <TextInput label="Motif" value={label} onChange={e => setLabel(e.target.value)} placeholder="Ex: Épargne, Remboursement..." required />
+                <SearchableTextInput 
+                    label="Motif" 
+                    value={label} 
+                    onChange={e => setLabel(e.target.value)} 
+                    onSelectSuggestion={setLabel}
+                    placeholder="Ex: Épargne, Remboursement..." 
+                    suggestions={transferSuggestions}
+                    required 
+                />
             </div>
         )}
 
