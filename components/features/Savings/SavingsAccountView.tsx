@@ -1,6 +1,6 @@
 
 import React, { useMemo, useState } from 'react';
-import { Account, Transfer, SavedLabel, VariableTransaction } from '../../../types';
+import { Account, Transfer, SavedLabel, VariableTransaction, CategoryDef } from '../../../types';
 import { SavingsKPIs } from './molecules/SavingsKPIs';
 import { SavingsHistoryTable } from './molecules/SavingsHistoryTable';
 import { VariableTransactionForm } from '../Operations/components/VariableTransactionForm';
@@ -11,13 +11,14 @@ interface SavingsAccountViewProps {
   transfers: Transfer[];
   directOps: VariableTransaction[];
   allAccounts: Account[];
+  categories: CategoryDef[];
   savedLabels?: SavedLabel[];
   onUpsertTransfer: (t: Transfer) => void;
   onUpsertTransaction: (t: VariableTransaction) => void;
   onDeleteTransfer: (id: string) => void;
 }
 
-export const SavingsAccountView: React.FC<SavingsAccountViewProps> = ({ account, transfers, directOps, allAccounts, savedLabels, onUpsertTransfer, onUpsertTransaction, onDeleteTransfer }) => {
+export const SavingsAccountView: React.FC<SavingsAccountViewProps> = ({ account, transfers, directOps, allAccounts, categories, savedLabels, onUpsertTransfer, onUpsertTransaction, onDeleteTransfer }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTx, setEditingTx] = useState<any | null>(null);
   const [editingTransferReal, setEditingTransferReal] = useState<Transfer | null>(null);
@@ -192,7 +193,7 @@ export const SavingsAccountView: React.FC<SavingsAccountViewProps> = ({ account,
         isOpen={isModalOpen} 
         onClose={() => setIsModalOpen(false)} 
         accounts={[account, ...allAccounts.filter(a => a.id !== account.id)]} // Mettre le compte courant en premier pour l'UX
-        categories={[]} 
+        categories={categories} 
         people={[]} 
         onAddTransaction={onUpsertTransaction}
         onUpsertTransfer={onUpsertTransfer}

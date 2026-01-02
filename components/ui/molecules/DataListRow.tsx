@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { ChevronRight, Tag as TagIcon, User, Users, CreditCard, Clock, CheckCircle2, Info } from 'lucide-react';
+import { ChevronRight, Tag as TagIcon, User, Users, CreditCard, Clock, CheckCircle2, Info, RefreshCcw } from 'lucide-react';
 import { MobileTooltip } from '../MobileTooltip';
 import { Tag } from '../../../types';
 
@@ -29,6 +29,15 @@ export const DataListRow: React.FC<DataListRowProps> = ({
 }) => {
   const isPending = isPaid === false;
   
+  // Logique d'affichage : Si c'est un Revenu OU si le montant est négatif (remboursement dans une dépense), c'est Vert.
+  // Sinon c'est une dépense classique (Noir).
+  // Note: on utilise Math.abs(amount) pour l'affichage du chiffre, mais le signe détermine la couleur.
+  const numericAmount = amount ?? 0;
+  const isPositiveFlow = isIncome || numericAmount < 0; 
+  
+  // Détection visuelle remboursement (Dépense négative)
+  const isRefund = !isIncome && numericAmount < 0;
+
   const bgClass = isPending 
     ? 'bg-amber-50 border-l-4 border-l-amber-400' 
     : 'bg-white hover:bg-slate-50 border-l-4 border-l-transparent';
@@ -59,6 +68,11 @@ export const DataListRow: React.FC<DataListRowProps> = ({
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5 sm:gap-2 mb-0.5 sm:mb-1 flex-wrap">
           <span className="font-bold truncate text-slate-900 text-sm sm:text-base">{label}</span>
+          {isRefund && (
+              <span className="text-[9px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded font-bold uppercase flex items-center gap-1">
+                  <RefreshCcw size={10} /> Remboursement
+              </span>
+          )}
           {badge}
           {comments && (
              <div onClick={(e) => e.stopPropagation()} className="inline-flex items-center">
@@ -101,10 +115,10 @@ export const DataListRow: React.FC<DataListRowProps> = ({
       <div className="text-right flex items-center gap-1 sm:gap-3">
         {amount !== undefined && (
             <div>
-                <div className={`font-black text-sm sm:text-base ${isIncome ? 'text-emerald-600' : 'text-slate-900'}`}>
-                    {isIncome ? '+' : ''}{amount.toFixed(2)} €
+                <div className={`font-black text-sm sm:text-base ${isPositiveFlow ? 'text-emerald-600' : 'text-slate-900'}`}>
+                    {isPositiveFlow ? '+' : ''}{Math.abs(numericAmount).toFixed(2)} €
                 </div>
-                {originalAmount !== undefined && Math.abs(amount - originalAmount) > 0.01 && (
+                {originalAmount !== undefined && Math.abs(numericAmount - originalAmount) > 0.01 && (
                     <div className="text-[9px] sm:text-[10px] text-amber-600 font-bold whitespace-nowrap">Prévu: {originalAmount.toFixed(2)}</div>
                 )}
             </div>

@@ -170,6 +170,7 @@ const App: React.FC = () => {
             transfers={transfers}
             variableTransactions={variableTransactions}
             settings={settings}
+            categories={categories}
             savedLabels={savedLabels} 
             onUpsertTransfer={actions.upsertTransfer} 
             onUpsertTransaction={actions.upsertVariableTransaction}

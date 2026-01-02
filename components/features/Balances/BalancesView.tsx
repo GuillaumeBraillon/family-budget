@@ -62,26 +62,25 @@ export const BalancesView: React.FC<BalancesViewProps> = ({
   const weekItems = currentWeekData?.items || [];
 
   // Calcul de la consommation variable totale (Payé + En attente)
-  const variableItems = weekItems.filter(i => i.source === 'VARIABLE' && !i.isExtra && i.category !== 'Virement Interne');
+  // Exclusion de "Virement Interne" ET "Intérêts"
+  const variableItems = weekItems.filter(i => 
+      i.source === 'VARIABLE' && 
+      !i.isExtra && 
+      i.category !== 'Virement Interne' &&
+      i.subCategory !== 'Intérêts'
+  );
   
-  // LOGIQUE DE CALCUL DE LA CONSOMMATION RÉELLE AVEC REMBOURSEMENTS
+  // LOGIQUE SIMPLIFIÉE GRÂCE AUX DÉPENSES NÉGATIVES
+  // Somme simple : Si dépense (100) -> +100. Si remboursement (-20) -> -20.
+  // Donc le total = Somme des montants dépenses
   let varExpenses = 0;
   let varIncome = 0;
 
   variableItems.forEach(i => {
       if (i.type === 'EXPENSE') {
-          varExpenses += i.amount;
+          varExpenses += i.amount; // i.amount peut être négatif si c'est un remboursement
       } else if (i.type === 'INCOME') {
-          // Si catégorie de type Dépense, c'est un remboursement
-          const isRefund = i.category === 'Dépenses' || 
-                           i.category === 'Remboursement' ||
-                           categories.find(c => c.name === i.category)?.type === 'EXPENSE';
-
-          if (isRefund) {
-              varExpenses -= i.amount; // On déduit le remboursement de la dépense
-          } else {
-              varIncome += i.amount;
-          }
+          varIncome += i.amount;
       }
   });
 
@@ -100,12 +99,13 @@ export const BalancesView: React.FC<BalancesViewProps> = ({
           i.accountId === acc.id && 
           i.source === 'VARIABLE' && 
           i.type === 'EXPENSE' && 
-          !i.isPaid
+          !i.isPaid &&
+          i.subCategory !== 'Intérêts'
         )
-        .reduce((sum, i) => sum + i.amount, 0);
+        .reduce((sum, i) => sum + i.amount, 0); // Marche aussi avec montants négatifs
       
       return { name: acc.name, amount: totalPending };
-    }).filter(x => x.amount > 0);
+    }).filter(x => x.amount > 0); // On n'affiche que s'il y a une dette positive
   }, [filteredWeeks, checkingAccounts]);
 
   // 2. Opérations Récurrentes En Attente (Courant + Retards)
@@ -136,7 +136,7 @@ export const BalancesView: React.FC<BalancesViewProps> = ({
     }).filter(x => x.amount > 0);
   }, [checkingAccounts, stats]);
 
-  // 4. Consommation Variable Réelle par compte (Avec logique remboursement)
+  // 4. Consommation Variable Réelle par compte
   const consumedDetails = useMemo(() => {
     return checkingAccounts.map(acc => {
         const items = variableItems.filter(i => i.accountId === acc.id);
@@ -148,20 +148,13 @@ export const BalancesView: React.FC<BalancesViewProps> = ({
             if (i.type === 'EXPENSE') {
                 expense += i.amount;
             } else if (i.type === 'INCOME') {
-                const isRefund = i.category === 'Dépenses' || 
-                                 i.category === 'Remboursement' ||
-                                 categories.find(c => c.name === i.category)?.type === 'EXPENSE';
-                if (isRefund) {
-                    expense -= i.amount; // Remboursement
-                } else {
-                    income += i.amount;
-                }
+                income += i.amount;
             }
         });
 
         return { name: acc.name, amount: expense - income };
     }).filter(x => Math.abs(x.amount) > 0.01);
-  }, [checkingAccounts, variableItems, categories]);
+  }, [checkingAccounts, variableItems]);
 
 
   const { jointRows, personalRows, totalPersonalRow, virLddsTotal } = useMemo(() => {

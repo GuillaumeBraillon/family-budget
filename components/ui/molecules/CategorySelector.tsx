@@ -1,7 +1,8 @@
 
-import React, { useMemo, useEffect } from 'react';
+import React, { useMemo } from 'react';
 import { Tag, Layers } from 'lucide-react';
 import { CategoryDef } from '../../../types';
+import { SearchableTextInput, SelectInput } from './FormInputs';
 
 interface CategorySelectorProps {
   categories: CategoryDef[];
@@ -22,86 +23,64 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
   onCategoryChange,
   onSubCategoryChange
 }) => {
-  // Séparation pour affichage groupé (OptGroup)
-  // On ne filtre plus par type pour permettre l'utilisation croisée (ex: Remboursement sur catégorie Dépense)
-  const { expenseCats, incomeCats } = useMemo(() => {
-    const sorted = [...categories].sort((a, b) => a.name.localeCompare(b.name));
-    return {
-        expenseCats: sorted.filter(c => c.type === 'EXPENSE'),
-        incomeCats: sorted.filter(c => c.type === 'INCOME')
-    };
-  }, [categories]);
+  
+  // Génération de la liste des suggestions
+  // On privilégie l'affichage des catégories du type actif (ex: Revenus) en premier
+  const suggestions = useMemo(() => {
+    let sortedCats = [...categories];
+    
+    if (type) {
+        sortedCats.sort((a, b) => {
+            // Mettre les catégories du bon type en tête de liste
+            if (a.type === type && b.type !== type) return -1;
+            if (a.type !== type && b.type === type) return 1;
+            return a.name.localeCompare(b.name);
+        });
+    } else {
+        sortedCats.sort((a, b) => a.name.localeCompare(b.name));
+    }
+    
+    return sortedCats.map(c => c.name);
+  }, [categories, type]);
 
-  // Liste plate pour la validation
-  const allCats = useMemo(() => [...expenseCats, ...incomeCats], [expenseCats, incomeCats]);
-
-  // Récupération des sous-catégories de la catégorie sélectionnée (quel que soit son type d'origine)
+  // Récupération des sous-catégories si la catégorie saisie existe déjà dans les paramètres
   const activeSubCats = useMemo(() => {
-    const cat = categories.find(c => c.name === selectedCategory);
+    const cat = categories.find(c => c.name.toLowerCase() === selectedCategory.toLowerCase());
     return cat ? [...cat.subCategories].sort((a, b) => a.localeCompare(b)) : [];
   }, [categories, selectedCategory]);
 
-  const focusRing = type === 'INCOME' ? 'focus:ring-emerald-500' : 'focus:ring-indigo-500';
-
-  useEffect(() => {
-    // Si la catégorie sélectionnée n'existe plus dans la liste globale (ex: supprimée), on reset
-    if (allCats.length > 0 && selectedCategory) {
-      const isValid = allCats.some(c => c.name === selectedCategory);
-      if (!isValid) {
-        onCategoryChange('');
-        onSubCategoryChange('');
-      }
-    }
-  }, [allCats, selectedCategory, onCategoryChange, onSubCategoryChange]);
-
   return (
     <>
-      <div>
-        <label className="text-xs font-medium text-slate-500 uppercase mb-1 flex items-center gap-1">
-          <Tag size={12} /> Catégorie
-        </label>
-        <select
-          value={selectedCategory}
-          onChange={e => {
+      <SearchableTextInput 
+        label="Catégorie"
+        icon={Tag}
+        value={selectedCategory}
+        onChange={(e) => {
             onCategoryChange(e.target.value);
-            onSubCategoryChange(''); 
-          }}
-          className={`w-full p-2.5 rounded-lg border border-slate-300 bg-white text-slate-900 focus:ring-2 outline-none ${focusRing}`}
-        >
-          <option value="">Aucune catégorie</option>
-          {expenseCats.length > 0 && (
-              <optgroup label="Dépenses">
-                  {expenseCats.map(c => (
-                    <option key={c.id} value={c.name}>{c.name}</option>
-                  ))}
-              </optgroup>
-          )}
-          {incomeCats.length > 0 && (
-              <optgroup label="Revenus">
-                  {incomeCats.map(c => (
-                    <option key={c.id} value={c.name}>{c.name}</option>
-                  ))}
-              </optgroup>
-          )}
-        </select>
-      </div>
+            // Si l'utilisateur change la catégorie, on vide la sous-catégorie pour éviter les incohérences
+            if (selectedSubCategory) onSubCategoryChange(''); 
+        }}
+        onSelectSuggestion={(val) => {
+            onCategoryChange(val);
+            onSubCategoryChange('');
+        }}
+        suggestions={suggestions}
+        placeholder="Sélectionner ou saisir (ex: Intérêts)"
+        className="w-full"
+      />
 
-      <div>
-        <label className="text-xs font-medium text-slate-500 uppercase mb-1 flex items-center gap-1">
-          <Layers size={12} /> Sous-catégorie
-        </label>
-        <select
-          value={selectedSubCategory}
-          onChange={e => onSubCategoryChange(e.target.value)}
-          className={`w-full p-2.5 rounded-lg border border-slate-300 bg-white text-slate-900 focus:ring-2 outline-none ${focusRing} disabled:bg-slate-50 disabled:text-slate-400`}
-          disabled={activeSubCats.length === 0}
-        >
-          <option value="">{activeSubCats.length === 0 ? '-- Aucune --' : '-- Optionnel --'}</option>
-          {activeSubCats.map(sc => (
-            <option key={sc} value={sc}>{sc}</option>
-          ))}
-        </select>
-      </div>
+      <SelectInput
+        label="Sous-catégorie"
+        icon={Layers}
+        value={selectedSubCategory}
+        onChange={(e) => onSubCategoryChange(e.target.value)}
+        disabled={activeSubCats.length === 0}
+      >
+        <option value="">{activeSubCats.length === 0 ? '-- Aucune --' : '-- Optionnel --'}</option>
+        {activeSubCats.map(sc => (
+          <option key={sc} value={sc}>{sc}</option>
+        ))}
+      </SelectInput>
     </>
   );
 };

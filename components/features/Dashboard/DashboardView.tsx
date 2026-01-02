@@ -4,6 +4,7 @@ import { getDaysInMonth } from 'date-fns';
 import { DashboardHeader } from './components/DashboardHeader';
 import { SavingsSummaryCard } from './components/SavingsSummaryCard';
 import { AnnualIncomeAnalysis } from './components/AnnualIncomeAnalysis';
+import { GlobalMonthlyAnalysis } from './components/GlobalMonthlyAnalysis';
 import { Account, Person, ExpenseConfig, IncomeConfig, PaidItemDetails, AppSettings, Transfer, VariableTransaction, CategoryDef, OperationFilters, AccountType } from '../../../types';
 
 interface DashboardViewProps {
@@ -31,7 +32,96 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     accounts.filter(a => a.type === AccountType.CHECKING).map(a => a.id),
   [accounts]);
 
-  // --- LOGIQUE D'AGRÉGATION ANNUELLE ---
+  // Fonction utilitaire pour détecter les remboursements
+  const isRefundCategory = (categoryName: string) => {
+      if (categoryName === 'Remboursement' || categoryName === 'Dépenses') return true;
+      const catDef = categories.find(c => c.name === categoryName);
+      return catDef?.type === 'EXPENSE';
+  };
+
+  // --- LOGIQUE 1 : TABLEAU MACRO (Salaires inclus) ---
+  const globalMonthlyData = useMemo(() => {
+    const data = [];
+    for (let month = 0; month < 12; month++) {
+        const currentMonthDate = new Date(selectedYear, month, 1);
+        const monthKey = `${selectedYear}-${String(month + 1).padStart(2, '0')}`;
+        
+        let salaryTotal = 0;
+        let otherIncomeTotal = 0;
+        let expenseTotal = 0;
+
+        // 1. Salaires et Revenus Récurrents
+        incomeConfigs.forEach(inc => {
+            if (inc.startMonth && monthKey < inc.startMonth) return;
+            if (inc.endMonth && monthKey > inc.endMonth) return;
+
+            const instanceId = `${inc.id}-${monthKey}`;
+            const paid = paidItems[instanceId];
+            
+            // Si payé, on prend le montant réel, sinon 0 (car on est sur du "Réel")
+            if (paid && !paid.isWaiting) {
+                // Vérification si c'est un remboursement récurrent (rare mais possible)
+                if (isRefundCategory(inc.category)) {
+                    expenseTotal -= paid.amount;
+                } else if (inc.isSalary) {
+                    salaryTotal += paid.amount;
+                } else {
+                    otherIncomeTotal += paid.amount;
+                }
+            }
+        });
+
+        // 2. Dépenses Récurrentes (Réel)
+        configs.forEach(conf => {
+            if (conf.startMonth && monthKey < conf.startMonth) return;
+            if (conf.endMonth && monthKey > conf.endMonth) return;
+            const instanceId = `${conf.id}-${monthKey}`;
+            const paid = paidItems[instanceId];
+            if (paid && !paid.isWaiting) {
+                expenseTotal += paid.amount;
+            }
+        });
+
+        // 3. Transactions Variables (Réel)
+        variableTransactions.forEach(tx => {
+            if (!checkingAccountIds.includes(tx.accountId)) return;
+            if (tx.isWaiting) return; 
+            if (tx.category === 'Virement Interne') return;
+
+            const [y, m] = tx.date.split('-').map(Number);
+            if (y === selectedYear && (m - 1) === month) {
+                if (tx.type === 'INCOME') {
+                    if (isRefundCategory(tx.category)) {
+                        // C'est un remboursement : on diminue les dépenses au lieu d'augmenter les revenus
+                        expenseTotal -= tx.amount;
+                    } else {
+                        otherIncomeTotal += tx.amount;
+                    }
+                } else {
+                    expenseTotal += tx.amount;
+                }
+            }
+        });
+
+        const totalIncome = salaryTotal + otherIncomeTotal;
+        const balance = totalIncome - expenseTotal;
+        const savingsRate = totalIncome > 0 ? (balance / totalIncome) * 100 : 0;
+
+        data.push({
+            monthName: new Intl.DateTimeFormat('fr-FR', { month: 'long' }).format(currentMonthDate),
+            salaries: salaryTotal,
+            otherIncome: otherIncomeTotal,
+            totalIncome,
+            expenses: expenseTotal,
+            balance,
+            savingsRate
+        });
+    }
+    return data.reverse();
+  }, [selectedYear, configs, incomeConfigs, paidItems, variableTransactions, checkingAccountIds, categories]);
+
+
+  // --- LOGIQUE 2 : TABLEAU DÉTAILLÉ PAR PÉRIODE (Salaires EXCLUS) ---
   const annualData = useMemo(() => {
     const monthsData = [];
 
@@ -96,7 +186,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             }
         };
 
-        // -> REVENUS RÉCURRENTS (Réel uniquement)
+        // -> REVENUS RÉCURRENTS (Réel uniquement, HORS SALAIRES)
         incomeConfigs.forEach(inc => {
             if (inc.isSalary) return; 
             if (inc.startMonth && monthKey < inc.startMonth) return;
@@ -111,7 +201,17 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     const parts = paid.paymentDate.split('-').map(Number);
                     if (parts.length === 3) day = parts[2];
                 }
-                addToPeriod(day, paid.amount, 'income_recurring');
+                
+                if (isRefundCategory(inc.category)) {
+                    // Remboursement récurrent -> Réduit les dépenses récurrentes
+                    // Note: techniquement c'est un flux entrant, pour l'affichage ici on le soustrait des dépenses ou on le met en revenu négatif ?
+                    // Pour le tableau détaillé, on le considère comme un "Revenu Variable" (Remboursement) ou on réduit la dépense ?
+                    // Pour rester simple dans ce tableau : on le traite comme une réduction de dépense récurrente
+                    // Mais `addToPeriod` gère des buckets. On va le mettre en dépense négative.
+                    addToPeriod(day, -paid.amount, 'expense_recurring');
+                } else {
+                    addToPeriod(day, paid.amount, 'income_recurring');
+                }
             }
         });
 
@@ -144,7 +244,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 if (tx.category === 'Virement Interne') return;
 
                 if (tx.type === 'INCOME') {
-                    addToPeriod(d, tx.amount, 'income_variable');
+                    if (isRefundCategory(tx.category)) {
+                        // Remboursement variable -> Réduit les dépenses variables
+                        addToPeriod(d, -tx.amount, 'expense_variable');
+                    } else {
+                        addToPeriod(d, tx.amount, 'income_variable');
+                    }
                 } else {
                     addToPeriod(d, tx.amount, 'expense_variable');
                 }
@@ -184,7 +289,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         onNavigateToPlanner={() => onNavigateToPlanner(new Date())} 
       />
       
-      {/* SECTION ANALYSE FLUX DÉTAILLÉE */}
+      {/* SECTION MACRO : CASHFLOW GLOBAL (Salaires inclus) */}
+      <GlobalMonthlyAnalysis 
+        data={globalMonthlyData} 
+        year={selectedYear} 
+      />
+
+      {/* SECTION MICRO : ANALYSE PAR PÉRIODE (Salaires exclus) */}
       <AnnualIncomeAnalysis 
         data={annualData} 
         year={selectedYear}

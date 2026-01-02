@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo } from 'react';
-import { Account, AccountType, Transfer, AppSettings, SavedLabel, VariableTransaction } from '../../../types';
+import { Account, AccountType, Transfer, AppSettings, SavedLabel, VariableTransaction, CategoryDef } from '../../../types';
 import { PiggyBank, PlusCircle } from 'lucide-react';
 import { InfoBox } from '../../ui/InfoBox';
 import { SavingsAccountView } from './SavingsAccountView';
@@ -10,6 +10,7 @@ interface SavingsViewProps {
   transfers: Transfer[];
   variableTransactions: VariableTransaction[];
   settings: AppSettings;
+  categories: CategoryDef[];
   savedLabels?: SavedLabel[];
   onUpsertTransfer: (t: Transfer) => void;
   onUpsertTransaction: (t: VariableTransaction) => void;
@@ -18,7 +19,7 @@ interface SavingsViewProps {
 }
 
 export const SavingsView: React.FC<SavingsViewProps> = ({ 
-  accounts, transfers, variableTransactions, settings, savedLabels, onUpsertTransfer, onUpsertTransaction, onDeleteTransfer, onNavigateToConfig
+  accounts, transfers, variableTransactions, settings, categories, savedLabels, onUpsertTransfer, onUpsertTransaction, onDeleteTransfer, onNavigateToConfig
 }) => {
   const savingsAccounts = useMemo(() => accounts.filter(a => a.type === AccountType.SAVINGS), [accounts]);
   const [activeAccountId, setActiveAccountId] = useState<string>(savingsAccounts[0]?.id || '');
@@ -90,6 +91,7 @@ export const SavingsView: React.FC<SavingsViewProps> = ({
                 transfers={activeTransfers}
                 directOps={activeDirectOps}
                 allAccounts={accounts}
+                categories={categories}
                 savedLabels={savedLabels}
                 onUpsertTransfer={onUpsertTransfer}
                 onUpsertTransaction={onUpsertTransaction}

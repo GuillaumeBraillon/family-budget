@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Save, TrendingUp, TrendingDown, Calendar, Trash2, Clock, CheckCircle2, Star, MessageSquare, ArrowRightLeft, ArrowDown } from 'lucide-react';
+import { Save, TrendingUp, TrendingDown, Calendar, Trash2, Clock, CheckCircle2, Star, MessageSquare, ArrowRightLeft, ArrowDown, RefreshCcw } from 'lucide-react';
 import { VariableTransaction, Account, CategoryDef, AccountType, Person, Transfer, SavedLabel, Tag } from '../../../../types';
 import { CategorySelector } from '../../../ui/molecules/CategorySelector';
 import { TextInput, AmountInput, SearchableTextInput } from '../../../ui/molecules/FormInputs';
@@ -34,6 +34,8 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
   const [mode, setMode] = useState<'STANDARD' | 'TRANSFER'>(initialMode);
 
   const [type, setType] = useState<'EXPENSE' | 'INCOME'>('EXPENSE');
+  const [isRefund, setIsRefund] = useState(false); // Nouveau flag pour remboursement
+
   const [date, setDate] = useState(defaultDate);
   const [label, setLabel] = useState('');
   const [amount, setAmount] = useState<string>('');
@@ -41,9 +43,6 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
   const [comments, setComments] = useState<string>('');
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   
-  // Utilisation de tous les comptes fournis, sans filtrage forcé ici.
-  // C'est au parent de décider quels comptes passer.
-  // Pour le mode Virement, on garde la logique source/dest.
   const [accountId, setAccountId] = useState(accounts[0]?.id || '');
   const [destAccountId, setDestAccountId] = useState(accounts[1]?.id || accounts[0]?.id || '');
   
@@ -75,12 +74,22 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
         if (editingTransaction) {
             setMode(initialMode);
             setType(editingTransaction.type || 'EXPENSE');
+            
+            // Détection si c'est un remboursement (Dépense négative)
+            const rawAmount = editingTransaction.amount;
+            if (editingTransaction.type === 'EXPENSE' && rawAmount < 0) {
+                setIsRefund(true);
+                setAmount(Math.abs(rawAmount).toString());
+            } else {
+                setIsRefund(false);
+                setAmount(rawAmount.toString());
+            }
+
             setDate(editingTransaction.date);
             setLabel(editingTransaction.label);
-            setAmount(editingTransaction.amount.toString());
             
             if (initialMode === 'TRANSFER') {
-                setAccountId(editingTransaction.accountId); // Source
+                setAccountId(editingTransaction.accountId);
                 if (editingTransaction.comments && accounts.some(a => a.id === editingTransaction.comments)) {
                     setDestAccountId(editingTransaction.comments);
                 }
@@ -103,10 +112,10 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
             setSubCategory('');
             setBeneficiaryId(defaultBeneficiary);
             setType('EXPENSE');
+            setIsRefund(false);
             setIsExtra(false);
             setComments('');
             setSelectedTagIds([]);
-            // Reset account to first available if new
             if (accounts.length > 0) setAccountId(accounts[0].id);
         }
     }
@@ -132,11 +141,19 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
             });
         }
     } else {
+        let finalAmount = parseFloat(amount);
+        // Si c'est une dépense marquée comme remboursement, on passe en négatif
+        if (type === 'EXPENSE' && isRefund) {
+            finalAmount = -Math.abs(finalAmount);
+        } else {
+            finalAmount = Math.abs(finalAmount);
+        }
+
         onAddTransaction({
             id: editingTransaction?.id || `var_${Date.now()}`,
             date,
             label,
-            amount: parseFloat(amount),
+            amount: finalAmount,
             category,
             subCategory,
             accountId,
@@ -159,7 +176,7 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
     }
   };
 
-  const themeColor = mode === 'TRANSFER' ? 'indigo' : (isExpense ? 'indigo' : 'emerald');
+  const themeColor = mode === 'TRANSFER' ? 'indigo' : (isExpense ? (isRefund ? 'emerald' : 'indigo') : 'emerald');
 
   if (showDeleteConfirm) {
       return <ConfirmModal isOpen={true} title="Supprimer ?" message={`Voulez-vous supprimer "${editingTransaction?.label}" ?`} onConfirm={handleDelete} onCancel={() => setShowDeleteConfirm(false)} />;
@@ -185,16 +202,41 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
                 <div className="mb-2">
                     <label className="text-xs font-medium text-slate-500 uppercase block mb-1">Type de flux</label>
                     <div className="flex bg-slate-100 p-1 rounded-lg">
-                        <button type="button" onClick={() => setType('EXPENSE')} className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm font-bold transition-all ${isExpense ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}><TrendingDown size={14}/> Dépense</button>
-                        <button type="button" onClick={() => setType('INCOME')} className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm font-bold transition-all ${!isExpense ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}><TrendingUp size={14}/> Revenu</button>
+                        <button type="button" onClick={() => { setType('EXPENSE'); setIsRefund(false); }} className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm font-bold transition-all ${isExpense ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}><TrendingDown size={14}/> Dépense</button>
+                        <button type="button" onClick={() => { setType('INCOME'); setIsRefund(false); }} className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm font-bold transition-all ${!isExpense ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}><TrendingUp size={14}/> Revenu</button>
                     </div>
                 </div>
-                <SearchableTextInput label="Libellé" value={label} onChange={e => setLabel(e.target.value)} onSelectSuggestion={setLabel} placeholder={isExpense ? "Ex: Frais bancaires..." : "Ex: Intérêts annuels..."} suggestions={standardSuggestions} required autoFocus={!editingTransaction} />
+
+                <SearchableTextInput label="Libellé" value={label} onChange={e => setLabel(e.target.value)} onSelectSuggestion={setLabel} placeholder={isExpense ? "Ex: Frais, Courses..." : "Ex: Vente, Remboursement..."} suggestions={standardSuggestions} required autoFocus={!editingTransaction} />
                 <AmountInput label="Montant" value={amount} onChange={e => setAmount(e.target.value)} color={themeColor} required />
+                
+                {/* Option Remboursement (Uniquement pour les dépenses) */}
+                {isExpense && (
+                    <div onClick={() => setIsRefund(!isRefund)} className={`cursor-pointer px-3 py-2 rounded-lg border transition-all flex items-center gap-3 ${isRefund ? 'bg-emerald-50 border-emerald-200' : 'bg-slate-50 border-transparent hover:border-slate-200'}`}>
+                        <div className={`p-1 rounded ${isRefund ? 'bg-emerald-200 text-emerald-700' : 'bg-slate-200 text-slate-500'}`}>
+                            {isRefund ? <RefreshCcw size={14} /> : <div className="w-3.5 h-3.5" />}
+                        </div>
+                        <div className="flex-1">
+                            <span className={`text-xs font-bold block ${isRefund ? 'text-emerald-800' : 'text-slate-600'}`}>C'est un remboursement</span>
+                            {isRefund && <span className="text-[10px] text-emerald-600 leading-none">Ce montant sera déduit de vos dépenses (ex: Mutuelle, Retour produit).</span>}
+                        </div>
+                        <input type="checkbox" checked={isRefund} onChange={() => {}} className="pointer-events-none" />
+                    </div>
+                )}
+
                 <TextInput label="Date" type="date" icon={Calendar} value={date} onChange={e => setDate(e.target.value)} required />
                 
-                <AccountSelector label={isExpense ? 'Compte débité' : 'Compte crédité'} accounts={accounts} value={accountId} onChange={e => setAccountId(e.target.value)} color={themeColor} />
+                <AccountSelector label={isExpense ? (isRefund ? 'Compte crédité (Remboursement)' : 'Compte débité') : 'Compte crédité'} accounts={accounts} value={accountId} onChange={e => setAccountId(e.target.value)} color={themeColor} />
                 
+                <CategorySelector 
+                    categories={categories}
+                    type={type}
+                    selectedCategory={category}
+                    selectedSubCategory={subCategory}
+                    onCategoryChange={setCategory}
+                    onSubCategoryChange={setSubCategory}
+                />
+
                 <div className="border-t border-slate-100 pt-3"></div>
                 
                 <TagSelector tags={tags} selectedTagIds={selectedTagIds} onToggleTag={toggleTag} />
@@ -243,7 +285,7 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
             ) : (
                 <button 
                     onClick={() => handleSubmit(false)} 
-                    className={`flex-1 text-white py-3 rounded-xl font-bold shadow-sm transition-colors flex items-center justify-center gap-2 ${isExpense ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-emerald-600 hover:bg-emerald-700'}`}
+                    className={`flex-1 text-white py-3 rounded-xl font-bold shadow-sm transition-colors flex items-center justify-center gap-2 ${isExpense && !isRefund ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-emerald-600 hover:bg-emerald-700'}`}
                 >
                     <CheckCircle2 size={18}/> {editingTransaction ? 'Enregistrer' : 'Valider'}
                 </button>
