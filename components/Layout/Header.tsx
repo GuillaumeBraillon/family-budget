@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { WalletCards, LayoutDashboard, CalendarCheck, Settings, PiggyBank, Calculator, ArrowRightLeft, Download } from 'lucide-react';
+import { WalletCards, LayoutDashboard, CalendarCheck, Settings, PiggyBank, Calculator, ArrowRightLeft, Download, LogOut, User } from 'lucide-react';
 import { usePWAInstall } from '../../hooks/usePWAInstall';
 
 type ViewState = 'dashboard' | 'balances' | 'planner' | 'transfers' | 'savings' | 'config';
@@ -8,9 +8,11 @@ type ViewState = 'dashboard' | 'balances' | 'planner' | 'transfers' | 'savings' 
 interface HeaderProps {
   currentView: ViewState;
   onViewChange: (view: ViewState) => void;
+  onLogout: () => void;
+  userEmail?: string;
 }
 
-export const Header: React.FC<HeaderProps> = ({ currentView, onViewChange }) => {
+export const Header: React.FC<HeaderProps> = ({ currentView, onViewChange, onLogout, userEmail }) => {
   const { isInstallable, install } = usePWAInstall();
   
   const navItems = [
@@ -34,7 +36,7 @@ export const Header: React.FC<HeaderProps> = ({ currentView, onViewChange }) => 
             <div className="bg-indigo-600 p-2 rounded-lg group-hover:scale-110 transition-transform">
               <WalletCards className="text-white h-5 w-5" />
             </div>
-            <h1 className="text-lg font-bold text-slate-900">Budget <span className="text-indigo-600">Famille</span></h1>
+            <h1 className="text-lg font-bold text-slate-900 hidden sm:block">Budget <span className="text-indigo-600">Famille</span></h1>
           </div>
           
           <div className="flex items-center gap-3">
@@ -45,7 +47,7 @@ export const Header: React.FC<HeaderProps> = ({ currentView, onViewChange }) => 
                     className="flex items-center gap-1.5 bg-indigo-50 text-indigo-600 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-indigo-100 transition-colors animate-in fade-in slide-in-from-top-2"
                 >
                     <Download size={14} />
-                    <span className="hidden sm:inline">Installer l'app</span>
+                    <span className="hidden sm:inline">Installer</span>
                 </button>
             )}
 
@@ -61,6 +63,24 @@ export const Header: React.FC<HeaderProps> = ({ currentView, onViewChange }) => 
                 />
                 ))}
             </nav>
+
+            {/* USER & LOGOUT */}
+            <div className="flex items-center gap-2 pl-2 border-l border-slate-100 ml-2">
+                <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 md:hidden" title={userEmail}>
+                    <User size={16} />
+                </div>
+                <div className="hidden md:flex flex-col items-end mr-1">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Connecté</span>
+                    <span className="text-xs font-medium text-slate-700 max-w-[100px] truncate">{userEmail?.split('@')[0]}</span>
+                </div>
+                <button 
+                    onClick={onLogout}
+                    className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                    title="Se déconnecter"
+                >
+                    <LogOut size={18} />
+                </button>
+            </div>
           </div>
         </div>
       </header>

@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Loader2, AlertCircle } from 'lucide-react';
 import { useBudget } from './hooks/useBudget';
+import { useAuth } from './hooks/useAuth';
 import { useConfigurationUI, ConfigTab } from './hooks/useConfigurationUI';
 import { Header } from './components/Layout/Header';
 import { DashboardView } from './components/features/Dashboard/DashboardView';
@@ -11,6 +12,7 @@ import { TransfersView } from './components/features/Transfers/TransfersView';
 import { SavingsView } from './components/features/Savings/SavingsView';
 import { ConfigurationView } from './components/features/Configuration/ConfigurationView';
 import { SupabaseSetup } from './components/Configuration/SupabaseSetup';
+import { LoginView } from './components/features/Auth/LoginView';
 import { WelcomeEmptyState } from './components/features/Dashboard/components/WelcomeEmptyState';
 import { isSupabaseConfigured, resetSupabaseConfig } from './services/supabase';
 import { OperationFilters } from './types';
@@ -20,37 +22,35 @@ type ViewState = 'dashboard' | 'balances' | 'planner' | 'transfers' | 'savings' 
 const VIEWS: ViewState[] = ['dashboard', 'balances', 'planner', 'transfers', 'savings', 'config'];
 
 const App: React.FC = () => {
+  // 1. Authentification & Configuration
   const [isConfigured, setIsConfigured] = useState(isSupabaseConfigured());
+  const { session, loading: authLoading, signInWithGoogle, signOut, error: authError } = useAuth();
+
+  // 2. État UI
   const [currentView, setCurrentView] = useState<ViewState>('dashboard');
-  
-  // État pour la navigation avec contexte (Dashboard -> Operations)
   const [plannerContext, setPlannerContext] = useState<{ date: Date; weekNumber?: number; filters?: Partial<OperationFilters> } | null>(null);
   
+  // 3. Données Budget (ne chargent que si authentifié)
   const { 
     accounts, configs, incomeConfigs, categories, people, 
     paidItems, settings, transfers, variableTransactions, savedLabels, tags,
-    loading, error, isDbEmpty, actions 
+    loading: budgetLoading, error: budgetError, isDbEmpty, actions 
   } = useBudget();
 
   const { activeTab, setActiveTab } = useConfigurationUI();
 
-  // --- LOGIQUE SWIPE AMÉLIORÉE ---
+  // --- LOGIQUE SWIPE ---
   const [touchStart, setTouchStart] = useState<{ x: number; y: number } | null>(null);
   const [touchEnd, setTouchEnd] = useState<{ x: number; y: number } | null>(null);
 
   const onTouchStart = (e: React.TouchEvent) => {
     setTouchEnd(null);
-    
-    // Détection intelligente : On ignore le swipe si l'utilisateur touche une zone scrollable horizontalement
     let target = e.target as HTMLElement;
     let isScrollable = false;
-    
     let el = target;
     while (el && el !== e.currentTarget && el !== document.body) {
-        // Si le contenu dépasse la largeur visible
         if (el.scrollWidth > el.clientWidth) {
              const style = window.getComputedStyle(el);
-             // Et que le scroll horizontal est explicitement activé
              if (['auto', 'scroll'].includes(style.overflowX) || ['auto', 'scroll'].includes(style.overflow)) {
                  isScrollable = true;
                  break;
@@ -58,11 +58,10 @@ const App: React.FC = () => {
         }
         el = el.parentElement as HTMLElement;
     }
-
     if (!isScrollable) {
         setTouchStart({ x: e.targetTouches[0].clientX, y: e.targetTouches[0].clientY });
     } else {
-        setTouchStart(null); // On annule le swipe de navigation pour laisser le composant gérer son scroll
+        setTouchStart(null);
     }
   };
 
@@ -72,17 +71,12 @@ const App: React.FC = () => {
 
   const onTouchEnd = () => {
     if (!touchStart || !touchEnd) return;
-    
     const xDist = touchStart.x - touchEnd.x;
     const yDist = touchStart.y - touchEnd.y;
-
-    // Si le mouvement est majoritairement vertical (scroll d'une liste), on ignore le swipe de page
     if (Math.abs(yDist) > Math.abs(xDist)) return;
-
     const minSwipeDistance = 50;
     const isLeftSwipe = xDist > minSwipeDistance;
     const isRightSwipe = xDist < -minSwipeDistance;
-
     if (isLeftSwipe || isRightSwipe) {
         const currentIndex = VIEWS.indexOf(currentView);
         if (isLeftSwipe && currentIndex < VIEWS.length - 1) {
@@ -99,6 +93,13 @@ const App: React.FC = () => {
     setIsConfigured(isSupabaseConfigured());
   }, []);
 
+  // Déclencher le chargement des données SI configuré ET authentifié
+  useEffect(() => {
+    if (isConfigured && session) {
+      actions.loadData();
+    }
+  }, [isConfigured, session]); // actions n'est pas dans les dépendances pour éviter les boucles, mais loadData est stable
+
   const navigateToConfig = (tab: ConfigTab) => {
     setActiveTab(tab);
     setCurrentView('config');
@@ -114,11 +115,30 @@ const App: React.FC = () => {
     setIsConfigured(false);
   };
 
+  // --- RENDU CONDITIONNEL ---
+
+  // 1. Setup Supabase manquant
   if (!isConfigured) {
-    return <SupabaseSetup onConfigured={() => { setIsConfigured(true); actions.loadData(); }} />;
+    return <SupabaseSetup onConfigured={() => { setIsConfigured(true); }} />;
   }
 
-  if (loading) {
+  // 2. Chargement de l'Auth
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 text-slate-400 gap-4">
+        <Loader2 size={48} className="animate-spin text-indigo-600" />
+        <p className="text-sm font-medium animate-pulse">Vérification de l'identité...</p>
+      </div>
+    );
+  }
+
+  // 3. Non connecté -> Login Screen
+  if (!session) {
+    return <LoginView onLogin={signInWithGoogle} loading={authLoading} error={authError} />;
+  }
+
+  // 4. Chargement des données métier (après auth)
+  if (budgetLoading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 text-slate-400 gap-4">
         <Loader2 size={48} className="animate-spin text-indigo-600" />
@@ -127,7 +147,8 @@ const App: React.FC = () => {
     );
   }
 
-  if (error) {
+  // 5. Erreur Globale Données
+  if (budgetError) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
         <div className="bg-white p-8 rounded-xl shadow-lg max-w-md text-center border border-rose-100">
@@ -135,7 +156,7 @@ const App: React.FC = () => {
             <AlertCircle size={32} />
           </div>
           <h2 className="text-xl font-bold text-slate-900 mb-2">Une erreur est survenue</h2>
-          <p className="text-slate-500 mb-6">{error}</p>
+          <p className="text-slate-500 mb-6">{budgetError}</p>
           <button 
             onClick={() => actions.loadData()}
             className="bg-slate-900 text-white px-6 py-2 rounded-lg font-bold hover:bg-slate-800 transition-colors"
@@ -147,10 +168,16 @@ const App: React.FC = () => {
     );
   }
 
+  // 6. Application Principale
   if (isDbEmpty && currentView !== 'config') {
     return (
       <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
-        <Header currentView={currentView} onViewChange={setCurrentView} />
+        <Header 
+            currentView={currentView} 
+            onViewChange={setCurrentView} 
+            onLogout={signOut}
+            userEmail={session.user.email}
+        />
         <main className="max-w-7xl mx-auto px-4 py-8 pb-24 md:pb-8">
            <WelcomeEmptyState onStartConfig={() => navigateToConfig('family')} />
         </main>
@@ -165,9 +192,13 @@ const App: React.FC = () => {
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
     >
-      <Header currentView={currentView} onViewChange={setCurrentView} />
+      <Header 
+        currentView={currentView} 
+        onViewChange={setCurrentView} 
+        onLogout={signOut}
+        userEmail={session.user.email}
+      />
       
-      {/* Ajout de pb-24 pour éviter que le contenu ne soit caché par la barre de navigation mobile fixe */}
       <main className="max-w-7xl mx-auto px-4 py-8 pb-24 md:pb-8">
         {currentView === 'dashboard' && (
           <DashboardView 
