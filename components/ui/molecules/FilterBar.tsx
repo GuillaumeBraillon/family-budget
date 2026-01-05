@@ -11,9 +11,10 @@ interface FilterBarProps {
   people: Person[];
   tags?: TagType[];
   hiddenFilters?: ('flux' | 'source' | 'status' | 'extra' | 'transfer' | 'salary' | 'accounts' | 'beneficiaries' | 'tags')[];
+  onReset?: () => void;
 }
 
-export const FilterBar: React.FC<FilterBarProps> = ({ filters, onFilterChange, accounts, people, tags = [], hiddenFilters = [] }) => {
+export const FilterBar: React.FC<FilterBarProps> = ({ filters, onFilterChange, accounts, people, tags = [], hiddenFilters = [], onReset }) => {
   const [showAllFilters, setShowAllFilters] = useState(false);
 
   const update = (key: keyof OperationFilters, value: any) => {
@@ -21,19 +22,23 @@ export const FilterBar: React.FC<FilterBarProps> = ({ filters, onFilterChange, a
   };
 
   const clear = () => {
-    onFilterChange({
-        flux: 'ALL',
-        source: 'ALL',
-        status: 'ALL',
-        extra: 'ALL',
-        transfer: 'EXCLUDE',
-        salary: 'EXCLUDE', // Remet à EXCLUDE pour masquer par défaut
-        accountIds: [],
-        beneficiaryIds: [],
-        includedTagIds: [],
-        excludedTagIds: [],
-        tagPresence: 'ALL'
-    });
+    if (onReset) {
+        onReset();
+    } else {
+        onFilterChange({
+            flux: 'ALL',
+            source: 'ALL',
+            status: 'ALL',
+            extra: 'ALL',
+            transfer: 'EXCLUDE',
+            salary: 'EXCLUDE', // Remet à EXCLUDE pour masquer par défaut
+            accountIds: [],
+            beneficiaryIds: [],
+            includedTagIds: [],
+            excludedTagIds: [],
+            tagPresence: 'ALL'
+        });
+    }
   };
 
   // --- CONFIGURATION DES BOUTONS CYCLIQUES ---

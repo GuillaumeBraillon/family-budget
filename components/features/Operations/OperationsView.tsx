@@ -54,7 +54,7 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
 
   // FILTRES PAR DÉFAUT
-  const [filters, setFilters] = useState<OperationFilters>({
+  const DEFAULT_FILTERS: OperationFilters = {
     flux: 'ALL', 
     source: 'VARIABLE', 
     status: 'REAL',
@@ -66,7 +66,9 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
     includedTagIds: [],
     excludedTagIds: [],
     tagPresence: 'ALL'
-  });
+  };
+
+  const [filters, setFilters] = useState<OperationFilters>(DEFAULT_FILTERS);
 
   useEffect(() => {
     if (initialFilters) {
@@ -314,6 +316,7 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
                 people={people}
                 hiddenFilters={['transfer']}
                 tags={tags}
+                onReset={() => setFilters(DEFAULT_FILTERS)}
               />
               <div className="pt-2 border-t border-slate-100 flex justify-between items-center">
                   <div className="flex items-center gap-2">
