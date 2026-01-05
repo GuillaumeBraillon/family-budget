@@ -1,6 +1,7 @@
 
 import React from 'react';
-import { WalletCards, LayoutDashboard, CalendarCheck, Settings, PiggyBank, Calculator, ArrowRightLeft } from 'lucide-react';
+import { WalletCards, LayoutDashboard, CalendarCheck, Settings, PiggyBank, Calculator, ArrowRightLeft, Download } from 'lucide-react';
+import { usePWAInstall } from '../../hooks/usePWAInstall';
 
 type ViewState = 'dashboard' | 'balances' | 'planner' | 'transfers' | 'savings' | 'config';
 
@@ -10,6 +11,7 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({ currentView, onViewChange }) => {
+  const { isInstallable, install } = usePWAInstall();
   
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard /> },
@@ -35,18 +37,31 @@ export const Header: React.FC<HeaderProps> = ({ currentView, onViewChange }) => 
             <h1 className="text-lg font-bold text-slate-900">Budget <span className="text-indigo-600">Famille</span></h1>
           </div>
           
-          {/* DESKTOP NAV */}
-          <nav className="hidden md:flex bg-slate-100 p-1 rounded-xl">
-            {navItems.map(item => (
-              <NavBtn 
-                key={item.id}
-                active={currentView === item.id} 
-                onClick={() => onViewChange(item.id)} 
-                icon={React.cloneElement(item.icon as React.ReactElement, { size: 16 })} 
-                label={item.label} 
-              />
-            ))}
-          </nav>
+          <div className="flex items-center gap-3">
+            {/* BOUTON PWA INSTALL */}
+            {isInstallable && (
+                <button 
+                    onClick={install}
+                    className="flex items-center gap-1.5 bg-indigo-50 text-indigo-600 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-indigo-100 transition-colors animate-in fade-in slide-in-from-top-2"
+                >
+                    <Download size={14} />
+                    <span className="hidden sm:inline">Installer l'app</span>
+                </button>
+            )}
+
+            {/* DESKTOP NAV */}
+            <nav className="hidden md:flex bg-slate-100 p-1 rounded-xl">
+                {navItems.map(item => (
+                <NavBtn 
+                    key={item.id}
+                    active={currentView === item.id} 
+                    onClick={() => onViewChange(item.id)} 
+                    icon={React.cloneElement(item.icon as React.ReactElement, { size: 16 })} 
+                    label={item.label} 
+                />
+                ))}
+            </nav>
+          </div>
         </div>
       </header>
 

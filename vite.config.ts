@@ -16,19 +16,37 @@ export default defineConfig(({ mode }) => {
       VitePWA({
         registerType: 'autoUpdate',
         includeAssets: ['favicon.ico', 'icon.svg'],
+        manifestFilename: 'manifest.json', // Force le nom standard
+        devOptions: {
+          enabled: true, // Active le SW en mode dev
+        },
+        workbox: {
+          cleanupOutdatedCaches: true,
+          clientsClaim: true,
+          skipWaiting: true,
+          globPatterns: ['**/*.{js,css,html,ico,png,svg,json}']
+        },
         manifest: {
           name: 'Budget Familial',
           short_name: 'Budget',
           description: 'Application de gestion financière pour la famille',
-          theme_color: '#ffffff',
+          theme_color: '#4F46E5',
           background_color: '#f8fafc',
           display: 'standalone',
           orientation: 'portrait',
           start_url: '/',
+          scope: '/',
+          id: '/',
           icons: [
             {
-              src: 'icon.svg',
-              sizes: 'any',
+              src: '/icon.svg',
+              sizes: '192x192',
+              type: 'image/svg+xml',
+              purpose: 'any maskable'
+            },
+            {
+              src: '/icon.svg',
+              sizes: '512x512',
               type: 'image/svg+xml',
               purpose: 'any maskable'
             }
