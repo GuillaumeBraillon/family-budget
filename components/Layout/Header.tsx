@@ -56,7 +56,7 @@ export const Header: React.FC<HeaderProps> = ({ currentView, onViewChange }) => 
                     key={item.id}
                     active={currentView === item.id} 
                     onClick={() => onViewChange(item.id)} 
-                    icon={React.cloneElement(item.icon as React.ReactElement, { size: 16 })} 
+                    icon={React.cloneElement(item.icon as React.ReactElement<any>, { size: 16 })} 
                     label={item.label} 
                 />
                 ))}
@@ -73,7 +73,7 @@ export const Header: React.FC<HeaderProps> = ({ currentView, onViewChange }) => 
                 key={item.id}
                 active={currentView === item.id} 
                 onClick={() => onViewChange(item.id)} 
-                icon={React.cloneElement(item.icon as React.ReactElement, { size: 20 })} 
+                icon={React.cloneElement(item.icon as React.ReactElement<any>, { size: 20 })} 
                 label={item.label} 
              />
           ))}
