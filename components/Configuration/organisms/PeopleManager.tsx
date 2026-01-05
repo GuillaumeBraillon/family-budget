@@ -2,7 +2,7 @@
 import React, { useState, useMemo } from 'react';
 import { Trash2, User, Users, Save, Baby } from 'lucide-react';
 import { Person } from '../../../types';
-import { ConfirmModal } from '../atoms/ConfirmModal';
+import { ConfirmModal } from '../../ui/atoms/ConfirmModal';
 import { DataList } from '../../ui/molecules/DataList';
 import { DataListRow } from '../../ui/molecules/DataListRow';
 import { Modal } from '../../ui/Modal';

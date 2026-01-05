@@ -7,7 +7,7 @@ import { TextInput, AmountInput } from '../../ui/molecules/FormInputs';
 import { AccountSelector, BeneficiarySelector } from '../../ui/molecules/SmartSelectors';
 import { DataList } from '../../ui/molecules/DataList';
 import { DataListRow } from '../../ui/molecules/DataListRow';
-import { ConfirmModal } from '../atoms/ConfirmModal';
+import { ConfirmModal } from '../../ui/atoms/ConfirmModal';
 import { Modal } from '../../ui/Modal';
 import { ListSorter, SortOrder } from '../../ui/molecules/ListSorter';
 

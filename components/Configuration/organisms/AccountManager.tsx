@@ -2,7 +2,7 @@
 import React, { useState, useMemo } from 'react';
 import { Trash2, CreditCard, Save, PiggyBank, Users, Wallet } from 'lucide-react';
 import { Account, Person, AccountType } from '../../../types';
-import { ConfirmModal } from '../atoms/ConfirmModal';
+import { ConfirmModal } from '../../ui/atoms/ConfirmModal';
 import { MobileTooltip } from '../../ui/MobileTooltip';
 import { DataList } from '../../ui/molecules/DataList';
 import { DataListRow } from '../../ui/molecules/DataListRow';

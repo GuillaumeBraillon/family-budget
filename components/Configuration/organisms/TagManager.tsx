@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Tag as TagIcon, Save, Trash2, Plus } from 'lucide-react';
 import { Tag } from '../../../types';
 import { Card, CardContent, CardHeader, CardTitle } from '../../ui/Card';
-import { ConfirmModal } from '../atoms/ConfirmModal';
+import { ConfirmModal } from '../../ui/atoms/ConfirmModal';
 
 interface TagManagerProps {
   tags: Tag[];

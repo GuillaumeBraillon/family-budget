@@ -2,7 +2,7 @@
 import React from 'react';
 import { Plus, Trash2, Pencil, X, ChevronDown, ChevronRight, Save } from 'lucide-react';
 import { CategoryDef } from '../../../types';
-import { ConfirmModal } from '../atoms/ConfirmModal';
+import { ConfirmModal } from '../../ui/atoms/ConfirmModal';
 import { useCategoryManager } from '../../../hooks/useCategoryManager';
 import { CategoryTypeSelector } from '../molecules/CategoryTypeSelector';
 
