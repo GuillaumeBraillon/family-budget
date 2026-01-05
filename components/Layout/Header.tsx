@@ -10,59 +10,61 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({ currentView, onViewChange }) => {
+  
+  const navItems = [
+    { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard /> },
+    { id: 'balances', label: 'Soldes', icon: <Calculator /> },
+    { id: 'planner', label: 'Opérations', icon: <CalendarCheck /> },
+    { id: 'transfers', label: 'Virements', icon: <ArrowRightLeft /> },
+    { id: 'savings', label: 'Épargne', icon: <PiggyBank /> },
+    { id: 'config', label: 'Réglages', icon: <Settings /> },
+  ] as const;
+
   return (
-    <header className="bg-white border-b sticky top-0 z-20">
-      <div className="max-w-7xl mx-auto px-4 h-16 flex justify-between items-center">
-        <div 
-          className="flex items-center gap-2 cursor-pointer group" 
-          onClick={() => onViewChange('dashboard')}
-        >
-          <div className="bg-indigo-600 p-2 rounded-lg group-hover:scale-110 transition-transform">
-            <WalletCards className="text-white h-5 w-5" />
+    <>
+      {/* HEADER DESKTOP & MOBILE TITLE */}
+      <header className="bg-white border-b sticky top-0 z-30 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 h-16 flex justify-between items-center">
+          <div 
+            className="flex items-center gap-2 cursor-pointer group" 
+            onClick={() => onViewChange('dashboard')}
+          >
+            <div className="bg-indigo-600 p-2 rounded-lg group-hover:scale-110 transition-transform">
+              <WalletCards className="text-white h-5 w-5" />
+            </div>
+            <h1 className="text-lg font-bold text-slate-900">Budget <span className="text-indigo-600">Famille</span></h1>
           </div>
-          <h1 className="text-lg font-bold hidden sm:block">Budget <span className="text-indigo-600">Famille</span></h1>
+          
+          {/* DESKTOP NAV */}
+          <nav className="hidden md:flex bg-slate-100 p-1 rounded-xl">
+            {navItems.map(item => (
+              <NavBtn 
+                key={item.id}
+                active={currentView === item.id} 
+                onClick={() => onViewChange(item.id)} 
+                icon={React.cloneElement(item.icon as React.ReactElement, { size: 16 })} 
+                label={item.label} 
+              />
+            ))}
+          </nav>
         </div>
-        
-        <nav className="flex bg-slate-100 p-1 rounded-xl overflow-x-auto no-scrollbar max-w-[280px] sm:max-w-none">
-          <NavBtn 
-            active={currentView === 'dashboard'} 
-            onClick={() => onViewChange('dashboard')} 
-            icon={<LayoutDashboard size={16}/>} 
-            label="Dashboard" 
-          />
-          <NavBtn 
-            active={currentView === 'balances'} 
-            onClick={() => onViewChange('balances')} 
-            icon={<Calculator size={16}/>} 
-            label="Soldes" 
-          />
-          <NavBtn 
-            active={currentView === 'planner'} 
-            onClick={() => onViewChange('planner')} 
-            icon={<CalendarCheck size={16}/>} 
-            label="Opérations" 
-          />
-          <NavBtn 
-            active={currentView === 'transfers'} 
-            onClick={() => onViewChange('transfers')} 
-            icon={<ArrowRightLeft size={16}/>} 
-            label="Virements" 
-          />
-          <NavBtn 
-            active={currentView === 'savings'} 
-            onClick={() => onViewChange('savings')} 
-            icon={<PiggyBank size={16}/>} 
-            label="Épargne" 
-          />
-          <NavBtn 
-            active={currentView === 'config'} 
-            onClick={() => onViewChange('config')} 
-            icon={<Settings size={16}/>} 
-            label="Paramètres" 
-          />
-        </nav>
-      </div>
-    </header>
+      </header>
+
+      {/* MOBILE BOTTOM NAV */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-40 pb-[env(safe-area-inset-bottom)] shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+        <div className="flex justify-between items-center h-16 px-1">
+          {navItems.map(item => (
+             <MobileNavBtn 
+                key={item.id}
+                active={currentView === item.id} 
+                onClick={() => onViewChange(item.id)} 
+                icon={React.cloneElement(item.icon as React.ReactElement, { size: 20 })} 
+                label={item.label} 
+             />
+          ))}
+        </div>
+      </nav>
+    </>
   );
 };
 
@@ -71,13 +73,33 @@ const NavBtn: React.FC<{ active: boolean; onClick: () => void; icon: React.React
 }) => (
   <button 
     onClick={onClick} 
-    className={`px-3 sm:px-4 py-1.5 text-sm font-semibold rounded-lg transition-all flex items-center gap-2 whitespace-nowrap ${
+    className={`px-3 lg:px-4 py-1.5 text-sm font-semibold rounded-lg transition-all flex items-center gap-2 whitespace-nowrap ${
       active 
         ? 'bg-white text-indigo-600 shadow-sm' 
         : 'text-slate-500 hover:text-slate-900'
     }`}
   >
     {icon}
-    <span className="hidden sm:inline">{label}</span>
+    <span>{label}</span>
+  </button>
+);
+
+const MobileNavBtn: React.FC<{ active: boolean; onClick: () => void; icon: React.ReactNode; label: string }> = ({ 
+  active, onClick, icon, label 
+}) => (
+  <button 
+    onClick={onClick} 
+    className={`flex-1 flex flex-col items-center justify-center gap-1 h-full transition-all active:scale-95 ${
+      active 
+        ? 'text-indigo-600' 
+        : 'text-slate-400 hover:text-slate-600'
+    }`}
+  >
+    <div className={`p-1 rounded-full transition-colors duration-300 ${active ? 'bg-indigo-50 translate-y-[-2px]' : ''}`}>
+      {icon}
+    </div>
+    <span className={`text-[9px] font-bold leading-none ${active ? 'text-indigo-600' : 'text-slate-400'}`}>
+        {label === 'Opérations' ? 'Opés' : label}
+    </span>
   </button>
 );

@@ -220,7 +220,8 @@ export const apiSetPaidStatus = async (details: PaidItemDetails | null, instance
       is_waiting: !!details.isWaiting, // False si pointé
       is_extra: !!details.isExtra,
       comments: details.comments || null,
-      tag_ids: details.tagIds || []
+      tag_ids: details.tagIds || [],
+      position: details.position
     });
   } else {
     return supabase.from('paid_items').delete().eq('instance_id', instanceId);
@@ -261,7 +262,8 @@ export const apiUpsertVariableTransaction = async (tx: VariableTransaction) =>
     is_waiting: !!tx.isWaiting,
     is_extra: !!tx.isExtra,
     comments: tx.comments || null,
-    tag_ids: tx.tagIds || []
+    tag_ids: tx.tagIds || [],
+    position: tx.position
   });
 
 export const apiDeleteVariableTransaction = async (id: string) => 

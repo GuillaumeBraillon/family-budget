@@ -17,7 +17,7 @@ export const SavingsSummaryCard: React.FC<SavingsSummaryCardProps> = ({ accounts
     const map: Record<string, number> = {};
     
     // On convertit la map en tableau pour faciliter le filtrage
-    const allPaidItems = Object.values(paidItems);
+    const allPaidItems = Object.values(paidItems) as PaidItemDetails[];
 
     accounts.forEach(acc => {
         if (acc.type === AccountType.SAVINGS) {

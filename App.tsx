@@ -17,6 +17,8 @@ import { OperationFilters } from './types';
 
 type ViewState = 'dashboard' | 'balances' | 'planner' | 'transfers' | 'savings' | 'config';
 
+const VIEWS: ViewState[] = ['dashboard', 'balances', 'planner', 'transfers', 'savings', 'config'];
+
 const App: React.FC = () => {
   const [isConfigured, setIsConfigured] = useState(isSupabaseConfigured());
   const [currentView, setCurrentView] = useState<ViewState>('dashboard');
@@ -31,6 +33,67 @@ const App: React.FC = () => {
   } = useBudget();
 
   const { activeTab, setActiveTab } = useConfigurationUI();
+
+  // --- LOGIQUE SWIPE AMÉLIORÉE ---
+  const [touchStart, setTouchStart] = useState<{ x: number; y: number } | null>(null);
+  const [touchEnd, setTouchEnd] = useState<{ x: number; y: number } | null>(null);
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null);
+    
+    // Détection intelligente : On ignore le swipe si l'utilisateur touche une zone scrollable horizontalement
+    let target = e.target as HTMLElement;
+    let isScrollable = false;
+    
+    let el = target;
+    while (el && el !== e.currentTarget && el !== document.body) {
+        // Si le contenu dépasse la largeur visible
+        if (el.scrollWidth > el.clientWidth) {
+             const style = window.getComputedStyle(el);
+             // Et que le scroll horizontal est explicitement activé
+             if (['auto', 'scroll'].includes(style.overflowX) || ['auto', 'scroll'].includes(style.overflow)) {
+                 isScrollable = true;
+                 break;
+             }
+        }
+        el = el.parentElement as HTMLElement;
+    }
+
+    if (!isScrollable) {
+        setTouchStart({ x: e.targetTouches[0].clientX, y: e.targetTouches[0].clientY });
+    } else {
+        setTouchStart(null); // On annule le swipe de navigation pour laisser le composant gérer son scroll
+    }
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd({ x: e.targetTouches[0].clientX, y: e.targetTouches[0].clientY });
+  };
+
+  const onTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    
+    const xDist = touchStart.x - touchEnd.x;
+    const yDist = touchStart.y - touchEnd.y;
+
+    // Si le mouvement est majoritairement vertical (scroll d'une liste), on ignore le swipe de page
+    if (Math.abs(yDist) > Math.abs(xDist)) return;
+
+    const minSwipeDistance = 50;
+    const isLeftSwipe = xDist > minSwipeDistance;
+    const isRightSwipe = xDist < -minSwipeDistance;
+
+    if (isLeftSwipe || isRightSwipe) {
+        const currentIndex = VIEWS.indexOf(currentView);
+        if (isLeftSwipe && currentIndex < VIEWS.length - 1) {
+            setCurrentView(VIEWS[currentIndex + 1]);
+        }
+        if (isRightSwipe && currentIndex > 0) {
+            setCurrentView(VIEWS[currentIndex - 1]);
+        }
+    }
+  };
+  // -------------------
 
   useEffect(() => {
     setIsConfigured(isSupabaseConfigured());
@@ -88,7 +151,7 @@ const App: React.FC = () => {
     return (
       <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
         <Header currentView={currentView} onViewChange={setCurrentView} />
-        <main className="max-w-7xl mx-auto px-4 py-8">
+        <main className="max-w-7xl mx-auto px-4 py-8 pb-24 md:pb-8">
            <WelcomeEmptyState onStartConfig={() => navigateToConfig('family')} />
         </main>
       </div>
@@ -96,10 +159,16 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
+    <div 
+        className="min-h-screen bg-slate-50 font-sans text-slate-900"
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+    >
       <Header currentView={currentView} onViewChange={setCurrentView} />
       
-      <main className="max-w-7xl mx-auto px-4 py-8">
+      {/* Ajout de pb-24 pour éviter que le contenu ne soit caché par la barre de navigation mobile fixe */}
+      <main className="max-w-7xl mx-auto px-4 py-8 pb-24 md:pb-8">
         {currentView === 'dashboard' && (
           <DashboardView 
             accounts={accounts}
@@ -148,12 +217,13 @@ const App: React.FC = () => {
             onTogglePaid={actions.setPaidStatus}
             onUpsertVariable={actions.upsertVariableTransaction}
             onDeleteVariable={actions.deleteVariableTransaction}
+            onMoveItem={actions.moveItem}
           />
         )}
 
         {currentView === 'transfers' && (
           <TransfersView 
-            transfers={transfers}
+            transfers={transfers} 
             accounts={accounts}
             people={people}
             settings={settings}
@@ -167,7 +237,7 @@ const App: React.FC = () => {
         {currentView === 'savings' && (
           <SavingsView 
             accounts={accounts} 
-            transfers={transfers}
+            transfers={transfers} 
             variableTransactions={variableTransactions}
             settings={settings}
             categories={categories}

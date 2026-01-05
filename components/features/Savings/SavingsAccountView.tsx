@@ -1,7 +1,6 @@
 
 import React, { useMemo, useState } from 'react';
 import { Account, Transfer, SavedLabel, VariableTransaction, CategoryDef } from '../../../types';
-import { SavingsKPIs } from './molecules/SavingsKPIs';
 import { SavingsHistoryTable } from './molecules/SavingsHistoryTable';
 import { VariableTransactionForm } from '../Operations/components/VariableTransactionForm';
 import { ListSorter, SortOrder } from '../../ui/molecules/ListSorter';
@@ -10,6 +9,7 @@ interface SavingsAccountViewProps {
   account: Account;
   transfers: Transfer[];
   directOps: VariableTransaction[];
+  history: any[]; // Historique calculé passé par le parent
   allAccounts: Account[];
   categories: CategoryDef[];
   savedLabels?: SavedLabel[];
@@ -18,7 +18,10 @@ interface SavingsAccountViewProps {
   onDeleteTransfer: (id: string) => void;
 }
 
-export const SavingsAccountView: React.FC<SavingsAccountViewProps> = ({ account, transfers, directOps, allAccounts, categories, savedLabels, onUpsertTransfer, onUpsertTransaction, onDeleteTransfer }) => {
+export const SavingsAccountView: React.FC<SavingsAccountViewProps> = ({ 
+  account, transfers, directOps, history, allAccounts, categories, savedLabels, 
+  onUpsertTransfer, onUpsertTransaction, onDeleteTransfer 
+}) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTx, setEditingTx] = useState<any | null>(null);
   const [editingTransferReal, setEditingTransferReal] = useState<Transfer | null>(null);
@@ -28,59 +31,9 @@ export const SavingsAccountView: React.FC<SavingsAccountViewProps> = ({ account,
   const [sortKey, setSortKey] = useState<string>('date');
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
 
-  // Conversion Transfer & DirectOps -> HistoryItem
-  // Note: On calcule d'abord l'historique complet chronologique pour avoir les bons soldes
-  const historyWithBalances = useMemo(() => {
-    // 1. Unification des flux (Virements + Opérations directes comme les intérêts)
-    const combinedOps = [
-        ...transfers.map(t => {
-            const isCredit = t.destinationAccountId === account.id;
-            return {
-                id: t.id,
-                date: t.date,
-                label: t.label,
-                amount: isCredit ? t.amount : -t.amount, // Signé
-                source: 'TRANSFER',
-                createdAt: t.createdAt
-            };
-        }),
-        ...directOps.map(op => {
-            const isCredit = op.type === 'INCOME';
-            return {
-                id: op.id,
-                date: op.date,
-                label: op.label,
-                amount: isCredit ? op.amount : -op.amount, // Signé
-                source: 'DIRECT',
-                createdAt: op.id // Fallback
-            };
-        })
-    ];
-
-    // 2. Tri chronologique croissant pour le calcul du solde
-    const chronological = combinedOps.sort((a, b) => {
-        const timeDiff = new Date(a.date).getTime() - new Date(b.date).getTime();
-        if (timeDiff !== 0) return timeDiff;
-        return (a.createdAt || '').localeCompare(b.createdAt || '');
-    });
-    
-    let runningBalance = 0; 
-    
-    return chronological.map(tx => {
-      runningBalance += tx.amount;
-      return { 
-          ...tx, 
-          balanceAfter: runningBalance,
-          // Re-map pour l'interface de DataListRow qui attend des props spécifiques
-          sourceAccountId: '', // Non utilisé en affichage direct
-          destinationAccountId: ''
-      };
-    });
-  }, [transfers, directOps, account.id]);
-
-  // 3. Tri pour l'affichage (L'utilisateur peut changer l'ordre sans casser les soldes calculés)
+  // Tri pour l'affichage (L'utilisateur peut changer l'ordre sans casser les soldes calculés qui sont dans 'history')
   const displayedHistory = useMemo(() => {
-      return [...historyWithBalances].sort((a, b) => {
+      return [...history].sort((a, b) => {
           let res = 0;
           if (sortKey === 'amount') {
               res = Math.abs(a.amount) - Math.abs(b.amount);
@@ -94,32 +47,7 @@ export const SavingsAccountView: React.FC<SavingsAccountViewProps> = ({ account,
           }
           return sortOrder === 'asc' ? res : -res;
       });
-  }, [historyWithBalances, sortKey, sortOrder]);
-
-  const stats = useMemo(() => {
-    const now = new Date();
-    const currentMonth = now.getMonth();
-    const currentYear = now.getFullYear();
-
-    return historyWithBalances.reduce((acc, t) => {
-        const d = new Date(t.date);
-        const isThisMonth = d.getMonth() === currentMonth && d.getFullYear() === currentYear;
-
-        if (t.amount > 0) acc.totalCredit += t.amount;
-        else acc.totalDebit += Math.abs(t.amount); 
-
-        if (isThisMonth) {
-            if (t.amount > 0) acc.monthCredit += t.amount;
-            else acc.monthDebit += Math.abs(t.amount);
-            acc.monthOpsCount++;
-        }
-
-        return acc;
-    }, { totalCredit: 0, totalDebit: 0, monthCredit: 0, monthDebit: 0, monthOpsCount: 0 });
-  }, [historyWithBalances]);
-
-  const totalBalance = historyWithBalances.length > 0 ? historyWithBalances[historyWithBalances.length - 1].balanceAfter : 0;
-  const monthNet = stats.monthCredit - stats.monthDebit;
+  }, [history, sortKey, sortOrder]);
 
   const handleAdd = () => {
       setEditingTransferReal(null);
@@ -168,12 +96,7 @@ export const SavingsAccountView: React.FC<SavingsAccountViewProps> = ({ account,
 
   return (
     <div className="space-y-6">
-      <SavingsKPIs 
-        totalBalance={totalBalance}
-        monthNet={monthNet}
-        stats={stats}
-      />
-
+      
       <div className="flex justify-end">
           <ListSorter 
             options={sortOptions} 

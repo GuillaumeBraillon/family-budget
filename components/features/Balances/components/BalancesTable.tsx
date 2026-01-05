@@ -27,17 +27,20 @@ export const BalancesTable: React.FC<BalancesTableProps> = ({ rows, onUpdateBala
   const [editingId, setEditingId] = useState<string | null>(null);
   const [tempBalance, setTempBalance] = useState<string>('');
 
-  const startEdit = (id: string, balance: number) => {
+  const startEdit = (id: string, balance: number, e?: React.MouseEvent) => {
+    e?.stopPropagation();
     setEditingId(id);
     setTempBalance(balance.toString());
   };
 
-  const cancelEdit = () => {
+  const cancelEdit = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
     setEditingId(null);
     setTempBalance('');
   };
 
-  const saveEdit = (id: string) => {
+  const saveEdit = (id: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
     const newBalance = parseFloat(tempBalance);
     if (!isNaN(newBalance)) {
         onUpdateBalance(id, newBalance);
@@ -119,9 +122,12 @@ export const BalancesTable: React.FC<BalancesTableProps> = ({ rows, onUpdateBala
                                   </div>
                               </div>
                           </td>
-                          <td className="px-4 py-2.5 text-right">
+                          <td 
+                            className="px-4 py-2.5 text-right cursor-pointer" 
+                            onClick={(e) => { if(editingId !== row.id) startEdit(row.id, row.balance, e); }}
+                          >
                               {editingId === row.id ? (
-                                  <div className="flex items-center justify-end gap-2 animate-in fade-in zoom-in-95 duration-200">
+                                  <div className="flex items-center justify-end gap-2 animate-in fade-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
                                       <input 
                                           autoFocus
                                           type="number"
@@ -129,17 +135,19 @@ export const BalancesTable: React.FC<BalancesTableProps> = ({ rows, onUpdateBala
                                           value={tempBalance} 
                                           onChange={e => setTempBalance(e.target.value)} 
                                           className="w-20 p-1 text-right text-xs border border-indigo-300 rounded bg-white text-slate-900 outline-none ring-2 ring-indigo-100 font-bold" 
-                                          onKeyDown={e => e.key === 'Enter' && saveEdit(row.id)}
+                                          onKeyDown={e => e.key === 'Enter' && saveEdit(row.id, e as any)}
                                       />
-                                      <button onClick={() => saveEdit(row.id)} className="bg-emerald-100 text-emerald-600 p-1 rounded hover:bg-emerald-200"><Check size={12} /></button>
-                                      <button onClick={cancelEdit} className="bg-slate-100 text-slate-500 p-1 rounded hover:bg-slate-200"><X size={12} /></button>
+                                      <button onClick={(e) => saveEdit(row.id, e)} className="bg-emerald-100 text-emerald-600 p-1 rounded hover:bg-emerald-200"><Check size={12} /></button>
+                                      <button onClick={(e) => cancelEdit(e)} className="bg-slate-100 text-slate-500 p-1 rounded hover:bg-slate-200"><X size={12} /></button>
                                   </div>
                               ) : (
-                                  <div className="flex items-center justify-end gap-2 group cursor-pointer" onClick={() => startEdit(row.id, row.balance)}>
-                                      <span className="font-mono font-medium text-slate-600 border-b border-dashed border-slate-300 pb-0.5 group-hover:border-indigo-400 group-hover:text-indigo-600 transition-colors text-sm" title={`Exact: ${row.balance.toFixed(2)} €`}>
+                                  <div className="flex items-center justify-end gap-2">
+                                      <span className="font-mono font-medium text-slate-600 border-b border-dashed border-slate-300 pb-0.5 text-sm" title={`Exact: ${row.balance.toFixed(2)} €`}>
                                           {roundedBalance} €
                                       </span>
-                                      <Pencil size={10} className="text-slate-300 group-hover:text-indigo-400 opacity-0 group-hover:opacity-100 transition-all" />
+                                      <div className="p-1.5 bg-slate-100 rounded-full text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors">
+                                        <Pencil size={12} />
+                                      </div>
                                   </div>
                               )}
                           </td>

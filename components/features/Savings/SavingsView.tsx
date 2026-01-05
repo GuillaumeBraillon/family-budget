@@ -4,6 +4,7 @@ import { Account, AccountType, Transfer, AppSettings, SavedLabel, VariableTransa
 import { PiggyBank, PlusCircle } from 'lucide-react';
 import { InfoBox } from '../../ui/InfoBox';
 import { SavingsAccountView } from './SavingsAccountView';
+import { SavingsKPIs } from './molecules/SavingsKPIs';
 
 interface SavingsViewProps {
   accounts: Account[];
@@ -39,6 +40,81 @@ export const SavingsView: React.FC<SavingsViewProps> = ({
     variableTransactions.filter(t => t.accountId === activeAccountId),
   [variableTransactions, activeAccountId]);
 
+  // --- CALCUL DE L'HISTORIQUE ET DES KPI (Lifted form SavingsAccountView) ---
+  const historyWithBalances = useMemo(() => {
+    if (!activeAccount) return [];
+
+    // 1. Unification des flux
+    const combinedOps = [
+        ...activeTransfers.map(t => {
+            const isCredit = t.destinationAccountId === activeAccount.id;
+            return {
+                id: t.id,
+                date: t.date,
+                label: t.label,
+                amount: isCredit ? t.amount : -t.amount, // Signé
+                source: 'TRANSFER',
+                createdAt: t.createdAt
+            };
+        }),
+        ...activeDirectOps.map(op => {
+            const isCredit = op.type === 'INCOME';
+            return {
+                id: op.id,
+                date: op.date,
+                label: op.label,
+                amount: isCredit ? op.amount : -op.amount, // Signé
+                source: 'DIRECT',
+                createdAt: op.id
+            };
+        })
+    ];
+
+    // 2. Tri chronologique
+    const chronological = combinedOps.sort((a, b) => {
+        const timeDiff = new Date(a.date).getTime() - new Date(b.date).getTime();
+        if (timeDiff !== 0) return timeDiff;
+        return (a.createdAt || '').localeCompare(b.createdAt || '');
+    });
+    
+    let runningBalance = 0; 
+    
+    return chronological.map(tx => {
+      runningBalance += tx.amount;
+      return { 
+          ...tx, 
+          balanceAfter: runningBalance,
+          sourceAccountId: '', 
+          destinationAccountId: ''
+      };
+    });
+  }, [activeTransfers, activeDirectOps, activeAccount]);
+
+  const stats = useMemo(() => {
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+
+    return historyWithBalances.reduce((acc, t) => {
+        const d = new Date(t.date);
+        const isThisMonth = d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+
+        if (t.amount > 0) acc.totalCredit += t.amount;
+        else acc.totalDebit += Math.abs(t.amount); 
+
+        if (isThisMonth) {
+            if (t.amount > 0) acc.monthCredit += t.amount;
+            else acc.monthDebit += Math.abs(t.amount);
+            acc.monthOpsCount++;
+        }
+
+        return acc;
+    }, { totalCredit: 0, totalDebit: 0, monthCredit: 0, monthDebit: 0, monthOpsCount: 0 });
+  }, [historyWithBalances]);
+
+  const totalBalance = historyWithBalances.length > 0 ? historyWithBalances[historyWithBalances.length - 1].balanceAfter : 0;
+  const monthNet = stats.monthCredit - stats.monthDebit;
+
   if (savingsAccounts.length === 0) {
     return (
       <div className="text-center py-12 space-y-4 animate-in fade-in">
@@ -61,6 +137,15 @@ export const SavingsView: React.FC<SavingsViewProps> = ({
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
+       
+       {activeAccount && (
+          <SavingsKPIs 
+            totalBalance={totalBalance}
+            monthNet={monthNet}
+            stats={stats}
+          />
+       )}
+
        <InfoBox 
          title="Suivi de l'Épargne"
          description="Gérez vos livrets : virements internes et intérêts annuels."
@@ -90,6 +175,7 @@ export const SavingsView: React.FC<SavingsViewProps> = ({
                 account={activeAccount}
                 transfers={activeTransfers}
                 directOps={activeDirectOps}
+                history={historyWithBalances}
                 allAccounts={accounts}
                 categories={categories}
                 savedLabels={savedLabels}

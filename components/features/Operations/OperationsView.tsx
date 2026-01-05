@@ -3,7 +3,8 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { usePlanner } from '../../../hooks/usePlanner';
 import { usePlannerUI } from '../../../hooks/usePlannerUI';
 import { ExpenseConfig, IncomeConfig, Account, Person, PaidItemDetails, PlannedItem, AppSettings, VariableTransaction, OperationFilters, SavedLabel, Tag, CategoryDef, AccountType } from '../../../types';
-import { Calendar, CalendarRange } from 'lucide-react';
+import { Calendar, CalendarRange, GripVertical } from 'lucide-react';
+import { arrayMove } from '@dnd-kit/sortable';
 
 // Imports UI Atomic (Generic)
 import { MonthNavigator } from '../../ui/molecules/MonthNavigator';
@@ -35,27 +36,29 @@ interface OperationsViewProps {
   onTogglePaid: (details: PaidItemDetails | null, instanceId: string) => void;
   onUpsertVariable: (t: VariableTransaction) => void;
   onDeleteVariable: (id: string) => void;
+  onMoveItem?: (item: PlannedItem, newPosition: number) => void;
 }
 
 export const OperationsView: React.FC<OperationsViewProps> = ({ 
   initialDate, initialWeek, initialFilters,
   configs, incomeConfigs, variableTransactions, accounts, people, paidItems, settings, categories, savedLabels, tags = [],
-  onTogglePaid, onUpsertVariable, onDeleteVariable
+  onTogglePaid, onUpsertVariable, onDeleteVariable, onMoveItem
 }) => {
   const ui = usePlannerUI(initialDate, initialWeek);
   const [scope, setScope] = useState<'MONTH' | 'PERIOD'>('PERIOD');
   const [isVarFormOpen, setIsVarFormOpen] = useState(false);
   const [editingVar, setEditingVar] = useState<VariableTransaction | null>(null);
   
-  // Tri
-  const [sortKey, setSortKey] = useState<string>('date');
+  // Tri par défaut sur Manuel pour permettre le DnD direct
+  const [sortKey, setSortKey] = useState<string>('manual'); 
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
 
+  // FILTRES PAR DÉFAUT
   const [filters, setFilters] = useState<OperationFilters>({
     flux: 'ALL', 
-    source: 'ALL', 
-    status: 'ALL', 
-    extra: 'ALL', 
+    source: 'VARIABLE', 
+    status: 'REAL',
+    extra: 'EXCLUDE',
     transfer: 'EXCLUDE', 
     salary: 'EXCLUDE', 
     accountIds: [], 
@@ -65,14 +68,12 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
     tagPresence: 'ALL'
   });
 
-  // Application des filtres initiaux si présents (Navigation depuis Dashboard)
   useEffect(() => {
     if (initialFilters) {
         setFilters(prev => ({ ...prev, ...initialFilters }));
     }
   }, [initialFilters]);
 
-  // --- FILTRAGE STRICT DES DONNÉES (Uniquement Comptes Courants) ---
   const checkingAccountIds = useMemo(() => 
     accounts.filter(a => a.type === AccountType.CHECKING).map(a => a.id),
   [accounts]);
@@ -91,7 +92,6 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
   
   const { filteredWeeks } = usePlanner(checkingConfigs, checkingIncomes, paidItems, checkingTransactions, ui.currentDate, ui.searchQuery, settings, categories, filters);
   
-  // Utilisation de la semaine active de l'UI (initialisée correctement via props)
   const currentWeekIndex = ui.activeWeek;
   const currentWeekData = filteredWeeks.find(w => w.weekNumber === currentWeekIndex);
   
@@ -99,19 +99,50 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
     ? filteredWeeks.flatMap(w => w.items) 
     : (currentWeekData?.items || []);
 
+  /**
+   * Calcule une position effective pour le tri Manuel.
+   * STRICTEMENT ALIGNÉ AVEC usePlanner pour garantir la stabilité du tri.
+   */
+  const getEffectivePosition = (item: PlannedItem) => {
+      if (typeof item.position === 'number' && item.position !== 0) return item.position;
+      
+      const BASE_SCORE = 100_000_000_000;
+      const DAY_STEP   =     100_000_000;
+      
+      // Génération d'un hash entier déterministe
+      let hash = 0;
+      for (let i = 0; i < item.instanceId.length; i++) {
+          hash = ((hash << 5) - hash) + item.instanceId.charCodeAt(i);
+          hash |= 0;
+      }
+      const safeHash = Math.abs(hash) % DAY_STEP;
+
+      return BASE_SCORE + (item.day * DAY_STEP) + safeHash;
+  };
+
+  // Logique de tri
   const currentItems = useMemo(() => {
     return [...unsortedItems].sort((a, b) => {
         let res = 0;
-        if (sortKey === 'amount') {
+        
+        if (sortKey === 'manual') {
+            const posA = getEffectivePosition(a);
+            const posB = getEffectivePosition(b);
+            
+            if (posA !== posB) {
+                res = posA - posB;
+            } else {
+                // Fallback ultime stable
+                res = a.instanceId.localeCompare(b.instanceId);
+            }
+        } else if (sortKey === 'date') {
+            res = a.day - b.day;
+        } else if (sortKey === 'amount') {
             res = a.amount - b.amount;
         } else if (sortKey === 'label') {
             res = a.label.localeCompare(b.label);
-        } else {
-            // Default to date
-            const dayDiff = a.day - b.day;
-            if (dayDiff !== 0) return dayDiff;
-            return a.instanceId.localeCompare(b.instanceId);
         }
+
         return sortOrder === 'asc' ? res : -res;
     });
   }, [unsortedItems, sortKey, sortOrder]);
@@ -167,39 +198,25 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
 
   const handleExport = () => {
     if (currentItems.length === 0) return;
-
     const headers = ['Date', 'Libellé', 'Montant', 'Type', 'Catégorie', 'Sous-Catégorie', 'Bénéficiaire', 'Compte', 'Statut', 'Note', 'Tags'];
     const csvContent = [
         headers.join(';'),
         ...currentItems.map(item => {
             const dateStr = item.paidDetails?.paymentDate || 
                 `${ui.currentDate.getFullYear()}-${String(ui.currentDate.getMonth()+1).padStart(2,'0')}-${String(item.day).padStart(2,'0')}`;
-            
             const personName = people.find(p => p.id === item.beneficiaryId)?.name || '';
             const accountName = accounts.find(a => a.id === item.accountId)?.name || '';
             const status = item.isPaid ? 'Réel' : 'En attente';
             const type = item.type === 'INCOME' ? 'Revenu' : 'Dépense';
             const amount = item.amount.toFixed(2).replace('.', ','); 
             const itemTags = item.tagIds ? tags.filter(t => item.tagIds?.includes(t.id)).map(t => t.name).join(', ') : '';
-
             const escapeCsv = (str: string) => `"${(str || '').replace(/"/g, '""')}"`;
-
             return [
-                dateStr,
-                escapeCsv(item.label),
-                amount,
-                type,
-                escapeCsv(item.category),
-                escapeCsv(item.subCategory || ''),
-                escapeCsv(personName),
-                escapeCsv(accountName),
-                status,
-                escapeCsv(item.comments || ''),
-                escapeCsv(itemTags)
+                dateStr, escapeCsv(item.label), amount, type, escapeCsv(item.category), escapeCsv(item.subCategory || ''),
+                escapeCsv(personName), escapeCsv(accountName), status, escapeCsv(item.comments || ''), escapeCsv(itemTags)
             ].join(';');
         })
     ].join('\n');
-
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     if (link.download !== undefined) {
@@ -221,14 +238,43 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
   })();
 
   const sortOptions = [
-      { key: 'date', label: 'Date' },
+      { key: 'manual', label: 'Manuel' }, 
+      { key: 'date', label: 'Date' },     
       { key: 'label', label: 'Libellé' },
       { key: 'amount', label: 'Montant' }
   ];
 
+  // LOGIQUE ROBUSTE DE RÉORDONNANCEMENT AVEC GRANDS ENTIERS
+  const handleReorder = (item: PlannedItem, oldIndex: number, newIndex: number) => {
+      if (onMoveItem && sortKey === 'manual') {
+          // On simule le nouveau tableau pour trouver les voisins
+          const reorderedList = arrayMove(currentItems, oldIndex, newIndex);
+          
+          const prevItem = reorderedList[newIndex - 1];
+          const nextItem = reorderedList[newIndex + 1];
+
+          // On utilise getEffectivePosition pour avoir un score valide et unique même si le voisin n'a pas de position DB
+          const prevScore = prevItem ? getEffectivePosition(prevItem) : 0;
+          
+          // Si on est à la fin, on ajoute un pas arbitraire au dernier score (100 Millions = 1 Jour théorique)
+          const nextScore = nextItem ? getEffectivePosition(nextItem) : (prevScore + 100000000);
+
+          // Nouvelle position = moyenne entière (Math.floor).
+          // Avec l'échelle de 100 Milliards, cela donne suffisamment de précision.
+          const newPosition = Math.floor((prevScore + nextScore) / 2);
+
+          onMoveItem(item, newPosition);
+      }
+  };
+
+  const isManualSort = sortKey === 'manual';
+
   return (
     <div className="space-y-6">
       <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+          
+          <QuickPeriodSummary expenses={quickStats.expenses} income={quickStats.income} />
+
           <div className="flex flex-col md:flex-row justify-between gap-4">
             <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
                 <MonthNavigator date={ui.currentDate} onPrev={ui.handlePrevMonth} onNext={ui.handleNextMonth} />
@@ -259,8 +305,6 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
                 searchQuery={ui.searchQuery}
             />
           )}
-
-          <QuickPeriodSummary expenses={quickStats.expenses} income={quickStats.income} />
           
           <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-4">
               <FilterBar 
@@ -271,13 +315,30 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
                 hiddenFilters={['transfer']}
                 tags={tags}
               />
-              <div className="pt-2 border-t border-slate-100 flex justify-end">
-                  <ListSorter 
-                    options={sortOptions} 
-                    currentSort={sortKey} 
-                    currentOrder={sortOrder} 
-                    onSortChange={(k, o) => { setSortKey(k); setSortOrder(o); }} 
-                  />
+              <div className="pt-2 border-t border-slate-100 flex justify-between items-center">
+                  <div className="flex items-center gap-2">
+                      {isManualSort ? (
+                          <span className="text-[10px] text-indigo-600 font-bold bg-indigo-50 px-2 py-1 rounded flex items-center gap-1">
+                              <GripVertical size={12} /> Drag & Drop Actif
+                          </span>
+                      ) : (
+                          <span className="text-[10px] text-slate-400 italic">
+                              Passez en mode "Manuel" pour réorganiser.
+                          </span>
+                      )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                      <ListSorter 
+                        options={sortOptions} 
+                        currentSort={sortKey} 
+                        currentOrder={sortOrder} 
+                        onSortChange={(k, o) => { 
+                            setSortKey(k); 
+                            setSortOrder(o);
+                            if (k === 'manual' && sortKey !== 'manual') setSortOrder('asc');
+                        }} 
+                      />
+                  </div>
               </div>
           </div>
           
@@ -291,6 +352,7 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
             onItemClick={handleItemClick} 
             onAddClick={() => { setEditingVar(null); setIsVarFormOpen(true); }} 
             onExport={handleExport}
+            onReorder={isManualSort ? handleReorder : undefined}
           />
       </div>
       

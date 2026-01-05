@@ -27,13 +27,13 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
 }) => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   
-  // Mode switch: 'STANDARD' vs 'TRANSFER'
   const [mode, setMode] = useState<'STANDARD' | 'TRANSFER'>('STANDARD');
 
   const [type, setType] = useState<'EXPENSE' | 'INCOME'>('EXPENSE');
   const [date, setDate] = useState(defaultDate);
   const [label, setLabel] = useState('');
   const [amount, setAmount] = useState<string>('');
+  // isWaiting removed
   const [isExtra, setIsExtra] = useState<boolean>(false);
   const [comments, setComments] = useState<string>('');
   
@@ -59,6 +59,7 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
             setCategory(editingTransaction.category);
             setSubCategory(editingTransaction.subCategory || '');
             setBeneficiaryId(editingTransaction.beneficiaryId || defaultBeneficiary);
+            // isWaiting ignored for state
             setIsExtra(!!editingTransaction.isExtra);
             setComments(editingTransaction.comments || '');
         } else {
@@ -313,9 +314,7 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
             <div className="space-y-6 pt-2">
                 <div className="bg-indigo-50 border border-indigo-100 p-4 rounded-xl flex items-start gap-3">
                     <ArrowRightLeft className="text-indigo-600 mt-1" size={20} />
-                    <p className="text-xs text-indigo-800 leading-relaxed">
-                        Ce mode crée automatiquement deux opérations (un débit et un crédit) pour équilibrer vos comptes. Ces mouvements ne seront pas comptabilisés comme des dépenses ou des revenus dans votre budget.
-                    </p>
+                    <p className="text-xs text-indigo-800 leading-relaxed">Virement entre deux comptes. Crée un mouvement unique lié.</p>
                 </div>
 
                 <AmountInput 
@@ -373,12 +372,12 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
             </div>
         )}
 
-        <div className="flex gap-3 pt-4 border-t border-slate-100">
+        <div className="flex gap-2 pt-4 border-t border-slate-100">
             {editingTransaction && onDeleteTransaction && (
                 <button 
                     type="button" 
                     onClick={() => setShowDeleteConfirm(true)}
-                    className="px-4 py-3 bg-red-50 text-red-600 rounded-xl font-bold hover:bg-red-100 transition-colors"
+                    className="px-3 py-3 bg-red-50 text-red-600 rounded-xl font-bold hover:bg-red-100 transition-colors"
                 >
                     <Trash2 size={18} />
                 </button>
@@ -395,15 +394,15 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
                 <>
                     <button 
                         onClick={() => handleSubmit(true)} 
-                        className="flex-1 bg-amber-100 text-amber-700 hover:bg-amber-200 py-3 rounded-xl font-bold transition-colors flex items-center justify-center gap-2"
+                        className="flex-1 bg-amber-100 text-amber-700 border border-amber-200 py-3 rounded-xl font-bold shadow-sm transition-colors flex items-center justify-center gap-2 hover:bg-amber-200"
                     >
-                        <Clock size={18}/> {editingTransaction ? 'Sauver (Attente)' : 'En Attente'}
+                        <Clock size={18}/> En attente
                     </button>
                     <button 
                         onClick={() => handleSubmit(false)} 
                         className={`flex-1 text-white py-3 rounded-xl font-bold shadow-sm transition-colors flex items-center justify-center gap-2 ${isExpense ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-emerald-600 hover:bg-emerald-700'}`}
                     >
-                        <CheckCircle2 size={18}/> {editingTransaction ? 'Sauver (Réel)' : 'Validé'}
+                        <CheckCircle2 size={18}/> Pointé (Réel)
                     </button>
                 </>
             )}

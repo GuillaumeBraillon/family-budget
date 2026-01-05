@@ -84,7 +84,8 @@ export const mapDbPaidItem = (item: any): PaidItemDetails => ({
   isWaiting: !!item.is_waiting,
   isExtra: !!item.is_extra,
   comments: item.comments || undefined,
-  tagIds: item.tag_ids || []
+  tagIds: item.tag_ids || [],
+  position: item.position !== null ? Number(item.position) : undefined
 });
 
 export const mapDbTransfer = (t: any): Transfer => ({
@@ -110,7 +111,8 @@ export const mapDbVariableTransaction = (t: any): VariableTransaction => ({
   isWaiting: !!t.is_waiting,
   isExtra: !!t.is_extra,
   comments: t.comments || undefined,
-  tagIds: t.tag_ids || []
+  tagIds: t.tag_ids || [],
+  position: t.position !== null ? Number(t.position) : undefined
 });
 
 export const mapDbSettings = (data: any): AppSettings => {

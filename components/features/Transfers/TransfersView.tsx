@@ -162,6 +162,10 @@ export const TransfersView: React.FC<TransfersViewProps> = ({
   return (
     <div className="space-y-6">
       <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+          
+          {/* KPIs DÉPLACÉS EN HAUT */}
+          <TransfersKPIs stats={stats} />
+
           <InfoBox 
             title="Gestion des Virements" 
             description="Suivez ici les mouvements d'argent entre vos comptes (Courant vers Épargne, Équilibrage Compte Joint, etc.)." 
@@ -172,8 +176,6 @@ export const TransfersView: React.FC<TransfersViewProps> = ({
             <MonthNavigator date={ui.currentDate} onPrev={ui.handlePrevMonth} onNext={ui.handleNextMonth} />
             <SearchBar value={ui.searchQuery} onChange={ui.setSearchQuery} />
           </div>
-
-          <TransfersKPIs stats={stats} />
 
           {/* BARRE DE FILTRES MOTIFS */}
           <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-4">

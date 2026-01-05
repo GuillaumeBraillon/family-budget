@@ -80,6 +80,7 @@ export interface VariableTransaction {
   isExtra: boolean;   // True = Hors budget
   comments?: string;
   tagIds?: string[];
+  position?: number; // Ordre d'affichage manuel
 }
 
 export type PeriodType = 'FIXED_DAYS' | 'CALENDAR_WEEKS' | 'CUSTOM_SPLIT';
@@ -138,6 +139,7 @@ export interface PaidItemDetails {
   isExtra: boolean;
   comments?: string;
   tagIds?: string[];
+  position?: number; // Ordre d'affichage manuel
 }
 
 export type PlannedItemType = 'EXPENSE' | 'INCOME';
@@ -164,6 +166,7 @@ export interface PlannedItem {
   endMonth?: string;
   comments?: string;
   tagIds?: string[];
+  position?: number;    // Ordre d'affichage manuel
 }
 
 export interface WeeklyBudget {

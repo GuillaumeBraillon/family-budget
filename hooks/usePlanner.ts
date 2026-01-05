@@ -109,7 +109,8 @@ export const usePlanner = (
         isWaiting: !isActuallyPaid,
         paidDetails: paid,
         comments: paid?.comments || '',
-        tagIds: paid ? (paid.tagIds || []) : (conf.tagIds || [])
+        tagIds: paid ? (paid.tagIds || []) : (conf.tagIds || []),
+        position: paid?.position
       });
     });
 
@@ -138,7 +139,8 @@ export const usePlanner = (
         isExtra: !!(paid ? paid.isExtra : inc.isExtra),
         isSalary: !!inc.isSalary,
         comments: paid?.comments || '',
-        tagIds: paid ? (paid.tagIds || []) : (inc.tagIds || [])
+        tagIds: paid ? (paid.tagIds || []) : (inc.tagIds || []),
+        position: paid?.position
       });
     });
 
@@ -164,13 +166,36 @@ export const usePlanner = (
             isWaiting: !!vt.isWaiting,
             isExtra: !!vt.isExtra,
             comments: vt.comments || '',
-            tagIds: vt.tagIds || []
+            tagIds: vt.tagIds || [],
+            position: vt.position
         });
     });
 
+    // --- SCORE DE TRI ROBUSTE POUR BIGINT ---
+    // Utilisation d'entiers larges (100 Milliards) pour éviter les collisions et l'arrondi.
+    const getItemSortScore = (item: PlannedItem) => {
+        if (typeof item.position === 'number' && item.position !== 0) return item.position;
+        
+        // Base : 100 Milliards. Espace large pour insertion avant/après.
+        const BASE_SCORE = 100_000_000_000;
+        const DAY_STEP   =     100_000_000; // 100 Millions par jour
+        
+        // Génération d'un hash entier déterministe entre 0 et 99,999,999
+        let hash = 0;
+        for (let i = 0; i < item.instanceId.length; i++) {
+            hash = ((hash << 5) - hash) + item.instanceId.charCodeAt(i);
+            hash |= 0; // Convert to 32bit integer
+        }
+        const safeHash = Math.abs(hash) % DAY_STEP;
+
+        // Le score par défaut dépend du jour + un hash stable pour l'ordre intra-jour par défaut
+        return BASE_SCORE + (item.day * DAY_STEP) + safeHash;
+    };
+
     res.forEach(w => w.items.sort((a, b) => {
-        const dayDiff = a.day - b.day;
-        if (dayDiff !== 0) return dayDiff;
+        const scoreA = getItemSortScore(a);
+        const scoreB = getItemSortScore(b);
+        if (scoreA !== scoreB) return scoreA - scoreB;
         return a.instanceId.localeCompare(b.instanceId);
     }));
     return res;
@@ -209,27 +234,22 @@ export const usePlanner = (
             if (filters.accountIds.length > 0) items = items.filter(i => filters.accountIds.includes(i.accountId));
             if (filters.beneficiaryIds.length > 0) items = items.filter(i => filters.beneficiaryIds.includes(i.beneficiaryId));
             
-            // --- NOUVELLE LOGIQUE TAGS ---
-            
-            // 1. Filtre de Présence Globale (Avec/Sans tags)
             if (filters.tagPresence === 'WITH_TAGS') {
                 items = items.filter(i => i.tagIds && i.tagIds.length > 0);
             } else if (filters.tagPresence === 'WITHOUT_TAGS') {
                 items = items.filter(i => !i.tagIds || i.tagIds.length === 0);
             }
 
-            // 2. Filtre d'Exclusion (Prioritaire) : Si l'item a UN SEUL des tags exclus, on le cache
             if (filters.excludedTagIds && filters.excludedTagIds.length > 0) {
                 items = items.filter(i => {
-                    if (!i.tagIds || i.tagIds.length === 0) return true; // Pas de tags = pas exclus
+                    if (!i.tagIds || i.tagIds.length === 0) return true;
                     return !i.tagIds.some(t => filters.excludedTagIds.includes(t));
                 });
             }
 
-            // 3. Filtre d'Inclusion : L'item doit avoir AU MOINS UN des tags inclus
             if (filters.includedTagIds && filters.includedTagIds.length > 0) {
                 items = items.filter(i => {
-                    if (!i.tagIds || i.tagIds.length === 0) return false; // Pas de tags = pas inclus
+                    if (!i.tagIds || i.tagIds.length === 0) return false;
                     return i.tagIds.some(t => filters.includedTagIds.includes(t));
                 });
             }
@@ -248,18 +268,11 @@ export const usePlanner = (
         .flatMap(w => w.items)
         .filter(i => !i.isPaid);
 
-    // Fonction utilitaire pour détecter les remboursements
-    // Un remboursement est un CRÉDIT (Income) sur une catégorie de type DÉPENSE (ou nommée explicitement remboursement)
     const isRefund = (item: PlannedItem) => {
         if (item.type !== 'INCOME') return false;
-        
-        // 1. Cas Explicites
         if (item.category === 'Dépenses' || item.category === 'Remboursement') return true;
-
-        // 2. Vérification via la définition de catégorie
         const catDef = categories.find(c => c.name === item.category);
         if (catDef && catDef.type === 'EXPENSE') return true;
-
         return false;
     };
 
@@ -310,7 +323,6 @@ export const usePlanner = (
     const periodLimit = currentWeek?.periodLimit || 0;
     const budgetVariableItems = currentItems.filter(i => i.source === 'VARIABLE' && !i.isExtra && !i.isWaiting && i.category !== 'Virement Interne');
     
-    // Calcul intelligent : Déduire les remboursements des dépenses au lieu de les ajouter aux revenus
     let varExpenses = 0;
     let varIncome = 0;
 
@@ -319,9 +331,9 @@ export const usePlanner = (
             varExpenses += item.amount;
         } else if (item.type === 'INCOME') {
             if (isRefund(item)) {
-                varExpenses -= item.amount; // On déduit le remboursement des dépenses
+                varExpenses -= item.amount;
             } else {
-                varIncome += item.amount; // Vrai revenu
+                varIncome += item.amount;
             }
         }
     });

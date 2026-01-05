@@ -103,7 +103,8 @@ export const fetchInitialData = async () => {
             isWaiting: mapped.isWaiting,
             isExtra: mapped.isExtra,
             comments: mapped.comments,
-            tagIds: mapped.tagIds
+            tagIds: mapped.tagIds,
+            position: mapped.position // AJOUT ESSENTIEL POUR LE TRI MANUEL
         });
     }
   });
