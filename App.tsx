@@ -10,7 +10,7 @@ import { BalancesView } from "./components/features/Balances/BalancesView";
 import { OperationsView } from "./components/features/Operations/OperationsView";
 import { TransfersView } from "./components/features/Transfers/TransfersView";
 import { ConfigurationView } from "./components/features/Configuration/ConfigurationView";
-import { SupabaseSetup } from "./components/Configuration/SupabaseSetup";
+import { SupabaseSetup } from "./components/features/Configuration/components/SupabaseSetup";
 import { LoginView } from "./components/features/Auth/LoginView";
 import { UnauthorizedView } from "./components/features/Auth/UnauthorizedView";
 import { WelcomeEmptyState } from "./components/features/Dashboard/components/WelcomeEmptyState";

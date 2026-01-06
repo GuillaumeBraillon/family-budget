@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../services/supabase";
 import { Session } from "@supabase/supabase-js";
+import { logger } from "../services/logger";
 
 export const useAuth = () => {
   const [session, setSession] = useState<Session | null>(null);
@@ -11,7 +12,7 @@ export const useAuth = () => {
     // 1. Récupérer la session actuelle au chargement
     supabase.auth.getSession().then(({ data: { session }, error }) => {
       if (error) {
-        console.error("Error getting session:", error);
+        logger.error("Error getting session:", error);
         setError(error.message);
       }
       setSession(session);

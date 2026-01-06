@@ -13,6 +13,7 @@ import {
   Tag,
   AuthorizedUser,
 } from "../types";
+import { logger } from "./logger";
 
 export const mapDbPerson = (p: any): Person => ({
   id: p.id,
@@ -21,7 +22,7 @@ export const mapDbPerson = (p: any): Person => ({
 });
 
 export const mapDbAuthorizedUser = (u: any): AuthorizedUser => {
-  console.log("🗺️ Mapping user from DB:", { email: u.email, is_allowed: u.is_allowed, type: typeof u.is_allowed });
+  logger.log("🗺️ Mapping user from DB:", { email: u.email, is_allowed: u.is_allowed, type: typeof u.is_allowed });
   return {
     email: u.email,
     name: u.name,

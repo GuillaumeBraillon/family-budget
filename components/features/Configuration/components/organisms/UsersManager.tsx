@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Users, Check, X, Trash2, Edit2, UserCheck, UserX, Calendar, Mail, MessageSquare } from "lucide-react";
-import { AuthorizedUser } from "../../../types";
+import { AuthorizedUser } from "../../../../../types";
+import { logger } from "../../../../../services/logger";
 
 interface UsersManagerProps {
   users: AuthorizedUser[];
@@ -16,6 +17,7 @@ interface UsersManagerProps {
 export const UsersManager: React.FC<UsersManagerProps> = ({ users, onToggleAuthorization, onUpdateNotes, onDeleteUser }) => {
   const [editingNotes, setEditingNotes] = useState<string | null>(null);
   const [notesValue, setNotesValue] = useState("");
+  const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
   const pendingUsers = users.filter((u) => !u.isAllowed);
   const authorizedUsers = users.filter((u) => u.isAllowed);
@@ -36,22 +38,30 @@ export const UsersManager: React.FC<UsersManagerProps> = ({ users, onToggleAutho
   };
 
   const handleAuthorize = async (email: string) => {
-    console.log("🔐 Tentative d'autorisation:", email);
+    logger.log("🔐 Tentative d'autorisation:", email);
     try {
       await onToggleAuthorization(email, true);
-      console.log("✅ Autorisation réussie");
+      logger.log("✅ Autorisation réussie");
+      setFeedback({ type: "success", message: "Utilisateur autorisé avec succès" });
+      setTimeout(() => setFeedback(null), 3000);
     } catch (err) {
-      console.error("❌ Erreur d'autorisation:", err);
+      logger.error("❌ Erreur d'autorisation:", err);
+      setFeedback({ type: "error", message: "Erreur lors de l'autorisation" });
+      setTimeout(() => setFeedback(null), 3000);
     }
   };
 
   const handleRevoke = async (email: string) => {
-    console.log("🚫 Tentative de révocation:", email);
+    logger.log("🚫 Tentative de révocation:", email);
     try {
       await onToggleAuthorization(email, false);
-      console.log("✅ Révocation réussie");
+      logger.log("✅ Révocation réussie");
+      setFeedback({ type: "success", message: "Accès révoqué" });
+      setTimeout(() => setFeedback(null), 3000);
     } catch (err) {
-      console.error("❌ Erreur de révocation:", err);
+      logger.error("❌ Erreur de révocation:", err);
+      setFeedback({ type: "error", message: "Erreur lors de la révocation" });
+      setTimeout(() => setFeedback(null), 3000);
     }
   };
 
@@ -68,6 +78,20 @@ export const UsersManager: React.FC<UsersManagerProps> = ({ users, onToggleAutho
 
   return (
     <div className="space-y-6">
+      {/* Feedback Toast */}
+      {feedback && (
+        <div
+          className={`fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg animate-in fade-in slide-in-from-top-2 ${
+            feedback.type === "success" ? "bg-emerald-600 text-white" : "bg-rose-600 text-white"
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            {feedback.type === "success" ? <Check size={18} /> : <X size={18} />}
+            <span className="font-medium">{feedback.message}</span>
+          </div>
+        </div>
+      )}
+
       {/* Demandes en attente */}
       {pendingUsers.length > 0 && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-6">
@@ -81,7 +105,7 @@ export const UsersManager: React.FC<UsersManagerProps> = ({ users, onToggleAutho
               <div key={user.email} className="bg-white p-4 rounded-lg border border-amber-200 flex items-center justify-between gap-4">
                 <div className="flex items-center gap-3 flex-1 min-w-0">
                   {user.avatarUrl ? (
-                    <img src={user.avatarUrl} alt={user.name || user.email} className="w-10 h-10 rounded-full border-2 border-amber-200" />
+                    <img src={user.avatarUrl} alt={user.name || user.email} referrerPolicy="no-referrer" className="w-10 h-10 rounded-full border-2 border-amber-200" />
                   ) : (
                     <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-600">
                       <Mail size={18} />
@@ -107,7 +131,7 @@ export const UsersManager: React.FC<UsersManagerProps> = ({ users, onToggleAutho
 
                   <button
                     onClick={() => {
-                      console.log("🗑️ Suppression de:", user.email);
+                      logger.log("🗑️ Suppression de:", user.email);
                       onDeleteUser(user.email);
                     }}
                     className="p-2 text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
@@ -137,7 +161,12 @@ export const UsersManager: React.FC<UsersManagerProps> = ({ users, onToggleAutho
               <div className="flex items-start justify-between gap-4">
                 <div className="flex items-start gap-3 flex-1 min-w-0">
                   {user.avatarUrl ? (
-                    <img src={user.avatarUrl} alt={user.name || user.email} className="w-10 h-10 rounded-full border-2 border-slate-200 flex-shrink-0" />
+                    <img
+                      src={user.avatarUrl}
+                      alt={user.name || user.email}
+                      referrerPolicy="no-referrer"
+                      className="w-10 h-10 rounded-full border-2 border-slate-200 flex-shrink-0"
+                    />
                   ) : (
                     <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 flex-shrink-0">
                       <Users size={18} />
@@ -153,6 +182,12 @@ export const UsersManager: React.FC<UsersManagerProps> = ({ users, onToggleAutho
                         <Calendar size={12} />
                         <span>Dernière connexion: {formatDate(user.lastLoginAt)}</span>
                       </div>
+                      {user.addedBy && (
+                        <div className="flex items-center gap-1">
+                          <UserCheck size={12} />
+                          <span>Autorisé par: {user.addedBy}</span>
+                        </div>
+                      )}
                     </div>
 
                     {/* Notes éditables */}
@@ -205,7 +240,7 @@ export const UsersManager: React.FC<UsersManagerProps> = ({ users, onToggleAutho
 
                   <button
                     onClick={() => {
-                      console.log("🗑️ Suppression (autorisé):", user.email);
+                      logger.log("🗑️ Suppression (autorisé):", user.email);
                       onDeleteUser(user.email);
                     }}
                     className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"

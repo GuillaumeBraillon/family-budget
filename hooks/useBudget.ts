@@ -15,6 +15,7 @@ import {
   PlannedItem,
   AuthorizedUser,
 } from "../types";
+import { logger } from "../services/logger";
 import {
   fetchInitialData,
   apiToggleUserAuthorization,
@@ -83,7 +84,7 @@ export const useBudget = () => {
   }, [data]);
 
   const loadData = useCallback(async (silent = false) => {
-    console.log("🔄 useBudget: loadData appelé", { silent });
+    logger.log("🔄 useBudget: loadData appelé", { silent });
     if (!isSupabaseConfigured()) {
       setLoading(false);
       return;
@@ -93,8 +94,8 @@ export const useBudget = () => {
       if (!silent) setLoading(true);
       setError(null);
       const res = await fetchInitialData();
-      console.log("✅ useBudget: Données rechargées", { authorizedUsers: res.authorizedUsers.length });
-      console.log(
+      logger.log("✅ useBudget: Données rechargées", { authorizedUsers: res.authorizedUsers.length });
+      logger.log(
         "📋 Détail des utilisateurs:",
         res.authorizedUsers.map((u) => ({ email: u.email, isAllowed: u.isAllowed }))
       );
@@ -115,7 +116,7 @@ export const useBudget = () => {
         tags: res.tags,
         authorizedUsers: res.authorizedUsers,
       });
-      console.log(
+      logger.log(
         "🔄 setData appelé avec authorizedUsers:",
         res.authorizedUsers.map((u) => ({ email: u.email, isAllowed: u.isAllowed }))
       );
@@ -354,19 +355,17 @@ export const useBudget = () => {
   const wrapCrud =
     (fn: (...args: any[]) => Promise<any>) =>
     async (...args: any[]) => {
-      console.log("🔧 wrapCrud: Opération en cours", { args });
+      logger.log("🔧 wrapCrud: Opération en cours", { args });
       try {
         const res = await fn(...args);
-        console.log("🔧 wrapCrud: Résultat API", { res });
+        logger.log("🔧 wrapCrud: Résultat API", { res });
         if (res && res.error) throw res.error;
-        console.log("🔧 wrapCrud: Attente de 500ms pour commit DB...");
-        await new Promise((resolve) => setTimeout(resolve, 500));
-        console.log("🔧 wrapCrud: Appel de loadData...");
+        logger.log("🔧 wrapCrud: Appel de loadData...");
         await loadData(true);
-        console.log("🔧 wrapCrud: loadData terminé");
+        logger.log("🔧 wrapCrud: loadData terminé");
         return res;
       } catch (err: any) {
-        console.error("❌ wrapCrud: Erreur", err);
+        logger.error("❌ wrapCrud: Erreur", err);
         setError(err.message || "Erreur lors de l'opération");
         return { error: err };
       }

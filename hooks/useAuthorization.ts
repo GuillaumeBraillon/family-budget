@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Session } from "@supabase/supabase-js";
 import { supabase } from "../services/supabase";
+import { logger } from "../services/logger";
 
 /**
  * Hook vérifiant si l'utilisateur connecté est autorisé via la whitelist.
@@ -65,7 +66,7 @@ export const useAuthorization = (session: Session | null) => {
 
         setLoading(false);
       } catch (err: any) {
-        console.error("Authorization check error:", err);
+        logger.error("Authorization check error:", err);
         setError(err.message || "Erreur lors de la vérification");
         setIsAuthorized(false);
         setLoading(false);

@@ -1,6 +1,6 @@
 import React from "react";
 import { Session } from "@supabase/supabase-js";
-import { AppSettings } from "../../../types";
+import { AppSettings } from "../../../../../types";
 import { MonthlyEnvelopeCard } from "../molecules/WeeklyEnvelopeCard";
 import { PeriodSettingsCard } from "../molecules/PeriodSettingsCard";
 import { DatabaseConnectionCard } from "../molecules/DatabaseConnectionCard";

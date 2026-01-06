@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Database, Key, Hash, ArrowRight, ExternalLink, AlertTriangle, Info } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "../ui/Card";
+import { Card, CardContent, CardHeader, CardTitle } from "../../../ui/Card";
 
 interface SupabaseSetupProps {
   onConfigured: () => void;

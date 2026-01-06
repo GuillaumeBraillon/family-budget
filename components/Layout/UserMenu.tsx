@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { User, LogOut, ChevronDown } from "lucide-react";
 import { Session } from "@supabase/supabase-js";
-import { UserInfoCard } from "../Configuration/molecules/UserInfoCard";
+import { UserInfoCard } from "../features/Configuration/components/molecules/UserInfoCard";
 
 interface UserMenuProps {
   userEmail?: string;

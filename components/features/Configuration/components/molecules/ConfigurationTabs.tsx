@@ -1,5 +1,5 @@
 import React from "react";
-import { ConfigTab } from "../../../hooks/useConfigurationUI";
+import { ConfigTab } from "../../../../../hooks/useConfigurationUI";
 import { Settings2, Users, CreditCard, Tag, List, CalendarRange, Bookmark, Shield } from "lucide-react";
 
 interface ConfigurationTabsProps {

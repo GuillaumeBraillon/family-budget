@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { logger } from "./logger";
 import {
   Person,
   Account,
@@ -18,7 +19,7 @@ import {
  * Opérations sur les Utilisateurs Autorisés
  */
 export const apiToggleUserAuthorization = async (email: string, isAllowed: boolean) => {
-  console.log("📡 API: Mise à jour autorisation", { email, isAllowed });
+  logger.log("📡 API: Mise à jour autorisation", { email, isAllowed });
 
   // Si on autorise quelqu'un, on enregistre qui l'a autorisé
   if (isAllowed) {
@@ -32,13 +33,13 @@ export const apiToggleUserAuthorization = async (email: string, isAllowed: boole
         added_by: user?.email || null,
       })
       .eq("email", email);
-    console.log("📡 API: Résultat", result);
+    logger.log("📡 API: Résultat", result);
     return result;
   }
 
   // Si on révoque, on met juste à jour is_allowed
   const result = await supabase.from("authorized_users").update({ is_allowed: isAllowed }).eq("email", email);
-  console.log("📡 API: Résultat", result);
+  logger.log("📡 API: Résultat", result);
   return result;
 };
 

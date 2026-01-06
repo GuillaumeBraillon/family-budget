@@ -5,15 +5,15 @@ import { ConfigTab } from "../../../hooks/useConfigurationUI";
 import { ExpenseConfig, IncomeConfig, CategoryDef, Person, Account, AppSettings, SavedLabel, Tag as TagType, AuthorizedUser } from "../../../types";
 import { InfoBox } from "../../ui/InfoBox";
 
-import { ConfigurationTabs } from "../../Configuration/molecules/ConfigurationTabs";
-import { CategoryManager } from "../../Configuration/organisms/CategoryManager";
-import { PeopleManager } from "../../Configuration/organisms/PeopleManager";
-import { AccountManager } from "../../Configuration/organisms/AccountManager";
-import { GlobalSettings } from "../../Configuration/organisms/GlobalSettings";
-import { AccountLabelManager } from "../../Configuration/organisms/AccountLabelManager";
-import { OperationsManager } from "../../Configuration/organisms/OperationsManager";
-import { TagManager } from "../../Configuration/organisms/TagManager";
-import { UsersManager } from "../../Configuration/organisms/UsersManager";
+import { ConfigurationTabs } from "./components/molecules/ConfigurationTabs";
+import { CategoryManager } from "./components/organisms/CategoryManager";
+import { PeopleManager } from "./components/organisms/PeopleManager";
+import { AccountManager } from "./components/organisms/AccountManager";
+import { GlobalSettings } from "./components/organisms/GlobalSettings";
+import { AccountLabelManager } from "./components/organisms/AccountLabelManager";
+import { OperationsManager } from "./components/organisms/OperationsManager";
+import { TagManager } from "./components/organisms/TagManager";
+import { UsersManager } from "./components/organisms/UsersManager";
 
 interface ConfigurationViewProps {
   configs: ExpenseConfig[];
