@@ -1,16 +1,43 @@
-
-import { Person, Account, CategoryDef, ExpenseConfig, IncomeConfig, PaidItemDetails, AppSettings, AccountType, VariableTransaction, SavedLabel, Transfer, Tag } from '../types';
+import {
+  Person,
+  Account,
+  CategoryDef,
+  ExpenseConfig,
+  IncomeConfig,
+  PaidItemDetails,
+  AppSettings,
+  AccountType,
+  VariableTransaction,
+  SavedLabel,
+  Transfer,
+  Tag,
+  AuthorizedUser,
+} from "../types";
 
 export const mapDbPerson = (p: any): Person => ({
   id: p.id,
   name: p.name,
-  isChild: p.is_child
+  isChild: p.is_child,
 });
+
+export const mapDbAuthorizedUser = (u: any): AuthorizedUser => {
+  console.log("🗺️ Mapping user from DB:", { email: u.email, is_allowed: u.is_allowed, type: typeof u.is_allowed });
+  return {
+    email: u.email,
+    name: u.name,
+    avatarUrl: u.avatar_url,
+    isAllowed: !!u.is_allowed,
+    addedAt: u.added_at,
+    addedBy: u.added_by,
+    lastLoginAt: u.last_login_at,
+    notes: u.notes,
+  };
+};
 
 export const mapDbTag = (t: any): Tag => ({
   id: t.id,
   name: t.name,
-  color: t.color
+  color: t.color,
 });
 
 export const mapDbAccount = (a: any): Account => ({
@@ -22,21 +49,21 @@ export const mapDbAccount = (a: any): Account => ({
   bankName: a.bank_name,
   isJoint: !!a.is_joint,
   targetRatio: a.target_ratio !== null && a.target_ratio !== undefined ? Number(a.target_ratio) : undefined,
-  targetCap: a.target_cap !== null && a.target_cap !== undefined ? Number(a.target_cap) : undefined
+  targetCap: a.target_cap !== null && a.target_cap !== undefined ? Number(a.target_cap) : undefined,
 });
 
 export const mapDbCategory = (c: any): CategoryDef => ({
   id: c.id,
   name: c.name,
-  type: c.type || 'EXPENSE',
-  subCategories: c.sub_categories || []
+  type: c.type || "EXPENSE",
+  subCategories: c.sub_categories || [],
 });
 
 export const mapDbSavedLabel = (l: any): SavedLabel => ({
   id: l.id,
   name: l.name,
   type: l.type,
-  isExpense: l.is_expense !== false // Default true si null/undefined pour rétrocompatibilité
+  isExpense: l.is_expense !== false, // Default true si null/undefined pour rétrocompatibilité
 });
 
 export const mapDbExpenseConfig = (c: any): ExpenseConfig => ({
@@ -51,7 +78,7 @@ export const mapDbExpenseConfig = (c: any): ExpenseConfig => ({
   startMonth: c.start_month || undefined,
   endMonth: c.end_month || undefined,
   isExtra: !!c.is_extra,
-  tagIds: c.tag_ids || []
+  tagIds: c.tag_ids || [],
 });
 
 export const mapDbIncomeConfig = (i: any): IncomeConfig => ({
@@ -67,7 +94,7 @@ export const mapDbIncomeConfig = (i: any): IncomeConfig => ({
   isSalary: !!i.is_salary,
   startMonth: i.start_month || undefined,
   endMonth: i.end_month || undefined,
-  tagIds: i.tag_ids || []
+  tagIds: i.tag_ids || [],
 });
 
 export const mapDbPaidItem = (item: any): PaidItemDetails => ({
@@ -79,13 +106,13 @@ export const mapDbPaidItem = (item: any): PaidItemDetails => ({
   label: item.label,
   category: item.category,
   subCategory: item.sub_category,
-  type: item.type || 'EXPENSE',
+  type: item.type || "EXPENSE",
   isVariable: !!item.is_variable,
   isWaiting: !!item.is_waiting,
   isExtra: !!item.is_extra,
   comments: item.comments || undefined,
   tagIds: item.tag_ids || [],
-  position: item.position !== null ? Number(item.position) : undefined
+  position: item.position !== null ? Number(item.position) : undefined,
 });
 
 export const mapDbTransfer = (t: any): Transfer => ({
@@ -95,7 +122,8 @@ export const mapDbTransfer = (t: any): Transfer => ({
   amount: Number(t.amount),
   sourceAccountId: t.source_account_id,
   destinationAccountId: t.destination_account_id,
-  createdAt: t.created_at
+  createdAt: t.created_at,
+  position: t.position !== null ? Number(t.position) : undefined,
 });
 
 export const mapDbVariableTransaction = (t: any): VariableTransaction => ({
@@ -107,19 +135,19 @@ export const mapDbVariableTransaction = (t: any): VariableTransaction => ({
   subCategory: t.sub_category,
   accountId: t.account_id,
   beneficiaryId: t.beneficiary_id,
-  type: t.type || 'EXPENSE',
+  type: t.type || "EXPENSE",
   isWaiting: !!t.is_waiting,
   isExtra: !!t.is_extra,
   comments: t.comments || undefined,
   tagIds: t.tag_ids || [],
-  position: t.position !== null ? Number(t.position) : undefined
+  position: t.position !== null ? Number(t.position) : undefined,
 });
 
 export const mapDbSettings = (data: any): AppSettings => {
-  if (!data) return { monthly_envelope: 2000, period_type: 'FIXED_DAYS', period_value: 7 };
+  if (!data) return { monthly_envelope: 2000, period_type: "FIXED_DAYS", period_value: 7 };
   return {
     monthly_envelope: Number(data.monthly_envelope || 2000),
-    period_type: (data.period_type || 'FIXED_DAYS') as any,
-    period_value: Number(data.period_value || 7)
+    period_type: (data.period_type || "FIXED_DAYS") as any,
+    period_value: Number(data.period_value || 7),
   };
 };

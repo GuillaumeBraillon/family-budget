@@ -1,13 +1,12 @@
+import { useState } from "react";
 
-import { useState } from 'react';
-
-export type ConfigTab = 'general' | 'family' | 'accounts' | 'operations' | 'categories' | 'labels' | 'tags';
+export type ConfigTab = "general" | "family" | "accounts" | "operations" | "categories" | "labels" | "tags" | "users";
 
 export const useConfigurationUI = () => {
-  const [activeTab, setActiveTab] = useState<ConfigTab>('family');
+  const [activeTab, setActiveTab] = useState<ConfigTab>("general");
 
   return {
     activeTab,
-    setActiveTab
+    setActiveTab,
   };
-}
+};

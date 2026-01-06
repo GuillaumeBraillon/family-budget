@@ -1,70 +1,46 @@
-
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
 /**
  * Récupère la configuration Supabase.
- * Priorité 1 : Variables d'environnement (Injection au build)
- * Priorité 2 : LocalStorage (Configuration manuelle via UI)
+ * Priorité 1 : LocalStorage (ce qui fonctionnait avant)
+ * Priorité 2 : Variables d'environnement .env (build time)
  */
 export const getSupabaseConfig = () => {
-  // Tentative de récupération via process.env (Standard pour .env)
-  // Note : Dans certains environnements web, on utilise import.meta.env
-  const envProjectId = (process as any).env?.SUPABASE_PROJECT_ID || '';
-  const envKey = (process as any).env?.SUPABASE_ANON_KEY || '';
+  // Priorité au localStorage (système qui fonctionnait)
+  let projectId = localStorage.getItem("supabase_project_id") || "";
+  let key = localStorage.getItem("supabase_key") || "";
 
-  let projectId = envProjectId || localStorage.getItem('supabase_project_id') || '';
-  let key = envKey || localStorage.getItem('supabase_key') || '';
-  let url = '';
+  // Fallback sur les variables d'environnement
+  if (!projectId) projectId = (process as any).env?.SUPABASE_PROJECT_ID || "";
+  if (!key) key = (process as any).env?.SUPABASE_ANON_KEY || "";
 
-  if (projectId) {
-    url = `https://${projectId.trim()}.supabase.co`;
-  }
+  const url = projectId ? `https://${projectId.trim()}.supabase.co` : "";
 
-  return { url, key, projectId, isFromEnv: !!envProjectId };
+  return { url, key, projectId };
 };
 
 /**
  * Instance initiale du client Supabase.
  */
 const config = getSupabaseConfig();
-export let supabase: SupabaseClient = createClient(
-  config.url || 'https://placeholder.supabase.co',
-  config.key || 'placeholder'
-);
+export let supabase: SupabaseClient = createClient(config.url || "https://placeholder.supabase.co", config.key || "placeholder");
 
 /**
- * Initialise les paramètres Supabase et met à jour l'instance du client.
+ * Nettoie uniquement le token d'authentification OAuth (session expirée).
  */
-export const initSupabase = (projectId: string, key: string) => {
-  const generatedUrl = `https://${projectId.trim()}.supabase.co`;
-  localStorage.setItem('supabase_project_id', projectId.trim());
-  localStorage.setItem('supabase_url', generatedUrl);
-  localStorage.setItem('supabase_key', key.trim());
-  
-  // Mise à jour de l'instance existante
-  supabase = createClient(generatedUrl, key.trim());
+export const clearAuthSession = () => {
+  const { projectId } = getSupabaseConfig();
+  if (projectId) {
+    const authTokenKey = `sb-${projectId}-auth-token`;
+    localStorage.removeItem(authTokenKey);
+    console.log("[Supabase] Session auth cleared:", authTokenKey);
+  }
 };
 
 /**
- * Supprime la configuration (Déconnexion).
- */
-export const resetSupabaseConfig = () => {
-  localStorage.removeItem('supabase_project_id');
-  localStorage.removeItem('supabase_url');
-  localStorage.removeItem('supabase_key');
-  
-  supabase = createClient('https://placeholder.supabase.co', 'placeholder');
-};
-
-/**
- * Vérifie si la configuration minimale est présente et valide (pas de placeholder).
+ * Vérifie si les variables d'environnement Supabase sont configurées dans .env
  */
 export const isSupabaseConfigured = () => {
   const { url, key } = getSupabaseConfig();
-  return (
-    url.length > 10 && 
-    key.length > 10 && 
-    url.startsWith('http') && 
-    !url.includes('placeholder.supabase.co')
-  );
+  return url.length > 10 && key.length > 10 && url.startsWith("http");
 };

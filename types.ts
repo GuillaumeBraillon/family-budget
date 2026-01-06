@@ -1,8 +1,7 @@
-
 export enum AccountType {
-  CHECKING = 'COURANT',
-  SAVINGS = 'EPARGNE',
-  TRANSFER = 'VIREMENT'
+  CHECKING = "COURANT",
+  SAVINGS = "EPARGNE",
+  TRANSFER = "VIREMENT",
 }
 
 export interface Person {
@@ -15,6 +14,17 @@ export interface Tag {
   id: string;
   name: string;
   color: string;
+}
+
+export interface AuthorizedUser {
+  email: string;
+  name?: string;
+  avatarUrl?: string;
+  isAllowed: boolean;
+  addedAt?: string;
+  addedBy?: string;
+  lastLoginAt?: string;
+  notes?: string;
 }
 
 export interface Account {
@@ -30,9 +40,9 @@ export interface Account {
 }
 
 export interface CategoryDef {
-  id: string; 
+  id: string;
   name: string;
-  type: 'EXPENSE' | 'INCOME';
+  type: "EXPENSE" | "INCOME";
   subCategories: string[];
 }
 
@@ -44,8 +54,8 @@ export interface SavedLabel {
 }
 
 export enum TransactionType {
-  DEBIT = 'DEBIT',
-  CREDIT = 'CREDIT'
+  DEBIT = "DEBIT",
+  CREDIT = "CREDIT",
 }
 
 export interface Transfer {
@@ -56,6 +66,7 @@ export interface Transfer {
   sourceAccountId: string;
   destinationAccountId: string;
   createdAt?: string;
+  position?: number;
 }
 
 export interface SavingsTransaction {
@@ -75,15 +86,15 @@ export interface VariableTransaction {
   subCategory?: string;
   accountId: string;
   beneficiaryId?: string;
-  type: 'EXPENSE' | 'INCOME';
+  type: "EXPENSE" | "INCOME";
   isWaiting: boolean; // True = En attente, False = Pointé
-  isExtra: boolean;   // True = Hors budget
+  isExtra: boolean; // True = Hors budget
   comments?: string;
   tagIds?: string[];
   position?: number; // Ordre d'affichage manuel
 }
 
-export type PeriodType = 'FIXED_DAYS' | 'CALENDAR_WEEKS' | 'CUSTOM_SPLIT';
+export type PeriodType = "FIXED_DAYS" | "CALENDAR_WEEKS" | "CUSTOM_SPLIT";
 
 export interface AppSettings {
   monthly_envelope: number;
@@ -115,7 +126,7 @@ export interface IncomeConfig {
   accountId: string;
   beneficiaryId: string;
   dayOfMonth: number;
-  category: string; 
+  category: string;
   subCategory?: string;
   isExtra?: boolean;
   isSalary?: boolean; // Nouveau champ pour identifier les revenus structurels
@@ -133,7 +144,7 @@ export interface PaidItemDetails {
   label: string;
   category: string;
   subCategory?: string;
-  type: 'EXPENSE' | 'INCOME';
+  type: "EXPENSE" | "INCOME";
   isVariable: boolean;
   isWaiting: boolean;
   isExtra: boolean;
@@ -142,31 +153,31 @@ export interface PaidItemDetails {
   position?: number; // Ordre d'affichage manuel
 }
 
-export type PlannedItemType = 'EXPENSE' | 'INCOME';
+export type PlannedItemType = "EXPENSE" | "INCOME";
 
 export interface PlannedItem {
   type: PlannedItemType;
-  source: 'RECURRING' | 'VARIABLE';
+  source: "RECURRING" | "VARIABLE";
   configId: string;
   instanceId: string;
   day: number;
   label: string;
   amount: number;
   originalAmount: number;
-  paidDetails?: PaidItemDetails; 
-  isPaid: boolean;      // Pour l'UI : inverse de isWaiting
-  isWaiting: boolean;   // Pour la logique métier
+  paidDetails?: PaidItemDetails;
+  isPaid: boolean; // Pour l'UI : inverse de isWaiting
+  isWaiting: boolean; // Pour la logique métier
   category: string;
   subCategory?: string;
   beneficiaryId: string;
   isExtra: boolean;
-  isSalary?: boolean;   // Propagation de l'info structurelle
+  isSalary?: boolean; // Propagation de l'info structurelle
   accountId: string;
   startMonth?: string;
   endMonth?: string;
   comments?: string;
   tagIds?: string[];
-  position?: number;    // Ordre d'affichage manuel
+  position?: number; // Ordre d'affichage manuel
 }
 
 export interface WeeklyBudget {
@@ -179,16 +190,16 @@ export interface WeeklyBudget {
 }
 
 export interface OperationFilters {
-  flux: 'EXPENSE' | 'INCOME' | 'ALL';
-  source: 'RECURRING' | 'VARIABLE' | 'ALL';
-  status: 'WAITING' | 'REAL' | 'ALL';
-  extra: 'ALL' | 'ONLY' | 'EXCLUDE';
-  transfer: 'ALL' | 'ONLY' | 'EXCLUDE';
-  salary: 'ALL' | 'ONLY' | 'EXCLUDE';
+  flux: "EXPENSE" | "INCOME" | "ALL";
+  source: "RECURRING" | "VARIABLE" | "ALL";
+  status: "WAITING" | "REAL" | "ALL";
+  extra: "ALL" | "ONLY" | "EXCLUDE";
+  transfer: "ALL" | "ONLY" | "EXCLUDE";
+  salary: "ALL" | "ONLY" | "EXCLUDE";
   accountIds: string[];
   beneficiaryIds: string[];
   // Nouveau système de Tags
   includedTagIds: string[];
   excludedTagIds: string[];
-  tagPresence: 'ALL' | 'WITH_TAGS' | 'WITHOUT_TAGS';
+  tagPresence: "ALL" | "WITH_TAGS" | "WITHOUT_TAGS";
 }

@@ -1,6 +1,5 @@
-
-import { useState } from 'react';
-import { PlannedItem } from '../types';
+import { useState } from "react";
+import { PlannedItem } from "../types";
 
 /**
  * Calcule le numéro de semaine (1 à 4) utilisé par le Planner
@@ -18,7 +17,17 @@ export const usePlannerUI = (initialDate: Date = new Date(), initialWeek?: numbe
   const [currentDate, setCurrentDate] = useState(initialDate);
   // On initialise la semaine active : soit forcée par props (navigation dashboard), soit calculée via la date
   const [activeWeek, setActiveWeek] = useState(() => initialWeek ?? getWeekFromDate(initialDate));
-  const [searchQuery, setSearchQuery] = useState('');
+
+  // Recherche AVEC PERSISTANCE
+  const [searchQuery, setSearchQuery] = useState(() => {
+    return localStorage.getItem("plannerUI_searchQuery") || "";
+  });
+
+  // Sauvegarder la recherche
+  const setSearchQueryPersist = (query: string) => {
+    setSearchQuery(query);
+    localStorage.setItem("plannerUI_searchQuery", query);
+  };
 
   // États des modales
   const [confirmModal, setConfirmModal] = useState<{
@@ -33,10 +42,10 @@ export const usePlannerUI = (initialDate: Date = new Date(), initialWeek?: numbe
     isOpen: false,
     item: null,
     amount: 0,
-    paymentDate: new Date().toISOString().split('T')[0],
-    accountId: '',
-    label: '',
-    comments: ''
+    paymentDate: new Date().toISOString().split("T")[0],
+    accountId: "",
+    label: "",
+    comments: "",
   });
 
   const [uncheckModal, setUncheckModal] = useState<{
@@ -44,7 +53,7 @@ export const usePlannerUI = (initialDate: Date = new Date(), initialWeek?: numbe
     item: PlannedItem | null;
   }>({
     isOpen: false,
-    item: null
+    item: null,
   });
 
   const handlePrevMonth = () => {
@@ -64,16 +73,16 @@ export const usePlannerUI = (initialDate: Date = new Date(), initialWeek?: numbe
       isOpen: true,
       item,
       amount: item.amount,
-      paymentDate: new Date().toISOString().split('T')[0],
+      paymentDate: new Date().toISOString().split("T")[0],
       accountId: defaultAccountId,
       label: item.label,
-      comments: item.comments || ''
+      comments: item.comments || "",
     });
   };
 
-  const closeConfirmModal = () => setConfirmModal(prev => ({ ...prev, isOpen: false }));
+  const closeConfirmModal = () => setConfirmModal((prev) => ({ ...prev, isOpen: false }));
   const openUncheckModal = (item: PlannedItem) => setUncheckModal({ isOpen: true, item });
-  const closeUncheckModal = () => setUncheckModal(prev => ({ ...prev, isOpen: false }));
+  const closeUncheckModal = () => setUncheckModal((prev) => ({ ...prev, isOpen: false }));
 
   return {
     currentDate,
@@ -82,13 +91,13 @@ export const usePlannerUI = (initialDate: Date = new Date(), initialWeek?: numbe
     confirmModal,
     uncheckModal,
     setActiveWeek,
-    setSearchQuery,
+    setSearchQuery: setSearchQueryPersist,
     setConfirmModal,
     handlePrevMonth,
     handleNextMonth,
     openConfirmModal,
     closeConfirmModal,
     openUncheckModal,
-    closeUncheckModal
+    closeUncheckModal,
   };
 };

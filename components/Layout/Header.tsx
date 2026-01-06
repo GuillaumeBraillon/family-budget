@@ -1,27 +1,28 @@
+import React from "react";
+import { WalletCards, LayoutDashboard, CalendarCheck, Settings, Calculator, ArrowRightLeft, Download } from "lucide-react";
+import { Session } from "@supabase/supabase-js";
+import { usePWAInstall } from "../../hooks/usePWAInstall";
+import { UserMenu } from "./UserMenu";
 
-import React from 'react';
-import { WalletCards, LayoutDashboard, CalendarCheck, Settings, PiggyBank, Calculator, ArrowRightLeft, Download, LogOut, User } from 'lucide-react';
-import { usePWAInstall } from '../../hooks/usePWAInstall';
-
-type ViewState = 'dashboard' | 'balances' | 'planner' | 'transfers' | 'savings' | 'config';
+type ViewState = "dashboard" | "balances" | "planner" | "transfers" | "config";
 
 interface HeaderProps {
   currentView: ViewState;
   onViewChange: (view: ViewState) => void;
   onLogout: () => void;
   userEmail?: string;
+  session?: Session | null;
 }
 
-export const Header: React.FC<HeaderProps> = ({ currentView, onViewChange, onLogout, userEmail }) => {
+export const Header: React.FC<HeaderProps> = ({ currentView, onViewChange, onLogout, userEmail, session }) => {
   const { isInstallable, install } = usePWAInstall();
-  
+
   const navItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard /> },
-    { id: 'balances', label: 'Soldes', icon: <Calculator /> },
-    { id: 'planner', label: 'Opérations', icon: <CalendarCheck /> },
-    { id: 'transfers', label: 'Virements', icon: <ArrowRightLeft /> },
-    { id: 'savings', label: 'Épargne', icon: <PiggyBank /> },
-    { id: 'config', label: 'Réglages', icon: <Settings /> },
+    { id: "dashboard", label: "Dashboard", icon: <LayoutDashboard /> },
+    { id: "balances", label: "Soldes", icon: <Calculator /> },
+    { id: "planner", label: "Opérations", icon: <CalendarCheck /> },
+    { id: "transfers", label: "Comptes", icon: <ArrowRightLeft /> },
+    { id: "config", label: "Réglages", icon: <Settings /> },
   ] as const;
 
   return (
@@ -29,58 +30,42 @@ export const Header: React.FC<HeaderProps> = ({ currentView, onViewChange, onLog
       {/* HEADER DESKTOP & MOBILE TITLE */}
       <header className="bg-white border-b sticky top-0 z-30 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 h-16 flex justify-between items-center">
-          <div 
-            className="flex items-center gap-2 cursor-pointer group" 
-            onClick={() => onViewChange('dashboard')}
-          >
+          <div className="flex items-center gap-2 cursor-pointer group" onClick={() => onViewChange("dashboard")}>
             <div className="bg-indigo-600 p-2 rounded-lg group-hover:scale-110 transition-transform">
               <WalletCards className="text-white h-5 w-5" />
             </div>
-            <h1 className="text-lg font-bold text-slate-900 hidden sm:block">Budget <span className="text-indigo-600">Famille</span></h1>
+            <h1 className="text-lg font-bold text-slate-900 hidden sm:block">
+              Budget <span className="text-indigo-600">Famille</span>
+            </h1>
           </div>
-          
+
           <div className="flex items-center gap-3">
             {/* BOUTON PWA INSTALL */}
             {isInstallable && (
-                <button 
-                    onClick={install}
-                    className="flex items-center gap-1.5 bg-indigo-50 text-indigo-600 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-indigo-100 transition-colors animate-in fade-in slide-in-from-top-2"
-                >
-                    <Download size={14} />
-                    <span className="hidden sm:inline">Installer</span>
-                </button>
+              <button
+                onClick={install}
+                className="flex items-center gap-1.5 bg-indigo-50 text-indigo-600 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-indigo-100 transition-colors animate-in fade-in slide-in-from-top-2"
+              >
+                <Download size={14} />
+                <span className="hidden sm:inline">Installer</span>
+              </button>
             )}
 
             {/* DESKTOP NAV */}
             <nav className="hidden md:flex bg-slate-100 p-1 rounded-xl">
-                {navItems.map(item => (
-                <NavBtn 
-                    key={item.id}
-                    active={currentView === item.id} 
-                    onClick={() => onViewChange(item.id)} 
-                    icon={React.cloneElement(item.icon as React.ReactElement<any>, { size: 16 })} 
-                    label={item.label} 
+              {navItems.map((item) => (
+                <NavBtn
+                  key={item.id}
+                  active={currentView === item.id}
+                  onClick={() => onViewChange(item.id)}
+                  icon={React.cloneElement(item.icon as React.ReactElement<any>, { size: 16 })}
+                  label={item.label}
                 />
-                ))}
+              ))}
             </nav>
 
             {/* USER & LOGOUT */}
-            <div className="flex items-center gap-2 pl-2 border-l border-slate-100 ml-2">
-                <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 md:hidden" title={userEmail}>
-                    <User size={16} />
-                </div>
-                <div className="hidden md:flex flex-col items-end mr-1">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Connecté</span>
-                    <span className="text-xs font-medium text-slate-700 max-w-[100px] truncate">{userEmail?.split('@')[0]}</span>
-                </div>
-                <button 
-                    onClick={onLogout}
-                    className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
-                    title="Se déconnecter"
-                >
-                    <LogOut size={18} />
-                </button>
-            </div>
+            <UserMenu userEmail={userEmail} onLogout={onLogout} session={session} />
           </div>
         </div>
       </header>
@@ -88,14 +73,14 @@ export const Header: React.FC<HeaderProps> = ({ currentView, onViewChange, onLog
       {/* MOBILE BOTTOM NAV */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-40 pb-[env(safe-area-inset-bottom)] shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
         <div className="flex justify-between items-center h-16 px-1">
-          {navItems.map(item => (
-             <MobileNavBtn 
-                key={item.id}
-                active={currentView === item.id} 
-                onClick={() => onViewChange(item.id)} 
-                icon={React.cloneElement(item.icon as React.ReactElement<any>, { size: 20 })} 
-                label={item.label} 
-             />
+          {navItems.map((item) => (
+            <MobileNavBtn
+              key={item.id}
+              active={currentView === item.id}
+              onClick={() => onViewChange(item.id)}
+              icon={React.cloneElement(item.icon as React.ReactElement<any>, { size: 20 })}
+              label={item.label}
+            />
           ))}
         </div>
       </nav>
@@ -103,15 +88,11 @@ export const Header: React.FC<HeaderProps> = ({ currentView, onViewChange, onLog
   );
 };
 
-const NavBtn: React.FC<{ active: boolean; onClick: () => void; icon: React.ReactNode; label: string }> = ({ 
-  active, onClick, icon, label 
-}) => (
-  <button 
-    onClick={onClick} 
+const NavBtn: React.FC<{ active: boolean; onClick: () => void; icon: React.ReactNode; label: string }> = ({ active, onClick, icon, label }) => (
+  <button
+    onClick={onClick}
     className={`px-3 lg:px-4 py-1.5 text-sm font-semibold rounded-lg transition-all flex items-center gap-2 whitespace-nowrap ${
-      active 
-        ? 'bg-white text-indigo-600 shadow-sm' 
-        : 'text-slate-500 hover:text-slate-900'
+      active ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500 hover:text-slate-900"
     }`}
   >
     {icon}
@@ -119,22 +100,14 @@ const NavBtn: React.FC<{ active: boolean; onClick: () => void; icon: React.React
   </button>
 );
 
-const MobileNavBtn: React.FC<{ active: boolean; onClick: () => void; icon: React.ReactNode; label: string }> = ({ 
-  active, onClick, icon, label 
-}) => (
-  <button 
-    onClick={onClick} 
+const MobileNavBtn: React.FC<{ active: boolean; onClick: () => void; icon: React.ReactNode; label: string }> = ({ active, onClick, icon, label }) => (
+  <button
+    onClick={onClick}
     className={`flex-1 flex flex-col items-center justify-center gap-1 h-full transition-all active:scale-95 ${
-      active 
-        ? 'text-indigo-600' 
-        : 'text-slate-400 hover:text-slate-600'
+      active ? "text-indigo-600" : "text-slate-400 hover:text-slate-600"
     }`}
   >
-    <div className={`p-1 rounded-full transition-colors duration-300 ${active ? 'bg-indigo-50 translate-y-[-2px]' : ''}`}>
-      {icon}
-    </div>
-    <span className={`text-[9px] font-bold leading-none ${active ? 'text-indigo-600' : 'text-slate-400'}`}>
-        {label === 'Opérations' ? 'Opés' : label}
-    </span>
+    <div className={`p-1 rounded-full transition-colors duration-300 ${active ? "bg-indigo-50 translate-y-[-2px]" : ""}`}>{icon}</div>
+    <span className={`text-[9px] font-bold leading-none ${active ? "text-indigo-600" : "text-slate-400"}`}>{label === "Opérations" ? "Opés" : label}</span>
   </button>
 );

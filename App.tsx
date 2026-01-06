@@ -1,40 +1,56 @@
+import React, { useState, useEffect } from "react";
+import { Loader2, AlertCircle } from "lucide-react";
+import { useBudget } from "./hooks/useBudget";
+import { useAuth } from "./hooks/useAuth";
+import { useAuthorization } from "./hooks/useAuthorization";
+import { useConfigurationUI, ConfigTab } from "./hooks/useConfigurationUI";
+import { Header } from "./components/Layout/Header";
+import { DashboardView } from "./components/features/Dashboard/DashboardView";
+import { BalancesView } from "./components/features/Balances/BalancesView";
+import { OperationsView } from "./components/features/Operations/OperationsView";
+import { TransfersView } from "./components/features/Transfers/TransfersView";
+import { ConfigurationView } from "./components/features/Configuration/ConfigurationView";
+import { SupabaseSetup } from "./components/Configuration/SupabaseSetup";
+import { LoginView } from "./components/features/Auth/LoginView";
+import { UnauthorizedView } from "./components/features/Auth/UnauthorizedView";
+import { WelcomeEmptyState } from "./components/features/Dashboard/components/WelcomeEmptyState";
+import { isSupabaseConfigured } from "./services/supabase";
+import { OperationFilters } from "./types";
 
-import React, { useState, useEffect } from 'react';
-import { Loader2, AlertCircle } from 'lucide-react';
-import { useBudget } from './hooks/useBudget';
-import { useAuth } from './hooks/useAuth';
-import { useConfigurationUI, ConfigTab } from './hooks/useConfigurationUI';
-import { Header } from './components/Layout/Header';
-import { DashboardView } from './components/features/Dashboard/DashboardView';
-import { BalancesView } from './components/features/Balances/BalancesView';
-import { OperationsView } from './components/features/Operations/OperationsView';
-import { TransfersView } from './components/features/Transfers/TransfersView';
-import { SavingsView } from './components/features/Savings/SavingsView';
-import { ConfigurationView } from './components/features/Configuration/ConfigurationView';
-import { SupabaseSetup } from './components/Configuration/SupabaseSetup';
-import { LoginView } from './components/features/Auth/LoginView';
-import { WelcomeEmptyState } from './components/features/Dashboard/components/WelcomeEmptyState';
-import { isSupabaseConfigured, resetSupabaseConfig } from './services/supabase';
-import { OperationFilters } from './types';
+type ViewState = "dashboard" | "balances" | "planner" | "transfers" | "config";
 
-type ViewState = 'dashboard' | 'balances' | 'planner' | 'transfers' | 'savings' | 'config';
-
-const VIEWS: ViewState[] = ['dashboard', 'balances', 'planner', 'transfers', 'savings', 'config'];
+const VIEWS: ViewState[] = ["dashboard", "balances", "planner", "transfers", "config"];
 
 const App: React.FC = () => {
   // 1. Authentification & Configuration
   const [isConfigured, setIsConfigured] = useState(isSupabaseConfigured());
   const { session, loading: authLoading, signInWithGoogle, signOut, error: authError } = useAuth();
 
-  // 2. État UI
-  const [currentView, setCurrentView] = useState<ViewState>('dashboard');
+  // 2. Autorisation (whitelist)
+  const { isAuthorized, loading: authzLoading, error: authzError } = useAuthorization(session);
+
+  // 3. État UI
+  const [currentView, setCurrentView] = useState<ViewState>("dashboard");
   const [plannerContext, setPlannerContext] = useState<{ date: Date; weekNumber?: number; filters?: Partial<OperationFilters> } | null>(null);
-  
-  // 3. Données Budget (ne chargent que si authentifié)
-  const { 
-    accounts, configs, incomeConfigs, categories, people, 
-    paidItems, settings, transfers, variableTransactions, savedLabels, tags,
-    loading: budgetLoading, error: budgetError, isDbEmpty, actions 
+
+  // 4. Données Budget (ne chargent que si authentifié ET autorisé)
+  const {
+    accounts,
+    configs,
+    incomeConfigs,
+    categories,
+    people,
+    paidItems,
+    settings,
+    transfers,
+    variableTransactions,
+    savedLabels,
+    tags,
+    authorizedUsers,
+    loading: budgetLoading,
+    error: budgetError,
+    isDbEmpty,
+    actions,
   } = useBudget();
 
   const { activeTab, setActiveTab } = useConfigurationUI();
@@ -49,19 +65,19 @@ const App: React.FC = () => {
     let isScrollable = false;
     let el = target;
     while (el && el !== e.currentTarget && el !== document.body) {
-        if (el.scrollWidth > el.clientWidth) {
-             const style = window.getComputedStyle(el);
-             if (['auto', 'scroll'].includes(style.overflowX) || ['auto', 'scroll'].includes(style.overflow)) {
-                 isScrollable = true;
-                 break;
-             }
+      if (el.scrollWidth > el.clientWidth) {
+        const style = window.getComputedStyle(el);
+        if (["auto", "scroll"].includes(style.overflowX) || ["auto", "scroll"].includes(style.overflow)) {
+          isScrollable = true;
+          break;
         }
-        el = el.parentElement as HTMLElement;
+      }
+      el = el.parentElement as HTMLElement;
     }
     if (!isScrollable) {
-        setTouchStart({ x: e.targetTouches[0].clientX, y: e.targetTouches[0].clientY });
+      setTouchStart({ x: e.targetTouches[0].clientX, y: e.targetTouches[0].clientY });
     } else {
-        setTouchStart(null);
+      setTouchStart(null);
     }
   };
 
@@ -78,13 +94,13 @@ const App: React.FC = () => {
     const isLeftSwipe = xDist > minSwipeDistance;
     const isRightSwipe = xDist < -minSwipeDistance;
     if (isLeftSwipe || isRightSwipe) {
-        const currentIndex = VIEWS.indexOf(currentView);
-        if (isLeftSwipe && currentIndex < VIEWS.length - 1) {
-            setCurrentView(VIEWS[currentIndex + 1]);
-        }
-        if (isRightSwipe && currentIndex > 0) {
-            setCurrentView(VIEWS[currentIndex - 1]);
-        }
+      const currentIndex = VIEWS.indexOf(currentView);
+      if (isLeftSwipe && currentIndex < VIEWS.length - 1) {
+        setCurrentView(VIEWS[currentIndex + 1]);
+      }
+      if (isRightSwipe && currentIndex > 0) {
+        setCurrentView(VIEWS[currentIndex - 1]);
+      }
     }
   };
   // -------------------
@@ -93,25 +109,22 @@ const App: React.FC = () => {
     setIsConfigured(isSupabaseConfigured());
   }, []);
 
-  // Déclencher le chargement des données SI configuré ET authentifié
-  useEffect(() => {
-    if (isConfigured && session) {
-      actions.loadData();
-    }
-  }, [isConfigured, session]); // actions n'est pas dans les dépendances pour éviter les boucles, mais loadData est stable
+  // SUPPRIMÉ : Ne plus recharger automatiquement les données
+  // Les données sont chargées UNE FOIS dans useBudget au montage initial
 
   const navigateToConfig = (tab: ConfigTab) => {
     setActiveTab(tab);
-    setCurrentView('config');
+    setCurrentView("config");
   };
 
   const navigateToPlannerWithContext = (date: Date, filters?: Partial<OperationFilters>, weekNumber?: number) => {
     setPlannerContext({ date, filters, weekNumber });
-    setCurrentView('planner');
+    setCurrentView("planner");
   };
 
   const handleResetConnection = () => {
-    resetSupabaseConfig();
+    localStorage.removeItem("SUPABASE_PROJECT_ID");
+    localStorage.removeItem("SUPABASE_ANON_KEY");
     setIsConfigured(false);
   };
 
@@ -119,7 +132,13 @@ const App: React.FC = () => {
 
   // 1. Setup Supabase manquant
   if (!isConfigured) {
-    return <SupabaseSetup onConfigured={() => { setIsConfigured(true); }} />;
+    return (
+      <SupabaseSetup
+        onConfigured={() => {
+          setIsConfigured(true);
+        }}
+      />
+    );
   }
 
   // 2. Chargement de l'Auth
@@ -137,7 +156,22 @@ const App: React.FC = () => {
     return <LoginView onLogin={signInWithGoogle} loading={authLoading} error={authError} />;
   }
 
-  // 4. Chargement des données métier (après auth)
+  // 4. Vérification autorisation (whitelist)
+  if (authzLoading) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 text-slate-400 gap-4">
+        <Loader2 size={48} className="animate-spin text-indigo-600" />
+        <p className="text-sm font-medium animate-pulse">Vérification des autorisations...</p>
+      </div>
+    );
+  }
+
+  // 5. Non autorisé -> Accès refusé
+  if (isAuthorized === false) {
+    return <UnauthorizedView userEmail={session.user.email} onLogout={signOut} />;
+  }
+
+  // 6. Chargement des données métier (après auth + autorisation)
   if (budgetLoading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 text-slate-400 gap-4">
@@ -147,7 +181,7 @@ const App: React.FC = () => {
     );
   }
 
-  // 5. Erreur Globale Données
+  // 7. Erreur Globale Données
   if (budgetError) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
@@ -157,10 +191,7 @@ const App: React.FC = () => {
           </div>
           <h2 className="text-xl font-bold text-slate-900 mb-2">Une erreur est survenue</h2>
           <p className="text-slate-500 mb-6">{budgetError}</p>
-          <button 
-            onClick={() => actions.loadData()}
-            className="bg-slate-900 text-white px-6 py-2 rounded-lg font-bold hover:bg-slate-800 transition-colors"
-          >
+          <button onClick={() => actions.loadData()} className="bg-slate-900 text-white px-6 py-2 rounded-lg font-bold hover:bg-slate-800 transition-colors">
             Réessayer
           </button>
         </div>
@@ -169,39 +200,24 @@ const App: React.FC = () => {
   }
 
   // 6. Application Principale
-  if (isDbEmpty && currentView !== 'config') {
+  if (isDbEmpty && currentView !== "config") {
     return (
       <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
-        <Header 
-            currentView={currentView} 
-            onViewChange={setCurrentView} 
-            onLogout={signOut}
-            userEmail={session.user.email}
-        />
+        <Header currentView={currentView} onViewChange={setCurrentView} onLogout={signOut} userEmail={session.user.email} session={session} />
         <main className="max-w-7xl mx-auto px-4 py-8 pb-24 md:pb-8">
-           <WelcomeEmptyState onStartConfig={() => navigateToConfig('family')} />
+          <WelcomeEmptyState onStartConfig={() => navigateToConfig("family")} />
         </main>
       </div>
     );
   }
 
   return (
-    <div 
-        className="min-h-screen bg-slate-50 font-sans text-slate-900"
-        onTouchStart={onTouchStart}
-        onTouchMove={onTouchMove}
-        onTouchEnd={onTouchEnd}
-    >
-      <Header 
-        currentView={currentView} 
-        onViewChange={setCurrentView} 
-        onLogout={signOut}
-        userEmail={session.user.email}
-      />
-      
+    <div className="min-h-screen bg-slate-50 font-sans text-slate-900" onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
+      <Header currentView={currentView} onViewChange={setCurrentView} onLogout={signOut} userEmail={session.user.email} session={session} />
+
       <main className="max-w-7xl mx-auto px-4 py-8 pb-24 md:pb-8">
-        {currentView === 'dashboard' && (
-          <DashboardView 
+        {currentView === "dashboard" && (
+          <DashboardView
             accounts={accounts}
             people={people}
             configs={configs}
@@ -212,12 +228,12 @@ const App: React.FC = () => {
             variableTransactions={variableTransactions}
             categories={categories}
             onNavigateToPlanner={navigateToPlannerWithContext}
-            onNavigateToConfig={() => navigateToConfig('general')}
+            onNavigateToConfig={() => navigateToConfig("general")}
           />
         )}
 
-        {currentView === 'balances' && (
-          <BalancesView 
+        {currentView === "balances" && (
+          <BalancesView
             accounts={accounts}
             people={people}
             configs={configs}
@@ -230,8 +246,8 @@ const App: React.FC = () => {
           />
         )}
 
-        {currentView === 'planner' && (
-          <OperationsView 
+        {currentView === "planner" && (
+          <OperationsView
             initialDate={plannerContext?.date}
             initialWeek={plannerContext?.weekNumber}
             initialFilters={plannerContext?.filters}
@@ -252,36 +268,24 @@ const App: React.FC = () => {
           />
         )}
 
-        {currentView === 'transfers' && (
-          <TransfersView 
-            transfers={transfers} 
+        {currentView === "transfers" && (
+          <TransfersView
+            transfers={transfers}
+            variableTransactions={variableTransactions}
             accounts={accounts}
             people={people}
             settings={settings}
             categories={categories}
             savedLabels={savedLabels}
             onUpsertTransfer={actions.upsertTransfer}
-            onDeleteTransfer={actions.deleteTransfer}
-          />
-        )}
-
-        {currentView === 'savings' && (
-          <SavingsView 
-            accounts={accounts} 
-            transfers={transfers} 
-            variableTransactions={variableTransactions}
-            settings={settings}
-            categories={categories}
-            savedLabels={savedLabels} 
-            onUpsertTransfer={actions.upsertTransfer} 
             onUpsertTransaction={actions.upsertVariableTransaction}
-            onDeleteTransfer={actions.deleteTransfer} 
-            onNavigateToConfig={() => navigateToConfig('accounts')} 
+            onDeleteTransfer={actions.deleteTransfer}
+            onMoveTransfer={actions.moveTransfer}
           />
         )}
 
-        {currentView === 'config' && (
-          <ConfigurationView 
+        {currentView === "config" && (
+          <ConfigurationView
             configs={configs}
             incomeConfigs={incomeConfigs}
             categories={categories}
@@ -290,6 +294,8 @@ const App: React.FC = () => {
             settings={settings}
             savedLabels={savedLabels}
             tags={tags}
+            authorizedUsers={authorizedUsers}
+            session={session}
             activeTab={activeTab}
             setActiveTab={setActiveTab}
             onUpdateCategories={actions.upsertCategory}
@@ -311,6 +317,9 @@ const App: React.FC = () => {
             onImportVirLabels={actions.importVirLabels}
             onUpsertTag={actions.upsertTag}
             onDeleteTag={actions.deleteTag}
+            onToggleUserAuthorization={actions.toggleUserAuthorization}
+            onUpdateUserNotes={actions.updateUserNotes}
+            onDeleteUser={actions.deleteAuthorizedUser}
           />
         )}
       </main>

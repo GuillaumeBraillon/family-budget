@@ -1,7 +1,6 @@
-
-import { useState, useEffect } from 'react';
-import { supabase } from '../services/supabase';
-import { Session } from '@supabase/supabase-js';
+import { useState, useEffect } from "react";
+import { supabase } from "../services/supabase";
+import { Session } from "@supabase/supabase-js";
 
 export const useAuth = () => {
   const [session, setSession] = useState<Session | null>(null);
@@ -12,7 +11,7 @@ export const useAuth = () => {
     // 1. Récupérer la session actuelle au chargement
     supabase.auth.getSession().then(({ data: { session }, error }) => {
       if (error) {
-        console.error('Error getting session:', error);
+        console.error("Error getting session:", error);
         setError(error.message);
       }
       setSession(session);
@@ -33,7 +32,7 @@ export const useAuth = () => {
   const signInWithGoogle = async () => {
     setLoading(true);
     const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
+      provider: "google",
       options: {
         redirectTo: window.location.origin,
       },
@@ -56,6 +55,6 @@ export const useAuth = () => {
     error,
     signInWithGoogle,
     signOut,
-    user: session?.user
+    user: session?.user,
   };
 };
