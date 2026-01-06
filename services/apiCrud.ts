@@ -195,8 +195,8 @@ export const apiUpsertConfig = async (config: ExpenseConfig) =>
     beneficiary_id: config.beneficiaryId,
     account_id: config.accountId,
     day_of_month: config.dayOfMonth,
-    start_month: config.startMonth,
-    end_month: config.endMonth,
+    start_month: config.startMonth || undefined,
+    end_month: config.endMonth || undefined,
     is_extra: config.isExtra,
     tag_ids: config.tagIds || [],
   });
@@ -218,8 +218,8 @@ export const apiUpsertIncome = async (income: IncomeConfig) =>
     sub_category: income.subCategory,
     is_extra: income.isExtra,
     is_salary: income.isSalary,
-    start_month: income.startMonth,
-    end_month: income.endMonth,
+    start_month: income.startMonth || undefined,
+    end_month: income.endMonth || undefined,
     tag_ids: income.tagIds || [],
   });
 

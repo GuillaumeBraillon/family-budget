@@ -8,6 +8,12 @@
 -- =====================================================
 
 -- =====================================
+-- 0. ACTIVATION EXTENSIONS REQUISES
+-- =====================================
+-- Extension pour recherche full-text trigramme
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
+-- =====================================
 -- 1. INDEX SUR CLÉS ÉTRANGÈRES
 -- =====================================
 -- PostgreSQL ne crée PAS automatiquement d'index sur les FK
@@ -114,10 +120,9 @@ CREATE INDEX IF NOT EXISTS idx_paid_items_label_trgm
 -- 7. INDEX RECHERCHE PAR PÉRIODE
 -- =====================================
 -- Pour requêtes "entre deux dates" (DashboardView, BalancesView)
-
-CREATE INDEX IF NOT EXISTS idx_paid_items_month 
-  ON paid_items(DATE_TRUNC('month', payment_date), account_id);
--- Permet requêtes ultra-rapides par mois
+-- Note: Index fonctionnel DATE_TRUNC non supporté (nécessite fonction IMMUTABLE)
+-- Alternative: Filtrer avec WHERE payment_date >= '2025-01-01' AND payment_date < '2025-02-01'
+-- Les index existants (idx_paid_items_planner, idx_paid_items_date) sont suffisants
 
 -- =====================================
 -- 8. ANALYSE DES TABLES
@@ -138,7 +143,9 @@ ANALYZE tags;
 -- =====================================
 -- VÉRIFICATION POST-MIGRATION
 -- =====================================
+-- Décommentez et exécutez manuellement après la création des index
 
+/*
 -- Lister tous les index créés
 SELECT 
   schemaname, 
@@ -163,6 +170,7 @@ FROM pg_stat_user_indexes
 WHERE schemaname = 'public'
 ORDER BY idx_scan DESC
 LIMIT 20;
+*/
 
 -- =====================================
 -- ROLLBACK (si problème)

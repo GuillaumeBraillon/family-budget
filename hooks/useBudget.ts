@@ -16,6 +16,7 @@ import {
   AuthorizedUser,
 } from "../types";
 import { logger } from "../services/logger";
+import { formatDatabaseError } from "../services/errorFormatter";
 import {
   fetchInitialData,
   apiToggleUserAuthorization,
@@ -366,7 +367,8 @@ export const useBudget = () => {
         return res;
       } catch (err: any) {
         logger.error("❌ wrapCrud: Erreur", err);
-        setError(err.message || "Erreur lors de l'opération");
+        const userMessage = formatDatabaseError(err.message || "Erreur lors de l'opération");
+        setError(userMessage);
         return { error: err };
       }
     };

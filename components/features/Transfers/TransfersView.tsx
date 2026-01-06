@@ -328,7 +328,7 @@ export const TransfersView: React.FC<TransfersViewProps> = ({
         isExtra: false,
         type: "EXPENSE",
         // On utilise comments pour passer l'ID de destination au formulaire via le mode 'TRANSFER'
-        comments: t.destinationAccountId,
+        comments: item.destinationAccountId,
       };
       setEditingTransfer(item); // On garde le vrai objet pour la suppression
       setEditingVar(mockTx);

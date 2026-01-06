@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { Trash2, Save } from "lucide-react";
 import { ExpenseConfig, CategoryDef, Person, Account } from "../../../../../types";
 import { CategorySelector } from "../../../../ui/molecules/CategorySelector";
@@ -24,6 +24,16 @@ export const ExpenseRulesEditor: React.FC<ExpenseRulesEditorProps> = ({ configs,
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const errorBlockRef = useRef<HTMLDivElement>(null);
+
+  // Scroller vers le bloc d'erreur quand des erreurs apparaissent
+  useEffect(() => {
+    if (validationErrors.length > 0 && errorBlockRef.current) {
+      errorBlockRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      errorBlockRef.current.focus();
+    }
+  }, [validationErrors]);
 
   const [sortKey, setSortKey] = useState<string>("dayOfMonth");
   const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
@@ -81,6 +91,7 @@ export const ExpenseRulesEditor: React.FC<ExpenseRulesEditorProps> = ({ configs,
     setEditingId(null);
     setIsFormOpen(false);
     setShowDeleteConfirm(false);
+    setValidationErrors([]);
   };
 
   const handleEdit = (config: ExpenseConfig) => {
@@ -108,7 +119,21 @@ export const ExpenseRulesEditor: React.FC<ExpenseRulesEditorProps> = ({ configs,
   };
 
   const handleSubmit = () => {
-    if (!formData.label || !formData.amount) return;
+    const errors: string[] = [];
+
+    if (!formData.label?.trim()) errors.push("Le libellé est obligatoire");
+    if (!formData.amount || formData.amount <= 0) errors.push("Le montant est obligatoire et doit être positif");
+    if (!formData.dayOfMonth || formData.dayOfMonth < 1 || formData.dayOfMonth > 31) errors.push("Le jour du mois doit être entre 1 et 31");
+    if (!formData.category) errors.push("La catégorie est obligatoire");
+    if (!formData.accountId) errors.push("Le compte est obligatoire");
+    if (!formData.beneficiaryId) errors.push("Le bénéficiaire est obligatoire");
+
+    if (errors.length > 0) {
+      setValidationErrors(errors);
+      return;
+    }
+
+    setValidationErrors([]);
     const finalConfig: ExpenseConfig = {
       id: editingId || Date.now().toString(),
       ...(formData as any),
@@ -171,6 +196,21 @@ export const ExpenseRulesEditor: React.FC<ExpenseRulesEditorProps> = ({ configs,
 
       <Modal isOpen={isFormOpen} onClose={resetForm} title={editingId ? "Modifier la dépense" : "Nouvelle Dépense Récurrente"}>
         <div className="space-y-4">
+          {validationErrors.length > 0 && (
+            <div
+              ref={errorBlockRef}
+              tabIndex={-1}
+              className="bg-rose-50 border border-rose-200 rounded-xl p-3 animate-in fade-in slide-in-from-top-2 duration-200 outline-none focus:ring-2 focus:ring-rose-300"
+            >
+              <p className="text-xs font-bold text-rose-700 mb-1">⚠️ Champs manquants :</p>
+              <ul className="text-xs text-rose-600 space-y-0.5 list-disc list-inside">
+                {validationErrors.map((error, idx) => (
+                  <li key={idx}>{error}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           <TextInput
             label="Libellé"
             value={formData.label}
