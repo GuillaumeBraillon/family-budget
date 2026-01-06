@@ -40,7 +40,7 @@ interface FilterBarProps {
 export const FilterBar: React.FC<FilterBarProps> = ({ filters, onFilterChange, accounts, people, tags = [], hiddenFilters = [], onReset }) => {
   const [showAllFilters, setShowAllFilters] = useState(false);
 
-  const update = (key: keyof OperationFilters, value: any) => {
+  const update = <K extends keyof OperationFilters>(key: K, value: OperationFilters[K]) => {
     onFilterChange({ ...filters, [key]: value });
   };
 
@@ -48,13 +48,14 @@ export const FilterBar: React.FC<FilterBarProps> = ({ filters, onFilterChange, a
     if (onReset) {
       onReset();
     } else {
+      // Fallback si onReset n'est pas fourni
       onFilterChange({
         flux: "ALL",
-        source: "ALL",
-        status: "ALL",
-        extra: "ALL",
+        source: "VARIABLE",
+        status: "REAL",
+        extra: "EXCLUDE",
         transfer: "EXCLUDE",
-        salary: "EXCLUDE", // Remet à EXCLUDE pour masquer par défaut
+        salary: "EXCLUDE",
         accountIds: [],
         beneficiaryIds: [],
         includedTagIds: [],

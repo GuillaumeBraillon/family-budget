@@ -1,12 +1,11 @@
-
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
 
 export const usePWAInstall = () => {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [isInstallable, setIsInstallable] = useState(false);
 
   useEffect(() => {
-    const handler = (e: any) => {
+    const handler = (e: Event) => {
       // Empêcher Chrome d'afficher la bannière automatiquement
       e.preventDefault();
       // Stocker l'événement pour le déclencher plus tard
@@ -14,10 +13,10 @@ export const usePWAInstall = () => {
       setIsInstallable(true);
     };
 
-    window.addEventListener('beforeinstallprompt', handler);
+    window.addEventListener("beforeinstallprompt", handler);
 
     return () => {
-      window.removeEventListener('beforeinstallprompt', handler);
+      window.removeEventListener("beforeinstallprompt", handler);
     };
   }, []);
 
@@ -29,8 +28,8 @@ export const usePWAInstall = () => {
 
     // Attendre la réponse de l'utilisateur
     const { outcome } = await deferredPrompt.userChoice;
-    
-    if (outcome === 'accepted') {
+
+    if (outcome === "accepted") {
       setDeferredPrompt(null);
       setIsInstallable(false);
     }

@@ -1,6 +1,7 @@
 import { supabase, isSupabaseConfigured } from "./supabase";
 import * as mappers from "./apiMappers";
-import { AppSettings } from "../types";
+import { AppSettings, VariableTransaction } from "../types";
+import { DbPaidItem } from "./dbTypes";
 import {
   apiToggleUserAuthorization,
   apiUpdateUserNotes,
@@ -85,9 +86,9 @@ export const fetchInitialData = async () => {
   const authorizedUsers = (authUsersRes.data || []).map(mappers.mapDbAuthorizedUser);
 
   const paidItems: Record<string, any> = {};
-  const variableTransactions: any[] = [];
+  const variableTransactions: VariableTransaction[] = [];
 
-  (paidItemsRes.data || []).forEach((item: any) => {
+  (paidItemsRes.data || []).forEach((item: DbPaidItem) => {
     const mapped = mappers.mapDbPaidItem(item);
     paidItems[item.instance_id] = mapped;
 

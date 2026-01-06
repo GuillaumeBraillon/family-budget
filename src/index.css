@@ -1,0 +1,28 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Styles globaux personnalisés */
+:root {
+  color-scheme: light;
+}
+
+body {
+  font-family: "Inter", sans-serif;
+  background-color: #f8fafc;
+  /* Prevent pull-to-refresh on mobile which feels web-like */
+  overscroll-behavior-y: none;
+}
+
+/* Force input text color to be dark, ensuring visibility on Android Dark Mode */
+input,
+select,
+textarea {
+  color: #0f172a !important; /* slate-900 */
+}
+
+/* Specific override for placeholders to ensure they are visible but distinct */
+::placeholder {
+  color: #94a3b8 !important; /* slate-400 */
+  opacity: 1;
+}

@@ -13,15 +13,16 @@ import {
   Tag,
   AuthorizedUser,
 } from "../types";
+import { DbPerson, DbAuthorizedUser, DbTag, DbAccount, DbCategory, DbSavedLabel, DbExpenseConfig, DbIncomeConfig, DbPaidItem, DbTransfer, DbSettings } from "./dbTypes";
 import { logger } from "./logger";
 
-export const mapDbPerson = (p: any): Person => ({
+export const mapDbPerson = (p: DbPerson): Person => ({
   id: p.id,
   name: p.name,
   isChild: p.is_child,
 });
 
-export const mapDbAuthorizedUser = (u: any): AuthorizedUser => {
+export const mapDbAuthorizedUser = (u: DbAuthorizedUser): AuthorizedUser => {
   logger.log("🗺️ Mapping user from DB:", { email: u.email, is_allowed: u.is_allowed, type: typeof u.is_allowed });
   return {
     email: u.email,
@@ -35,13 +36,13 @@ export const mapDbAuthorizedUser = (u: any): AuthorizedUser => {
   };
 };
 
-export const mapDbTag = (t: any): Tag => ({
+export const mapDbTag = (t: DbTag): Tag => ({
   id: t.id,
   name: t.name,
   color: t.color,
 });
 
-export const mapDbAccount = (a: any): Account => ({
+export const mapDbAccount = (a: DbAccount): Account => ({
   id: a.id,
   name: a.name,
   type: a.type as AccountType,
@@ -53,21 +54,21 @@ export const mapDbAccount = (a: any): Account => ({
   targetCap: a.target_cap !== null && a.target_cap !== undefined ? Number(a.target_cap) : undefined,
 });
 
-export const mapDbCategory = (c: any): CategoryDef => ({
+export const mapDbCategory = (c: DbCategory): CategoryDef => ({
   id: c.id,
   name: c.name,
   type: c.type || "EXPENSE",
   subCategories: c.sub_categories || [],
 });
 
-export const mapDbSavedLabel = (l: any): SavedLabel => ({
+export const mapDbSavedLabel = (l: DbSavedLabel): SavedLabel => ({
   id: l.id,
   name: l.name,
   type: l.type,
   isExpense: l.is_expense !== false, // Default true si null/undefined pour rétrocompatibilité
 });
 
-export const mapDbExpenseConfig = (c: any): ExpenseConfig => ({
+export const mapDbExpenseConfig = (c: DbExpenseConfig): ExpenseConfig => ({
   id: c.id,
   label: c.label,
   amount: c.amount ?? 0,
@@ -82,7 +83,7 @@ export const mapDbExpenseConfig = (c: any): ExpenseConfig => ({
   tagIds: c.tag_ids || [],
 });
 
-export const mapDbIncomeConfig = (i: any): IncomeConfig => ({
+export const mapDbIncomeConfig = (i: DbIncomeConfig): IncomeConfig => ({
   id: i.id,
   label: i.label,
   amount: i.amount ?? 0,
@@ -98,7 +99,7 @@ export const mapDbIncomeConfig = (i: any): IncomeConfig => ({
   tagIds: i.tag_ids || [],
 });
 
-export const mapDbPaidItem = (item: any): PaidItemDetails => ({
+export const mapDbPaidItem = (item: DbPaidItem): PaidItemDetails => ({
   instanceId: item.instance_id,
   amount: Number(item.amount),
   paymentDate: item.payment_date,
@@ -116,7 +117,7 @@ export const mapDbPaidItem = (item: any): PaidItemDetails => ({
   position: item.position !== null ? Number(item.position) : undefined,
 });
 
-export const mapDbTransfer = (t: any): Transfer => ({
+export const mapDbTransfer = (t: DbTransfer): Transfer => ({
   id: t.id,
   date: t.date,
   label: t.label,
@@ -127,7 +128,7 @@ export const mapDbTransfer = (t: any): Transfer => ({
   position: t.position !== null ? Number(t.position) : undefined,
 });
 
-export const mapDbVariableTransaction = (t: any): VariableTransaction => ({
+export const mapDbVariableTransaction = (t: DbPaidItem): VariableTransaction => ({
   id: t.id,
   date: t.date,
   label: t.label,
@@ -144,7 +145,7 @@ export const mapDbVariableTransaction = (t: any): VariableTransaction => ({
   position: t.position !== null ? Number(t.position) : undefined,
 });
 
-export const mapDbSettings = (data: any): AppSettings => {
+export const mapDbSettings = (data: DbSettings | null): AppSettings => {
   if (!data) return { monthly_envelope: 2000, period_type: "FIXED_DAYS", period_value: 7 };
   return {
     monthly_envelope: Number(data.monthly_envelope || 2000),

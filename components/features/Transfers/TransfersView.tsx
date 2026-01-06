@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { usePlannerUI } from "../../../hooks/usePlannerUI";
-import { Account, Person, Transfer, AppSettings, SavedLabel, AccountType, VariableTransaction } from "../../../types";
+import { Account, Person, Transfer, AppSettings, SavedLabel, AccountType, VariableTransaction, CategoryDef } from "../../../types";
 import { ArrowRightLeft, Filter, X, ArrowRight, GripVertical, Wallet, PiggyBank, TrendingUp } from "lucide-react";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from "@dnd-kit/sortable";
@@ -17,13 +17,16 @@ import { SortableRow } from "../../ui/molecules/SortableRow";
 import { VariableTransactionForm } from "../Operations/components/VariableTransactionForm";
 import { TransfersKPIs } from "./components/TransfersKPIs";
 
+// Type guard pour différencier Transfer et VariableTransaction
+const isTransfer = (item: any): item is Transfer => "sourceAccountId" in item;
+
 interface TransfersViewProps {
   transfers: Transfer[];
   variableTransactions: VariableTransaction[];
   accounts: Account[];
   people: Person[];
   settings: AppSettings;
-  categories: any[];
+  categories: CategoryDef[];
   savedLabels?: SavedLabel[];
   onUpsertTransfer: (t: Transfer) => void;
   onUpsertTransaction: (t: VariableTransaction) => void;
@@ -246,7 +249,7 @@ export const TransfersView: React.FC<TransfersViewProps> = ({
     });
 
     // 10. Calcul du solde \u00e9volutif (si compte sp\u00e9cifique s\u00e9lectionn\u00e9)
-    let history: any[] = [];
+    let history: Array<Transfer | VariableTransaction> = [];
     if (specificAccountId) {
       const chronological = [...combinedOps].sort((a, b) => {
         const timeDiff = new Date(a.date).getTime() - new Date(b.date).getTime();
@@ -258,7 +261,7 @@ export const TransfersView: React.FC<TransfersViewProps> = ({
       history = chronological.map((item) => {
         let deltaForAccount = 0;
 
-        if (item.source === "TRANSFER") {
+        if (isTransfer(item)) {
           const isCredit = item.destinationAccountId === specificAccountId;
           deltaForAccount = isCredit ? item.amount : -item.amount;
         } else {
@@ -292,52 +295,48 @@ export const TransfersView: React.FC<TransfersViewProps> = ({
     let fromSavings = 0;
     let internalChecking = 0;
 
-    currentItems
-      .filter((item) => item.source === "TRANSFER")
-      .forEach((item: any) => {
-        const source = accounts.find((a) => a.id === item.sourceAccountId);
-        const dest = accounts.find((a) => a.id === item.destinationAccountId);
+    currentItems.filter(isTransfer).forEach((item) => {
+      const source = accounts.find((a) => a.id === item.sourceAccountId);
+      const dest = accounts.find((a) => a.id === item.destinationAccountId);
 
-        const isSourceSavings = source?.type === AccountType.SAVINGS;
-        const isDestSavings = dest?.type === AccountType.SAVINGS;
+      const isSourceSavings = source?.type === AccountType.SAVINGS;
+      const isDestSavings = dest?.type === AccountType.SAVINGS;
 
-        if (isDestSavings && !isSourceSavings) {
-          toSavings += item.amount;
-        } else if (isSourceSavings && !isDestSavings) {
-          fromSavings += item.amount;
-        } else if (!isSourceSavings && !isDestSavings) {
-          internalChecking += item.amount;
-        }
-      });
+      if (isDestSavings && !isSourceSavings) {
+        toSavings += item.amount;
+      } else if (isSourceSavings && !isDestSavings) {
+        fromSavings += item.amount;
+      } else if (!isSourceSavings && !isDestSavings) {
+        internalChecking += item.amount;
+      }
+    });
 
     return { toSavings, fromSavings, internalChecking };
   }, [currentItems, accounts]);
 
-  const handleEdit = (item: any) => {
-    if (item.source === "TRANSFER") {
-      const t = item.transferData!;
+  const handleEdit = (item: Transfer | VariableTransaction) => {
+    if (isTransfer(item)) {
       // Mapping Transfer -> VariableTransaction pour réutiliser le formulaire
-      const mockTx: any = {
-        id: t.id,
-        date: t.date,
-        label: t.label,
-        amount: t.amount,
+      const mockTx: Partial<VariableTransaction> = {
+        id: item.id,
+        date: item.date,
+        label: item.label,
+        amount: item.amount,
         category: "Virement Interne",
-        accountId: t.sourceAccountId, // Source par défaut pour l'édition
+        accountId: item.sourceAccountId, // Source par défaut pour l'édition
         isWaiting: false,
         isExtra: false,
         type: "EXPENSE",
         // On utilise comments pour passer l'ID de destination au formulaire via le mode 'TRANSFER'
         comments: t.destinationAccountId,
       };
-      setEditingTransfer(t); // On garde le vrai objet pour la suppression
+      setEditingTransfer(item); // On garde le vrai objet pour la suppression
       setEditingVar(mockTx);
       setIsFormOpen(true);
     } else {
-      // Opération directe
-      const tx = item.directOpData!;
+      // Opération directe - item est déjà un VariableTransaction
       setEditingTransfer(null);
-      setEditingVar(tx);
+      setEditingVar(item);
       setIsFormOpen(true);
     }
   };

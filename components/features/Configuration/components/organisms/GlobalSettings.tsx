@@ -1,9 +1,10 @@
 import React from "react";
 import { Session } from "@supabase/supabase-js";
-import { AppSettings } from "../../../../../types";
+import { AppSettings, PeriodType } from "../../../../../types";
 import { MonthlyEnvelopeCard } from "../molecules/WeeklyEnvelopeCard";
 import { PeriodSettingsCard } from "../molecules/PeriodSettingsCard";
 import { DatabaseConnectionCard } from "../molecules/DatabaseConnectionCard";
+import { LocalStorageManager } from "../molecules/LocalStorageManager";
 
 interface GlobalSettingsProps {
   settings: AppSettings;
@@ -20,7 +21,7 @@ export const GlobalSettings: React.FC<GlobalSettingsProps> = ({ settings, onUpda
     onUpdate({ ...settings, monthly_envelope: newEnv });
   };
 
-  const updatePeriod = (type: any, value: number) => {
+  const updatePeriod = (type: PeriodType, value: number) => {
     onUpdate({ ...settings, period_type: type, period_value: value });
   };
 
@@ -31,7 +32,8 @@ export const GlobalSettings: React.FC<GlobalSettingsProps> = ({ settings, onUpda
         <PeriodSettingsCard settings={settings} onUpdate={updatePeriod} />
       </div>
 
-      <div className="border-t border-slate-200 pt-6">
+      <div className="border-t border-slate-200 pt-6 space-y-6">
+        <LocalStorageManager />
         <DatabaseConnectionCard onReset={onResetConnection} />
       </div>
     </div>
