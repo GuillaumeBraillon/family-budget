@@ -221,7 +221,7 @@ export const IncomeEditor: React.FC<IncomeEditorProps> = ({ incomeConfigs, peopl
               const val = e.target.value;
               setFormData((prev) => ({ ...prev, label: val }));
             }}
-            placeholder="Ex: Salaire Guillaume, CAF..."
+            placeholder="Ex: Salaire mensuel, CAF..."
             required
           />
 
