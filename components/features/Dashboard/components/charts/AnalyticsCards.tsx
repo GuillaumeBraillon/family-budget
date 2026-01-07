@@ -85,9 +85,9 @@ export const HealthCard: React.FC<AnalyticsProps> = ({ data, onNavigate }) => {
 // --- CARTE 2: FLUX DE TRÉSORERIE ---
 export const CashFlowCard: React.FC<AnalyticsProps> = ({ data, onNavigate }) => {
   // Hack pour éviter le rendu Recharts avant que le DOM ne soit prêt
-  const [ready, setReady] = useState(false);
+  const [isChartReady, setIsChartReady] = useState(false);
   useEffect(() => {
-    const timer = requestAnimationFrame(() => setReady(true));
+    const timer = requestAnimationFrame(() => setIsChartReady(true));
     return () => cancelAnimationFrame(timer);
   }, []);
 
@@ -198,9 +198,9 @@ export const ExtrasCard: React.FC<AnalyticsProps> = ({ data, onNavigate }) => {
 export const TopExpensesCard: React.FC<AnalyticsProps> = ({ data, onNavigate }) => {
   const [mode, setMode] = useState<"CAT" | "BEN">("CAT");
   // Hack pour éviter le rendu Recharts avant que le DOM ne soit prêt
-  const [ready, setReady] = useState(false);
+  const [isChartReady, setIsChartReady] = useState(false);
   useEffect(() => {
-    const timer = requestAnimationFrame(() => setReady(true));
+    const timer = requestAnimationFrame(() => setIsChartReady(true));
     return () => cancelAnimationFrame(timer);
   }, []);
 

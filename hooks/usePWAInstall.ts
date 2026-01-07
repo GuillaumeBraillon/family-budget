@@ -1,5 +1,32 @@
 import { useState, useEffect } from "react";
 
+/**
+ * Hook de gestion de l'installation PWA (Progressive Web App).
+ *
+ * @description
+ * Écoute l'événement `beforeinstallprompt` du navigateur et permet de déclencher
+ * manuellement l'installation de l'application comme PWA. Gère l'état d'installabilité
+ * et fournit une action pour afficher le prompt d'installation.
+ *
+ * @returns {Object} État et actions PWA
+ * @returns {boolean} isInstallable - True si l'app peut être installée
+ * @returns {Function} promptInstall - Déclenche le prompt d'installation
+ *
+ * @example
+ * ```tsx
+ * const { isInstallable, promptInstall } = usePWAInstall();
+ *
+ * return (
+ *   <>
+ *     {isInstallable && (
+ *       <button onClick={promptInstall}>
+ *         Installer l'application
+ *       </button>
+ *     )}
+ *   </>
+ * );
+ * ```
+ */
 export const usePWAInstall = () => {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [isInstallable, setIsInstallable] = useState(false);

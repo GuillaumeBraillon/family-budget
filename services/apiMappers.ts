@@ -30,91 +30,91 @@ import {
 } from "./dbTypes";
 import { logger } from "./logger";
 
-export const mapDbPerson = (p: DbPerson): Person => ({
-  id: p.id,
-  name: p.name,
-  isChild: p.is_child,
+export const mapDbPerson = (person: DbPerson): Person => ({
+  id: person.id,
+  name: person.name,
+  isChild: person.is_child,
 });
 
-export const mapDbAuthorizedUser = (u: DbAuthorizedUser): AuthorizedUser => {
-  logger.log("🗺️ Mapping user from DB:", { email: u.email, is_allowed: u.is_allowed, type: typeof u.is_allowed });
+export const mapDbAuthorizedUser = (user: DbAuthorizedUser): AuthorizedUser => {
+  logger.log("🗺️ Mapping user from DB:", { email: user.email, is_allowed: user.is_allowed, type: typeof user.is_allowed });
   return {
-    email: u.email,
-    name: u.name,
-    avatarUrl: u.avatar_url,
-    isAllowed: !!u.is_allowed,
-    addedAt: u.added_at,
-    addedBy: u.added_by,
-    lastLoginAt: u.last_login_at,
-    notes: u.notes,
+    email: user.email,
+    name: user.name,
+    avatarUrl: user.avatar_url,
+    isAllowed: !!user.is_allowed,
+    addedAt: user.added_at,
+    addedBy: user.added_by,
+    lastLoginAt: user.last_login_at,
+    notes: user.notes,
   };
 };
 
-export const mapDbTag = (t: DbTag): Tag => ({
-  id: t.id,
-  name: t.name,
-  color: t.color,
+export const mapDbTag = (tag: DbTag): Tag => ({
+  id: tag.id,
+  name: tag.name,
+  color: tag.color,
 });
 
-export const mapDbTagAmount = (t: DbPaidItemTag): TagAmount => ({
-  tagId: t.tag_id,
-  amount: Number(t.amount),
-  isExtra: !!t.is_extra,
+export const mapDbTagAmount = (tagAmount: DbPaidItemTag): TagAmount => ({
+  tagId: tagAmount.tag_id,
+  amount: Number(tagAmount.amount),
+  isExtra: !!tagAmount.is_extra,
 });
 
-export const mapDbAccount = (a: DbAccount): Account => ({
-  id: a.id,
-  name: a.name,
-  type: a.type as AccountType,
-  ownerId: a.owner_id,
-  currentBalance: a.current_balance ?? 0,
-  bankName: a.bank_name,
-  isJoint: !!a.is_joint,
-  targetRatio: a.target_ratio !== null && a.target_ratio !== undefined ? Number(a.target_ratio) : undefined,
-  targetCap: a.target_cap !== null && a.target_cap !== undefined ? Number(a.target_cap) : undefined,
+export const mapDbAccount = (account: DbAccount): Account => ({
+  id: account.id,
+  name: account.name,
+  type: account.type as AccountType,
+  ownerId: account.owner_id,
+  currentBalance: account.current_balance ?? 0,
+  bankName: account.bank_name,
+  isJoint: !!account.is_joint,
+  targetRatio: account.target_ratio !== null && account.target_ratio !== undefined ? Number(account.target_ratio) : undefined,
+  targetCap: account.target_cap !== null && account.target_cap !== undefined ? Number(account.target_cap) : undefined,
 });
 
-export const mapDbCategory = (c: DbCategory): CategoryDef => ({
-  id: c.id,
-  name: c.name,
-  type: c.type || "EXPENSE",
-  subCategories: c.sub_categories || [],
+export const mapDbCategory = (category: DbCategory): CategoryDef => ({
+  id: category.id,
+  name: category.name,
+  type: category.type || "EXPENSE",
+  subCategories: category.sub_categories || [],
 });
 
-export const mapDbSavedLabel = (l: DbSavedLabel): SavedLabel => ({
-  id: l.id,
-  name: l.name,
-  type: l.type,
-  isExpense: l.is_expense !== false, // Default true si null/undefined pour rétrocompatibilité
+export const mapDbSavedLabel = (label: DbSavedLabel): SavedLabel => ({
+  id: label.id,
+  name: label.name,
+  type: label.type,
+  isExpense: label.is_expense !== false, // Default true si null/undefined pour rétrocompatibilité
 });
 
-export const mapDbExpenseConfig = (c: DbExpenseConfig): ExpenseConfig => ({
-  id: c.id,
-  label: c.label,
-  amount: c.amount ?? 0,
-  category: c.category,
-  subCategory: c.sub_category,
-  beneficiaryId: c.beneficiary_id,
-  accountId: c.account_id,
-  dayOfMonth: c.day_of_month,
-  startMonth: c.start_month || undefined,
-  endMonth: c.end_month || undefined,
-  isExtra: !!c.is_extra,
+export const mapDbExpenseConfig = (config: DbExpenseConfig): ExpenseConfig => ({
+  id: config.id,
+  label: config.label,
+  amount: config.amount ?? 0,
+  category: config.category,
+  subCategory: config.sub_category,
+  beneficiaryId: config.beneficiary_id,
+  accountId: config.account_id,
+  dayOfMonth: config.day_of_month,
+  startMonth: config.start_month || undefined,
+  endMonth: config.end_month || undefined,
+  isExtra: !!config.is_extra,
 });
 
-export const mapDbIncomeConfig = (i: DbIncomeConfig): IncomeConfig => ({
-  id: i.id,
-  label: i.label,
-  amount: i.amount ?? 0,
-  accountId: i.account_id,
-  beneficiaryId: i.beneficiary_id,
-  dayOfMonth: i.day_of_month,
-  category: i.category,
-  subCategory: i.sub_category,
-  isExtra: !!i.is_extra,
-  isSalary: !!i.is_salary,
-  startMonth: i.start_month || undefined,
-  endMonth: i.end_month || undefined,
+export const mapDbIncomeConfig = (income: DbIncomeConfig): IncomeConfig => ({
+  id: income.id,
+  label: income.label,
+  amount: income.amount ?? 0,
+  accountId: income.account_id,
+  beneficiaryId: income.beneficiary_id,
+  dayOfMonth: income.day_of_month,
+  category: income.category,
+  subCategory: income.sub_category,
+  isExtra: !!income.is_extra,
+  isSalary: !!income.is_salary,
+  startMonth: income.start_month || undefined,
+  endMonth: income.end_month || undefined,
 });
 
 export const mapDbPaidItem = (item: DbPaidItem): PaidItemDetails => ({
@@ -134,31 +134,31 @@ export const mapDbPaidItem = (item: DbPaidItem): PaidItemDetails => ({
   position: item.position !== null ? Number(item.position) : undefined,
 });
 
-export const mapDbTransfer = (t: DbTransfer): Transfer => ({
-  id: t.id,
-  date: t.date,
-  label: t.label,
-  amount: Number(t.amount),
-  sourceAccountId: t.source_account_id,
-  destinationAccountId: t.destination_account_id,
-  createdAt: t.created_at,
-  position: t.position !== null ? Number(t.position) : undefined,
+export const mapDbTransfer = (transfer: DbTransfer): Transfer => ({
+  id: transfer.id,
+  date: transfer.date,
+  label: transfer.label,
+  amount: Number(transfer.amount),
+  sourceAccountId: transfer.source_account_id,
+  destinationAccountId: transfer.destination_account_id,
+  createdAt: transfer.created_at,
+  position: transfer.position !== null ? Number(transfer.position) : undefined,
 });
 
-export const mapDbVariableTransaction = (t: DbPaidItem): VariableTransaction => ({
-  id: t.id || t.instance_id, // Utiliser id si disponible, sinon instance_id
-  date: t.date || t.payment_date, // Utiliser date si disponible, sinon payment_date
-  label: t.label,
-  amount: Number(t.amount),
-  category: t.category,
-  subCategory: t.sub_category,
-  accountId: t.account_id,
-  beneficiaryId: t.beneficiary_id,
-  type: t.type || "EXPENSE",
-  isWaiting: !!t.is_waiting,
-  isExtra: !!t.is_extra,
-  comments: t.comments || undefined,
-  position: t.position !== null ? Number(t.position) : undefined,
+export const mapDbVariableTransaction = (transaction: DbPaidItem): VariableTransaction => ({
+  id: transaction.id || transaction.instance_id, // Utiliser id si disponible, sinon instance_id
+  date: transaction.date || transaction.payment_date, // Utiliser date si disponible, sinon payment_date
+  label: transaction.label,
+  amount: Number(transaction.amount),
+  category: transaction.category,
+  subCategory: transaction.sub_category,
+  accountId: transaction.account_id,
+  beneficiaryId: transaction.beneficiary_id,
+  type: transaction.type || "EXPENSE",
+  isWaiting: !!transaction.is_waiting,
+  isExtra: !!transaction.is_extra,
+  comments: transaction.comments || undefined,
+  position: transaction.position !== null ? Number(transaction.position) : undefined,
 });
 
 export const mapDbSettings = (data: DbSettings | null): AppSettings => {

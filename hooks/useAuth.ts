@@ -3,6 +3,30 @@ import { supabase } from "../services/supabase";
 import { Session } from "@supabase/supabase-js";
 import { logger } from "../services/logger";
 
+/**
+ * Hook de gestion de l'authentification Supabase.
+ *
+ * @description
+ * Gère la session utilisateur avec Google OAuth via Supabase Auth.
+ * Écoute les changements de session (login/logout) et fournit des actions
+ * pour se connecter et se déconnecter.
+ *
+ * @returns {Object} État et actions d'authentification
+ * @returns {Session | null} session - Session Supabase actuelle
+ * @returns {boolean} loading - Indicateur de chargement initial
+ * @returns {string | null} error - Message d'erreur si échec
+ * @returns {Function} signInWithGoogle - Déclenche l'authentification Google
+ * @returns {Function} signOut - Déconnecte l'utilisateur
+ *
+ * @example
+ * ```tsx
+ * const { session, loading, signInWithGoogle, signOut } = useAuth();
+ *
+ * if (loading) return <Loader />;
+ * if (!session) return <LoginButton onClick={signInWithGoogle} />;
+ * return <Dashboard onLogout={signOut} />;
+ * ```
+ */
 export const useAuth = () => {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);

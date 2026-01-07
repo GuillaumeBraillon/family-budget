@@ -1,0 +1,348 @@
+/**
+ * @file Hook de calcul des données d'opérations (checking accounts + stats)
+ * @description Centralise tous les calculs de données pour la vue Opérations :
+ * filtrage des comptes courants, génération du planner, calcul des statistiques rapides
+ * avec gestion des remboursements et montants effectifs basés sur les tags.
+ *
+ * @architecture
+ * **Responsabilités :**
+ * - Filtrage des comptes courants (type CHECKING)
+ * - Extraction des opérations associées (configs, revenus, transactions)
+ * - Appel au hook usePlanner pour génération des instances mensuelles
+ * - Sélection de la portée (mois complet vs période spécifique)
+ * - Calcul des statistiques rapides (quickStats) avec logique métier complexe
+ *
+ * **Logique métier :**
+ * - **Remboursements** : Revenus de catégorie "EXPENSE" → Réduction des dépenses
+ * - **Montants effectifs** : Si filtres de tags actifs → Utiliser les montants taggés
+ * - **Extra** : Comptabilisation séparée des opérations hors budget
+ *
+ * **Optimisation :**
+ * Tous les calculs sont memoizés (useMemo) pour éviter les recalculs inutiles
+ * lors des rerenders non liés aux dépendances.
+ *
+ * @dependencies
+ * - hooks/usePlanner : Génération des instances mensuelles
+ * - types.ts : Toutes les interfaces métier
+ */
+import { useMemo } from "react";
+import { usePlanner } from "../usePlanner";
+import {
+  Account,
+  ExpenseConfig,
+  IncomeConfig,
+  PaidItemDetails,
+  VariableTransaction,
+  AppSettings,
+  CategoryDef,
+  OperationFilters,
+  PlannedItem,
+  AccountType,
+} from "../../types";
+
+/**
+ * Interface des statistiques rapides d'une période.
+ *
+ * @description
+ * Structure de données pour afficher le résumé financier d'une période
+ * (semaine, mois) avec séparation dépenses/revenus et ventilation par statut.
+ *
+ * **Structure :**
+ * ```
+ * {
+ *   expenses: {
+ *     real: 450€,      // Dépenses pointées
+ *     planned: 600€,   // Total prévu (configs)
+ *     pending: 150€,   // En attente
+ *     extra: 50€       // Hors budget
+ *   },
+ *   income: {
+ *     real: 2500€,     // Revenus pointés
+ *     planned: 2500€,  // Total prévu
+ *     pending: 0€,     // En attente
+ *     extra: 0€        // Hors budget (rare pour revenus)
+ *   }
+ * }
+ * ```
+ *
+ * **Cas d'usage :**
+ * - Composant QuickPeriodSummary (affichage du résumé en haut de page)
+ * - Calcul du reste disponible (income.real - expenses.real)
+ * - Détection des dépassements (real > planned)
+ */
+interface QuickStats {
+  expenses: {
+    real: number;
+    planned: number;
+    pending: number;
+    extra: number;
+  };
+  income: {
+    real: number;
+    planned: number;
+    pending: number;
+    extra: number;
+  };
+}
+
+/**
+ * Hook de calcul des données d'opérations avec statistiques.
+ *
+ * @description
+ * **Workflow complet :**
+ *
+ * 1. **Filtrage des comptes courants** :
+ *    - Extraction des comptes de type CHECKING (exclu SAVINGS et TRANSFER)
+ *    - Récupération des IDs pour filtrage des opérations
+ *
+ * 2. **Filtrage des opérations associées** :
+ *    - `checkingTransactions` : Variables liées aux comptes courants
+ *    - `checkingConfigs` : Dépenses récurrentes sur comptes courants
+ *    - `checkingIncomes` : Revenus récurrents sur comptes courants
+ *
+ * 3. **Génération du planner** :
+ *    - Appel à `usePlanner` avec les données filtrées + filtres utilisateur
+ *    - Retour : `filteredPeriodBudgets` (périodes avec items générés)
+ *
+ * 4. **Sélection de la portée** :
+ *    - Si `scope="MONTH"` → Aplatir toutes les périodes
+ *    - Si `scope="PERIOD"` → Sélectionner la période active uniquement
+ *
+ * 5. **Calcul des statistiques** :
+ *    - Pour chaque item : Détection type, remboursement, extra
+ *    - Calcul des montants effectifs (basés sur tags si filtrés)
+ *    - Accumulation dans `quickStats` (expenses + income)
+ *
+ * **Gestion des remboursements :**
+ * Un revenu est considéré comme remboursement si :
+ * - `type === "INCOME"` ET
+ * - `category === "Dépenses"` OU `category === "Remboursement"` OU
+ * - La catégorie est définie comme EXPENSE dans `categories`
+ *
+ * Dans ce cas, le montant est SOUSTRAIT des dépenses au lieu d'être ajouté aux revenus.
+ *
+ * **Montants effectifs avec tags :**
+ * Si des filtres `includedTagIds` sont actifs :
+ * - Pour chaque item, utiliser uniquement les montants des tags filtrés
+ * - Exemple : Opération 100€ avec tag "Alimentation" (60€) et "Loisirs" (40€)
+ *   → Si filtre sur "Alimentation" → Montant effectif = 60€
+ *
+ * **Opérations Extra :**
+ * Comptabilisées séparément dans `quickStats.*.extra` pour visibilité du hors budget.
+ *
+ * @param {Object} params - Paramètres de calcul
+ * @param {Account[]} params.accounts - Tous les comptes (pour filtrage CHECKING)
+ * @param {ExpenseConfig[]} params.configs - Modèles de dépenses récurrentes
+ * @param {IncomeConfig[]} params.incomeConfigs - Modèles de revenus récurrents
+ * @param {Record<string, PaidItemDetails>} params.paidItems - Pointages mensuels
+ * @param {VariableTransaction[]} params.variableTransactions - Transactions variables
+ * @param {Date} params.currentDate - Mois affiché
+ * @param {string} params.searchQuery - Requête de recherche textuelle
+ * @param {AppSettings} params.settings - Paramètres globaux (enveloppe, périodes)
+ * @param {CategoryDef[]} params.categories - Définitions des catégories (pour remboursements)
+ * @param {OperationFilters} params.filters - Filtres actifs
+ * @param {"MONTH" | "PERIOD"} params.scope - Portée d'affichage
+ * @param {number} params.activeWeek - Numéro de la période active (si scope=PERIOD)
+ *
+ * @returns {Object} Résultats de calcul
+ * @returns {PlannedItem[]} unsortedItems - Items bruts (avant tri) pour la portée sélectionnée
+ * @returns {QuickStats} quickStats - Statistiques financières de la période
+ * @returns {string} monthShort - Mois court formaté (ex: "jan.", "fév.")
+ *
+ * @example
+ * ```tsx
+ * const { unsortedItems, quickStats, monthShort } = useOperationsData({
+ *   accounts,
+ *   configs,
+ *   incomeConfigs,
+ *   paidItems,
+ *   variableTransactions,
+ *   currentDate: new Date(2025, 0, 1),
+ *   searchQuery: "",
+ *   settings,
+ *   categories,
+ *   filters,
+ *   scope: "PERIOD",
+ *   activeWeek: 1,
+ * });
+ *
+ * // Afficher les stats
+ * <QuickPeriodSummary expenses={quickStats.expenses} income={quickStats.income} />
+ *
+ * // Utiliser les items (après tri dans composant parent)
+ * const sortedItems = sortItems(unsortedItems);
+ * <OperationsList items={sortedItems} />
+ * ```
+ *
+ * @optimization
+ * Tous les calculs utilisent `useMemo` avec dépendances explicites pour éviter
+ * les recalculs lors de rerenders non liés (ex: changement de modal ouverte).
+ */
+export const useOperationsData = ({
+  accounts,
+  configs,
+  incomeConfigs,
+  paidItems,
+  variableTransactions,
+  currentDate,
+  searchQuery,
+  settings,
+  categories,
+  filters,
+  scope,
+  activeWeek,
+}: {
+  accounts: Account[];
+  configs: ExpenseConfig[];
+  incomeConfigs: IncomeConfig[];
+  paidItems: Record<string, PaidItemDetails>;
+  variableTransactions: VariableTransaction[];
+  currentDate: Date;
+  searchQuery: string;
+  settings: AppSettings;
+  categories: CategoryDef[];
+  filters: OperationFilters;
+  scope: "MONTH" | "PERIOD";
+  activeWeek: number;
+}) => {
+  // 1. Filtrage des comptes courants (CHECKING uniquement)
+  const checkingAccountIds = useMemo(() => accounts.filter((a) => a.type === AccountType.CHECKING).map((a) => a.id), [accounts]);
+
+  // 2. Filtrage des opérations sur comptes courants
+  const checkingTransactions = useMemo(() => variableTransactions.filter((t) => checkingAccountIds.includes(t.accountId)), [variableTransactions, checkingAccountIds]);
+
+  const checkingConfigs = useMemo(() => configs.filter((c) => checkingAccountIds.includes(c.accountId)), [configs, checkingAccountIds]);
+
+  const checkingIncomes = useMemo(() => incomeConfigs.filter((i) => checkingAccountIds.includes(i.accountId)), [incomeConfigs, checkingAccountIds]);
+
+  // 3. Génération du planner (périodes + items filtrés)
+  const { filteredPeriodBudgets } = usePlanner(
+    checkingConfigs,
+    checkingIncomes,
+    paidItems,
+    checkingTransactions,
+    currentDate,
+    searchQuery,
+    settings,
+    categories,
+    filters
+  );
+
+  // 4. Sélection de la portée (mois complet ou période spécifique)
+  const currentWeekData = filteredPeriodBudgets.find((w) => w.weekNumber === activeWeek);
+  const unsortedItems = scope === "MONTH" ? filteredPeriodBudgets.flatMap((w) => w.items) : currentWeekData?.items || [];
+
+  // 5. Calcul des statistiques rapides
+  const quickStats = useMemo((): QuickStats => {
+    /**
+     * Calcule le montant effectif d'un item en fonction des filtres de tags actifs.
+     *
+     * @description
+     * Si des tags sont filtrés (`filters.includedTagIds` non vide) :
+     * - Utilise la somme des montants des tags filtrés uniquement
+     * - Exemple : Item 100€ avec tags [A:60€, B:40€] + filtre sur A → 60€
+     *
+     * Sinon : Utilise le montant total de l'item.
+     *
+     * **Cas particulier :**
+     * Si l'item n'a pas de `tagAmounts` mais un filtre de tags est actif,
+     * retourne 0 (l'item ne devrait pas apparaître dans les résultats filtrés).
+     *
+     * @param {PlannedItem} item - Opération à évaluer
+     * @returns {number} Montant effectif en €
+     */
+    const getEffectiveAmount = (item: PlannedItem): number => {
+      // Pas de filtre de tags → Montant total
+      if (!filters.includedTagIds || filters.includedTagIds.length === 0) {
+        return item.amount;
+      }
+
+      // Item sans ventilation de tags → 0 (ne devrait pas apparaître)
+      if (!item.tagAmounts || item.tagAmounts.length === 0) {
+        return 0;
+      }
+
+      // Somme des montants des tags filtrés
+      const tagSum = item.tagAmounts.filter((ta) => filters.includedTagIds.includes(ta.tagId)).reduce((sum, ta) => sum + ta.amount, 0);
+
+      return tagSum;
+    };
+
+    // Initialisation des accumulateurs
+    const stats: QuickStats = {
+      expenses: { real: 0, planned: 0, pending: 0, extra: 0 },
+      income: { real: 0, planned: 0, pending: 0, extra: 0 },
+    };
+
+    // Parcours des items et accumulation
+    unsortedItems.forEach((item) => {
+      // Exclure les virements internes (mouvements entre comptes)
+      if (item.category === "Virement Interne") return;
+
+      /**
+       * Détection des remboursements.
+       *
+       * @description
+       * Un revenu est considéré comme remboursement si :
+       * - Type = INCOME ET
+       * - Catégorie = "Dépenses" OU "Remboursement" OU
+       * - Catégorie définie comme EXPENSE dans categories
+       *
+       * **Traitement :**
+       * Les remboursements sont soustraits des dépenses au lieu d'être
+       * ajoutés aux revenus (logique métier de réduction de dépenses).
+       */
+      const isRefund =
+        item.type === "INCOME" &&
+        (item.category === "Dépenses" || item.category === "Remboursement" || categories.find((c) => c.name === item.category)?.type === "EXPENSE");
+
+      let target;
+      let amount = getEffectiveAmount(item); // Montant effectif basé sur filtres
+
+      // Sélection de la cible (dépenses ou revenus)
+      if (item.type === "EXPENSE") {
+        target = stats.expenses;
+      } else if (isRefund) {
+        target = stats.expenses;
+        amount = -amount; // Inverser le signe pour réduction de dépenses
+      } else {
+        target = stats.income;
+      }
+
+      // Accumulation selon source et statut
+      if (item.source === "VARIABLE") {
+        // Transactions variables : Real ou Pending uniquement
+        if (item.isPaid) target.real += amount;
+        else target.pending += amount;
+      } else {
+        // Opérations récurrentes : Planned + Real/Pending
+        const plannedAmount =
+          filters.includedTagIds && filters.includedTagIds.length > 0
+            ? amount // Utiliser montant effectif filtré pour le prévu
+            : item.type === "INCOME" && isRefund
+            ? -item.originalAmount
+            : item.originalAmount;
+
+        target.planned += plannedAmount;
+        if (item.isPaid) target.real += amount;
+        else target.pending += amount;
+      }
+
+      // Comptabilisation Extra séparée
+      if (item.isExtra) {
+        target.extra += amount;
+      }
+    });
+
+    return stats;
+  }, [unsortedItems, categories, filters.includedTagIds]);
+
+  // 6. Formatage du mois court (ex: "jan.", "déc.")
+  const monthShort = new Intl.DateTimeFormat("fr-FR", { month: "short" }).format(currentDate);
+
+  return {
+    unsortedItems,
+    quickStats,
+    monthShort,
+  };
+};

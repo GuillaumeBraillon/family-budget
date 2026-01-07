@@ -73,7 +73,7 @@ export const ExpenseRulesEditor: React.FC<ExpenseRulesEditorProps> = ({ configs,
     }
   }, [formData.startMonth, durationMonths, durationMode, formData.isExtra, formData.endMonth]);
 
-  const resetForm = () => {
+  const clearForm = () => {
     setFormData({
       label: "",
       amount: 0,
@@ -118,7 +118,7 @@ export const ExpenseRulesEditor: React.FC<ExpenseRulesEditorProps> = ({ configs,
     setIsFormOpen(true);
   };
 
-  const handleSubmit = () => {
+  const handleFormSubmit = () => {
     const errors: string[] = [];
 
     if (!formData.label?.trim()) errors.push("Le libellé est obligatoire");
@@ -194,7 +194,7 @@ export const ExpenseRulesEditor: React.FC<ExpenseRulesEditorProps> = ({ configs,
         />
       </div>
 
-      <Modal isOpen={isFormOpen} onClose={resetForm} title={editingId ? "Modifier la dépense" : "Nouvelle Dépense Récurrente"}>
+      <Modal isOpen={isFormOpen} onClose={clearForm} title={editingId ? "Modifier la dépense" : "Nouvelle Dépense Récurrente"}>
         <div className="space-y-2">
           {validationErrors.length > 0 && (
             <div
@@ -358,7 +358,7 @@ export const ExpenseRulesEditor: React.FC<ExpenseRulesEditorProps> = ({ configs,
               </button>
             )}
             <button
-              onClick={handleSubmit}
+              onClick={handleFormSubmit}
               className="flex-1 bg-slate-900 text-white py-2 rounded-lg font-bold hover:bg-slate-800 transition-colors flex items-center justify-center gap-2"
             >
               <Save size={18} /> {editingId ? "Mettre à jour" : "Créer la règle"}

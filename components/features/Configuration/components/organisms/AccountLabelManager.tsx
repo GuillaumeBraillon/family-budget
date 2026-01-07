@@ -62,7 +62,7 @@ export const AccountLabelManager: React.FC<AccountLabelManagerProps> = ({ labels
     setIsModalOpen(true);
   };
 
-  const handleSubmit = () => {
+  const handleFormSubmit = () => {
     if (!name.trim()) return;
 
     let newId = `lbl_${Date.now()}`;
@@ -89,7 +89,7 @@ export const AccountLabelManager: React.FC<AccountLabelManagerProps> = ({ labels
   const handleDelete = () => {
     if (deleteConfirm) {
       onDeleteLabel(deleteConfirm.id);
-      resetForm();
+      clearForm();
     }
   };
 
@@ -144,7 +144,7 @@ export const AccountLabelManager: React.FC<AccountLabelManagerProps> = ({ labels
               </button>
             )}
             <button
-              onClick={handleSubmit}
+              onClick={handleFormSubmit}
               className="flex-1 bg-slate-900 text-white py-3 rounded-lg font-bold hover:bg-slate-800 transition-colors flex items-center justify-center gap-2"
             >
               <Save size={18} /> {editingLabel ? "Enregistrer" : "Ajouter"}

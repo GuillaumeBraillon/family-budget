@@ -1,3 +1,26 @@
+/**
+ * @file Hook de planification et calcul des périodes budgétaires mensuelles
+ * @description Génère les instances mensuelles des opérations récurrentes (dépenses/revenus)
+ * et les combine avec les transactions variables pour construire l'échéancier du mois.
+ * Gère la découpe du mois en périodes (semaines, jours fixes, etc.) avec calculs statistiques.
+ *
+ * @architecture
+ * **Concepts clés :**
+ * - **Config** : Modèle d'opération récurrente (ex: loyer chaque mois)
+ * - **Instance** : Occurrence mensuelle d'une config (ex: loyer de janvier 2025)
+ * - **Instance ID** : Format `{configId}-YYYY-MM` pour identifi
+ * - **PlannedItem** : Opération enrichie pour affichage (config + pointage + variable)
+ * - **Période** : Découpage du mois selon `settings.period_type`
+ *
+ * **Système Extra à deux niveaux :**
+ * 1. Niveau opération : Toggle global `isExtra`
+ * 2. Niveau tag : Chaque `TagAmount` peut être marqué individuellement
+ * → Une opération est "Extra" si toggle OU au moins un tag Extra
+ *
+ * @dependencies
+ * - date-fns : Manipulation des dates et calcul des périodes
+ * - types.ts : Toutes les interfaces métier
+ */
 import { useMemo } from "react";
 import { startOfMonth, endOfMonth, eachWeekOfInterval, getDate, getDaysInMonth } from "date-fns";
 import {
@@ -14,10 +37,33 @@ import {
 } from "../types";
 
 /**
- * Détermine si une opération contient des montants "Extra" (hors budget)
- * Vérifie à deux niveaux :
- * 1. Flag global isExtra de l'opération
- * 2. Présence de tags individuels marqués comme Extra
+ * Détermine si une opération contient des montants "Extra" (hors budget).
+ *
+ * @description
+ * Vérifie à deux niveaux indépendants si une opération doit être considérée comme
+ * "hors budget" (Extra) pour les calculs et filtres.
+ *
+ * **Niveaux de vérification :**
+ * 1. **Niveau global** : Flag `isExtra` sur l'opération entière
+ * 2. **Niveau granulaire** : Au moins un tag marqué `isExtra` dans `tagAmounts`
+ *
+ * **Logique OR :** Une seule condition suffit pour marquer l'opération Extra.
+ *
+ * @param {boolean} isExtraGlobal - Flag Extra au niveau de l'opération
+ * @param {TagAmount[]} [tagAmounts] - Ventilation optionnelle des montants par tag
+ * @returns {boolean} True si l'opération contient des montants Extra
+ *
+ * @example
+ * ```tsx
+ * // Scénario 1 : Toggle global activé
+ * hasExtraAmounts(true, []) // true
+ *
+ * // Scénario 2 : Tag individuel Extra
+ * hasExtraAmounts(false, [{ tagId: 't1', amount: 50, isExtra: true }]) // true
+ *
+ * // Scénario 3 : Rien d'Extra
+ * hasExtraAmounts(false, [{ tagId: 't1', amount: 50 }]) // false
+ * ```
  */
 const hasExtraAmounts = (isExtraGlobal: boolean, tagAmounts?: TagAmount[]): boolean => {
   // Niveau 1 : Si l'opération entière est Extra
@@ -31,6 +77,67 @@ const hasExtraAmounts = (isExtraGlobal: boolean, tagAmounts?: TagAmount[]): bool
   return false;
 };
 
+/**
+ * Hook de planification des périodes budgétaires mensuelles.
+ *
+ * @description
+ * Génère l'échéancier complet du mois en combinant :
+ * - Instances mensuelles des opérations récurrentes (configs)
+ * - Transactions variables (hors modèles)
+ * - Pointages réels (ajustements de montants/dates)
+ *
+ * **Algorithme de génération :**
+ * 1. Découpe du mois en périodes selon `settings.period_type` :
+ *    - FIXED_DAYS : Périodes de N jours (ex: semaines de 7 jours)
+ *    - CALENDAR_WEEKS : Semaines calendaires (lundi-dimanche)
+ *    - CUSTOM_SPLIT : Découpage équitable en N parts
+ * 2. Création des instances mensuelles :
+ *    - Vérification des dates de validité (startMonth/endMonth)
+ *    - Application des pointages si existants (montant/date ajustés)
+ *    - Détection du statut Extra via `hasExtraAmounts`
+ * 3. Affectation aux périodes selon le jour du mois
+ * 4. Tri intelligent avec système de scores (position manuelle prioritaire)
+ * 5. Application des filtres (flux, source, statut, tags, etc.)
+ *
+ * **Système de tri robuste :**
+ * - Position manuelle (`item.position`) prioritaire si définie
+ * - Sinon : score par défaut = BASE_SCORE (100 Milliards) + jour * 100M + hash(instanceId)
+ * - Espace large (100M par jour) pour insertions avant/après via drag & drop
+ *
+ * @param {ExpenseConfig[]} configs - Modèles de dépenses récurrentes
+ * @param {IncomeConfig[]} incomeConfigs - Modèles de revenus récurrents
+ * @param {Record<string, PaidItemDetails>} paidItems - Pointages mensuels (instanceId -> détails)
+ * @param {VariableTransaction[]} variableTransactions - Transactions hors modèles
+ * @param {Date} currentDate - Mois affiché (seuls mois/année utilisés)
+ * @param {string} searchQuery - Requête de recherche textuelle (filtre label/catégorie/montant)
+ * @param {AppSettings} settings - Paramètres globaux (enveloppe, type de périodes)
+ * @param {CategoryDef[]} categories - Définitions des catégories (pour détecter remboursements)
+ * @param {OperationFilters} [filters] - Filtres optionnels (flux, source, statut, tags, etc.)
+ *
+ * @returns {Object} Résultats de la planification
+ * @returns {WeeklyBudget[]} filteredPeriodBudgets - Périodes avec items filtrés
+ * @returns {Function} calculatePeriodStatistics - Fonction de calcul des stats d'une période
+ *
+ * @example
+ * ```tsx
+ * const { filteredPeriodBudgets, calculatePeriodStatistics } = usePlanner(
+ *   configs,
+ *   incomeConfigs,
+ *   paidItems,
+ *   variableTransactions,
+ *   new Date(2025, 0, 1), // Janvier 2025
+ *   "",
+ *   settings,
+ *   categories
+ * );
+ *
+ * // Accès aux périodes
+ * const firstPeriod = filteredPeriodBudgets[0];
+ *
+ * // Calcul des stats
+ * const stats = calculatePeriodStatistics(firstPeriod.weekNumber);
+ * ```
+ */
 export const usePlanner = (
   configs: ExpenseConfig[],
   incomeConfigs: IncomeConfig[],
@@ -46,8 +153,8 @@ export const usePlanner = (
   const daysInMonth = getDaysInMonth(currentDate);
   const monthlyBudget = settings.monthly_envelope || 0;
 
-  const weeks = useMemo(() => {
-    const res: WeeklyBudget[] = [];
+  const periodBudgets = useMemo(() => {
+    const periods: WeeklyBudget[] = [];
     const type = settings.period_type || "FIXED_DAYS";
     const val = settings.period_value || 7;
 
@@ -69,7 +176,7 @@ export const usePlanner = (
       for (let start = 1; start <= daysInMonth; start += val) {
         const isLast = start + val - 1 >= daysInMonth;
         const end = isLast ? daysInMonth : start + val - 1;
-        res.push(createPeriod(start, end, res.length + 1));
+        periods.push(createPeriod(start, end, periods.length + 1));
         if (isLast) break;
       }
     } else if (type === "CALENDAR_WEEKS") {
@@ -82,7 +189,7 @@ export const usePlanner = (
         const nextWeek = new Date(weekDate);
         nextWeek.setDate(nextWeek.getDate() + 6);
         const end = getDate(nextWeek > monthEnd ? monthEnd : nextWeek);
-        res.push(createPeriod(start, end, idx + 1));
+        periods.push(createPeriod(start, end, idx + 1));
       });
     } else if (type === "CUSTOM_SPLIT") {
       const parts = Math.max(1, Math.min(daysInMonth, val));
@@ -92,12 +199,12 @@ export const usePlanner = (
       for (let i = 0; i < parts; i++) {
         const start = i * daysPerPart + 1;
         const end = i === parts - 1 ? daysInMonth : (i + 1) * daysPerPart;
-        res.push(createPeriod(start, end, i + 1, equalLimit));
+        periods.push(createPeriod(start, end, i + 1, equalLimit));
       }
     }
 
     const assignToPeriod = (item: PlannedItem) => {
-      const period = res.find((p) => item.day >= p.startDate && item.day <= p.endDate);
+      const period = periods.find((p) => item.day >= p.startDate && item.day <= p.endDate);
       if (period) period.items.push(item);
     };
 
@@ -230,7 +337,7 @@ export const usePlanner = (
       return BASE_SCORE + item.day * DAY_STEP + safeHash;
     };
 
-    res.forEach((w) =>
+    periods.forEach((w) =>
       w.items.sort((a, b) => {
         const scoreA = getItemSortScore(a);
         const scoreB = getItemSortScore(b);
@@ -238,11 +345,11 @@ export const usePlanner = (
         return a.instanceId.localeCompare(b.instanceId);
       })
     );
-    return res;
+    return periods;
   }, [configs, incomeConfigs, paidItems, variableTransactions, currentMonthKey, settings, currentDate, daysInMonth, monthlyBudget]);
 
-  const filteredWeeks = useMemo(() => {
-    return weeks.map((w) => {
+  const filteredPeriodBudgets = useMemo(() => {
+    return periodBudgets.map((w) => {
       let items = w.items;
 
       if (searchQuery.trim()) {
@@ -298,13 +405,62 @@ export const usePlanner = (
 
       return { ...w, items };
     });
-  }, [weeks, searchQuery, filters]);
+  }, [periodBudgets, searchQuery, filters]);
 
-  const getStats = (activeWeek: number) => {
-    const safeActiveWeek = weeks.some((w) => w.weekNumber === activeWeek) ? activeWeek : 1;
-    const currentWeek = weeks.find((w) => w.weekNumber === safeActiveWeek);
+  /**
+   * Calcule les statistiques financières d'une période budgétaire.
+   *
+   * @description
+   * Analyse une période et toutes les périodes précédentes pour calculer :
+   * - Dépenses fixes (payées, à payer, retards)
+   * - Dépenses/revenus variables
+   * - Soldes par compte
+   * - Répartition par bénéficiaire
+   * - Reste disponible dans l'enveloppe de la période
+   *
+   * **Logique des retards :**
+   * Les opérations non pointées des périodes précédentes sont comptabilisées
+   * comme "délais" et ajoutées aux calculs de la période active.
+   *
+   * **Remboursements :**
+   * Les revenus dans des catégories de type EXPENSE ou nommées "Remboursement"
+   * sont traités comme des réductions de dépenses (varExpenses -= montant).
+   *
+   * **Soldes par compte :**
+   * - `paid` : Somme des opérations pointées (dépenses positives, revenus négatifs)
+   * - `remaining` : Somme des opérations en attente
+   * - `planned` : Somme des montants théoriques des configs (hors variables)
+   * - `pendingCount` : Nombre d'opérations en attente
+   *
+   * @param {number} activeWeek - Numéro de la période active (1-indexé)
+   * @returns {Object} Statistiques calculées
+   * @returns {number} fixedPaid - Dépenses fixes déjà payées
+   * @returns {number} fixedToPay - Dépenses fixes à payer cette période
+   * @returns {number} fixedDelays - Dépenses fixes en retard (périodes précédentes)
+   * @returns {number} fixedPlanned - Total théorique des dépenses fixes
+   * @returns {number} varExpenses - Dépenses variables pointées (hors Extra)
+   * @returns {number} varIncome - Revenus variables pointés (hors Extra, hors remboursements)
+   * @returns {number} periodLimit - Budget alloué à cette période
+   * @returns {number} varRemaining - Reste disponible (periodLimit + varIncome - varExpenses)
+   * @returns {number} totalIncomeReal - Total des revenus pointés
+   * @returns {Record<string, Object>} byAccount - Statistiques par compte (paid, remaining, planned, pendingCount)
+   * @returns {Record<string, Object>} expByBeneficiary - Dépenses par bénéficiaire (paid, planned)
+   * @returns {Record<string, Object>} incByBeneficiary - Revenus par bénéficiaire (paid, planned)
+   *
+   * @example
+   * ```tsx
+   * const stats = calculatePeriodStatistics(1);
+   *
+   * console.log(stats.fixedPaid); // Dépenses fixes payées
+   * console.log(stats.varRemaining); // Reste disponible
+   * console.log(stats.byAccount['acc_1'].paid); // Solde payé du compte 1
+   * ```
+   */
+  const calculatePeriodStatistics = (activeWeek: number) => {
+    const safeActiveWeek = periodBudgets.some((w) => w.weekNumber === activeWeek) ? activeWeek : 1;
+    const currentWeek = periodBudgets.find((w) => w.weekNumber === safeActiveWeek);
     const currentItems = currentWeek?.items || [];
-    const previousUnpaidItems = weeks
+    const previousUnpaidItems = periodBudgets
       .filter((w) => w.weekNumber < safeActiveWeek)
       .flatMap((w) => w.items)
       .filter((i) => !i.isPaid);
@@ -411,5 +567,5 @@ export const usePlanner = (
     };
   };
 
-  return { filteredWeeks, getStats };
+  return { filteredPeriodBudgets, calculatePeriodStatistics };
 };

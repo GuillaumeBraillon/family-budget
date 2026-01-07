@@ -2,6 +2,36 @@ import { useState } from "react";
 import { PlannedItem } from "../types";
 
 /**
+ * Hook de gestion de l'état UI de l'échéancier (Planner).
+ *
+ * @description
+ * Centralise tous les états d'interface de l'échéancier :
+ * - Navigation de date et période
+ * - Recherche avec persistance localStorage
+ * - Sélection d'items pour édition en masse
+ * - État des formulaires (ajout/édition)
+ *
+ * @param {Date} [initialDate=new Date()] - Date initiale d'affichage
+ * @param {number} [initialWeek] - Période initiale (1-4), auto-calculée sinon
+ * @returns {Object} État et actions UI du Planner
+ *
+ * @example
+ * ```tsx
+ * const ui = usePlannerUI(new Date(), 2);
+ *
+ * return (
+ *   <Planner
+ *     currentDate={ui.currentDate}
+ *     activeWeek={ui.activeWeek}
+ *     searchQuery={ui.searchQuery}
+ *     onDateChange={ui.setCurrentDate}
+ *     onWeekChange={ui.setActiveWeek}
+ *   />
+ * );
+ * ```
+ */
+
+/**
  * Calcule le numéro de semaine (1 à 4) utilisé par le Planner
  * en fonction du jour du mois.
  */

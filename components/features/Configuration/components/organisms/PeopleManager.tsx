@@ -49,7 +49,7 @@ export const PeopleManager: React.FC<PeopleManagerProps> = ({ people, onUpsertPe
     setIsModalOpen(true);
   };
 
-  const handleSubmit = () => {
+  const handleFormSubmit = () => {
     if (!name) return;
     const person: Person = {
       id: editingPerson ? editingPerson.id : `p_${Date.now()}`,
@@ -117,7 +117,7 @@ export const PeopleManager: React.FC<PeopleManagerProps> = ({ people, onUpsertPe
               </button>
             )}
             <button
-              onClick={handleSubmit}
+              onClick={handleFormSubmit}
               className="flex-1 bg-slate-900 text-white py-3 rounded-lg font-bold hover:bg-slate-800 transition-colors flex items-center justify-center gap-2"
             >
               <Save size={18} /> {editingPerson ? "Enregistrer" : "Ajouter"}

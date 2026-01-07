@@ -30,7 +30,7 @@ export const TagManager: React.FC<TagManagerProps> = ({ tags, onUpsertTag, onDel
   const [selectedColor, setSelectedColor] = useState(PRESET_COLORS[0]);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
 
@@ -67,7 +67,7 @@ export const TagManager: React.FC<TagManagerProps> = ({ tags, onUpsertTag, onDel
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4 p-4 bg-slate-50 rounded-xl border border-slate-200">
+          <form onSubmit={handleFormSubmit} className="flex flex-col gap-4 p-4 bg-slate-50 rounded-xl border border-slate-200">
             <div className="flex flex-col gap-2">
               <label className="text-xs font-bold text-slate-500 uppercase">Nouveau Tag</label>
               <div className="flex gap-2">

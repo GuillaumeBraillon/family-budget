@@ -1,6 +1,7 @@
-import React, { useState, useMemo, useEffect } from "react";
-import { usePlanner } from "../../../hooks/usePlanner";
+import React, { useState } from "react";
 import { usePlannerUI } from "../../../hooks/usePlannerUI";
+import { usePlanner } from "../../../hooks/usePlanner";
+import { useOperationsFilters, useOperationsSorting, useOperationsData } from "../../../hooks/operations";
 import {
   ExpenseConfig,
   IncomeConfig,
@@ -10,11 +11,10 @@ import {
   PlannedItem,
   AppSettings,
   VariableTransaction,
-  OperationFilters,
   SavedLabel,
   Tag,
   CategoryDef,
-  AccountType,
+  OperationFilters,
 } from "../../../types";
 import { Calendar, CalendarRange, GripVertical } from "lucide-react";
 import { arrayMove } from "@dnd-kit/sortable";
@@ -26,7 +26,7 @@ import { FilterBar } from "../../ui/molecules/FilterBar";
 import { WeekSelector } from "../../ui/molecules/WeekSelector";
 import { QuickPeriodSummary } from "../../ui/molecules/QuickPeriodSummary";
 import { SearchBar } from "../../ui/atoms/SearchBar";
-import { ListSorter, SortOrder } from "../../ui/molecules/ListSorter";
+import { ListSorter } from "../../ui/molecules/ListSorter";
 
 // Imports Feature-Specific Components
 import { OperationsList } from "./components/OperationsList";
@@ -72,204 +72,45 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
   onDeleteVariable,
   onMoveItem,
 }) => {
+  // Hooks spécialisés (responsabilités déléguées)
   const ui = usePlannerUI(initialDate, initialWeek);
+  const { filters, setFilters, resetFilters } = useOperationsFilters(initialFilters);
+  const { sortKey, sortOrder, setSorting, sortItems, isManualSort, sortOptions, getEffectivePosition } = useOperationsSorting();
   const [scope, setScope] = useState<"MONTH" | "PERIOD">("PERIOD");
+
+  // Récupération des périodes pour le WeekSelector
+  const checkingAccounts = accounts.filter((a) => a.type === "COURANT");
+  const { filteredPeriodBudgets } = usePlanner(configs, incomeConfigs, paidItems, variableTransactions, ui.currentDate, ui.searchQuery, settings, categories, filters);
+
+  const { unsortedItems, quickStats, monthShort } = useOperationsData({
+    accounts,
+    configs,
+    incomeConfigs,
+    paidItems,
+    variableTransactions,
+    currentDate: ui.currentDate,
+    searchQuery: ui.searchQuery,
+    settings,
+    categories,
+    filters,
+    scope,
+    activeWeek: ui.activeWeek,
+  });
+
+  // État UI local
   const [isVarFormOpen, setIsVarFormOpen] = useState(false);
   const [editingVar, setEditingVar] = useState<VariableTransaction | null>(null);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
-  // Tri par défaut sur Manuel - AVEC PERSISTANCE
-  const [sortKey, setSortKey] = useState<string>(() => {
-    return localStorage.getItem("operationsView_sortKey") || "manual";
-  });
-  const [sortOrder, setSortOrder] = useState<SortOrder>(() => {
-    return (localStorage.getItem("operationsView_sortOrder") as SortOrder) || "asc";
-  });
+  // Tri des items
+  const currentItems = sortItems(unsortedItems);
 
-  // FILTRES PAR DÉFAUT
-  const DEFAULT_FILTERS: OperationFilters = {
-    flux: "ALL",
-    source: "VARIABLE",
-    status: "REAL",
-    extra: "EXCLUDE",
-    transfer: "EXCLUDE",
-    salary: "EXCLUDE",
-    accountIds: [],
-    beneficiaryIds: [],
-    includedTagIds: [],
-    excludedTagIds: [],
-    tagPresence: "ALL",
-  };
-
-  // FILTRES - AVEC PERSISTANCE
-  const [filters, setFilters] = useState<OperationFilters>(() => {
-    const saved = localStorage.getItem("operationsView_filters");
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch {
-        return DEFAULT_FILTERS;
-      }
-    }
-    return DEFAULT_FILTERS;
-  });
-
-  useEffect(() => {
-    if (initialFilters) {
-      setFilters((prev) => ({ ...prev, ...initialFilters }));
-    }
-  }, [initialFilters]);
-
-  // Sauvegarder les préférences
-  React.useEffect(() => {
-    localStorage.setItem("operationsView_sortKey", sortKey);
-  }, [sortKey]);
-
-  React.useEffect(() => {
-    localStorage.setItem("operationsView_sortOrder", sortOrder);
-  }, [sortOrder]);
-
-  React.useEffect(() => {
-    localStorage.setItem("operationsView_filters", JSON.stringify(filters));
-  }, [filters]);
-
+  // Handlers
   const handleDeleteVariable = (id: string) => {
     onDeleteVariable(id);
     setFeedback({ type: "success", message: "Opération supprimée" });
     setTimeout(() => setFeedback(null), 3000);
   };
-
-  const checkingAccountIds = useMemo(() => accounts.filter((a) => a.type === AccountType.CHECKING).map((a) => a.id), [accounts]);
-
-  const checkingTransactions = useMemo(() => variableTransactions.filter((t) => checkingAccountIds.includes(t.accountId)), [variableTransactions, checkingAccountIds]);
-
-  const checkingConfigs = useMemo(() => configs.filter((c) => checkingAccountIds.includes(c.accountId)), [configs, checkingAccountIds]);
-
-  const checkingIncomes = useMemo(() => incomeConfigs.filter((i) => checkingAccountIds.includes(i.accountId)), [incomeConfigs, checkingAccountIds]);
-
-  const { filteredWeeks } = usePlanner(checkingConfigs, checkingIncomes, paidItems, checkingTransactions, ui.currentDate, ui.searchQuery, settings, categories, filters);
-
-  const currentWeekIndex = ui.activeWeek;
-  const currentWeekData = filteredWeeks.find((w) => w.weekNumber === currentWeekIndex);
-
-  const unsortedItems = scope === "MONTH" ? filteredWeeks.flatMap((w) => w.items) : currentWeekData?.items || [];
-
-  /**
-   * Calcule une position effective pour le tri Manuel.
-   * STRICTEMENT ALIGNÉ AVEC usePlanner pour garantir la stabilité du tri.
-   */
-  const getEffectivePosition = (item: PlannedItem) => {
-    if (typeof item.position === "number" && item.position !== 0) return item.position;
-
-    const BASE_SCORE = 100_000_000_000;
-    const DAY_STEP = 100_000_000;
-
-    // Génération d'un hash entier déterministe
-    let hash = 0;
-    for (let i = 0; i < item.instanceId.length; i++) {
-      hash = (hash << 5) - hash + item.instanceId.charCodeAt(i);
-      hash |= 0;
-    }
-    const safeHash = Math.abs(hash) % DAY_STEP;
-
-    return BASE_SCORE + item.day * DAY_STEP + safeHash;
-  };
-
-  // Logique de tri
-  const currentItems = useMemo(() => {
-    return [...unsortedItems].sort((a, b) => {
-      let res = 0;
-
-      if (sortKey === "manual") {
-        const posA = getEffectivePosition(a);
-        const posB = getEffectivePosition(b);
-
-        if (posA !== posB) {
-          res = posA - posB;
-        } else {
-          // Fallback ultime stable
-          res = a.instanceId.localeCompare(b.instanceId);
-        }
-      } else if (sortKey === "date") {
-        res = a.day - b.day;
-      } else if (sortKey === "amount") {
-        res = a.amount - b.amount;
-      } else if (sortKey === "label") {
-        res = a.label.localeCompare(b.label);
-      }
-
-      return sortOrder === "asc" ? res : -res;
-    });
-  }, [unsortedItems, sortKey, sortOrder]);
-
-  const quickStats = useMemo(() => {
-    /**
-     * Calcule le montant effectif d'un item en fonction des filtres de tags actifs
-     * Si des tags sont filtrés (includedTagIds), on utilise la somme des montants de ces tags
-     * Sinon, on utilise le montant total de l'opération
-     */
-    const getEffectiveAmount = (item: PlannedItem): number => {
-      // Si aucun filtre de tag actif, retourner le montant total
-      if (!filters.includedTagIds || filters.includedTagIds.length === 0) {
-        return item.amount;
-      }
-
-      // Si l'item n'a pas de ventilation de tags, retourner 0 (ne devrait pas apparaître dans les filtres)
-      if (!item.tagAmounts || item.tagAmounts.length === 0) {
-        return 0;
-      }
-
-      // Calculer la somme des montants des tags filtrés
-      const tagSum = item.tagAmounts.filter((ta) => filters.includedTagIds.includes(ta.tagId)).reduce((sum, ta) => sum + ta.amount, 0);
-
-      return tagSum;
-    };
-
-    const stats = { expenses: { real: 0, planned: 0, pending: 0, extra: 0 }, income: { real: 0, planned: 0, pending: 0, extra: 0 } };
-    currentItems.forEach((item) => {
-      if (item.category === "Virement Interne") return;
-
-      const isRefund =
-        item.type === "INCOME" &&
-        (item.category === "Dépenses" || item.category === "Remboursement" || categories.find((c) => c.name === item.category)?.type === "EXPENSE");
-
-      let target;
-      let amount = getEffectiveAmount(item); // Utiliser le montant effectif basé sur les filtres
-
-      if (item.type === "EXPENSE") {
-        target = stats.expenses;
-      } else if (isRefund) {
-        target = stats.expenses;
-        amount = -amount; // Inverser le signe pour les remboursements
-      } else {
-        target = stats.income;
-      }
-
-      if (item.source === "VARIABLE") {
-        if (item.isPaid) target.real += amount;
-        else target.pending += amount;
-      } else {
-        // Pour les opérations récurrentes avec filtres de tags, ajuster aussi le montant prévu
-        const plannedAmount =
-          filters.includedTagIds && filters.includedTagIds.length > 0
-            ? amount // Utiliser le montant effectif filtré
-            : item.type === "INCOME" && isRefund
-            ? -item.originalAmount
-            : item.originalAmount;
-
-        target.planned += plannedAmount;
-        if (item.isPaid) target.real += amount;
-        else target.pending += amount;
-      }
-
-      if (item.isExtra) {
-        target.extra += amount;
-      }
-    });
-    return stats;
-  }, [currentItems, categories, filters.includedTagIds]);
-
-  const monthShort = new Intl.DateTimeFormat("fr-FR", { month: "short" }).format(ui.currentDate);
 
   const handleItemClick = (item: PlannedItem) => {
     if (item.source === "RECURRING") {
@@ -335,17 +176,8 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
   const defaultVarDate = (() => {
     const today = new Date();
     if (today.getMonth() === ui.currentDate.getMonth() && today.getFullYear() === ui.currentDate.getFullYear()) return today.toISOString().split("T")[0];
-    if (scope === "PERIOD" && currentWeekData)
-      return new Date(ui.currentDate.getFullYear(), ui.currentDate.getMonth(), currentWeekData.startDate, 12).toISOString().split("T")[0];
     return new Date().toISOString().split("T")[0];
   })();
-
-  const sortOptions = [
-    { key: "manual", label: "Manuel" },
-    { key: "date", label: "Date" },
-    { key: "label", label: "Libellé" },
-    { key: "amount", label: "Montant" },
-  ];
 
   // LOGIQUE ROBUSTE DE RÉORDONNANCEMENT AVEC GRANDS ENTIERS
   const handleReorder = (item: PlannedItem, oldIndex: number, newIndex: number) => {
@@ -369,8 +201,6 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
       onMoveItem(item, newPosition);
     }
   };
-
-  const isManualSort = sortKey === "manual";
 
   return (
     <div className="space-y-6">
@@ -404,18 +234,10 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
           <SearchBar value={ui.searchQuery} onChange={ui.setSearchQuery} />
         </div>
 
-        {scope === "PERIOD" && <WeekSelector weeks={filteredWeeks} activeWeek={currentWeekIndex} onSelect={ui.setActiveWeek} searchQuery={ui.searchQuery} />}
+        {scope === "PERIOD" && <WeekSelector weeks={filteredPeriodBudgets} activeWeek={ui.activeWeek} onSelect={ui.setActiveWeek} searchQuery={ui.searchQuery} />}
 
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-4">
-          <FilterBar
-            filters={filters}
-            onFilterChange={setFilters}
-            accounts={accounts}
-            people={people}
-            hiddenFilters={["transfer"]}
-            tags={tags}
-            onReset={() => setFilters(DEFAULT_FILTERS)}
-          />
+          <FilterBar filters={filters} onFilterChange={setFilters} accounts={accounts} people={people} hiddenFilters={["transfer"]} tags={tags} onReset={resetFilters} />
           <div className="pt-2 border-t border-slate-100 flex justify-between items-center">
             <div className="flex items-center gap-2">
               {isManualSort ? (
@@ -427,16 +249,7 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
               )}
             </div>
             <div className="flex items-center gap-2">
-              <ListSorter
-                options={sortOptions}
-                currentSort={sortKey}
-                currentOrder={sortOrder}
-                onSortChange={(k, o) => {
-                  setSortKey(k);
-                  setSortOrder(o);
-                  if (k === "manual" && sortKey !== "manual") setSortOrder("asc");
-                }}
-              />
+              <ListSorter options={sortOptions} currentSort={sortKey} currentOrder={sortOrder} onSortChange={setSorting} />
             </div>
           </div>
         </div>

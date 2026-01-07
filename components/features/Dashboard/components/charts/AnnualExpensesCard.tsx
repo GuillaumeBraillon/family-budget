@@ -15,9 +15,9 @@ interface AnnualExpensesCardProps {
 
 export const AnnualExpensesCard: React.FC<AnnualExpensesCardProps> = ({ data, year, onYearChange }) => {
   // Hack pour éviter le flash de rendu Recharts SSR/Hydration
-  const [ready, setReady] = useState(false);
+  const [isChartReady, setIsChartReady] = useState(false);
   useEffect(() => {
-    const timer = requestAnimationFrame(() => setReady(true));
+    const timer = requestAnimationFrame(() => setIsChartReady(true));
     return () => cancelAnimationFrame(timer);
   }, []);
 
@@ -50,7 +50,7 @@ export const AnnualExpensesCard: React.FC<AnnualExpensesCardProps> = ({ data, ye
         </div>
       </CardHeader>
       <CardContent className="p-4 h-[300px]">
-        {ready ? (
+        {isChartReady ? (
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />

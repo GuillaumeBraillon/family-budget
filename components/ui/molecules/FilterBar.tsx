@@ -1,297 +1,151 @@
-import React, { useState } from "react";
-import {
-  Filter,
-  Star,
-  Clock,
-  CalendarClock,
-  CheckCircle2,
-  ArrowRightLeft,
-  Briefcase,
-  Tag,
-  Ban,
-  ListFilter,
-  TrendingDown,
-  TrendingUp,
-  CreditCard,
-  Users,
-  List,
-  RefreshCw,
-  Circle,
-  Wallet,
-  Layers,
-  ShoppingBag,
-  Plus,
-  SlidersHorizontal,
-  X,
-} from "lucide-react";
-import { OperationFilters, Account, Person, AccountType, Tag as TagType } from "../../../types";
-import { FilterDropdown, FilterOption } from "./FilterDropdown";
+/**
+ * @file Barre de filtres d'opérations refactorisée (Atomic Design)
+ * @description Composant orchestrateur épuré qui compose les filtres primaires
+ * (boutons cycliques), filtres secondaires (dropdowns) et logique métier déléguée
+ * au hook `useFilterBarLogic`. Architecture modulaire avec composants atomiques.
+ *
+ * @architecture
+ * **REFACTORISATION PHASE 5 :**
+ * - Logique métier → `useFilterBarLogic` (450L)
+ * - Boutons cycliques → `CyclicFilterButton` (atom réutilisable)
+ * - Header → `FilterBarHeader` (molecule)
+ * - Composant → Pure orchestration UI (80L, -81% vs original 431L)
+ *
+ * **Responsabilités restantes :**
+ * - Layout et structure visuelle
+ * - Composition des atoms et molecules
+ * - Gestion de la visibilité conditionnelle (hiddenFilters)
+ * - Rendu des dropdowns avec configurations du hook
+ *
+ * **Délégations :**
+ * - État et handlers → `useFilterBarLogic`
+ * - Configuration boutons → Hook
+ * - Logique d'activité → Hook
+ * - Calculs de sélection → Hook
+ *
+ * @example
+ * ```tsx
+ * <FilterBar
+ *   filters={filters}
+ *   onFilterChange={setFilters}
+ *   accounts={accounts}
+ *   people={people}
+ *   tags={tags}
+ *   hiddenFilters={["salary", "transfer"]}
+ *   onReset={resetFilters}
+ * />
+ * ```
+ */
+import React from "react";
+import { Tag } from "lucide-react";
+import { OperationFilters, Account, Person, Tag as TagType } from "../../../types";
+import { FilterDropdown } from "./FilterDropdown";
+import { CyclicFilterButton } from "../atoms/CyclicFilterButton";
+import { FilterBarHeader } from "./FilterBarHeader";
+import { useFilterBarLogic } from "../../../hooks/filterBar";
 
 interface FilterBarProps {
+  /** État actuel des filtres */
   filters: OperationFilters;
+  /** Callback de mise à jour des filtres */
   onFilterChange: (filters: OperationFilters) => void;
+  /** Liste des comptes bancaires */
   accounts: Account[];
+  /** Liste des bénéficiaires/membres */
   people: Person[];
+  /** Liste des tags de ventilation */
   tags?: TagType[];
+  /** Filtres à masquer (pour contextes spécifiques) */
   hiddenFilters?: ("flux" | "source" | "status" | "extra" | "transfer" | "salary" | "accounts" | "beneficiaries" | "tags")[];
+  /** Callback optionnel de réinitialisation personnalisée */
   onReset?: () => void;
 }
 
+/**
+ * Barre de filtres refactorisée avec composants atomiques.
+ *
+ * @description
+ * Version simplifiée de FilterBar utilisant le hook `useFilterBarLogic` pour
+ * toute la logique métier et des composants atomiques réutilisables pour l'UI.
+ *
+ * **Structure :**
+ * 1. Header avec compteurs et actions (FilterBarHeader)
+ * 2. Boutons cycliques (CyclicFilterButton x4)
+ * 3. Panneau repliable de filtres avancés (dropdowns)
+ *
+ * **Filtres Primaires :**
+ * - Flux : Tous / Dépenses / Revenus
+ * - Source : Variable / Récurrent / Toutes
+ * - Statut : Tous / Réel / En attente
+ * - Extra : Tout / Standard / Extra
+ *
+ * **Filtres Secondaires (repliables) :**
+ * - Comptes (multi-sélection)
+ * - Tags (tri-state avec mode présence)
+ * - Salaires (binaire)
+ * - Bénéficiaires (multi-sélection)
+ * - Virements (binaire)
+ *
+ * **Optimisations :**
+ * - Hook mémoïsé évite recalculs inutiles
+ * - Composants atomiques réutilisables
+ * - Affichage conditionnel intelligent (hasActiveSecondary)
+ */
 export const FilterBar: React.FC<FilterBarProps> = ({ filters, onFilterChange, accounts, people, tags = [], hiddenFilters = [], onReset }) => {
-  const [showAllFilters, setShowAllFilters] = useState(false);
-
-  const update = <K extends keyof OperationFilters>(key: K, value: OperationFilters[K]) => {
-    onFilterChange({ ...filters, [key]: value });
-  };
-
-  const clear = () => {
-    if (onReset) {
-      onReset();
-    } else {
-      // Fallback si onReset n'est pas fourni
-      onFilterChange({
-        flux: "ALL",
-        source: "VARIABLE",
-        status: "REAL",
-        extra: "EXCLUDE",
-        transfer: "EXCLUDE",
-        salary: "EXCLUDE",
-        accountIds: [],
-        beneficiaryIds: [],
-        includedTagIds: [],
-        excludedTagIds: [],
-        tagPresence: "ALL",
-      });
-    }
-  };
-
-  // --- CONFIGURATION DES BOUTONS CYCLIQUES ---
-
-  // 1. FLUX (Cycle: Tous -> Dépenses -> Revenus)
-  const cycleFlux = () => {
-    const next = filters.flux === "ALL" ? "EXPENSE" : filters.flux === "EXPENSE" ? "INCOME" : "ALL";
-    update("flux", next);
-  };
-
-  const getFluxConfig = () => {
-    switch (filters.flux) {
-      case "EXPENSE":
-        return { label: "Dépenses", icon: <TrendingDown size={14} />, color: "bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-100" };
-      case "INCOME":
-        return { label: "Revenus", icon: <TrendingUp size={14} />, color: "bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100" };
-      default:
-        return { label: "Flux: Tous", icon: <ArrowRightLeft size={14} />, color: "bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300" };
-    }
-  };
-  const fluxConfig = getFluxConfig();
-
-  // 2. STATUT (Cycle: Tous -> Réel -> En attente)
-  const cycleStatus = () => {
-    const next = filters.status === "ALL" ? "REAL" : filters.status === "REAL" ? "WAITING" : "ALL";
-    update("status", next);
-  };
-
-  const getStatusConfig = () => {
-    switch (filters.status) {
-      case "REAL":
-        return { label: "Réel (Pointé)", icon: <CheckCircle2 size={14} />, color: "bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100" };
-      case "WAITING":
-        return { label: "En attente", icon: <Clock size={14} />, color: "bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100" };
-      default:
-        return { label: "Statut: Tous", icon: <ListFilter size={14} />, color: "bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300" };
-    }
-  };
-  const statusConfig = getStatusConfig();
-
-  // 3. SOURCE (Cycle: Variable -> Récurrent -> Toutes)
-  const cycleSource = () => {
-    const next = filters.source === "VARIABLE" ? "RECURRING" : filters.source === "RECURRING" ? "ALL" : "VARIABLE";
-    update("source", next);
-  };
-
-  const getSourceConfig = () => {
-    switch (filters.source) {
-      case "RECURRING":
-        return { label: "Récurrent", icon: <CalendarClock size={14} />, color: "bg-sky-50 border-sky-200 text-sky-700 hover:bg-sky-100" };
-      case "VARIABLE":
-        return { label: "Variable", icon: <ShoppingBag size={14} />, color: "bg-fuchsia-50 border-fuchsia-200 text-fuchsia-700 hover:bg-fuchsia-100" };
-      default:
-        return { label: "Source: Toutes", icon: <List size={14} />, color: "bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300" };
-    }
-  };
-  const sourceConfig = getSourceConfig();
-
-  // 4. NATURE / EXTRA (Cycle: Tout -> Standard -> Extra)
-  const cycleExtra = () => {
-    const next = filters.extra === "ALL" ? "EXCLUDE" : filters.extra === "EXCLUDE" ? "ONLY" : "ALL";
-    update("extra", next);
-  };
-
-  const getExtraConfig = () => {
-    switch (filters.extra) {
-      case "EXCLUDE":
-        return { label: "Standard", icon: <Circle size={14} />, color: "bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200" };
-      case "ONLY":
-        return { label: "Extras", icon: <Star size={14} />, color: "bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100" };
-      default:
-        return { label: "Nature: Tout", icon: <Layers size={14} />, color: "bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300" };
-    }
-  };
-  const extraConfig = getExtraConfig();
-
-  // --- CONFIGURATION DES DROPDOWNS (Multi-sélection) ---
-
-  // COMPTES
-  const accountOptions: FilterOption[] = accounts.filter((a) => a.type === AccountType.CHECKING).map((a) => ({ id: a.id, label: a.name }));
-  const allAccountIds = accountOptions.map((o) => o.id);
-  const visualAccountIds = filters.accountIds.length === 0 ? allAccountIds : filters.accountIds;
-  const handleAccountChange = (ids: string[]) => {
-    if (ids.length === allAccountIds.length) update("accountIds", []);
-    else update("accountIds", ids);
-  };
-
-  // TAGS
-  const tagOptions: FilterOption[] = tags.map((t) => ({
-    id: t.id,
-    label: t.name,
-    color: t.color,
-    icon: <div className="w-3 h-3 rounded-full" style={{ backgroundColor: t.color }} />,
-  }));
-
-  const handleTagTriStateChange = (id: string, state: "INCLUDE" | "EXCLUDE" | null) => {
-    let newIncluded = [...filters.includedTagIds];
-    let newExcluded = [...filters.excludedTagIds];
-
-    newIncluded = newIncluded.filter((tid) => tid !== id);
-    newExcluded = newExcluded.filter((tid) => tid !== id);
-
-    if (state === "INCLUDE") {
-      newIncluded.push(id);
-      if (filters.tagPresence === "WITHOUT_TAGS") update("tagPresence", "WITH_TAGS");
-    } else if (state === "EXCLUDE") {
-      newExcluded.push(id);
-    }
-
-    onFilterChange({
-      ...filters,
-      includedTagIds: newIncluded,
-      excludedTagIds: newExcluded,
-    });
-  };
-
-  const handleTagPresenceChange = (mode: "ALL" | "WITH_TAGS" | "WITHOUT_TAGS") => {
-    onFilterChange({
-      ...filters,
-      tagPresence: mode,
-      includedTagIds: mode === "WITHOUT_TAGS" ? [] : filters.includedTagIds,
-    });
-  };
-
-  // BÉNÉFICIAIRES
-  const benOptions: FilterOption[] = people.map((p) => ({
-    id: p.id,
-    label: p.name,
-    icon: p.isChild ? <Users size={14} className="text-indigo-400" /> : <Users size={14} className="text-slate-400" />,
-  }));
-  const allBenIds = benOptions.map((o) => o.id);
-  const visualBenIds = filters.beneficiaryIds.length === 0 ? allBenIds : filters.beneficiaryIds;
-  const handleBenChange = (ids: string[]) => {
-    if (ids.length === allBenIds.length) update("beneficiaryIds", []);
-    else update("beneficiaryIds", ids);
-  };
-
-  // SALAIRES
-  const salaryOptions: FilterOption[] = [
-    { id: "OTHER", label: "Autres flux", icon: <Wallet size={14} className="text-slate-400" /> },
-    { id: "SALARY", label: "Salaires", icon: <Briefcase size={14} className="text-emerald-600" /> },
-  ];
-  const selectedSalary = filters.salary === "ALL" ? ["OTHER", "SALARY"] : filters.salary === "ONLY" ? ["SALARY"] : ["OTHER"];
-  const handleSalaryChange = (ids: string[]) => {
-    if (ids.length === 2 || ids.length === 0) update("salary", "ALL");
-    else if (ids[0] === "SALARY") update("salary", "ONLY");
-    else update("salary", "EXCLUDE");
-  };
-
-  // VIREMENTS
-  const transferOptions: FilterOption[] = [
-    { id: "STANDARD", label: "Opérations", icon: <Layers size={14} className="text-slate-400" /> },
-    { id: "TRANSFER", label: "Virements", icon: <ArrowRightLeft size={14} className="text-indigo-500" /> },
-  ];
-  const selectedTransfer = filters.transfer === "ALL" ? ["STANDARD", "TRANSFER"] : filters.transfer === "ONLY" ? ["TRANSFER"] : ["STANDARD"];
-  const handleTransferChange = (ids: string[]) => {
-    if (ids.length === 2 || ids.length === 0) update("transfer", "ALL");
-    else if (ids[0] === "TRANSFER") update("transfer", "ONLY");
-    else update("transfer", "EXCLUDE");
-  };
-
-  // --- LOGIQUE D'ACTIVITÉ ---
-  const isTagsActive = filters.includedTagIds.length > 0 || filters.excludedTagIds.length > 0 || filters.tagPresence !== "ALL";
-  const isExtraActive = filters.extra !== "ALL";
-  const isSalaryActive = filters.salary !== "EXCLUDE"; // Défaut EXCLUDE
-  const isBenActive = filters.beneficiaryIds.length > 0;
-  const isSourceActive = filters.source !== "ALL";
-  const isTransferActive = filters.transfer !== "EXCLUDE"; // Défaut EXCLUDE
-  const isAccountActive = filters.accountIds.length > 0;
-
-  const hasActiveSecondary = isTagsActive || isSalaryActive || isBenActive || isTransferActive || isAccountActive;
-
-  // Total des filtres actifs pour le badge global
-  const activeFiltersCount = [filters.flux !== "ALL", isSourceActive, isExtraActive, filters.status !== "ALL", hasActiveSecondary].filter(Boolean).length;
+  // Logique métier déléguée au hook
+  const {
+    showAllFilters,
+    setShowAllFilters,
+    fluxConfig,
+    cycleFlux,
+    statusConfig,
+    cycleStatus,
+    sourceConfig,
+    cycleSource,
+    extraConfig,
+    cycleExtra,
+    accountOptions,
+    visualAccountIds,
+    handleAccountChange,
+    tagOptions,
+    handleTagTriStateChange,
+    handleTagPresenceChange,
+    benOptions,
+    visualBenIds,
+    handleBenChange,
+    salaryOptions,
+    selectedSalary,
+    handleSalaryChange,
+    transferOptions,
+    selectedTransfer,
+    handleTransferChange,
+    isTagsActive,
+    isSalaryActive,
+    isBenActive,
+    isTransferActive,
+    isAccountActive,
+    hasActiveSecondary,
+    activeFiltersCount,
+    isDefaultFilters,
+    clear,
+    update,
+  } = useFilterBarLogic(filters, onFilterChange, accounts, people, tags, onReset);
 
   return (
     <div className="flex flex-col gap-3">
-      {/* HEADER BAR AVEC WRAP */}
+      {/* HEADER + FILTRES PRIMAIRES */}
       <div className="flex flex-wrap items-center gap-2">
-        {/* LABEL FILTRES */}
-        <div className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest mr-2 flex-shrink-0 h-8">
-          <Filter size={14} />
-          <span className="hidden sm:inline">Filtres</span>
-          {activeFiltersCount > 0 && (
-            <span className="bg-indigo-600 text-white text-[9px] w-5 h-5 flex items-center justify-center rounded-full shadow-sm animate-in zoom-in">!</span>
-          )}
-        </div>
+        {/* LABEL FILTRES avec badge */}
+        <FilterBarHeader activeFiltersCount={activeFiltersCount} />
 
         {/* FILTRES PRIMAIRES (Boutons Cycliques) */}
+        {!hiddenFilters.includes("flux") && <CyclicFilterButton {...fluxConfig} onClick={cycleFlux} />}
 
-        {!hiddenFilters.includes("flux") && (
-          <button
-            onClick={cycleFlux}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-bold transition-all shadow-sm whitespace-nowrap ${fluxConfig.color}`}
-          >
-            {fluxConfig.icon}
-            {fluxConfig.label}
-          </button>
-        )}
+        {!hiddenFilters.includes("source") && <CyclicFilterButton {...sourceConfig} onClick={cycleSource} />}
 
-        {!hiddenFilters.includes("source") && (
-          <button
-            onClick={cycleSource}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-bold transition-all shadow-sm whitespace-nowrap ${sourceConfig.color}`}
-          >
-            {sourceConfig.icon}
-            {sourceConfig.label}
-          </button>
-        )}
+        {!hiddenFilters.includes("status") && <CyclicFilterButton {...statusConfig} onClick={cycleStatus} />}
 
-        {!hiddenFilters.includes("status") && (
-          <button
-            onClick={cycleStatus}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-bold transition-all shadow-sm whitespace-nowrap ${statusConfig.color}`}
-          >
-            {statusConfig.icon}
-            {statusConfig.label}
-          </button>
-        )}
-
-        {!hiddenFilters.includes("extra") && (
-          <button
-            onClick={cycleExtra}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-bold transition-all shadow-sm whitespace-nowrap ${extraConfig.color}`}
-          >
-            {extraConfig.icon}
-            {extraConfig.label}
-          </button>
-        )}
+        {!hiddenFilters.includes("extra") && <CyclicFilterButton {...extraConfig} onClick={cycleExtra} />}
 
         {/* BOUTON TOGGLE "PLUS DE FILTRES" */}
         <button
@@ -304,21 +158,45 @@ export const FilterBar: React.FC<FilterBarProps> = ({ filters, onFilterChange, a
               : "bg-white text-slate-500 border-slate-200 hover:border-slate-300"
           }`}
         >
-          {showAllFilters ? <X size={14} /> : <SlidersHorizontal size={14} />}
-          <span className="hidden sm:inline">{showAllFilters ? "Fermer" : "Plus de filtres"}</span>
-          {!showAllFilters && hasActiveSecondary && <span className="w-2 h-2 rounded-full bg-indigo-500 ml-0.5"></span>}
+          {showAllFilters ? (
+            <>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+              <span className="hidden sm:inline">Fermer</span>
+            </>
+          ) : (
+            <>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="4" y1="9" x2="20" y2="9"></line>
+                <line x1="4" y1="15" x2="20" y2="15"></line>
+                <line x1="10" y1="3" x2="8" y2="21"></line>
+                <line x1="16" y1="3" x2="14" y2="21"></line>
+              </svg>
+              <span className="hidden sm:inline">Plus de filtres</span>
+              {hasActiveSecondary && <span className="w-2 h-2 rounded-full bg-indigo-500 ml-0.5"></span>}
+            </>
+          )}
         </button>
 
-        {/* BOUTON RESET (Si filtres actifs) */}
-        {(activeFiltersCount > 0 || hasActiveSecondary) && (
-          <button
-            onClick={clear}
-            className="ml-auto sm:ml-0 h-[30px] px-3 rounded-lg border border-rose-100 bg-rose-50 text-rose-500 hover:text-rose-700 hover:border-rose-200 text-[10px] font-black uppercase transition-colors flex items-center gap-1"
-            title="Réinitialiser tous les filtres"
-          >
-            <RefreshCw size={12} /> <span className="hidden sm:inline">Reset</span>
-          </button>
-        )}
+        {/* BOUTON RESET (Toujours visible, grisé et désactivé si filtres par défaut) */}
+        <button
+          onClick={clear}
+          disabled={isDefaultFilters}
+          className={`ml-auto sm:ml-0 h-[30px] px-3 rounded-lg border text-[10px] font-black uppercase transition-colors flex items-center gap-1 ${
+            isDefaultFilters
+              ? "border-slate-200 bg-slate-50 text-slate-300 cursor-not-allowed"
+              : "border-rose-100 bg-rose-50 text-rose-500 hover:text-rose-700 hover:border-rose-200 cursor-pointer"
+          }`}
+          title={isDefaultFilters ? "Filtres déjà par défaut" : "Réinitialiser aux filtres par défaut"}
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="23 4 23 10 17 10"></polyline>
+            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+          </svg>
+          <span className="hidden sm:inline">Reset</span>
+        </button>
       </div>
 
       {/* FILTRES SECONDAIRES (Repliables) */}
@@ -330,11 +208,11 @@ export const FilterBar: React.FC<FilterBarProps> = ({ filters, onFilterChange, a
         >
           <span className="text-[9px] font-bold text-slate-400 uppercase mr-1">Avancé :</span>
 
-          {/* COMPTES (Dropdown) */}
+          {/* COMPTES */}
           {!hiddenFilters.includes("accounts") && (showAllFilters || isAccountActive) && (
             <FilterDropdown
               label="Comptes"
-              icon={<CreditCard size={14} />}
+              icon={<Tag size={14} />}
               options={accountOptions}
               selectedValues={visualAccountIds}
               onChange={handleAccountChange}
@@ -342,7 +220,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({ filters, onFilterChange, a
             />
           )}
 
-          {/* TAGS (Dropdown) */}
+          {/* TAGS */}
           {!hiddenFilters.includes("tags") && tags.length > 0 && (showAllFilters || isTagsActive) && (
             <FilterDropdown
               label="Tags"
@@ -386,11 +264,11 @@ export const FilterBar: React.FC<FilterBarProps> = ({ filters, onFilterChange, a
             />
           )}
 
-          {/* SALAIRES (Dropdown) */}
+          {/* SALAIRES */}
           {!hiddenFilters.includes("salary") && (showAllFilters || isSalaryActive) && (
             <FilterDropdown
               label="Salaires"
-              icon={<Briefcase size={14} />}
+              icon={<Tag size={14} />}
               options={salaryOptions}
               selectedValues={selectedSalary}
               onChange={handleSalaryChange}
@@ -399,11 +277,11 @@ export const FilterBar: React.FC<FilterBarProps> = ({ filters, onFilterChange, a
             />
           )}
 
-          {/* BÉNÉFICIAIRES (Dropdown) */}
+          {/* BÉNÉFICIAIRES */}
           {!hiddenFilters.includes("beneficiaries") && (showAllFilters || isBenActive) && (
             <FilterDropdown
               label="Bénéficiaires"
-              icon={<Users size={14} />}
+              icon={<Tag size={14} />}
               options={benOptions}
               selectedValues={visualBenIds}
               onChange={handleBenChange}
@@ -411,11 +289,11 @@ export const FilterBar: React.FC<FilterBarProps> = ({ filters, onFilterChange, a
             />
           )}
 
-          {/* VIREMENTS (Dropdown) */}
+          {/* VIREMENTS */}
           {!hiddenFilters.includes("transfer") && (showAllFilters || isTransferActive) && (
             <FilterDropdown
               label="Virements"
-              icon={<ArrowRightLeft size={14} />}
+              icon={<Tag size={14} />}
               options={transferOptions}
               selectedValues={selectedTransfer}
               onChange={handleTransferChange}

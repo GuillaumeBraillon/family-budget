@@ -74,7 +74,7 @@ export const IncomeEditor: React.FC<IncomeEditorProps> = ({ incomeConfigs, peopl
     }
   }, [formData.startMonth, durationMonths, durationMode, formData.isExtra, formData.endMonth]);
 
-  const resetForm = () => {
+  const clearForm = () => {
     setFormData({
       label: "",
       amount: 0,
@@ -121,7 +121,7 @@ export const IncomeEditor: React.FC<IncomeEditorProps> = ({ incomeConfigs, peopl
     setIsFormOpen(true);
   };
 
-  const handleSubmit = () => {
+  const handleFormSubmit = () => {
     const errors: string[] = [];
 
     if (!formData.label?.trim()) errors.push("Le libellé est obligatoire");
@@ -197,7 +197,7 @@ export const IncomeEditor: React.FC<IncomeEditorProps> = ({ incomeConfigs, peopl
         />
       </div>
 
-      <Modal isOpen={isFormOpen} onClose={resetForm} title={editingId ? "Modifier le revenu" : "Nouveau Revenu Récurrent"}>
+      <Modal isOpen={isFormOpen} onClose={clearForm} title={editingId ? "Modifier le revenu" : "Nouveau Revenu Récurrent"}>
         <div className="space-y-2">
           {validationErrors.length > 0 && (
             <div
@@ -389,7 +389,7 @@ export const IncomeEditor: React.FC<IncomeEditorProps> = ({ incomeConfigs, peopl
               </button>
             )}
             <button
-              onClick={handleSubmit}
+              onClick={handleFormSubmit}
               className="flex-1 bg-slate-900 text-white py-2 rounded-lg font-medium hover:bg-slate-800 flex items-center justify-center gap-2"
             >
               <Save size={18} /> Sauvegarder

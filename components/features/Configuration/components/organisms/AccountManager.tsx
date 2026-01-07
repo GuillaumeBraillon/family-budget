@@ -34,7 +34,7 @@ export const AccountManager: React.FC<AccountManagerProps> = ({ accounts, people
     return [...accounts].sort((a, b) => a.name.localeCompare(b.name));
   }, [accounts]);
 
-  const resetForm = () => {
+  const clearForm = () => {
     setName("");
     setBankName("");
     setType(AccountType.CHECKING);
@@ -74,7 +74,7 @@ export const AccountManager: React.FC<AccountManagerProps> = ({ accounts, people
     setIsModalOpen(true);
   };
 
-  const handleSubmit = () => {
+  const handleFormSubmit = () => {
     if (!name) return;
 
     const account: Account = {
@@ -90,13 +90,13 @@ export const AccountManager: React.FC<AccountManagerProps> = ({ accounts, people
     };
 
     onUpsertAccount(account);
-    resetForm();
+    clearForm();
   };
 
   const handleDelete = () => {
     if (deleteConfirm) {
       onDeleteAccount(deleteConfirm.id);
-      resetForm();
+      clearForm();
     }
   };
 
@@ -114,7 +114,7 @@ export const AccountManager: React.FC<AccountManagerProps> = ({ accounts, people
         onCancel={() => setDeleteConfirm(null)}
       />
 
-      <Modal isOpen={isModalOpen} onClose={resetForm} title={editingAccount ? "Modifier le compte" : "Ajouter un compte"}>
+      <Modal isOpen={isModalOpen} onClose={clearForm} title={editingAccount ? "Modifier le compte" : "Ajouter un compte"}>
         <div className="space-y-4">
           <TextInput label="Nom du compte" value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex: Compte Joint, Livret A..." required />
 
@@ -168,7 +168,7 @@ export const AccountManager: React.FC<AccountManagerProps> = ({ accounts, people
               </button>
             )}
             <button
-              onClick={handleSubmit}
+              onClick={handleFormSubmit}
               className="flex-1 bg-slate-900 text-white py-3 rounded-lg font-bold hover:bg-slate-800 transition-colors flex items-center justify-center gap-2"
             >
               <Save size={18} /> {editingAccount ? "Enregistrer" : "Créer le compte"}

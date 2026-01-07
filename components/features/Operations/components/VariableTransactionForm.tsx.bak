@@ -18,7 +18,7 @@
  */
 import React, { useState, useRef, useEffect } from "react";
 import { Save, TrendingUp, TrendingDown, Calendar, Trash2, Clock, CheckCircle2, Star, MessageSquare, ArrowRightLeft, ArrowDown, RefreshCcw } from "lucide-react";
-import { VariableTransaction, Account, CategoryDef, Person, Transfer, SavedLabel, Tag, AccountType } from "../../../../types";
+import { VariableTransaction, Account, CategoryDef, Person, Transfer, SavedLabel, Tag } from "../../../../types";
 import { CategorySelector } from "../../../ui/molecules/CategorySelector";
 import { TextInput, AmountInput, SearchableTextInput } from "../../../ui/molecules/FormInputs";
 import { AccountSelector, BeneficiarySelector } from "../../../ui/molecules/SmartSelectors";
@@ -38,7 +38,7 @@ interface VariableTransactionFormProps {
   onDeleteTransaction?: (id: string) => void;
   onUpsertTransfer?: (t: Transfer) => void;
   defaultDate: string;
-  labelsSuggestions?: string[];
+  form.labelsSuggestions?: string[];
   savedLabels?: SavedLabel[];
   editingTransaction?: VariableTransaction | null;
   initialMode?: "STANDARD" | "TRANSFER";
@@ -56,12 +56,10 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
   onDeleteTransaction,
   onUpsertTransfer,
   defaultDate,
-  labelsSuggestions = [],
+  form.labelsSuggestions = [],
   savedLabels = [],
   editingTransaction,
   initialMode = "STANDARD",
-  lockMode = false,
-}) => {
   // --- HOOKS SPÉCIALISÉS (LOGIQUE DÉLÉGUÉE) ---
 
   const form = useTransactionForm({
@@ -71,7 +69,7 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
     savedLabels,
     defaultDate,
     initialMode,
-    labelsSuggestions,
+    form.labelsSuggestions,
     isOpen,
   });
 
@@ -95,15 +93,13 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
     }
   };
 
-  const handleDelete = () => {
     if (editingTransaction && onDeleteTransaction) {
       onDeleteTransaction(editingTransaction.id);
       setShowDeleteConfirm(false);
       onClose();
     }
   };
-
-  if (showDeleteConfirm) {
+if (showDeleteConfirm) {
     return (
       <ConfirmModal
         isOpen={true}
@@ -162,7 +158,7 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
         {form.mode === "STANDARD" ? (
           <>
             <div className="mb-2">
-              <label className="text-xs font-medium text-slate-500 uppercase block mb-1">Type</label>
+              <form.label className="text-xs font-medium text-slate-500 uppercase block mb-1">Type</form.label>
               <div className="flex bg-slate-100 p-1 rounded-lg">
                 <button
                   type="button"
@@ -192,23 +188,23 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
             </div>
 
             <SearchableTextInput
-              label="Libellé"
+              form.label="Libellé"
               value={form.label}
               onChange={(e) => form.setLabel(e.target.value)}
-              onSelectSuggestion={form.setLabel}
+              onSelectSuggestion={setLabel}
               placeholder={form.isExpense ? "Ex: Frais, Courses..." : "Ex: Vente, Remboursement..."}
               suggestions={form.standardSuggestions}
               required
               autoFocus={!editingTransaction}
             />
             <div className="grid grid-cols-2 gap-2">
-              <AmountInput label="Montant" value={form.amount} onChange={(e) => form.setAmount(e.target.value)} color={form.themeColor} required />
-              <TextInput label="Date" type="form.date" icon={Calendar} value={form.date} onChange={(e) => form.setDate(e.target.value)} required />
+              <AmountInput form.label="Montant" value={form.amount} onChange={(e) => form.setAmount(e.target.value)} color={form.themeColor} required />
+              <TextInput form.label="Date" type="form.date" icon={Calendar} value={form.date} onChange={(e) => form.setDate(e.target.value)} required />
             </div>
 
             <div className="grid grid-cols-2 gap-2">
               <AccountSelector
-                label={form.isExpense ? (form.isRefund ? "Compte crédité (Remboursement)" : "Compte débité") : "Compte crédité"}
+                form.label={form.isExpense ? (form.isRefund ? "Compte crédité (Remboursement)" : "Compte débité") : "Compte crédité"}
                 accounts={accounts}
                 value={form.accountId}
                 onChange={(e) => form.setAccountId(e.target.value)}
@@ -221,21 +217,16 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
 
             <CategorySelector
               categories={categories}
-              type={form.type}
+              type={type}
               selectedCategory={form.category}
               selectedSubCategory={form.subCategory}
-              onCategoryChange={form.setCategory}
-              onSubCategoryChange={form.setSubCategory}
+              onCategoryChange={setCategory}
+              onSubCategoryChange={setSubCategory}
             />
 
             <div className="border-t border-slate-100 pt-2"></div>
 
-            <TagAmountSelector
-              tags={tags}
-              selectedTagAmounts={form.selectedTagAmounts}
-              onTagAmountsChange={form.setSelectedTagAmounts}
-              totalAmount={parseFloat(form.amount) || 0}
-            />
+            <TagAmountSelector tags={tags} form.selectedTagAmounts={form.selectedTagAmounts} onTagAmountsChange={setSelectedTagAmounts} totalAmount={parseFloat(form.amount) || 0} />
 
             {/* Toggle Extra Global - Compatible avec les tags individuels */}
             <div
@@ -258,24 +249,22 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
               <div
                 onClick={() => form.setIsRefund(!form.isRefund)}
                 className={`cursor-pointer px-3 py-2 rounded-lg border transition-all flex items-center gap-3 ${
-                  form.isRefund ? "bg-emerald-50 border-emerald-200" : "bg-slate-50 border-transparent hover:border-slate-200"
+                  isRefund ? "bg-emerald-50 border-emerald-200" : "bg-slate-50 border-transparent hover:border-slate-200"
                 }`}
               >
-                <div className={`p-1 rounded ${form.isRefund ? "bg-emerald-200 text-emerald-700" : "bg-slate-200 text-slate-500"}`}>
-                  {form.isRefund ? <RefreshCcw size={14} /> : <TrendingDown size={14} />}
+                <div className={`p-1 rounded ${isRefund ? "bg-emerald-200 text-emerald-700" : "bg-slate-200 text-slate-500"}`}>
+                  {isRefund ? <RefreshCcw size={14} /> : <TrendingDown size={14} />}
                 </div>
                 <div className="flex-1">
-                  <span className={`text-xs font-bold block ${form.isRefund ? "text-emerald-800" : "text-slate-600"}`}>C'est un remboursement</span>
-                  {form.isRefund && (
-                    <span className="text-[10px] text-emerald-600 leading-none">Ce montant sera déduit de vos dépenses (ex: Mutuelle, Retour produit).</span>
-                  )}
+                  <span className={`text-xs font-bold block ${isRefund ? "text-emerald-800" : "text-slate-600"}`}>C'est un remboursement</span>
+                  {isRefund && <span className="text-[10px] text-emerald-600 leading-none">Ce montant sera déduit de vos dépenses (ex: Mutuelle, Retour produit).</span>}
                 </div>
-                <input type="checkbox" checked={form.isRefund} onChange={() => {}} className="pointer-events-none" />
+                <input type="checkbox" checked={isRefund} onChange={() => {}} className="pointer-events-none" />
               </div>
             )}
 
             <TextInput
-              label="Note / Commentaire"
+              form.label="Note / Commentaire"
               value={form.comments}
               onChange={(e) => form.setComments(e.target.value)}
               placeholder="Infos complémentaires..."
@@ -289,14 +278,14 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
               <p className="text-xs text-indigo-800 leading-relaxed">Virement entre deux comptes. Crée un mouvement unique lié.</p>
             </div>
             <div className="grid grid-cols-2 gap-2">
-              <AmountInput label="Montant" value={form.amount} onChange={(e) => form.setAmount(e.target.value)} color="indigo" required autoFocus />
-              <TextInput label="Date" type="form.date" icon={Calendar} value={form.date} onChange={(e) => form.setDate(e.target.value)} required />
+              <AmountInput form.label="Montant" value={form.amount} onChange={(e) => form.setAmount(e.target.value)} color="indigo" required autoFocus />
+              <TextInput form.label="Date" type="form.date" icon={Calendar} value={form.date} onChange={(e) => form.setDate(e.target.value)} required />
             </div>
             <div className="relative">
               <div className="absolute left-[13px] top-[34px] bottom-[34px] w-0.5 bg-slate-200 -z-10"></div>
               <div className="space-y-3">
                 <AccountSelector
-                  label="Depuis (Source)"
+                  form.label="Depuis (Source)"
                   accounts={form.filteredSourceAccounts}
                   value={form.accountId}
                   onChange={(e) => form.setAccountId(e.target.value)}
@@ -309,7 +298,7 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
                   </div>
                 </div>
                 <AccountSelector
-                  label="Vers (Destination)"
+                  form.label="Vers (Destination)"
                   accounts={form.filteredDestAccounts}
                   value={form.destAccountId}
                   onChange={(e) => form.setDestAccountId(e.target.value)}
@@ -319,10 +308,10 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
               </div>
             </div>
             <SearchableTextInput
-              label="Motif"
+              form.label="Motif"
               value={form.label}
               onChange={(e) => form.setLabel(e.target.value)}
-              onSelectSuggestion={form.setLabel}
+              onSelectSuggestion={setLabel}
               placeholder="Ex: Épargne, Remboursement..."
               suggestions={form.transferSuggestions}
               required

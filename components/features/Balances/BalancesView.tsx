@@ -30,7 +30,7 @@ export const BalancesView: React.FC<BalancesViewProps> = ({
   onUpdateAccount,
 }) => {
   const currentDate = new Date();
-  const { getStats, filteredWeeks } = usePlanner(configs, incomeConfigs, paidItems, variableTransactions, currentDate, "", settings, categories);
+  const { calculatePeriodStatistics, filteredPeriodBudgets } = usePlanner(configs, incomeConfigs, paidItems, variableTransactions, currentDate, "", settings, categories);
 
   const getWeekFromDate = (date: Date): number => {
     const day = date.getDate();
@@ -40,7 +40,7 @@ export const BalancesView: React.FC<BalancesViewProps> = ({
     return 4;
   };
   const activeWeek = getWeekFromDate(currentDate);
-  const stats = getStats(activeWeek);
+  const stats = calculatePeriodStatistics(activeWeek);
 
   // Budget alloué pour la période
   const budgetPeriodeGlobal = stats.periodLimit;
@@ -57,7 +57,7 @@ export const BalancesView: React.FC<BalancesViewProps> = ({
   const totalPersonalBalance = personalAccounts.reduce((sum, acc) => sum + acc.currentBalance, 0);
 
   // 3. Récupération des données précises de la semaine active
-  const currentWeekData = filteredWeeks.find((w) => w.weekNumber === (filteredWeeks.some((w) => w.weekNumber === activeWeek) ? activeWeek : 1));
+  const currentWeekData = filteredPeriodBudgets.find((w) => w.weekNumber === (filteredPeriodBudgets.some((w) => w.weekNumber === activeWeek) ? activeWeek : 1));
   const weekItems = currentWeekData?.items || [];
 
   // Calcul de la consommation variable totale (Payé + En attente)
@@ -88,7 +88,7 @@ export const BalancesView: React.FC<BalancesViewProps> = ({
   const pendingVariablesDetails = useMemo(() => {
     return checkingAccounts
       .map((acc) => {
-        const totalPending = filteredWeeks
+        const totalPending = filteredPeriodBudgets
           .flatMap((w) => w.items)
           .filter((i) => i.accountId === acc.id && i.source === "VARIABLE" && i.type === "EXPENSE" && !i.isPaid && i.subCategory !== "Intérêts")
           .reduce((sum, i) => sum + i.amount, 0); // Marche aussi avec montants négatifs
@@ -96,11 +96,11 @@ export const BalancesView: React.FC<BalancesViewProps> = ({
         return { name: acc.name, amount: totalPending };
       })
       .filter((x) => x.amount > 0); // On n'affiche que s'il y a une dette positive
-  }, [filteredWeeks, checkingAccounts]);
+  }, [filteredPeriodBudgets, checkingAccounts]);
 
   // 2. Opérations Récurrentes En Attente (Courant + Retards)
   const pendingRecurringDetails = useMemo(() => {
-    const relevantItems = filteredWeeks
+    const relevantItems = filteredPeriodBudgets
       .filter((w) => w.weekNumber <= activeWeek)
       .flatMap((w) => w.items)
       .filter((i) => i.source === "RECURRING" && !i.isPaid && i.category !== "Virement Interne" && i.type === "EXPENSE");
@@ -111,7 +111,7 @@ export const BalancesView: React.FC<BalancesViewProps> = ({
         return { name: acc.name, amount };
       })
       .filter((x) => x.amount > 0);
-  }, [filteredWeeks, activeWeek, checkingAccounts]);
+  }, [filteredPeriodBudgets, activeWeek, checkingAccounts]);
 
   // 3. Total Dette (Reste à payer global)
   const totalDebtDetails = useMemo(() => {

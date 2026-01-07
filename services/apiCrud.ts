@@ -1,3 +1,25 @@
+/**
+ * @file Opérations CRUD pour toutes les entités budgétaires
+ * @description Centralise tous les appels API Supabase avec conversion automatique
+ * des données (camelCase → snake_case). Chaque fonction retourne un objet
+ * `{ data, error }` conforme à l'API Supabase.
+ *
+ * **Responsabilités :**
+ * - Conversion des données applicatives vers format DB
+ * - Exécution des requêtes Supabase (INSERT, UPDATE, DELETE)
+ * - Gestion spéciale des relations (ex: `paid_item_tags` avec CASCADE)
+ * - Retour des résultats bruts (mapping fait par apiMappers)
+ *
+ * **Gestion des tags :**
+ * Les `tagAmounts` sont stockés dans une table séparée (`paid_item_tags`)
+ * avec foreign key CASCADE. La suppression d'un `paid_item` supprime
+ * automatiquement ses tags associés.
+ *
+ * @dependencies
+ * - services/supabase : Instance client Supabase configurée
+ * - services/logger : Traçage des opérations pour debug
+ * - types.ts : Types applicatifs pour les paramètres
+ */
 import { supabase } from "./supabase";
 import { logger } from "./logger";
 import {
@@ -84,11 +106,11 @@ export const apiDeleteAccount = async (id: string) => supabase.from("accounts").
  */
 export const apiUpsertCategory = async (categoryOrList: CategoryDef | CategoryDef[]) => {
   const payload = Array.isArray(categoryOrList)
-    ? categoryOrList.map((c) => ({
-        id: c.id,
-        name: c.name,
-        type: c.type,
-        sub_categories: c.subCategories,
+    ? categoryOrList.map((category) => ({
+        id: category.id,
+        name: category.name,
+        type: category.type,
+        sub_categories: category.subCategories,
       }))
     : {
         id: categoryOrList.id,
@@ -224,7 +246,43 @@ export const apiUpsertIncome = async (income: IncomeConfig) =>
 export const apiDeleteIncome = async (id: string) => supabase.from("income_configs").delete().eq("id", id);
 
 /**
- * Opérations sur le Pointage (PaidItems)
+ * Enregistre ou supprime le pointage d'une opération récurrente.
+ *
+ * @description
+ * Gère la persistence des pointages mensuels avec traitement spécial des `tagAmounts`
+ * qui sont stockés dans une table relationnelle séparée.
+ *
+ * **Comportement :**
+ * - Si `details` fourni : Upsert du pointage + remplacement complet des tags
+ * - Si `details = null` : Suppression du pointage (tags supprimés automatiquement par CASCADE)
+ * - Les tags sont remplacés atomiquement (DELETE ancien + INSERT nouveau)
+ *
+ * **Gestion des tags :**
+ * 1. Upsert du `paid_item` principal
+ * 2. Suppression de tous les anciens `paid_item_tags`
+ * 3. Insertion des nouveaux tags si `tagAmounts` présent
+ * 4. Si `tagAmounts = []` : Suppression explicite des tags (ventilation vide)
+ *
+ * @param {PaidItemDetails | null} details - Détails du pointage ou null pour supprimer
+ * @param {string} instanceId - Identifiant de l'instance (non utilisé si details fourni)
+ * @returns {Promise<{data: any, error: any}>} Résultat Supabase
+ *
+ * @example
+ * ```tsx
+ * // Pointer avec ventilation de tags
+ * await apiSetPaidStatus({
+ *   instanceId: "exp_123-2025-01",
+ *   amount: 150,
+ *   tagAmounts: [
+ *     { tagId: 'tag1', amount: 100 },
+ *     { tagId: 'tag2', amount: 50, isExtra: true }
+ *   ],
+ *   // ... autres champs
+ * }, "exp_123-2025-01");
+ *
+ * // Dépointer
+ * await apiSetPaidStatus(null, "exp_123-2025-01");
+ * ```
  */
 export const apiSetPaidStatus = async (details: PaidItemDetails | null, instanceId: string) => {
   if (details) {
@@ -276,15 +334,15 @@ export const apiSetPaidStatus = async (details: PaidItemDetails | null, instance
 /**
  * Opérations sur les Virements (Transfers)
  */
-export const apiUpsertTransfer = async (t: Transfer) =>
+export const apiUpsertTransfer = async (transfer: Transfer) =>
   supabase.from("transfers").upsert({
-    id: t.id,
-    date: t.date,
-    label: t.label,
-    amount: t.amount,
-    source_account_id: t.sourceAccountId,
-    destination_account_id: t.destinationAccountId,
-    position: t.position,
+    id: transfer.id,
+    date: transfer.date,
+    label: transfer.label,
+    amount: transfer.amount,
+    source_account_id: transfer.sourceAccountId,
+    destination_account_id: transfer.destinationAccountId,
+    position: transfer.position,
   });
 
 export const apiDeleteTransfer = async (id: string) => supabase.from("transfers").delete().eq("id", id);
@@ -292,43 +350,43 @@ export const apiDeleteTransfer = async (id: string) => supabase.from("transfers"
 /**
  * Opérations sur les Transactions Variables (Suivi Réel)
  */
-export const apiUpsertVariableTransaction = async (tx: VariableTransaction) => {
+export const apiUpsertVariableTransaction = async (transaction: VariableTransaction) => {
   // 1. Upsert de la transaction principale
   const result = await supabase.from("paid_items").upsert({
-    instance_id: tx.id,
-    payment_date: tx.date,
-    label: tx.label,
-    amount: tx.amount,
-    category: tx.category,
-    sub_category: tx.subCategory || null,
-    account_id: tx.accountId,
-    beneficiary_id: tx.beneficiaryId || null,
-    type: tx.type,
+    instance_id: transaction.id,
+    payment_date: transaction.date,
+    label: transaction.label,
+    amount: transaction.amount,
+    category: transaction.category,
+    sub_category: transaction.subCategory || null,
+    account_id: transaction.accountId,
+    beneficiary_id: transaction.beneficiaryId || null,
+    type: transaction.type,
     is_variable: true,
-    is_waiting: !!tx.isWaiting,
-    is_extra: !!tx.isExtra,
-    comments: tx.comments || null,
-    position: tx.position,
+    is_waiting: !!transaction.isWaiting,
+    is_extra: !!transaction.isExtra,
+    comments: transaction.comments || null,
+    position: transaction.position,
   });
 
   // 2. Gérer les tagAmounts si présents
-  if (tx.tagAmounts && tx.tagAmounts.length > 0) {
+  if (transaction.tagAmounts && transaction.tagAmounts.length > 0) {
     // Supprimer les anciens tagAmounts
-    await supabase.from("paid_item_tags").delete().eq("paid_item_instance_id", tx.id);
+    await supabase.from("paid_item_tags").delete().eq("paid_item_instance_id", transaction.id);
 
     // Insérer les nouveaux
-    const tagAmountsToInsert = tx.tagAmounts.map((ta) => ({
+    const tagAmountsToInsert = transaction.tagAmounts.map((ta) => ({
       id: `tag_amount_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      paid_item_instance_id: tx.id,
+      paid_item_instance_id: transaction.id,
       tag_id: ta.tagId,
       amount: ta.amount,
       is_extra: !!ta.isExtra,
     }));
 
     await supabase.from("paid_item_tags").insert(tagAmountsToInsert);
-  } else if (tx.tagAmounts && tx.tagAmounts.length === 0) {
+  } else if (transaction.tagAmounts && transaction.tagAmounts.length === 0) {
     // Si tagAmounts est vide explicitement, supprimer les anciens
-    await supabase.from("paid_item_tags").delete().eq("paid_item_instance_id", tx.id);
+    await supabase.from("paid_item_tags").delete().eq("paid_item_instance_id", transaction.id);
   }
 
   return result;

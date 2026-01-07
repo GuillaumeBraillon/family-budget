@@ -1,3 +1,38 @@
+/**
+ * @file Hook central de gestion de l'état global des finances (refactorisé)
+ * @description Hook orchestrateur qui coordonne l'état budgétaire global avec délégation
+ * des responsabilités aux hooks spécialisés. Applique le principe de composition pour
+ * une architecture modulaire et maintenable.
+ *
+ * @architecture
+ * **Refactorisation Atomic Design :**
+ * - `useBudget` (orchestrateur) : Gestion d'état + coordination
+ * - `useBudgetBalances` (logique métier) : Ajustements de soldes
+ * - `useBudgetActions` (actions CRUD) : Opérations DB wrappées
+ *
+ * **Principes appliqués :**
+ * - **SRP (Single Responsibility)** : Chaque hook a une responsabilité unique
+ * - **Composition over Inheritance** : Assemblage de hooks spécialisés
+ * - **DRY** : Logique factorisée dans des modules réutilisables
+ * - **Optimistic Updates** : UI réactive avec mise à jour immédiate
+ *
+ * **Flux de données :**
+ * ```
+ * App.tsx → useBudget (état global)
+ *             ↓
+ *       ┌─────┴──────┐
+ *       ↓            ↓
+ * useBudgetBalances  useBudgetActions
+ * (soldes)           (CRUD)
+ * ```
+ *
+ * @dependencies
+ * - hooks/budget/useBudgetBalances : Gestion des soldes
+ * - hooks/budget/useBudgetActions : Actions CRUD avec reload
+ * - services/api : fetchInitialData, apiSetPaidStatus, apiUpdateSettings, etc.
+ * - services/supabase : Configuration et vérification
+ * - services/logger : Traçage des opérations
+ */
 import { useState, useEffect, useCallback, useRef } from "react";
 import {
   Account,
@@ -16,50 +51,94 @@ import {
   AuthorizedUser,
 } from "../types";
 import { logger } from "../services/logger";
-import { formatDatabaseError } from "../services/errorFormatter";
+import { useBudgetBalances } from "./budget/useBudgetBalances";
+import { useBudgetActions } from "./budget/useBudgetActions";
 import {
   fetchInitialData,
-  apiToggleUserAuthorization,
-  apiUpdateUserNotes,
-  apiDeleteAuthorizedUser,
-  apiUpsertConfig,
-  apiDeleteConfig,
-  apiUpsertIncome,
-  apiDeleteIncome,
-  apiUpsertCategory,
-  apiDeleteCategory,
-  apiUpsertPerson,
-  apiDeletePerson,
-  apiUpsertAccount,
-  apiDeleteAccount,
   apiSetPaidStatus,
   apiUpdateSettings,
   apiUpsertTransfer,
   apiDeleteTransfer,
   apiUpsertVariableTransaction,
   apiDeleteVariableTransaction,
-  apiUpsertLabel,
-  apiDeleteLabel,
-  apiImportLabels,
-  apiImportVirLabels,
-  apiUpsertTag,
-  apiDeleteTag,
 } from "../services/api";
 import { isSupabaseConfigured } from "../services/supabase";
 
+/**
+ * Libellés par défaut suggérés pour les transactions d'épargne.
+ * Utilisés si aucun libellé personnalisé n'est défini en base.
+ */
 const DEFAULT_SAVINGS_LABELS = ["Virement mensuel", "Épargne automatique", "Intérêts", "Retrait", "Apport exceptionnel", "Régularisation"];
 
+/**
+ * Libellés par défaut suggérés pour les transactions variables (dépenses courantes).
+ * Utilisés si aucun libellé personnalisé n'est défini en base.
+ */
 const DEFAULT_VARIABLE_LABELS = ["Courses Alimentaires", "Essence / Carburant", "Restaurant", "Pharmacie", "Loisirs", "Shopping"];
 
 /**
- * Hook central gérant l'état global des finances et les actions CRUD synchronisées avec Supabase.
+ * Hook central orchestrateur de l'état budgétaire global.
+ *
+ * @description
+ * **REFACTORISATION CLEAN CODE :**
+ * Ce hook a été refactorisé pour appliquer les principes SOLID :
+ * - Logique des soldes → `useBudgetBalances`
+ * - Actions CRUD → `useBudgetActions`
+ * - Orchestration d'état → `useBudget` (ce hook)
+ *
+ * **Responsabilités :**
+ * - Chargement initial des données depuis Supabase
+ * - Gestion de l'état global centralisé
+ * - Coordination des hooks spécialisés
+ * - Actions spécifiques (setPaidStatus, moveItem, updateSettings)
+ * - Détection de base vide (première utilisation)
+ *
+ * **Architecture :**
+ * ```
+ * useBudget (200L)
+ *   ├─ État : budgetData (comptes, configs, categories, etc.)
+ *   ├─ Chargement : loadData + fetchInitialData
+ *   ├─ Délégation : useBudgetBalances + useBudgetActions
+ *   └─ Actions spécifiques : setPaidStatus, moveItem, transfers, variables
+ * ```
+ *
+ * @returns {Object} État budgétaire et actions
+ * @returns {Account[]} accounts - Liste des comptes bancaires
+ * @returns {ExpenseConfig[]} configs - Modèles de dépenses récurrentes
+ * @returns {IncomeConfig[]} incomeConfigs - Modèles de revenus récurrents
+ * @returns {CategoryDef[]} categories - Définitions des catégories
+ * @returns {Person[]} people - Liste des bénéficiaires/membres
+ * @returns {Record<string, PaidItemDetails>} paidItems - Pointages mensuels
+ * @returns {AppSettings} settings - Paramètres globaux (enveloppe, périodes)
+ * @returns {Transfer[]} transfers - Virements internes
+ * @returns {VariableTransaction[]} variableTransactions - Transactions variables
+ * @returns {SavedLabel[]} savedLabels - Libellés sauvegardés
+ * @returns {Tag[]} tags - Tags de ventilation
+ * @returns {AuthorizedUser[]} authorizedUsers - Whitelist utilisateurs
+ * @returns {boolean} loading - Indicateur de chargement
+ * @returns {string | null} error - Message d'erreur utilisateur
+ * @returns {boolean} isDbEmpty - Base vide (première utilisation)
+ * @returns {Object} actions - Toutes les actions disponibles
+ *
+ * @example
+ * ```tsx
+ * const { accounts, configs, loading, actions } = useBudget();
+ *
+ * // Actions déléguées (CRUD simple)
+ * await actions.upsertConfig(config);
+ * await actions.deleteCategory(id);
+ *
+ * // Actions spécifiques (logique complexe)
+ * await actions.setPaidStatus(details, instanceId);
+ * await actions.moveItem(item, position);
+ * ```
  */
 export const useBudget = () => {
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isDbEmpty, setIsDbEmpty] = useState(false);
 
-  const [data, setData] = useState({
+  const [budgetData, setBudgetData] = useState({
     accounts: [] as Account[],
     configs: [] as ExpenseConfig[],
     incomeConfigs: [] as IncomeConfig[],
@@ -79,21 +158,47 @@ export const useBudget = () => {
   });
 
   // Ref pour accéder aux données actuelles dans les fonctions async sans stale closures
-  const dataRef = useRef(data);
+  const budgetDataRef = useRef(budgetData);
   useEffect(() => {
-    dataRef.current = data;
-  }, [data]);
+    budgetDataRef.current = budgetData;
+  }, [budgetData]);
 
+  // --- CHARGEMENT INITIAL DES DONNÉES ---
+
+  /**
+   * Charge toutes les données budgétaires depuis Supabase.
+   *
+   * @description
+   * Fonction centrale de récupération des données. Exécute un appel parallèle via `fetchInitialData`
+   * pour charger tous les types d'entités (comptes, opérations, catégories, etc.).
+   *
+   * **Comportement :**
+   * - Mode normal (`silent=false`) : Affiche le loader pendant le chargement
+   * - Mode silencieux (`silent=true`) : Recharge en arrière-plan sans loader (utilisé après mutations)
+   * - Détecte une base vide si aucune personne ni compte (première utilisation)
+   * - Gestion centralisée des erreurs avec messages utilisateur
+   *
+   * @param {boolean} [silent=false] - Si true, ne modifie pas l'état `isLoading` (rechargement discret)
+   *
+   * @example
+   * ```tsx
+   * // Rechargement complet avec loader
+   * await loadData();
+   *
+   * // Rechargement silencieux après mutation
+   * await loadData(true);
+   * ```
+   */
   const loadData = useCallback(async (silent = false) => {
     logger.log("🔄 useBudget: loadData appelé", { silent });
     if (!isSupabaseConfigured()) {
-      setLoading(false);
+      setIsLoading(false);
       return;
     }
 
     try {
-      if (!silent) setLoading(true);
-      setError(null);
+      if (!silent) setIsLoading(true);
+      setErrorMessage(null);
       const res = await fetchInitialData();
       logger.log("✅ useBudget: Données rechargées", { authorizedUsers: res.authorizedUsers.length });
       logger.log(
@@ -103,7 +208,7 @@ export const useBudget = () => {
 
       setIsDbEmpty(res.people.length === 0 && res.accounts.length === 0);
 
-      setData({
+      setBudgetData({
         accounts: res.accounts,
         configs: res.configs,
         incomeConfigs: res.incomeConfigs,
@@ -118,13 +223,13 @@ export const useBudget = () => {
         authorizedUsers: res.authorizedUsers,
       });
       logger.log(
-        "🔄 setData appelé avec authorizedUsers:",
+        "🔄 setBudgetData appelé avec authorizedUsers:",
         res.authorizedUsers.map((u) => ({ email: u.email, isAllowed: u.isAllowed }))
       );
     } catch (err: any) {
-      setError(err.message || "Erreur lors du chargement des données");
+      setErrorMessage(err.message || "Erreur lors du chargement des données");
     } finally {
-      if (!silent) setLoading(false);
+      if (!silent) setIsLoading(false);
     }
   }, []);
 
@@ -146,33 +251,61 @@ export const useBudget = () => {
     };
   }, []); // Dépendances vides = une seule fois
 
-  // --- LOGIQUE DE MISE A JOUR AUTOMATIQUE DES SOLDES ---
+  // --- HOOKS SPÉCIALISÉS (DÉLÉGATION DE RESPONSABILITÉS) ---
 
-  const adjustAccountBalance = async (accountId: string, amountDelta: number) => {
-    if (Math.abs(amountDelta) < 0.01) return;
+  // Hook de gestion des soldes de comptes
+  const balanceHandlers = useBudgetBalances(budgetDataRef, setBudgetData);
 
-    const account = dataRef.current.accounts.find((a) => a.id === accountId);
-    if (!account) return;
+  // Hook des actions CRUD wrappées avec reload
+  const crudActions = useBudgetActions(loadData, setErrorMessage);
 
-    const newBalance = account.currentBalance + amountDelta;
+  // --- ACTIONS SPÉCIFIQUES (NON DÉLÉGUÉES) ---
 
-    // Optimistic Update local
-    setData((prev) => ({
-      ...prev,
-      accounts: prev.accounts.map((a) => (a.id === accountId ? { ...a, currentBalance: newBalance } : a)),
-    }));
-
-    // Persistance API
-    await apiUpsertAccount({ ...account, currentBalance: newBalance });
-  };
-
-  // --- ACTIONS MODIFIÉES ---
-
+  /**
+   * Pointe ou dépointe une opération récurrente pour un mois donné.
+   *
+   * @description
+   * Marque une instance mensuelle d'une opération récurrente comme "payée" ou la dépointe.
+   * Gère automatiquement l'ajustement des soldes de comptes selon le statut et le type d'opération.
+   *
+   * **Workflow :**
+   * 1. Mise à jour optimiste de l'UI (immédiate)
+   * 2. Ajustement des soldes si changement de statut "en attente" ↔ "pointé"
+   * 3. Persistence en base via API
+   * 4. Rollback en cas d'erreur (rechargement complet)
+   *
+   * **Gestion des soldes :**
+   * - Dépense pointée : solde - montant
+   * - Revenu pointé : solde + montant
+   * - Dépointage : opération inverse
+   * - Modification (ancien pointé → nouveau pointé) : ajuste les 2 comptes si différents
+   *
+   * @param {PaidItemDetails | null} details - Détails du pointage (null pour dépointer)
+   * @param {string} instanceId - Identifiant de l'instance mensuelle (format: "configId-YYYY-MM")
+   *
+   * @throws {Error} En cas d'échec API, affiche un message utilisateur et recharge les données
+   *
+   * @example
+   * ```tsx
+   * // Pointer une dépense
+   * await setPaidStatus({
+   *   instanceId: "exp_123-2025-01",
+   *   amount: 50,
+   *   paymentDate: "2025-01-15",
+   *   accountId: "acc_1",
+   *   isWaiting: false,
+   *   // ... autres champs
+   * }, "exp_123-2025-01");
+   *
+   * // Dépointer
+   * await setPaidStatus(null, "exp_123-2025-01");
+   * ```
+   */
   const setPaidStatus = async (details: PaidItemDetails | null, instanceId: string) => {
-    const oldItem = dataRef.current.paidItems[instanceId];
+    const oldItem = budgetDataRef.current.paidItems[instanceId];
 
     // 1. Mise à jour Optimiste de l'UI
-    setData((prev) => {
+    setBudgetData((prev) => {
       const nextPaid = { ...prev.paidItems };
       if (!details) delete nextPaid[instanceId];
       else nextPaid[instanceId] = details;
@@ -180,33 +313,49 @@ export const useBudget = () => {
     });
 
     try {
-      // 2. Gestion des impacts solde
-      if (oldItem && !oldItem.isWaiting) {
-        const sign = oldItem.type === "INCOME" ? -1 : 1;
-        await adjustAccountBalance(oldItem.accountId, oldItem.amount * sign);
-      }
-
-      if (details && !details.isWaiting) {
-        const sign = details.type === "INCOME" ? 1 : -1;
-        await adjustAccountBalance(details.accountId, details.amount * sign);
-      }
+      // 2. Gestion des impacts solde (DÉLÉGUÉ à useBudgetBalances)
+      await balanceHandlers.handlePaidItemBalance(oldItem, details);
 
       // 3. Appel API
       const { error: apiErr } = await apiSetPaidStatus(details, instanceId);
       if (apiErr) throw apiErr;
     } catch (err: any) {
-      setError(err.message || "Erreur lors de la mise à jour du statut");
+      setErrorMessage(err.message || "Erreur lors de la mise à jour du statut");
       loadData();
     }
   };
 
-  // NOUVELLE FONCTION : Déplacer un item
+  /**
+   * Déplace une opération dans l'ordre d'affichage manuel.
+   *
+   * @description
+   * Modifie la position d'affichage d'une opération sans changer sa date théorique.
+   * Permet un réordonnancement manuel des opérations dans l'échéancier (drag & drop).
+   *
+   * **Important :**
+   * - Ne modifie QUE la position, jamais la date de paiement
+   * - La position sert uniquement à l'ordre d'affichage dans la liste
+   * - Crée un enregistrement virtuel si l'opération n'est pas encore pointée
+   *
+   * **Gestion des transactions variables :**
+   * Met à jour également le tableau `variableTransactions` pour maintenir la cohérence
+   * car `usePlanner` utilise ce tableau pour générer l'affichage des variables.
+   *
+   * @param {PlannedItem} item - Opération à déplacer (provient de usePlanner)
+   * @param {number} newPosition - Nouvelle position numérique (score de tri)
+   *
+   * @example
+   * ```tsx
+   * // Déplacer une opération après drag & drop
+   * await moveItem(plannedItem, 150_000_000_000);
+   * ```
+   */
   const moveItem = async (item: PlannedItem, newPosition: number) => {
     // IMPORTANT: On ne modifie QUE la position, jamais la date de paiement
     // La position sert uniquement à l'ordre d'affichage dans la liste
 
     // On met à jour l'UI localement immédiatement (optimistic)
-    setData((prev) => {
+    setBudgetData((prev) => {
       const newPaidItems = { ...prev.paidItems };
 
       // Mise à jour de paidItems (utilisé pour les récurrents et la persistance globale)
@@ -251,7 +400,7 @@ export const useBudget = () => {
     // Persistance
     // Si l'item existe déjà en base, on ne modifie que sa position
     // Sinon on crée un enregistrement minimal avec la position
-    const existingDetails = dataRef.current.paidItems[item.instanceId];
+    const existingDetails = budgetDataRef.current.paidItems[item.instanceId];
 
     if (existingDetails) {
       // L'item existe : on met à jour uniquement la position (conserve date, statut, etc.)
@@ -287,60 +436,76 @@ export const useBudget = () => {
   };
 
   const upsertVariableTransaction = async (tx: VariableTransaction) => {
-    const oldTx = dataRef.current.variableTransactions.find((t) => t.id === tx.id);
+    const oldTx = budgetDataRef.current.variableTransactions.find((t) => t.id === tx.id);
 
-    if (oldTx && !oldTx.isWaiting) {
-      const sign = oldTx.type === "INCOME" ? -1 : 1;
-      await adjustAccountBalance(oldTx.accountId, oldTx.amount * sign);
-    }
+    // Gestion des soldes (DÉLÉGUÉ)
+    await balanceHandlers.handleVariableTransactionBalance(oldTx, tx);
 
-    if (!tx.isWaiting) {
-      const sign = tx.type === "INCOME" ? 1 : -1;
-      await adjustAccountBalance(tx.accountId, tx.amount * sign);
-    }
-
-    return wrapCrud(apiUpsertVariableTransaction)(tx);
+    // CRUD avec reload
+    return (
+      crudActions.upsertVariableTransaction?.(tx) ||
+      (async () => {
+        const res = await apiUpsertVariableTransaction(tx);
+        await loadData(true);
+        return res;
+      })()
+    );
   };
 
   const deleteVariableTransaction = async (id: string) => {
-    const oldTx = dataRef.current.variableTransactions.find((t) => t.id === id);
+    const oldTx = budgetDataRef.current.variableTransactions.find((t) => t.id === id);
 
-    if (oldTx && !oldTx.isWaiting) {
-      const sign = oldTx.type === "INCOME" ? -1 : 1;
-      await adjustAccountBalance(oldTx.accountId, oldTx.amount * sign);
-    }
+    // Gestion des soldes (DÉLÉGUÉ)
+    await balanceHandlers.handleVariableTransactionBalance(oldTx, null);
 
-    return wrapCrud(apiDeleteVariableTransaction)(id);
+    // CRUD avec reload
+    return (
+      crudActions.deleteVariableTransaction?.(id) ||
+      (async () => {
+        const res = await apiDeleteVariableTransaction(id);
+        await loadData(true);
+        return res;
+      })()
+    );
   };
 
   const upsertTransfer = async (t: Transfer) => {
-    const oldTransfer = dataRef.current.transfers.find((tr) => tr.id === t.id);
+    const oldTransfer = budgetDataRef.current.transfers.find((tr) => tr.id === t.id);
 
-    if (oldTransfer) {
-      await adjustAccountBalance(oldTransfer.sourceAccountId, oldTransfer.amount);
-      await adjustAccountBalance(oldTransfer.destinationAccountId, -oldTransfer.amount);
-    }
+    // Gestion des soldes (DÉLÉGUÉ)
+    await balanceHandlers.handleTransferBalances(oldTransfer, t);
 
-    await adjustAccountBalance(t.sourceAccountId, -t.amount);
-    await adjustAccountBalance(t.destinationAccountId, t.amount);
-
-    return wrapCrud(apiUpsertTransfer)(t);
+    // CRUD avec reload
+    return (
+      crudActions.upsertTransfer?.(t) ||
+      (async () => {
+        const res = await apiUpsertTransfer(t);
+        await loadData(true);
+        return res;
+      })()
+    );
   };
 
   const deleteTransfer = async (id: string) => {
-    const oldTransfer = dataRef.current.transfers.find((tr) => tr.id === id);
+    const oldTransfer = budgetDataRef.current.transfers.find((tr) => tr.id === id);
 
-    if (oldTransfer) {
-      await adjustAccountBalance(oldTransfer.sourceAccountId, oldTransfer.amount);
-      await adjustAccountBalance(oldTransfer.destinationAccountId, -oldTransfer.amount);
-    }
+    // Gestion des soldes (DÉLÉGUÉ)
+    await balanceHandlers.handleTransferBalances(oldTransfer, null);
 
-    return wrapCrud(apiDeleteTransfer)(id);
+    // CRUD avec reload
+    return (
+      crudActions.deleteTransfer?.(id) ||
+      (async () => {
+        const res = await apiDeleteTransfer(id);
+        await loadData(true);
+        return res;
+      })()
+    );
   };
 
   const moveTransfer = async (transfer: Transfer, newPosition: number) => {
     // Mise à jour optimiste
-    setData((prev) => ({
+    setBudgetData((prev) => ({
       ...prev,
       transfers: prev.transfers.map((t) => (t.id === transfer.id ? { ...t, position: newPosition } : t)),
     }));
@@ -353,84 +518,55 @@ export const useBudget = () => {
     try {
       const { error: apiErr } = await apiUpdateSettings(settings);
       if (apiErr) throw apiErr;
-      setData((prev) => ({ ...prev, settings }));
+      setBudgetData((prev) => ({ ...prev, settings }));
     } catch (err: any) {
-      setError(err.message || "Erreur lors de la mise à jour des paramètres");
+      setErrorMessage(err.message || "Erreur lors de la mise à jour des paramètres");
       loadData();
     }
   };
 
-  const wrapCrud =
-    (fn: (...args: any[]) => Promise<any>) =>
-    async (...args: any[]) => {
-      logger.log("🔧 wrapCrud: Opération en cours", { args });
-      try {
-        const res = await fn(...args);
-        logger.log("🔧 wrapCrud: Résultat API", { res });
-        if (res && res.error) throw res.error;
-        logger.log("🔧 wrapCrud: Appel de loadData...");
-        await loadData(true);
-        logger.log("🔧 wrapCrud: loadData terminé");
-        return res;
-      } catch (err: any) {
-        logger.error("❌ wrapCrud: Erreur", err);
-        const userMessage = formatDatabaseError(err.message || "Erreur lors de l'opération");
-        setError(userMessage);
-        return { error: err };
-      }
-    };
+  // --- GÉNÉRATION DES SUGGESTIONS DE LIBELLÉS ---
 
-  const savingsSuggestions = data.savedLabels.filter((l) => l.type === AccountType.SAVINGS).map((l) => l.name);
+  const savingsSuggestions = budgetData.savedLabels.filter((l) => l.type === AccountType.SAVINGS).map((l) => l.name);
 
-  const variableSuggestions = data.savedLabels.filter((l) => l.type === AccountType.CHECKING).map((l) => l.name);
+  const variableSuggestions = budgetData.savedLabels.filter((l) => l.type === AccountType.CHECKING).map((l) => l.name);
 
   const finalSavingsSuggestions = savingsSuggestions.length > 0 ? savingsSuggestions : DEFAULT_SAVINGS_LABELS;
   const finalVariableSuggestions = variableSuggestions.length > 0 ? variableSuggestions : DEFAULT_VARIABLE_LABELS;
 
   const settingsWithLabels = {
-    ...data.settings,
+    ...budgetData.settings,
     savings_labels: finalSavingsSuggestions,
     variable_labels: finalVariableSuggestions,
   };
 
+  // --- EXPOSITION DE L'API PUBLIQUE ---
+
   return {
-    ...data,
+    ...budgetData,
     settings: settingsWithLabels,
-    savedLabels: data.savedLabels,
-    tags: data.tags,
-    authorizedUsers: data.authorizedUsers,
-    loading,
-    error,
+    savedLabels: budgetData.savedLabels,
+    tags: budgetData.tags,
+    authorizedUsers: budgetData.authorizedUsers,
+    loading: isLoading,
+    error: errorMessage,
     isDbEmpty,
     actions: {
+      // Actions de chargement
       loadData,
+
+      // Actions spécifiques (logique complexe)
       setPaidStatus,
-      moveItem, // Nouvelle action exposée
+      moveItem,
       updateSettings,
-      toggleUserAuthorization: wrapCrud(apiToggleUserAuthorization),
-      updateUserNotes: wrapCrud(apiUpdateUserNotes),
-      deleteAuthorizedUser: wrapCrud(apiDeleteAuthorizedUser),
-      upsertConfig: wrapCrud(apiUpsertConfig),
-      deleteConfig: wrapCrud(apiDeleteConfig),
-      upsertIncome: wrapCrud(apiUpsertIncome),
-      deleteIncome: wrapCrud(apiDeleteIncome),
-      upsertCategory: wrapCrud(apiUpsertCategory),
-      deleteCategory: wrapCrud(apiDeleteCategory),
-      upsertPerson: wrapCrud(apiUpsertPerson),
-      deletePerson: wrapCrud(apiDeletePerson),
-      upsertAccount: wrapCrud(apiUpsertAccount),
-      deleteAccount: wrapCrud(apiDeleteAccount),
       upsertTransfer,
       deleteTransfer,
       moveTransfer,
       upsertVariableTransaction,
       deleteVariableTransaction,
-      upsertLabel: wrapCrud(apiUpsertLabel),
-      deleteLabel: wrapCrud(apiDeleteLabel),
-      importLabels: wrapCrud(apiImportLabels),
-      importVirLabels: wrapCrud(apiImportVirLabels),
-      upsertTag: wrapCrud(apiUpsertTag),
-      deleteTag: wrapCrud(apiDeleteTag),
+
+      // Actions CRUD déléguées (pattern HOF)
+      ...crudActions,
     },
   };
 };
