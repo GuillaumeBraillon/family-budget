@@ -1,6 +1,35 @@
 import { useMemo } from "react";
 import { startOfMonth, endOfMonth, eachWeekOfInterval, getDate, getDaysInMonth } from "date-fns";
-import { ExpenseConfig, IncomeConfig, PaidItemDetails, PlannedItem, WeeklyBudget, AppSettings, VariableTransaction, OperationFilters, CategoryDef } from "../types";
+import {
+  ExpenseConfig,
+  IncomeConfig,
+  PaidItemDetails,
+  PlannedItem,
+  WeeklyBudget,
+  AppSettings,
+  VariableTransaction,
+  OperationFilters,
+  CategoryDef,
+  TagAmount,
+} from "../types";
+
+/**
+ * Détermine si une opération contient des montants "Extra" (hors budget)
+ * Vérifie à deux niveaux :
+ * 1. Flag global isExtra de l'opération
+ * 2. Présence de tags individuels marqués comme Extra
+ */
+const hasExtraAmounts = (isExtraGlobal: boolean, tagAmounts?: TagAmount[]): boolean => {
+  // Niveau 1 : Si l'opération entière est Extra
+  if (isExtraGlobal) return true;
+
+  // Niveau 2 : Si au moins un tag est marqué Extra
+  if (tagAmounts && tagAmounts.length > 0) {
+    return tagAmounts.some((ta) => ta.isExtra === true);
+  }
+
+  return false;
+};
 
 export const usePlanner = (
   configs: ExpenseConfig[],
@@ -92,6 +121,9 @@ export const usePlanner = (
         const isActuallyPaid = paid ? !paid.isWaiting : false;
         const day = paid ? getDayFromDateStr(paid.paymentDate, conf.dayOfMonth) : conf.dayOfMonth;
 
+        const baseIsExtra = !!(paid ? paid.isExtra : conf.isExtra);
+        const tagAmounts = paid?.tagAmounts;
+
         assignToPeriod({
           type: "EXPENSE",
           source: "RECURRING",
@@ -105,12 +137,12 @@ export const usePlanner = (
           subCategory: conf.subCategory,
           beneficiaryId: conf.beneficiaryId,
           accountId: conf.accountId,
-          isExtra: !!(paid ? paid.isExtra : conf.isExtra),
+          isExtra: hasExtraAmounts(baseIsExtra, tagAmounts),
           isPaid: isActuallyPaid,
           isWaiting: !isActuallyPaid,
           paidDetails: paid,
           comments: paid?.comments || "",
-          tagAmounts: paid?.tagAmounts,
+          tagAmounts,
           position: paid?.position,
         });
       });
@@ -120,6 +152,9 @@ export const usePlanner = (
       const paid = paidItems[instanceId];
       const isActuallyPaid = paid ? !paid.isWaiting : false;
       const day = paid ? getDayFromDateStr(paid.paymentDate, inc.dayOfMonth) : inc.dayOfMonth;
+
+      const baseIsExtra = !!(paid ? paid.isExtra : inc.isExtra);
+      const tagAmounts = paid?.tagAmounts;
 
       assignToPeriod({
         type: "INCOME",
@@ -137,10 +172,10 @@ export const usePlanner = (
         isPaid: isActuallyPaid,
         isWaiting: !isActuallyPaid,
         paidDetails: paid,
-        isExtra: !!(paid ? paid.isExtra : inc.isExtra),
+        isExtra: hasExtraAmounts(baseIsExtra, tagAmounts),
         isSalary: !!inc.isSalary,
         comments: paid?.comments || "",
-        tagAmounts: paid?.tagAmounts,
+        tagAmounts,
         position: paid?.position,
       });
     });
@@ -167,7 +202,7 @@ export const usePlanner = (
           accountId: vt.accountId,
           isPaid: !vt.isWaiting,
           isWaiting: !!vt.isWaiting,
-          isExtra: !!vt.isExtra,
+          isExtra: hasExtraAmounts(!!vt.isExtra, vt.tagAmounts),
           comments: vt.comments || "",
           tagAmounts: vt.tagAmounts,
           position: vt.position,

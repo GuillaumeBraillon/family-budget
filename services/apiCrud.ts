@@ -257,6 +257,7 @@ export const apiSetPaidStatus = async (details: PaidItemDetails | null, instance
         paid_item_instance_id: details.instanceId,
         tag_id: ta.tagId,
         amount: ta.amount,
+        is_extra: !!ta.isExtra,
       }));
 
       await supabase.from("paid_item_tags").insert(tagAmountsToInsert);
@@ -321,6 +322,7 @@ export const apiUpsertVariableTransaction = async (tx: VariableTransaction) => {
       paid_item_instance_id: tx.id,
       tag_id: ta.tagId,
       amount: ta.amount,
+      is_extra: !!ta.isExtra,
     }));
 
     await supabase.from("paid_item_tags").insert(tagAmountsToInsert);

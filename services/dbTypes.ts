@@ -31,6 +31,7 @@ export interface DbPaidItemTag {
   paid_item_instance_id: string;
   tag_id: string;
   amount: number;
+  is_extra?: boolean;
   created_at: string;
 }
 

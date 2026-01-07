@@ -203,6 +203,28 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
   }, [unsortedItems, sortKey, sortOrder]);
 
   const quickStats = useMemo(() => {
+    /**
+     * Calcule le montant effectif d'un item en fonction des filtres de tags actifs
+     * Si des tags sont filtrés (includedTagIds), on utilise la somme des montants de ces tags
+     * Sinon, on utilise le montant total de l'opération
+     */
+    const getEffectiveAmount = (item: PlannedItem): number => {
+      // Si aucun filtre de tag actif, retourner le montant total
+      if (!filters.includedTagIds || filters.includedTagIds.length === 0) {
+        return item.amount;
+      }
+
+      // Si l'item n'a pas de ventilation de tags, retourner 0 (ne devrait pas apparaître dans les filtres)
+      if (!item.tagAmounts || item.tagAmounts.length === 0) {
+        return 0;
+      }
+
+      // Calculer la somme des montants des tags filtrés
+      const tagSum = item.tagAmounts.filter((ta) => filters.includedTagIds.includes(ta.tagId)).reduce((sum, ta) => sum + ta.amount, 0);
+
+      return tagSum;
+    };
+
     const stats = { expenses: { real: 0, planned: 0, pending: 0, extra: 0 }, income: { real: 0, planned: 0, pending: 0, extra: 0 } };
     currentItems.forEach((item) => {
       if (item.category === "Virement Interne") return;
@@ -212,13 +234,13 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
         (item.category === "Dépenses" || item.category === "Remboursement" || categories.find((c) => c.name === item.category)?.type === "EXPENSE");
 
       let target;
-      let amount = item.amount;
+      let amount = getEffectiveAmount(item); // Utiliser le montant effectif basé sur les filtres
 
       if (item.type === "EXPENSE") {
         target = stats.expenses;
       } else if (isRefund) {
         target = stats.expenses;
-        amount = -item.amount;
+        amount = -amount; // Inverser le signe pour les remboursements
       } else {
         target = stats.income;
       }
@@ -227,7 +249,14 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
         if (item.isPaid) target.real += amount;
         else target.pending += amount;
       } else {
-        const plannedAmount = item.type === "INCOME" && isRefund ? -item.originalAmount : item.originalAmount;
+        // Pour les opérations récurrentes avec filtres de tags, ajuster aussi le montant prévu
+        const plannedAmount =
+          filters.includedTagIds && filters.includedTagIds.length > 0
+            ? amount // Utiliser le montant effectif filtré
+            : item.type === "INCOME" && isRefund
+            ? -item.originalAmount
+            : item.originalAmount;
+
         target.planned += plannedAmount;
         if (item.isPaid) target.real += amount;
         else target.pending += amount;
@@ -238,7 +267,7 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
       }
     });
     return stats;
-  }, [currentItems, categories]);
+  }, [currentItems, categories, filters.includedTagIds]);
 
   const monthShort = new Intl.DateTimeFormat("fr-FR", { month: "short" }).format(ui.currentDate);
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Tag as TagIcon, Plus, X, AlertCircle } from "lucide-react";
+import { Tag as TagIcon, Plus, X, AlertCircle, Star } from "lucide-react";
 import { Tag, TagAmount } from "../../../types";
 
 interface TagAmountSelectorProps {
@@ -43,6 +43,10 @@ export const TagAmountSelector: React.FC<TagAmountSelectorProps> = ({ tags, tota
     onTagAmountsChange(selectedTagAmounts.map((ta) => (ta.tagId === tagId ? { ...ta, amount: newAmount } : ta)));
   };
 
+  const handleToggleExtra = (tagId: string) => {
+    onTagAmountsChange(selectedTagAmounts.map((ta) => (ta.tagId === tagId ? { ...ta, isExtra: !ta.isExtra } : ta)));
+  };
+
   const handleDistributeEqually = () => {
     if (selectedTagAmounts.length === 0) return;
     const amountPerTag = totalAmount / selectedTagAmounts.length;
@@ -82,6 +86,14 @@ export const TagAmountSelector: React.FC<TagAmountSelectorProps> = ({ tags, tota
                   className="w-24 px-2 py-1 text-sm border border-slate-300 rounded bg-white text-slate-900 font-bold focus:ring-2 focus:ring-indigo-500 outline-none"
                 />
                 <span className="text-xs text-slate-400 font-medium">€</span>
+                <button
+                  type="button"
+                  onClick={() => handleToggleExtra(tag.id)}
+                  className={`p-1 rounded transition-all ${tagAmount.isExtra ? "bg-amber-100 text-amber-600" : "bg-slate-100 text-slate-400 hover:text-amber-500"}`}
+                  title={tagAmount.isExtra ? "Hors budget" : "Dans le budget"}
+                >
+                  <Star size={14} fill={tagAmount.isExtra ? "currentColor" : "none"} />
+                </button>
                 <button type="button" onClick={() => handleRemoveTag(tag.id)} className="text-slate-400 hover:text-red-500 transition-colors">
                   <X size={16} />
                 </button>

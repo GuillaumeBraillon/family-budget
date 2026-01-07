@@ -19,6 +19,7 @@ export interface Tag {
 export interface TagAmount {
   tagId: string;
   amount: number;
+  isExtra?: boolean; // Indique si ce montant est hors budget
 }
 
 export interface AuthorizedUser {

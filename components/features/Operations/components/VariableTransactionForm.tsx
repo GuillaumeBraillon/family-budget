@@ -225,7 +225,7 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
         beneficiaryId,
         type,
         isWaiting: targetIsWaiting,
-        isExtra,
+        isExtra, // Toggle global au niveau opération
         comments: comments.trim() || undefined,
         tagAmounts: selectedTagAmounts.length > 0 ? selectedTagAmounts : undefined,
         position: editingTransaction?.position,
@@ -372,6 +372,24 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
             <div className="border-t border-slate-100 pt-2"></div>
 
             <TagAmountSelector tags={tags} selectedTagAmounts={selectedTagAmounts} onTagAmountsChange={setSelectedTagAmounts} totalAmount={parseFloat(amount) || 0} />
+
+            {/* Toggle Extra Global - Compatible avec les tags individuels */}
+            <div
+              onClick={() => setIsExtra(!isExtra)}
+              className={`cursor-pointer px-3 py-2 rounded-lg border transition-all flex items-center gap-3 ${
+                isExtra ? "bg-amber-50 border-amber-200" : "bg-slate-50 border-transparent hover:border-slate-200"
+              }`}
+            >
+              <div className={`p-1 rounded ${isExtra ? "bg-amber-200 text-amber-700" : "bg-slate-200 text-slate-500"}`}>
+                <Star size={14} fill={isExtra ? "currentColor" : "none"} />
+              </div>
+              <div className="flex-1">
+                <span className={`text-xs font-bold block ${isExtra ? "text-amber-800" : "text-slate-600"}`}>Dépense temporaire / Exceptionnelle (Hors Budget)</span>
+                {isExtra && <span className="text-[10px] text-amber-600 leading-none">Cette opération ne sera pas comptabilisée dans le budget courant.</span>}
+              </div>
+              <input type="checkbox" checked={isExtra} onChange={() => {}} className="pointer-events-none" />
+            </div>
+
             {isExpense && (
               <div
                 onClick={() => setIsRefund(!isRefund)}
@@ -389,6 +407,7 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
                 <input type="checkbox" checked={isRefund} onChange={() => {}} className="pointer-events-none" />
               </div>
             )}
+
             <TextInput
               label="Note / Commentaire"
               value={comments}

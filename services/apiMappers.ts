@@ -59,6 +59,7 @@ export const mapDbTag = (t: DbTag): Tag => ({
 export const mapDbTagAmount = (t: DbPaidItemTag): TagAmount => ({
   tagId: t.tag_id,
   amount: Number(t.amount),
+  isExtra: !!t.is_extra,
 });
 
 export const mapDbAccount = (a: DbAccount): Account => ({
