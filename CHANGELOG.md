@@ -7,6 +7,22 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.1.0] - 2026-01-07
+
+### Changé
+
+- **Restructuration de la documentation** :
+  - Consolidation de tous les fichiers SQL dans `startup/database_complete.sql`
+  - Création du dossier `startup/` avec guides de déploiement (Supabase, Vercel)
+  - Réécriture complète du README avec documentation exhaustive de toutes les fonctionnalités
+  - Suppression du dossier `migrations/` (migrations consolidées dans le fichier SQL principal)
+  - Suppression du dossier `docs/` (documentation intégrée dans les fichiers SQL et README)
+  - Suppression des noms propres dans les exemples de formulaires
+
+**Commit** : Refactor tags and extra system, update docs and migrations (7ae00bc)
+
+---
+
 ## [2.0.0] - 2026-01-07
 
 ### Ajouté
