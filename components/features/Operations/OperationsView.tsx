@@ -268,9 +268,9 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
         const status = item.isPaid ? "Réel" : "En attente";
         const type = item.type === "INCOME" ? "Revenu" : "Dépense";
         const amount = item.amount.toFixed(2).replace(".", ",");
-        const itemTags = item.tagIds
+        const itemTags = item.tagAmounts
           ? tags
-              .filter((t) => item.tagIds?.includes(t.id))
+              .filter((t) => item.tagAmounts?.some((ta) => ta.tagId === t.id))
               .map((t) => t.name)
               .join(", ")
           : "";

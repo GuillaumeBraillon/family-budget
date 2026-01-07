@@ -198,7 +198,6 @@ export const apiUpsertConfig = async (config: ExpenseConfig) =>
     start_month: config.startMonth || undefined,
     end_month: config.endMonth || undefined,
     is_extra: config.isExtra,
-    tag_ids: config.tagIds || [],
   });
 
 export const apiDeleteConfig = async (id: string) => supabase.from("expense_configs").delete().eq("id", id);
@@ -220,7 +219,6 @@ export const apiUpsertIncome = async (income: IncomeConfig) =>
     is_salary: income.isSalary,
     start_month: income.startMonth || undefined,
     end_month: income.endMonth || undefined,
-    tag_ids: income.tagIds || [],
   });
 
 export const apiDeleteIncome = async (id: string) => supabase.from("income_configs").delete().eq("id", id);
@@ -230,7 +228,8 @@ export const apiDeleteIncome = async (id: string) => supabase.from("income_confi
  */
 export const apiSetPaidStatus = async (details: PaidItemDetails | null, instanceId: string) => {
   if (details) {
-    return supabase.from("paid_items").upsert({
+    // 1. Upsert du paid_item principal
+    const result = await supabase.from("paid_items").upsert({
       instance_id: details.instanceId,
       amount: details.amount,
       payment_date: details.paymentDate,
@@ -241,13 +240,34 @@ export const apiSetPaidStatus = async (details: PaidItemDetails | null, instance
       sub_category: details.subCategory,
       type: details.type,
       is_variable: !!details.isVariable,
-      is_waiting: !!details.isWaiting, // False si pointé
+      is_waiting: !!details.isWaiting,
       is_extra: !!details.isExtra,
       comments: details.comments || null,
-      tag_ids: details.tagIds || [],
       position: details.position,
     });
+
+    // 2. Gérer les tagAmounts si présents
+    if (details.tagAmounts && details.tagAmounts.length > 0) {
+      // Supprimer les anciens tagAmounts
+      await supabase.from("paid_item_tags").delete().eq("paid_item_instance_id", details.instanceId);
+
+      // Insérer les nouveaux
+      const tagAmountsToInsert = details.tagAmounts.map((ta) => ({
+        id: `tag_amount_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        paid_item_instance_id: details.instanceId,
+        tag_id: ta.tagId,
+        amount: ta.amount,
+      }));
+
+      await supabase.from("paid_item_tags").insert(tagAmountsToInsert);
+    } else if (details.tagAmounts && details.tagAmounts.length === 0) {
+      // Si tagAmounts est vide explicitement, supprimer les anciens
+      await supabase.from("paid_item_tags").delete().eq("paid_item_instance_id", details.instanceId);
+    }
+
+    return result;
   } else {
+    // La suppression du paid_item déclenche automatiquement la suppression des paid_item_tags (CASCADE)
     return supabase.from("paid_items").delete().eq("instance_id", instanceId);
   }
 };
@@ -271,8 +291,9 @@ export const apiDeleteTransfer = async (id: string) => supabase.from("transfers"
 /**
  * Opérations sur les Transactions Variables (Suivi Réel)
  */
-export const apiUpsertVariableTransaction = async (tx: VariableTransaction) =>
-  supabase.from("paid_items").upsert({
+export const apiUpsertVariableTransaction = async (tx: VariableTransaction) => {
+  // 1. Upsert de la transaction principale
+  const result = await supabase.from("paid_items").upsert({
     instance_id: tx.id,
     payment_date: tx.date,
     label: tx.label,
@@ -286,8 +307,29 @@ export const apiUpsertVariableTransaction = async (tx: VariableTransaction) =>
     is_waiting: !!tx.isWaiting,
     is_extra: !!tx.isExtra,
     comments: tx.comments || null,
-    tag_ids: tx.tagIds || [],
     position: tx.position,
   });
+
+  // 2. Gérer les tagAmounts si présents
+  if (tx.tagAmounts && tx.tagAmounts.length > 0) {
+    // Supprimer les anciens tagAmounts
+    await supabase.from("paid_item_tags").delete().eq("paid_item_instance_id", tx.id);
+
+    // Insérer les nouveaux
+    const tagAmountsToInsert = tx.tagAmounts.map((ta) => ({
+      id: `tag_amount_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      paid_item_instance_id: tx.id,
+      tag_id: ta.tagId,
+      amount: ta.amount,
+    }));
+
+    await supabase.from("paid_item_tags").insert(tagAmountsToInsert);
+  } else if (tx.tagAmounts && tx.tagAmounts.length === 0) {
+    // Si tagAmounts est vide explicitement, supprimer les anciens
+    await supabase.from("paid_item_tags").delete().eq("paid_item_instance_id", tx.id);
+  }
+
+  return result;
+};
 
 export const apiDeleteVariableTransaction = async (id: string) => supabase.from("paid_items").delete().eq("instance_id", id);

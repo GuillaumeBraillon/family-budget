@@ -89,7 +89,7 @@ export const OperationsList: React.FC<OperationsListProps> = ({
               const person = people.find((p) => p.id === item.beneficiaryId);
               const account = accounts.find((a) => a.id === item.accountId);
               const isVariable = item.source === "VARIABLE";
-              const itemTags = item.tagIds ? tags.filter((t) => item.tagIds?.includes(t.id)) : [];
+              const itemTags = item.tagAmounts ? tags.filter((t) => item.tagAmounts?.some((ta) => ta.tagId === t.id)) : [];
 
               const content = (
                 <DataListRow
@@ -108,6 +108,7 @@ export const OperationsList: React.FC<OperationsListProps> = ({
                   onClick={() => onItemClick(item)}
                   comments={item.comments}
                   tags={itemTags}
+                  tagAmounts={item.tagAmounts}
                   badge={
                     <div className="flex gap-1 items-center">
                       {isVariable ? (

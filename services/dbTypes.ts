@@ -26,6 +26,14 @@ export interface DbTag {
   color: string;
 }
 
+export interface DbPaidItemTag {
+  id: string;
+  paid_item_instance_id: string;
+  tag_id: string;
+  amount: number;
+  created_at: string;
+}
+
 export interface DbAccount {
   id: string;
   name: string;

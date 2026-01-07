@@ -16,6 +16,11 @@ export interface Tag {
   color: string;
 }
 
+export interface TagAmount {
+  tagId: string;
+  amount: number;
+}
+
 export interface AuthorizedUser {
   email: string;
   name?: string;
@@ -90,7 +95,7 @@ export interface VariableTransaction {
   isWaiting: boolean; // True = En attente, False = Pointé
   isExtra: boolean; // True = Hors budget
   comments?: string;
-  tagIds?: string[];
+  tagAmounts?: TagAmount[]; // Ventilation des montants par tag
   position?: number; // Ordre d'affichage manuel
 }
 
@@ -116,7 +121,7 @@ export interface ExpenseConfig {
   startMonth?: string;
   endMonth?: string;
   isExtra?: boolean;
-  tagIds?: string[];
+  tagAmounts?: TagAmount[]; // Ventilation des montants par tag
 }
 
 export interface IncomeConfig {
@@ -132,7 +137,7 @@ export interface IncomeConfig {
   isSalary?: boolean; // Nouveau champ pour identifier les revenus structurels
   startMonth?: string;
   endMonth?: string;
-  tagIds?: string[];
+  tagAmounts?: TagAmount[]; // Ventilation des montants par tag
 }
 
 export interface PaidItemDetails {
@@ -149,7 +154,7 @@ export interface PaidItemDetails {
   isWaiting: boolean;
   isExtra: boolean;
   comments?: string;
-  tagIds?: string[];
+  tagAmounts?: TagAmount[]; // Ventilation des montants par tag
   position?: number; // Ordre d'affichage manuel
 }
 
@@ -176,7 +181,7 @@ export interface PlannedItem {
   startMonth?: string;
   endMonth?: string;
   comments?: string;
-  tagIds?: string[];
+  tagAmounts?: TagAmount[]; // Ventilation des montants par tag
   position?: number; // Ordre d'affichage manuel
 }
 

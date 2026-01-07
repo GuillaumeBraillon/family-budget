@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { Save, TrendingUp, TrendingDown, Calendar, Trash2, Clock, CheckCircle2, Star, MessageSquare, ArrowRightLeft, ArrowDown, RefreshCcw } from "lucide-react";
-import { VariableTransaction, Account, CategoryDef, AccountType, Person, Transfer, SavedLabel, Tag } from "../../../../types";
+import { VariableTransaction, Account, CategoryDef, AccountType, Person, Transfer, SavedLabel, Tag, TagAmount } from "../../../../types";
 import { CategorySelector } from "../../../ui/molecules/CategorySelector";
 import { TextInput, AmountInput, SearchableTextInput } from "../../../ui/molecules/FormInputs";
 import { AccountSelector, BeneficiarySelector } from "../../../ui/molecules/SmartSelectors";
 import { ConfirmModal } from "../../../ui/atoms/ConfirmModal";
 import { Modal } from "../../../ui/Modal";
-import { TagSelector } from "../../../ui/molecules/TagSelector";
+import { TagAmountSelector } from "../../../ui/molecules/TagAmountSelector";
 
 interface VariableTransactionFormProps {
   isOpen: boolean;
@@ -65,7 +65,7 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
   // isWaiting state removed, handling via submit buttons
   const [isExtra, setIsExtra] = useState<boolean>(false);
   const [comments, setComments] = useState<string>("");
-  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
+  const [selectedTagAmounts, setSelectedTagAmounts] = useState<TagAmount[]>([]);
 
   // Filtrer les comptes COURANTS pour l'initialisation par défaut
   const checkingAccounts = useMemo(() => accounts.filter((a) => a.type === AccountType.CHECKING), [accounts]);
@@ -140,7 +140,7 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
         } else {
           setAccountId(editingTransaction.accountId);
           setComments(editingTransaction.comments || "");
-          setSelectedTagIds(editingTransaction.tagIds || []);
+          setSelectedTagAmounts(editingTransaction.tagAmounts || []);
         }
 
         setCategory(editingTransaction.category);
@@ -159,16 +159,12 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
         setIsRefund(false);
         setIsExtra(false);
         setComments("");
-        setSelectedTagIds([]);
+        setSelectedTagAmounts([]);
         if (checkingAccounts.length > 0) setAccountId(checkingAccounts[0].id);
       }
       setValidationErrors([]);
     }
   }, [isOpen, editingTransaction, defaultDate, defaultBeneficiary, initialMode, accounts, checkingAccounts]);
-
-  const toggleTag = (tagId: string) => {
-    setSelectedTagIds((prev) => (prev.includes(tagId) ? prev.filter((id) => id !== tagId) : [...prev, tagId]));
-  };
 
   const handleSubmit = (targetIsWaiting: boolean) => {
     const errors: string[] = [];
@@ -180,6 +176,15 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
     if (mode === "TRANSFER") {
       if (!destAccountId) errors.push("Le compte de destination est obligatoire");
       if (accountId === destAccountId) errors.push("Le compte source et destination ne peuvent pas être identiques");
+    }
+
+    // Validation des tagAmounts - Permet une ventilation partielle
+    if (selectedTagAmounts.length > 0) {
+      const totalAmount = parseFloat(amount) || 0;
+      const sumTagAmounts = selectedTagAmounts.reduce((sum, ta) => sum + ta.amount, 0);
+      if (sumTagAmounts > totalAmount + 0.01) {
+        errors.push(`La somme des montants affectés aux tags (${sumTagAmounts.toFixed(2)}€) dépasse le montant total (${totalAmount.toFixed(2)}€)`);
+      }
     }
 
     if (errors.length > 0) {
@@ -222,7 +227,7 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
         isWaiting: targetIsWaiting,
         isExtra,
         comments: comments.trim() || undefined,
-        tagIds: selectedTagIds,
+        tagAmounts: selectedTagAmounts.length > 0 ? selectedTagAmounts : undefined,
         position: editingTransaction?.position,
       });
     }
@@ -366,7 +371,7 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
 
             <div className="border-t border-slate-100 pt-2"></div>
 
-            <TagSelector tags={tags} selectedTagIds={selectedTagIds} onToggleTag={toggleTag} />
+            <TagAmountSelector tags={tags} selectedTagAmounts={selectedTagAmounts} onTagAmountsChange={setSelectedTagAmounts} totalAmount={parseFloat(amount) || 0} />
             {isExpense && (
               <div
                 onClick={() => setIsRefund(!isRefund)}

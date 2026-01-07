@@ -233,7 +233,7 @@ export const useBudget = () => {
           isWaiting: true, // Reste en attente (ne modifie pas le statut)
           isExtra: item.isExtra,
           comments: item.comments,
-          tagIds: item.tagIds,
+          tagAmounts: item.tagAmounts,
           position: newPosition,
         };
       }
@@ -279,7 +279,7 @@ export const useBudget = () => {
         isWaiting: true, // Reste en attente
         isExtra: item.isExtra,
         comments: item.comments,
-        tagIds: item.tagIds,
+        tagAmounts: item.tagAmounts,
         position: newPosition,
       };
       await apiSetPaidStatus(details, item.instanceId);

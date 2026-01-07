@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { X, Check, MessageSquare } from "lucide-react";
 import { Modal } from "../../../ui/Modal";
 import { PlannedItem, Account, PaidItemDetails, Tag } from "../../../../types";
-import { TagSelector } from "../../../ui/molecules/TagSelector";
 
 interface PlannerModalsProps {
   confirmModal: { instanceId: string; newStatus: boolean } | null;
@@ -25,19 +24,6 @@ export const PlannerModals: React.FC<PlannerModalsProps> = ({
   onCloseUncheck,
   setConfirmModal,
 }) => {
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
-
-  // Synchronisation des tags existants à l'ouverture
-  useEffect(() => {
-    if (confirmModal.isOpen && confirmModal.item) {
-      setSelectedTags(confirmModal.item.tagIds || []);
-    }
-  }, [confirmModal.isOpen, confirmModal.item]);
-
-  const toggleTag = (tagId: string) => {
-    setSelectedTags((prev) => (prev.includes(tagId) ? prev.filter((id) => id !== tagId) : [...prev, tagId]));
-  };
-
   return (
     <>
       {confirmModal.isOpen && (
@@ -90,8 +76,6 @@ export const PlannerModals: React.FC<PlannerModalsProps> = ({
                   ))}
                 </select>
               </FormField>
-
-              <TagSelector tags={tags} selectedTagIds={selectedTags} onToggleTag={toggleTag} />
 
               <FormField label="Note / Commentaire">
                 <div className="relative">

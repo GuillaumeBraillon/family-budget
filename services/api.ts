@@ -52,7 +52,7 @@ export const fetchInitialData = async () => {
     };
   }
 
-  const [peopleRes, accountsRes, categoriesRes, configsRes, incomesRes, paidItemsRes, settingsRes, transfersRes, savedLabelsRes, tagsRes, authUsersRes] =
+  const [peopleRes, accountsRes, categoriesRes, configsRes, incomesRes, paidItemsRes, settingsRes, transfersRes, savedLabelsRes, tagsRes, authUsersRes, tagAmountsRes] =
     await Promise.all([
       supabase.from("people").select("*"),
       supabase.from("accounts").select("*"),
@@ -65,9 +65,23 @@ export const fetchInitialData = async () => {
       supabase.from("saved_labels").select("*"),
       supabase.from("tags").select("*"),
       supabase.from("authorized_users").select("*").order("added_at", { ascending: false }),
+      supabase.from("paid_item_tags").select("*"),
     ]);
 
-  const responses = [peopleRes, accountsRes, categoriesRes, configsRes, incomesRes, paidItemsRes, settingsRes, transfersRes, savedLabelsRes, tagsRes, authUsersRes];
+  const responses = [
+    peopleRes,
+    accountsRes,
+    categoriesRes,
+    configsRes,
+    incomesRes,
+    paidItemsRes,
+    settingsRes,
+    transfersRes,
+    savedLabelsRes,
+    tagsRes,
+    authUsersRes,
+    tagAmountsRes,
+  ];
   const errors = responses.map((r) => r.error).filter((e) => e !== null);
 
   if (errors.length > 0) {
@@ -85,11 +99,24 @@ export const fetchInitialData = async () => {
   const tags = (tagsRes.data || []).map(mappers.mapDbTag);
   const authorizedUsers = (authUsersRes.data || []).map(mappers.mapDbAuthorizedUser);
 
+  // Grouper les tag amounts par instance_id
+  const tagAmountsByInstance: Record<string, any[]> = {};
+  (tagAmountsRes.data || []).forEach((ta: any) => {
+    if (!tagAmountsByInstance[ta.paid_item_instance_id]) {
+      tagAmountsByInstance[ta.paid_item_instance_id] = [];
+    }
+    tagAmountsByInstance[ta.paid_item_instance_id].push(mappers.mapDbTagAmount(ta));
+  });
+
   const paidItems: Record<string, any> = {};
   const variableTransactions: VariableTransaction[] = [];
 
   (paidItemsRes.data || []).forEach((item: DbPaidItem) => {
     const mapped = mappers.mapDbPaidItem(item);
+    // Ajouter les tagAmounts s'ils existent
+    if (tagAmountsByInstance[item.instance_id]) {
+      mapped.tagAmounts = tagAmountsByInstance[item.instance_id];
+    }
     paidItems[item.instance_id] = mapped;
 
     // Si c'est une opération VARIABLE (is_variable = true)
@@ -107,8 +134,8 @@ export const fetchInitialData = async () => {
         isWaiting: mapped.isWaiting,
         isExtra: mapped.isExtra,
         comments: mapped.comments,
-        tagIds: mapped.tagIds,
-        position: mapped.position, // AJOUT ESSENTIEL POUR LE TRI MANUEL
+        tagAmounts: mapped.tagAmounts,
+        position: mapped.position,
       });
     }
   });

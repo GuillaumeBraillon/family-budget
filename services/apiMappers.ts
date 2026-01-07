@@ -12,8 +12,22 @@ import {
   Transfer,
   Tag,
   AuthorizedUser,
+  TagAmount,
 } from "../types";
-import { DbPerson, DbAuthorizedUser, DbTag, DbAccount, DbCategory, DbSavedLabel, DbExpenseConfig, DbIncomeConfig, DbPaidItem, DbTransfer, DbSettings } from "./dbTypes";
+import {
+  DbPerson,
+  DbAuthorizedUser,
+  DbTag,
+  DbPaidItemTag,
+  DbAccount,
+  DbCategory,
+  DbSavedLabel,
+  DbExpenseConfig,
+  DbIncomeConfig,
+  DbPaidItem,
+  DbTransfer,
+  DbSettings,
+} from "./dbTypes";
 import { logger } from "./logger";
 
 export const mapDbPerson = (p: DbPerson): Person => ({
@@ -40,6 +54,11 @@ export const mapDbTag = (t: DbTag): Tag => ({
   id: t.id,
   name: t.name,
   color: t.color,
+});
+
+export const mapDbTagAmount = (t: DbPaidItemTag): TagAmount => ({
+  tagId: t.tag_id,
+  amount: Number(t.amount),
 });
 
 export const mapDbAccount = (a: DbAccount): Account => ({
@@ -80,7 +99,6 @@ export const mapDbExpenseConfig = (c: DbExpenseConfig): ExpenseConfig => ({
   startMonth: c.start_month || undefined,
   endMonth: c.end_month || undefined,
   isExtra: !!c.is_extra,
-  tagIds: c.tag_ids || [],
 });
 
 export const mapDbIncomeConfig = (i: DbIncomeConfig): IncomeConfig => ({
@@ -96,7 +114,6 @@ export const mapDbIncomeConfig = (i: DbIncomeConfig): IncomeConfig => ({
   isSalary: !!i.is_salary,
   startMonth: i.start_month || undefined,
   endMonth: i.end_month || undefined,
-  tagIds: i.tag_ids || [],
 });
 
 export const mapDbPaidItem = (item: DbPaidItem): PaidItemDetails => ({
@@ -113,7 +130,6 @@ export const mapDbPaidItem = (item: DbPaidItem): PaidItemDetails => ({
   isWaiting: !!item.is_waiting,
   isExtra: !!item.is_extra,
   comments: item.comments || undefined,
-  tagIds: item.tag_ids || [],
   position: item.position !== null ? Number(item.position) : undefined,
 });
 
@@ -141,7 +157,6 @@ export const mapDbVariableTransaction = (t: DbPaidItem): VariableTransaction => 
   isWaiting: !!t.is_waiting,
   isExtra: !!t.is_extra,
   comments: t.comments || undefined,
-  tagIds: t.tag_ids || [],
   position: t.position !== null ? Number(t.position) : undefined,
 });
 
