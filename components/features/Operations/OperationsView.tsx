@@ -179,25 +179,47 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
     return new Date().toISOString().split("T")[0];
   })();
 
-  // LOGIQUE ROBUSTE DE RÉORDONNANCEMENT AVEC GRANDS ENTIERS
+  // DRAG & DROP : SYSTÈME D'INTERVALLES LARGES (Scalable)
   const handleReorder = (item: PlannedItem, oldIndex: number, newIndex: number) => {
     if (onMoveItem && sortKey === "manual") {
-      // On simule le nouveau tableau pour trouver les voisins
+      // 1. Simuler le nouveau tableau après déplacement
       const reorderedList = arrayMove(currentItems, oldIndex, newIndex);
 
       const prevItem = reorderedList[newIndex - 1] as PlannedItem | undefined;
       const nextItem = reorderedList[newIndex + 1] as PlannedItem | undefined;
 
-      // On utilise getEffectivePosition pour avoir un score valide et unique même si le voisin n'a pas de position DB
-      const prevScore = prevItem ? getEffectivePosition(prevItem) : 0;
+      // 2. Calculer la nouvelle position entre les voisins
+      const POSITION_STEP = 1000; // Intervalles larges (1000, 2000, 3000...)
 
-      // Si on est à la fin, on ajoute un pas arbitraire au dernier score (100 Millions = 1 Jour théorique)
-      const nextScore = nextItem ? getEffectivePosition(nextItem) : prevScore + 100000000;
+      let newPosition: number;
 
-      // Nouvelle position = moyenne entière (Math.floor).
-      // Avec l'échelle de 100 Milliards, cela donne suffisamment de précision.
-      const newPosition = Math.floor((prevScore + nextScore) / 2);
+      if (!prevItem && !nextItem) {
+        // Liste vide
+        newPosition = POSITION_STEP;
+      } else if (!prevItem) {
+        // Première position : moitié du suivant (ou suivant - 1000)
+        const nextPos = nextItem!.position || getEffectivePosition(nextItem!);
+        newPosition = nextPos > POSITION_STEP ? Math.floor(nextPos / 2) : 1;
+      } else if (!nextItem) {
+        // Dernière position : précédent + 1000
+        const prevPos = prevItem.position || getEffectivePosition(prevItem);
+        newPosition = prevPos + POSITION_STEP;
+      } else {
+        // Entre deux items : moyenne
+        const prevPos = prevItem.position || getEffectivePosition(prevItem);
+        const nextPos = nextItem.position || getEffectivePosition(nextItem);
 
+        // Si l'espace est trop petit (< 2), on force un rééchelonnement local
+        if (nextPos - prevPos < 2) {
+          // Réaffecter uniquement les 3 items (prev, current, next) avec intervalles larges
+          newPosition = prevPos + POSITION_STEP;
+          // Note: On pourrait aussi réaffecter nextItem à prevPos + 2*POSITION_STEP
+        } else {
+          newPosition = Math.floor((prevPos + nextPos) / 2);
+        }
+      }
+
+      // 3. Persister uniquement l'item déplacé (1 seule requête DB)
       onMoveItem(item, newPosition);
     }
   };

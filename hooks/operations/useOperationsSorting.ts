@@ -86,24 +86,24 @@ export interface SortOption {
  * ```
  */
 const getEffectivePosition = (item: PlannedItem): number => {
-  // Priorité à la position manuelle si définie
-  if (typeof item.position === "number" && item.position !== 0) {
+  // Priorité absolue : Position manuelle (1, 2, 3, 4...)
+  if (typeof item.position === "number" && item.position > 0) {
     return item.position;
   }
 
-  // Score par défaut basé sur le jour + hash stable
-  const BASE_SCORE = 100_000_000_000; // 100 Milliards
-  const DAY_STEP = 100_000_000; // 100 Millions par jour
+  // Tri par défaut : jour + hash stable
+  const AUTO_BASE = 1_000_000; // 1 Million
+  const DAY_STEP = 10_000; // 10k par jour
 
-  // Génération d'un hash entier déterministe entre 0 et 99,999,999
+  // Hash stable
   let hash = 0;
   for (let i = 0; i < item.instanceId.length; i++) {
     hash = (hash << 5) - hash + item.instanceId.charCodeAt(i);
-    hash |= 0; // Conversion en entier 32 bits
+    hash |= 0;
   }
   const safeHash = Math.abs(hash) % DAY_STEP;
 
-  return BASE_SCORE + item.day * DAY_STEP + safeHash;
+  return AUTO_BASE + item.day * DAY_STEP + safeHash;
 };
 
 /**

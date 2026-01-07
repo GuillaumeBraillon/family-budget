@@ -316,25 +316,29 @@ export const usePlanner = (
         });
       });
 
-    // --- SCORE DE TRI ROBUSTE POUR BIGINT ---
-    // Utilisation d'entiers larges (100 Milliards) pour éviter les collisions et l'arrondi.
+    // --- SYSTÈME DE TRI SIMPLIFIÉ ---
+    // Les items avec position manuelle (drag & drop) ont priorité absolue
+    // Les items sans position sont triés par jour + hash pour stabilité
     const getItemSortScore = (item: PlannedItem) => {
-      if (typeof item.position === "number" && item.position !== 0) return item.position;
+      // Priorité absolue : Position manuelle (1, 2, 3, 4...)
+      if (typeof item.position === "number" && item.position > 0) {
+        return item.position;
+      }
 
-      // Base : 100 Milliards. Espace large pour insertion avant/après.
-      const BASE_SCORE = 100_000_000_000;
-      const DAY_STEP = 100_000_000; // 100 Millions par jour
+      // Tri par défaut : jour + hash stable
+      // On utilise une base élevée pour séparer clairement du tri manuel
+      const AUTO_BASE = 1_000_000; // 1 Million
+      const DAY_STEP = 10_000; // 10k par jour
 
-      // Génération d'un hash entier déterministe entre 0 et 99,999,999
+      // Hash stable pour ordre déterministe intra-jour
       let hash = 0;
       for (let i = 0; i < item.instanceId.length; i++) {
         hash = (hash << 5) - hash + item.instanceId.charCodeAt(i);
-        hash |= 0; // Convert to 32bit integer
+        hash |= 0;
       }
       const safeHash = Math.abs(hash) % DAY_STEP;
 
-      // Le score par défaut dépend du jour + un hash stable pour l'ordre intra-jour par défaut
-      return BASE_SCORE + item.day * DAY_STEP + safeHash;
+      return AUTO_BASE + item.day * DAY_STEP + safeHash;
     };
 
     periods.forEach((w) =>
