@@ -129,8 +129,8 @@ export const mapDbTransfer = (t: DbTransfer): Transfer => ({
 });
 
 export const mapDbVariableTransaction = (t: DbPaidItem): VariableTransaction => ({
-  id: t.id,
-  date: t.date,
+  id: t.id || t.instance_id, // Utiliser id si disponible, sinon instance_id
+  date: t.date || t.payment_date, // Utiliser date si disponible, sinon payment_date
   label: t.label,
   amount: Number(t.amount),
   category: t.category,

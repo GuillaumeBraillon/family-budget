@@ -67,12 +67,15 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
   const [comments, setComments] = useState<string>("");
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
 
-  const [accountId, setAccountId] = useState(accounts[0]?.id || "");
+  // Filtrer les comptes COURANTS pour l'initialisation par défaut
+  const checkingAccounts = useMemo(() => accounts.filter((a) => a.type === AccountType.CHECKING), [accounts]);
+
+  const [accountId, setAccountId] = useState(checkingAccounts[0]?.id || accounts[0]?.id || "");
   const [destAccountId, setDestAccountId] = useState(accounts[1]?.id || accounts[0]?.id || "");
 
   const [category, setCategory] = useState("");
   const [subCategory, setSubCategory] = useState("");
-  const defaultBeneficiary = people.find((p) => !p.isChild)?.id || people[0]?.id || "";
+  const defaultBeneficiary = people.find((p) => p.name === "Famille")?.id || people.find((p) => !p.isChild)?.id || people[0]?.id || "";
   const [beneficiaryId, setBeneficiaryId] = useState(defaultBeneficiary);
 
   const isExpense = type === "EXPENSE";
@@ -88,6 +91,27 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
   const transferSuggestions = useMemo(() => {
     return savedLabels.filter((l) => l.type === AccountType.TRANSFER).map((l) => l.name);
   }, [savedLabels]);
+
+  // Filtrage des comptes pour virements : un compte EPARGNE ne peut être jumelé qu'avec le compte pivot (isJoint)
+  const filteredSourceAccounts = useMemo(() => {
+    const destAccount = accounts.find((a) => a.id === destAccountId);
+    if (destAccount && destAccount.type === AccountType.SAVINGS) {
+      // Si destination = EPARGNE, source = pivot uniquement
+      return accounts.filter((a) => a.isJoint);
+    }
+    // Sinon tous les comptes
+    return accounts;
+  }, [accounts, destAccountId]);
+
+  const filteredDestAccounts = useMemo(() => {
+    const srcAccount = accounts.find((a) => a.id === accountId);
+    if (srcAccount && srcAccount.type === AccountType.SAVINGS) {
+      // Si source = EPARGNE, destination = pivot uniquement
+      return accounts.filter((a) => a.isJoint);
+    }
+    // Sinon tous les comptes
+    return accounts;
+  }, [accounts, accountId]);
 
   useEffect(() => {
     if (isOpen) {
@@ -136,11 +160,11 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
         setIsExtra(false);
         setComments("");
         setSelectedTagIds([]);
-        if (accounts.length > 0) setAccountId(accounts[0].id);
+        if (checkingAccounts.length > 0) setAccountId(checkingAccounts[0].id);
       }
       setValidationErrors([]);
     }
-  }, [isOpen, editingTransaction, defaultDate, defaultBeneficiary, initialMode, accounts]);
+  }, [isOpen, editingTransaction, defaultDate, defaultBeneficiary, initialMode, accounts, checkingAccounts]);
 
   const toggleTag = (tagId: string) => {
     setSelectedTagIds((prev) => (prev.includes(tagId) ? prev.filter((id) => id !== tagId) : [...prev, tagId]));
@@ -229,7 +253,7 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={editingTransaction ? "Modifier" : mode === "TRANSFER" ? "Nouveau virement" : "Nouvelle opération"}>
-      <div className="space-y-4">
+      <div className="space-y-2">
         {!editingTransaction && !lockMode && (
           <div className="flex bg-slate-100 p-1 rounded-lg mb-2">
             <button
@@ -313,35 +337,23 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
               required
               autoFocus={!editingTransaction}
             />
-            <AmountInput label="Montant" value={amount} onChange={(e) => setAmount(e.target.value)} color={themeColor} required />
+            <div className="grid grid-cols-2 gap-2">
+              <AmountInput label="Montant" value={amount} onChange={(e) => setAmount(e.target.value)} color={themeColor} required />
+              <TextInput label="Date" type="date" icon={Calendar} value={date} onChange={(e) => setDate(e.target.value)} required />
+            </div>
 
-            {isExpense && (
-              <div
-                onClick={() => setIsRefund(!isRefund)}
-                className={`cursor-pointer px-3 py-2 rounded-lg border transition-all flex items-center gap-3 ${
-                  isRefund ? "bg-emerald-50 border-emerald-200" : "bg-slate-50 border-transparent hover:border-slate-200"
-                }`}
-              >
-                <div className={`p-1 rounded ${isRefund ? "bg-emerald-200 text-emerald-700" : "bg-slate-200 text-slate-500"}`}>
-                  {isRefund ? <RefreshCcw size={14} /> : <div className="w-3.5 h-3.5" />}
-                </div>
-                <div className="flex-1">
-                  <span className={`text-xs font-bold block ${isRefund ? "text-emerald-800" : "text-slate-600"}`}>C'est un remboursement</span>
-                  {isRefund && <span className="text-[10px] text-emerald-600 leading-none">Ce montant sera déduit de vos dépenses (ex: Mutuelle, Retour produit).</span>}
-                </div>
-                <input type="checkbox" checked={isRefund} onChange={() => {}} className="pointer-events-none" />
-              </div>
-            )}
+            <div className="grid grid-cols-2 gap-2">
+              <AccountSelector
+                label={isExpense ? (isRefund ? "Compte crédité (Remboursement)" : "Compte débité") : "Compte crédité"}
+                accounts={accounts}
+                value={accountId}
+                onChange={(e) => setAccountId(e.target.value)}
+                color={themeColor}
+                filterTypes={[AccountType.CHECKING]}
+              />
 
-            <TextInput label="Date" type="date" icon={Calendar} value={date} onChange={(e) => setDate(e.target.value)} required />
-
-            <AccountSelector
-              label={isExpense ? (isRefund ? "Compte crédité (Remboursement)" : "Compte débité") : "Compte crédité"}
-              accounts={accounts}
-              value={accountId}
-              onChange={(e) => setAccountId(e.target.value)}
-              color={themeColor}
-            />
+              <BeneficiarySelector people={people} value={beneficiaryId} onChange={(e) => setBeneficiaryId(e.target.value)} color={themeColor} />
+            </div>
 
             <CategorySelector
               categories={categories}
@@ -352,11 +364,26 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
               onSubCategoryChange={setSubCategory}
             />
 
-            <BeneficiarySelector people={people} value={beneficiaryId} onChange={(e) => setBeneficiaryId(e.target.value)} color={themeColor} />
-
-            <div className="border-t border-slate-100 pt-3"></div>
+            <div className="border-t border-slate-100 pt-2"></div>
 
             <TagSelector tags={tags} selectedTagIds={selectedTagIds} onToggleTag={toggleTag} />
+            {isExpense && (
+              <div
+                onClick={() => setIsRefund(!isRefund)}
+                className={`cursor-pointer px-3 py-2 rounded-lg border transition-all flex items-center gap-3 ${
+                  isRefund ? "bg-emerald-50 border-emerald-200" : "bg-slate-50 border-transparent hover:border-slate-200"
+                }`}
+              >
+                <div className={`p-1 rounded ${isRefund ? "bg-emerald-200 text-emerald-700" : "bg-slate-200 text-slate-500"}`}>
+                  {isRefund ? <RefreshCcw size={14} /> : <TrendingDown size={14} />}
+                </div>
+                <div className="flex-1">
+                  <span className={`text-xs font-bold block ${isRefund ? "text-emerald-800" : "text-slate-600"}`}>C'est un remboursement</span>
+                  {isRefund && <span className="text-[10px] text-emerald-600 leading-none">Ce montant sera déduit de vos dépenses (ex: Mutuelle, Retour produit).</span>}
+                </div>
+                <input type="checkbox" checked={isRefund} onChange={() => {}} className="pointer-events-none" />
+              </div>
+            )}
             <TextInput
               label="Note / Commentaire"
               value={comments}
@@ -366,18 +393,21 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
             />
           </>
         ) : (
-          <div className="space-y-6 pt-2">
-            <div className="bg-indigo-50 border border-indigo-100 p-4 rounded-xl flex items-start gap-3">
+          <div className="space-y-3 pt-1">
+            <div className="bg-indigo-50 border border-indigo-100 p-3 rounded-xl flex items-start gap-2">
               <ArrowRightLeft className="text-indigo-600 mt-1" size={20} />
               <p className="text-xs text-indigo-800 leading-relaxed">Virement entre deux comptes. Crée un mouvement unique lié.</p>
             </div>
-            <AmountInput label="Montant" value={amount} onChange={(e) => setAmount(e.target.value)} color="indigo" required autoFocus />
+            <div className="grid grid-cols-2 gap-2">
+              <AmountInput label="Montant" value={amount} onChange={(e) => setAmount(e.target.value)} color="indigo" required autoFocus />
+              <TextInput label="Date" type="date" icon={Calendar} value={date} onChange={(e) => setDate(e.target.value)} required />
+            </div>
             <div className="relative">
               <div className="absolute left-[13px] top-[34px] bottom-[34px] w-0.5 bg-slate-200 -z-10"></div>
-              <div className="space-y-4">
+              <div className="space-y-3">
                 <AccountSelector
                   label="Depuis (Source)"
-                  accounts={accounts}
+                  accounts={filteredSourceAccounts}
                   value={accountId}
                   onChange={(e) => setAccountId(e.target.value)}
                   color="indigo"
@@ -390,7 +420,7 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
                 </div>
                 <AccountSelector
                   label="Vers (Destination)"
-                  accounts={accounts}
+                  accounts={filteredDestAccounts}
                   value={destAccountId}
                   onChange={(e) => setDestAccountId(e.target.value)}
                   color="emerald"
@@ -398,7 +428,6 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
                 />
               </div>
             </div>
-            <TextInput label="Date" type="date" icon={Calendar} value={date} onChange={(e) => setDate(e.target.value)} required />
             <SearchableTextInput
               label="Motif"
               value={label}
@@ -411,12 +440,12 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
           </div>
         )}
 
-        <div className="flex gap-2 pt-4 border-t border-slate-100">
+        <div className="flex gap-2 pt-3 border-t border-slate-100">
           {editingTransaction && onDeleteTransaction && (
             <button
               type="button"
               onClick={() => setShowDeleteConfirm(true)}
-              className="px-3 py-3 bg-red-50 text-red-600 rounded-xl font-bold hover:bg-red-100 transition-colors"
+              className="px-3 py-2 bg-red-50 text-red-600 rounded-xl font-bold hover:bg-red-100 transition-colors"
             >
               <Trash2 size={18} />
             </button>
@@ -425,7 +454,7 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
           {mode === "TRANSFER" ? (
             <button
               onClick={() => handleSubmit(false)}
-              className={`flex-1 text-white py-3 rounded-xl font-bold shadow-sm transition-colors flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700`}
+              className={`flex-1 text-white py-2 rounded-xl font-bold shadow-sm transition-colors flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700`}
             >
               <Save size={18} /> {editingTransaction ? "Mettre à jour" : "Exécuter le virement"}
             </button>
@@ -433,13 +462,13 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
             <>
               <button
                 onClick={() => handleSubmit(true)}
-                className="flex-1 bg-amber-100 text-amber-700 border border-amber-200 py-3 rounded-xl font-bold shadow-sm transition-colors flex items-center justify-center gap-2 hover:bg-amber-200"
+                className="flex-1 bg-amber-100 text-amber-700 border border-amber-200 py-2 rounded-xl font-bold shadow-sm transition-colors flex items-center justify-center gap-2 hover:bg-amber-200"
               >
                 <Clock size={18} /> En attente
               </button>
               <button
                 onClick={() => handleSubmit(false)}
-                className={`flex-1 text-white py-3 rounded-xl font-bold shadow-sm transition-colors flex items-center justify-center gap-2 ${
+                className={`flex-1 text-white py-2 rounded-xl font-bold shadow-sm transition-colors flex items-center justify-center gap-2 ${
                   isExpense ? "bg-indigo-600 hover:bg-indigo-700" : "bg-emerald-600 hover:bg-emerald-700"
                 }`}
               >

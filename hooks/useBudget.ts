@@ -129,11 +129,18 @@ export const useBudget = () => {
   }, []);
 
   // Charger une SEULE fois au montage initial
+  const loadDataCalledRef = useRef(false);
   useEffect(() => {
+    // Empêcher les rechargements multiples (StrictMode, focus, etc.)
+    if (loadDataCalledRef.current) return;
+
+    loadDataCalledRef.current = true;
     let isMounted = true;
+
     if (isMounted) {
       loadData();
     }
+
     return () => {
       isMounted = false;
     };

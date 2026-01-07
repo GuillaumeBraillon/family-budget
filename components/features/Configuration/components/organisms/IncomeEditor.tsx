@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import { Trash2, Save, Briefcase } from "lucide-react";
-import { IncomeConfig, CategoryDef, Person, Account } from "../../../../../types";
+import { IncomeConfig, CategoryDef, Person, Account, AccountType } from "../../../../../types";
 import { CategorySelector } from "../../../../ui/molecules/CategorySelector";
 import { TextInput, AmountInput } from "../../../../ui/molecules/FormInputs";
 import { AccountSelector, BeneficiarySelector } from "../../../../ui/molecules/SmartSelectors";
@@ -45,7 +45,7 @@ export const IncomeEditor: React.FC<IncomeEditorProps> = ({ incomeConfigs, peopl
     amount: 0,
     dayOfMonth: 1,
     accountId: defaultAccount,
-    beneficiaryId: people[0]?.id,
+    beneficiaryId: people.find((p) => p.name === "Famille")?.id || people[0]?.id,
     category: "",
     subCategory: "",
     isExtra: false,
@@ -80,7 +80,7 @@ export const IncomeEditor: React.FC<IncomeEditorProps> = ({ incomeConfigs, peopl
       amount: 0,
       dayOfMonth: 1,
       accountId: accounts[0]?.id || "",
-      beneficiaryId: people[0]?.id,
+      beneficiaryId: people.find((p) => p.name === "Famille")?.id || people[0]?.id,
       category: "",
       subCategory: "",
       isExtra: false,
@@ -184,7 +184,7 @@ export const IncomeEditor: React.FC<IncomeEditorProps> = ({ incomeConfigs, peopl
   ];
 
   return (
-    <div className="space-y-4 animate-in fade-in duration-300">
+    <div className="space-y-2 animate-in fade-in duration-300">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2">
         <ListSorter
           options={sortOptions}
@@ -198,7 +198,7 @@ export const IncomeEditor: React.FC<IncomeEditorProps> = ({ incomeConfigs, peopl
       </div>
 
       <Modal isOpen={isFormOpen} onClose={resetForm} title={editingId ? "Modifier le revenu" : "Nouveau Revenu Récurrent"}>
-        <div className="space-y-4">
+        <div className="space-y-2">
           {validationErrors.length > 0 && (
             <div
               ref={errorBlockRef}
@@ -257,6 +257,7 @@ export const IncomeEditor: React.FC<IncomeEditorProps> = ({ incomeConfigs, peopl
               setFormData((prev) => ({ ...prev, accountId: val }));
             }}
             color="emerald"
+            filterTypes={[AccountType.CHECKING]}
           />
 
           <BeneficiarySelector
@@ -278,7 +279,7 @@ export const IncomeEditor: React.FC<IncomeEditorProps> = ({ incomeConfigs, peopl
             onSubCategoryChange={(val) => setFormData((prev) => ({ ...prev, subCategory: val }))}
           />
 
-          <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 mt-2 space-y-3">
+          <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200 mt-2 space-y-2.5">
             <div className="flex items-center gap-3">
               <input
                 type="checkbox"
@@ -300,7 +301,7 @@ export const IncomeEditor: React.FC<IncomeEditorProps> = ({ incomeConfigs, peopl
               </div>
             </div>
 
-            <div className="flex items-center gap-3 border-t border-slate-200 pt-3">
+            <div className="flex items-center gap-3 border-t border-slate-200 pt-2.5">
               <input
                 type="checkbox"
                 id="extra"
@@ -320,7 +321,7 @@ export const IncomeEditor: React.FC<IncomeEditorProps> = ({ incomeConfigs, peopl
             </div>
 
             {formData.isExtra && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2 pt-2 border-t border-slate-200">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 animate-in fade-in slide-in-from-top-2 pt-2 border-t border-slate-200">
                 <TextInput
                   label="Mois de début"
                   type="month"

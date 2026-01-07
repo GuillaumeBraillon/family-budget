@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { Trash2, Save } from "lucide-react";
-import { ExpenseConfig, CategoryDef, Person, Account } from "../../../../../types";
+import { ExpenseConfig, CategoryDef, Person, Account, AccountType } from "../../../../../types";
 import { CategorySelector } from "../../../../ui/molecules/CategorySelector";
 import { TextInput, AmountInput } from "../../../../ui/molecules/FormInputs";
 import { AccountSelector, BeneficiarySelector } from "../../../../ui/molecules/SmartSelectors";
@@ -45,7 +45,7 @@ export const ExpenseRulesEditor: React.FC<ExpenseRulesEditorProps> = ({ configs,
     amount: 0,
     dayOfMonth: 1,
     accountId: defaultAccount,
-    beneficiaryId: people[0]?.id,
+    beneficiaryId: people.find((p) => p.name === "Famille")?.id || people[0]?.id,
     category: "",
     subCategory: "",
     isExtra: false,
@@ -79,7 +79,7 @@ export const ExpenseRulesEditor: React.FC<ExpenseRulesEditorProps> = ({ configs,
       amount: 0,
       dayOfMonth: 1,
       accountId: accounts[0]?.id || "",
-      beneficiaryId: people[0]?.id,
+      beneficiaryId: people.find((p) => p.name === "Famille")?.id || people[0]?.id,
       category: "",
       subCategory: "",
       isExtra: false,
@@ -181,7 +181,7 @@ export const ExpenseRulesEditor: React.FC<ExpenseRulesEditorProps> = ({ configs,
   ];
 
   return (
-    <div className="space-y-4 animate-in fade-in duration-300">
+    <div className="space-y-2 animate-in fade-in duration-300">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2">
         <ListSorter
           options={sortOptions}
@@ -195,7 +195,7 @@ export const ExpenseRulesEditor: React.FC<ExpenseRulesEditorProps> = ({ configs,
       </div>
 
       <Modal isOpen={isFormOpen} onClose={resetForm} title={editingId ? "Modifier la dépense" : "Nouvelle Dépense Récurrente"}>
-        <div className="space-y-4">
+        <div className="space-y-2">
           {validationErrors.length > 0 && (
             <div
               ref={errorBlockRef}
@@ -251,6 +251,7 @@ export const ExpenseRulesEditor: React.FC<ExpenseRulesEditorProps> = ({ configs,
               const val = e.target.value;
               setFormData((prev) => ({ ...prev, accountId: val }));
             }}
+            filterTypes={[AccountType.CHECKING]}
           />
 
           <BeneficiarySelector
@@ -271,8 +272,8 @@ export const ExpenseRulesEditor: React.FC<ExpenseRulesEditorProps> = ({ configs,
             onSubCategoryChange={(val) => setFormData((prev) => ({ ...prev, subCategory: val }))}
           />
 
-          <div className="bg-white/60 p-3 rounded-lg border border-slate-200 mt-2">
-            <div className="flex items-center gap-2 mb-3">
+          <div className="bg-white/60 p-2.5 rounded-lg border border-slate-200 mt-2">
+            <div className="flex items-center gap-2 mb-2.5">
               <input
                 type="checkbox"
                 id="extra"
@@ -289,7 +290,7 @@ export const ExpenseRulesEditor: React.FC<ExpenseRulesEditorProps> = ({ configs,
             </div>
 
             {formData.isExtra && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 animate-in fade-in slide-in-from-top-2">
                 <TextInput
                   label="Mois de début"
                   type="month"
@@ -358,7 +359,7 @@ export const ExpenseRulesEditor: React.FC<ExpenseRulesEditorProps> = ({ configs,
             )}
             <button
               onClick={handleSubmit}
-              className="flex-1 bg-slate-900 text-white py-3 rounded-lg font-bold hover:bg-slate-800 transition-colors flex items-center justify-center gap-2"
+              className="flex-1 bg-slate-900 text-white py-2 rounded-lg font-bold hover:bg-slate-800 transition-colors flex items-center justify-center gap-2"
             >
               <Save size={18} /> {editingId ? "Mettre à jour" : "Créer la règle"}
             </button>

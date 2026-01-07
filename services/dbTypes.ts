@@ -84,6 +84,7 @@ export interface DbIncomeConfig {
 }
 
 export interface DbPaidItem {
+  id?: string; // ID technique auto-généré par Supabase
   instance_id: string;
   amount: number;
   payment_date: string;
@@ -97,6 +98,7 @@ export interface DbPaidItem {
   is_waiting: boolean;
   is_extra: boolean;
   comments?: string;
+  date?: string; // Alias de payment_date pour compatibilité
   tag_ids?: string[];
   position?: number;
 }

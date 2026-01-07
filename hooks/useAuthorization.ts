@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Session } from "@supabase/supabase-js";
 import { supabase } from "../services/supabase";
 import { logger } from "../services/logger";
@@ -10,14 +10,19 @@ export const useAuthorization = (session: Session | null) => {
   const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const checkedRef = useRef(false);
 
   useEffect(() => {
     const checkAuthorization = async () => {
+      // Si pas de session, attendre qu'elle arrive (ne pas bloquer avec la ref)
       if (!session?.user?.email) {
-        setIsAuthorized(false);
-        setLoading(false);
+        setIsAuthorized(null);
+        setLoading(true);
         return;
       }
+
+      // Si on a déjà vérifié cet email, ne pas revérifier (évite les refresh de token)
+      if (checkedRef.current) return;
 
       try {
         setLoading(true);
@@ -45,6 +50,7 @@ export const useAuthorization = (session: Session | null) => {
 
           setIsAuthorized(false);
           setLoading(false);
+          checkedRef.current = true;
           return;
         }
 
@@ -65,11 +71,13 @@ export const useAuthorization = (session: Session | null) => {
         }
 
         setLoading(false);
+        checkedRef.current = true;
       } catch (err: any) {
         logger.error("Authorization check error:", err);
         setError(err.message || "Erreur lors de la vérification");
         setIsAuthorized(false);
         setLoading(false);
+        checkedRef.current = true;
       }
     };
 

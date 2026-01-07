@@ -20,6 +20,7 @@ import { Calendar, CalendarRange, GripVertical } from "lucide-react";
 import { arrayMove } from "@dnd-kit/sortable";
 
 // Imports UI Atomic (Generic)
+import { Toast } from "../../ui/Toast";
 import { MonthNavigator } from "../../ui/molecules/MonthNavigator";
 import { FilterBar } from "../../ui/molecules/FilterBar";
 import { WeekSelector } from "../../ui/molecules/WeekSelector";
@@ -75,6 +76,7 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
   const [scope, setScope] = useState<"MONTH" | "PERIOD">("PERIOD");
   const [isVarFormOpen, setIsVarFormOpen] = useState(false);
   const [editingVar, setEditingVar] = useState<VariableTransaction | null>(null);
+  const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
   // Tri par défaut sur Manuel - AVEC PERSISTANCE
   const [sortKey, setSortKey] = useState<string>(() => {
@@ -130,6 +132,12 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
   React.useEffect(() => {
     localStorage.setItem("operationsView_filters", JSON.stringify(filters));
   }, [filters]);
+
+  const handleDeleteVariable = (id: string) => {
+    onDeleteVariable(id);
+    setFeedback({ type: "success", message: "Opération supprimée" });
+    setTimeout(() => setFeedback(null), 3000);
+  };
 
   const checkingAccountIds = useMemo(() => accounts.filter((a) => a.type === AccountType.CHECKING).map((a) => a.id), [accounts]);
 
@@ -337,6 +345,7 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
 
   return (
     <div className="space-y-6">
+      {feedback && <Toast type={feedback.type} message={feedback.message} onClose={() => setFeedback(null)} />}
       <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
         <QuickPeriodSummary expenses={quickStats.expenses} income={quickStats.income} />
 
@@ -439,7 +448,7 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
         people={people}
         tags={tags}
         onAddTransaction={onUpsertVariable}
-        onDeleteTransaction={onDeleteVariable}
+        onDeleteTransaction={handleDeleteVariable}
         defaultDate={defaultVarDate}
         savedLabels={savedLabels}
         labelsSuggestions={settings.variable_labels}
