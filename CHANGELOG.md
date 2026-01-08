@@ -41,6 +41,7 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
   - Décalage automatique des items suivants lors de collision
 
 - **Drag & drop en mode DESC** : Correction du calcul des positions en tri descendant
+
   - Inversion automatique des voisins (prev/next) selon le sens du tri
   - Positions correctement calculées : DESC (première position = plus grande valeur)
   - Résolution du bug : En DESC, les items étaient placés aux mauvaises positions
