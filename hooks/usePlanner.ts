@@ -78,6 +78,50 @@ const hasExtraAmounts = (isExtraGlobal: boolean, tagAmounts?: TagAmount[]): bool
 };
 
 /**
+ * Détermine si une opération contient des montants "Standard" (dans le budget).
+ *
+ * @description
+ * Vérifie si une opération a au moins une partie qui n'est PAS Extra.
+ * Une opération mixte (70€ Extra + 45€ Standard) retournera true.
+ *
+ * **Logique :**
+ * - Si toggle global Extra activé : false (tout est Extra)
+ * - Sinon, vérifie s'il y a des montants non-Extra :
+ *   * Pas de tags : true (tout le montant est Standard)
+ *   * Tags présents : true si au moins un tag Standard OU si montant total > somme tags
+ *
+ * @param {boolean} isExtraGlobal - Flag Extra au niveau de l'opération
+ * @param {number} totalAmount - Montant total de l'opération
+ * @param {TagAmount[]} [tagAmounts] - Ventilation optionnelle des montants par tag
+ * @returns {boolean} True si l'opération contient des montants Standard
+ *
+ * @example
+ * ```tsx
+ * // Opération 100% Extra (toggle global)
+ * hasStandardAmounts(true, 100, []) // false
+ *
+ * // Opération mixte (70€ Extra + 45€ non taggé)
+ * hasStandardAmounts(false, 115, [{ tagId: 't1', amount: 70, isExtra: true }]) // true
+ *
+ * // Opération 100% Standard
+ * hasStandardAmounts(false, 100, [{ tagId: 't1', amount: 50 }]) // true
+ * ```
+ */
+const hasStandardAmounts = (isExtraGlobal: boolean, totalAmount: number, tagAmounts?: TagAmount[]): boolean => {
+  // Si toggle global Extra : tout est Extra, rien de Standard
+  if (isExtraGlobal) return false;
+
+  // Pas de tags : tout le montant est Standard
+  if (!tagAmounts || tagAmounts.length === 0) return true;
+
+  // Calculer la somme des montants Extra
+  const extraSum = tagAmounts.filter((ta) => ta.isExtra === true).reduce((sum, ta) => sum + ta.amount, 0);
+
+  // S'il reste un montant non-Extra (total - extraSum > 0.01), c'est Standard
+  return totalAmount - extraSum > 0.01;
+};
+
+/**
  * Hook de planification des périodes budgétaires mensuelles.
  *
  * @description
@@ -346,6 +390,7 @@ export const usePlanner = (
         const scoreA = getItemSortScore(a);
         const scoreB = getItemSortScore(b);
         if (scoreA !== scoreB) return scoreA - scoreB;
+        // Si égalité de score (positions identiques), tri par instanceId pour stabilité
         return a.instanceId.localeCompare(b.instanceId);
       })
     );
@@ -374,8 +419,29 @@ export const usePlanner = (
           const wantWaiting = filters.status === "WAITING";
           items = items.filter((i) => i.isWaiting === wantWaiting);
         }
-        if (filters.extra === "ONLY") items = items.filter((i) => i.isExtra === true);
-        else if (filters.extra === "EXCLUDE") items = items.filter((i) => i.isExtra === false);
+
+        // Filtre Extra/Standard : Logique mixte pour opérations ventilées
+        if (filters.extra === "ONLY") {
+          // Afficher UNIQUEMENT les opérations qui ont des montants Extra
+          items = items.filter((i) => i.isExtra === true);
+        } else if (filters.extra === "EXCLUDE") {
+          // Afficher UNIQUEMENT les opérations qui ont des montants Standard
+          // Une opération mixte (70€ Extra + 45€ Standard) doit apparaître ici
+          items = items.filter((i) => {
+            // Si toggle global Extra : tout est Extra, on exclut
+            if (i.paidDetails?.isExtra === true || (!i.paidDetails && i.isExtra === true)) {
+              // Vérifier s'il y a des tags (cas mixte possible)
+              const tagAmounts = i.tagAmounts;
+              if (!tagAmounts || tagAmounts.length === 0) return false; // Tout Extra, pas de ventilation
+
+              // Calculer si reste Standard
+              const extraSum = tagAmounts.filter((ta) => ta.isExtra === true).reduce((sum, ta) => sum + ta.amount, 0);
+              return i.amount - extraSum > 0.01; // Il reste du Standard
+            }
+            // Pas Extra globalement : c'est Standard
+            return true;
+          });
+        }
 
         if (filters.transfer === "ONLY") items = items.filter((i) => i.category === "Virement Interne");
         else if (filters.transfer === "EXCLUDE") items = items.filter((i) => i.category !== "Virement Interne");

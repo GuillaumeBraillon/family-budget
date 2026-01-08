@@ -102,7 +102,6 @@ export const PlannerModals: React.FC<PlannerModalsProps> = ({
                         comments: confirmModal.comments.trim() || undefined,
                         isWaiting: false,
                         isVariable: false,
-                        tagIds: selectedTags,
                       } as any,
                       confirmModal.item.instanceId
                     );
