@@ -7,6 +7,76 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.2.0] - 2026-01-08
+
+### Ajouté
+
+- **Système de tri manuel intelligent** : Gestion robuste du drag & drop des opérations avec positions manuelles
+  - Système à deux niveaux : positions manuelles (< 1M) et automatiques (>= 1M)
+  - Intervalles larges (1000) pour scalabilité et éviter les conflits
+  - Gestion automatique des collisions avec décalage des items suivants
+  - Tri stable avec second critère (`instanceId`) en cas d'égalité de position
+  - Support de 8 cas d'insertion différents (première position, dernière, entre deux items avec/sans positions)
+
+### Amélioré
+
+- **Logique de filtrage des opérations** : Amélioration du filtrage Nature (Extra/Standard)
+
+  - Détection des opérations mixtes (montants à la fois Extra et Standard)
+  - Calcul précis du montant Extra via les tags (`extraSum`)
+  - Opérations mixtes visibles dans les deux filtres (Extra et Standard)
+  - Fonction `hasStandardAmounts()` pour détecter les montants dans le budget
+
+- **Architecture des hooks** : Refactorisation complète pour améliorer la maintenabilité
+
+  - Création de `hooks/filterBar/useFilterBarLogic.tsx` (538 lignes) pour la logique des filtres
+  - Création de `hooks/operations/` avec 4 hooks spécialisés (useOperationsFilters, useOperationsSorting, useOperationsData)
+  - Création de `hooks/transactions/useTransactionForm.ts` (500 lignes) pour la gestion des formulaires
+  - Création de `hooks/transfers/` avec useTransfersData et useTransfersFilters
+  - Création de `hooks/budget/` avec useBudgetActions et useBudgetBalances
+  - Ajout de JSDoc complet à tous les nouveaux hooks
+  - OperationsView réduit de ~600 à ~326 lignes (-45%)
+  - VariableTransactionForm réduit de ~363 à ~151 lignes (-58%)
+
+- **Bouton Reset des filtres** : Amélioration de la visibilité et du comportement
+  - Détection de l'état par défaut (`isDefaultFilters`) distincte de "tous les filtres désactivés"
+  - Bouton toujours visible avec styling adaptatif (grisé si défaut, rouge si modifié)
+  - Tooltips contextuels ("Filtres déjà par défaut" vs "Réinitialiser aux filtres par défaut")
+
+### Corrigé
+
+- **Crash validation dans PlannerModals** : Suppression de la référence obsolète `tagIds: selectedTags`
+
+  - Résolution de ReferenceError lors de la validation d'opérations
+  - Les `tagAmounts` sont correctement préservés via le spread operator
+
+- **Positions manuelles** : Correction de la détection des positions manuelles vs automatiques
+  - Ajout du seuil `< 1_000_000` dans `getManualPosition()` helper
+  - Alignement des fonctions de scoring entre `usePlanner.ts` et `useOperationsSorting.ts`
+  - Réduction de AUTO_BASE de 100B → 10M → 1M pour cohérence
+
+### Technique
+
+- **Refactorisation Architecture** : Application des principes SOLID et Atomic Design
+
+  - Séparation claire des responsabilités (SRP)
+  - Composition de hooks spécialisés plutôt que composants monolithiques
+  - Logique métier isolée dans des hooks réutilisables
+  - Réduction de la duplication de code (DRY)
+
+- **Documentation Technique** :
+  - Ajout de JSDoc complet sur 15+ hooks avec exemples d'utilisation
+  - Documentation des cas d'usage et des patterns de composition
+  - Clarification des dépendances et du flux de données
+
+**Commits** :
+
+- Improve manual position logic and filtering in planner (4e1c770)
+- Refactor manual sorting logic for operations (edc5a05)
+- Refactor operations and forms logic into custom hooks (4b264c6)
+
+---
+
 ## [2.1.0] - 2026-01-07
 
 ### Changé
