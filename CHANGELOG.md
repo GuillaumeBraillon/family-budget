@@ -40,6 +40,11 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
   - Tri stable avec second critère (`instanceId`) en cas d'égalité de position
   - Décalage automatique des items suivants lors de collision
 
+- **Drag & drop en mode DESC** : Correction du calcul des positions en tri descendant
+  - Inversion automatique des voisins (prev/next) selon le sens du tri
+  - Positions correctement calculées : DESC (première position = plus grande valeur)
+  - Résolution du bug : En DESC, les items étaient placés aux mauvaises positions
+
 - **Crash VariableTransactionForm** : Correction de l'accès à la propriété lors de la suppression
   - TypeError lors de la suppression d'une opération (accès à `form.label` au lieu de `label`)
   - Correction de la référence dans le message de confirmation de suppression

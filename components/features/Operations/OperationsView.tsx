@@ -185,8 +185,11 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
       // 1. Simuler le nouveau tableau après déplacement
       const reorderedList = arrayMove(currentItems, oldIndex, newIndex);
 
-      const prevItem = reorderedList[newIndex - 1] as PlannedItem | undefined;
-      const nextItem = reorderedList[newIndex + 1] as PlannedItem | undefined;
+      // IMPORTANT : En mode DESC, l'ordre visuel est inversé
+      // prev devient next et vice-versa pour le calcul des positions
+      const isDescending = sortOrder === "desc";
+      const prevItem = (isDescending ? reorderedList[newIndex + 1] : reorderedList[newIndex - 1]) as PlannedItem | undefined;
+      const nextItem = (isDescending ? reorderedList[newIndex - 1] : reorderedList[newIndex + 1]) as PlannedItem | undefined;
 
       // 2. Calculer la nouvelle position entre les voisins
       const POSITION_STEP = 1000; // Intervalles larges (1000, 2000, 3000...)
