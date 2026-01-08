@@ -289,6 +289,7 @@ export const usePlanner = (
           beneficiaryId: conf.beneficiaryId,
           accountId: conf.accountId,
           isExtra: hasExtraAmounts(baseIsExtra, tagAmounts),
+          isExtraGlobal: baseIsExtra, // Toggle brut
           isPaid: isActuallyPaid,
           isWaiting: !isActuallyPaid,
           paidDetails: paid,
@@ -354,6 +355,7 @@ export const usePlanner = (
           isPaid: !vt.isWaiting,
           isWaiting: !!vt.isWaiting,
           isExtra: hasExtraAmounts(!!vt.isExtra, vt.tagAmounts),
+          isExtraGlobal: !!vt.isExtra, // Toggle brut de la variable
           comments: vt.comments || "",
           tagAmounts: vt.tagAmounts,
           position: vt.position,
@@ -420,17 +422,19 @@ export const usePlanner = (
           items = items.filter((i) => i.isWaiting === wantWaiting);
         }
 
-        // Filtre Extra/Standard : Logique mixte pour opérations ventilées
+        // Filtre Extra/Standard : NE PAS FILTRER ICI
+        // Les opérations mixtes (70€ Extra + 45€ Standard) doivent être visibles dans les deux filtres
+        // Le calcul des montants effectifs se fait dans useOperationsData.getEffectiveAmount()
+        // On garde toutes les opérations qui ont AU MOINS une partie correspondant au filtre
         if (filters.extra === "ONLY") {
-          // Afficher UNIQUEMENT les opérations qui ont des montants Extra
+          // Afficher les opérations qui ont des montants Extra (même partiellement)
           items = items.filter((i) => i.isExtra === true);
         } else if (filters.extra === "EXCLUDE") {
-          // Afficher UNIQUEMENT les opérations qui ont des montants Standard
+          // Afficher les opérations qui ont des montants Standard (même partiellement)
           // Une opération mixte (70€ Extra + 45€ Standard) doit apparaître ici
           items = items.filter((i) => {
-            // Si toggle global Extra : tout est Extra, on exclut
+            // Si toggle global Extra : vérifier s'il reste du Standard via tags
             if (i.paidDetails?.isExtra === true || (!i.paidDetails && i.isExtra === true)) {
-              // Vérifier s'il y a des tags (cas mixte possible)
               const tagAmounts = i.tagAmounts;
               if (!tagAmounts || tagAmounts.length === 0) return false; // Tout Extra, pas de ventilation
 
@@ -438,8 +442,14 @@ export const usePlanner = (
               const extraSum = tagAmounts.filter((ta) => ta.isExtra === true).reduce((sum, ta) => sum + ta.amount, 0);
               return i.amount - extraSum > 0.01; // Il reste du Standard
             }
-            // Pas Extra globalement : c'est Standard
-            return true;
+
+            // Pas de toggle global : vérifier s'il y a des montants Standard
+            const tagAmounts = i.tagAmounts;
+            if (!tagAmounts || tagAmounts.length === 0) return true; // Pas de tags : tout Standard
+
+            // Calculer montants Standard (total - Extra)
+            const extraSum = tagAmounts.filter((ta) => ta.isExtra === true).reduce((sum, ta) => sum + ta.amount, 0);
+            return i.amount - extraSum > 0.01; // Il reste du Standard
           });
         }
 

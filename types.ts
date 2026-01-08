@@ -176,7 +176,8 @@ export interface PlannedItem {
   category: string;
   subCategory?: string;
   beneficiaryId: string;
-  isExtra: boolean;
+  isExtra: boolean; // Calculé : true si toggle global OU au moins un tag Extra
+  isExtraGlobal: boolean; // Toggle global uniquement (sans tags)
   isSalary?: boolean; // Propagation de l'info structurelle
   accountId: string;
   startMonth?: string;
