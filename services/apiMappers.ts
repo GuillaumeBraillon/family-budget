@@ -37,7 +37,6 @@ export const mapDbPerson = (person: DbPerson): Person => ({
 });
 
 export const mapDbAuthorizedUser = (user: DbAuthorizedUser): AuthorizedUser => {
-  logger.log("🗺️ Mapping user from DB:", { email: user.email, is_allowed: user.is_allowed, type: typeof user.is_allowed });
   return {
     email: user.email,
     name: user.name,

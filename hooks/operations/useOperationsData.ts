@@ -27,6 +27,7 @@
  */
 import { useMemo } from "react";
 import { usePlanner } from "../usePlanner";
+import { logger } from "../../services/logger";
 import {
   Account,
   ExpenseConfig,
@@ -268,7 +269,16 @@ export const useOperationsData = ({
       const hasTagFilter = filters.includedTagIds && filters.includedTagIds.length > 0;
       const hasExtraFilter = filters.extra === "ONLY" || filters.extra === "EXCLUDE";
 
-      // Cas 1 : Filtre Extra actif
+      logger.debug("calculations", "getEffectiveAmount", {
+        label: item.label,
+        amount: item.amount,
+        isExtraGlobal: item.isExtraGlobal,
+        hasTagFilter,
+        hasExtraFilter,
+        tagAmounts: item.tagAmounts?.length || 0,
+      });
+
+      // Cas 1 : Filtre Extra/Standard actif
       if (hasExtraFilter) {
         // Utiliser le toggle global stocké dans isExtraGlobal (source de vérité)
         const hasGlobalExtra = item.isExtraGlobal;

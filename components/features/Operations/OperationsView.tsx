@@ -182,6 +182,14 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
   // DRAG & DROP : SYSTÈME D'INTERVALLES LARGES (Scalable)
   const handleReorder = (item: PlannedItem, oldIndex: number, newIndex: number) => {
     if (onMoveItem && sortKey === "manual") {
+      logger.debug("drag-drop", "Début handleReorder", {
+        item: item.label,
+        oldIndex,
+        newIndex,
+        sortOrder,
+        currentPosition: item.position,
+      });
+
       // 1. Simuler le nouveau tableau après déplacement
       const reorderedList = arrayMove(currentItems, oldIndex, newIndex);
 

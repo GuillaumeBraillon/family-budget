@@ -190,7 +190,7 @@ export const useBudget = () => {
    * ```
    */
   const loadData = useCallback(async (silent = false) => {
-    logger.log("🔄 useBudget: loadData appelé", { silent });
+    logger.debug("useBudget", "loadData appelé", { silent });
     if (!isSupabaseConfigured()) {
       setIsLoading(false);
       return;
@@ -200,11 +200,11 @@ export const useBudget = () => {
       if (!silent) setIsLoading(true);
       setErrorMessage(null);
       const res = await fetchInitialData();
-      logger.log("✅ useBudget: Données rechargées", { authorizedUsers: res.authorizedUsers.length });
-      logger.log(
-        "📋 Détail des utilisateurs:",
-        res.authorizedUsers.map((u) => ({ email: u.email, isAllowed: u.isAllowed }))
-      );
+      logger.debug("useBudget", "Données rechargées", {
+        accounts: res.accounts.length,
+        configs: res.configs.length,
+        authorizedUsers: res.authorizedUsers.length,
+      });
 
       setIsDbEmpty(res.people.length === 0 && res.accounts.length === 0);
 
@@ -222,10 +222,6 @@ export const useBudget = () => {
         tags: res.tags,
         authorizedUsers: res.authorizedUsers,
       });
-      logger.log(
-        "🔄 setBudgetData appelé avec authorizedUsers:",
-        res.authorizedUsers.map((u) => ({ email: u.email, isAllowed: u.isAllowed }))
-      );
     } catch (err: any) {
       setErrorMessage(err.message || "Erreur lors du chargement des données");
     } finally {

@@ -2,6 +2,7 @@ import { supabase, isSupabaseConfigured } from "./supabase";
 import * as mappers from "./apiMappers";
 import { AppSettings, VariableTransaction } from "../types";
 import { DbPaidItem } from "./dbTypes";
+import { logger } from "./logger";
 import {
   apiToggleUserAuthorization,
   apiUpdateUserNotes,
@@ -35,6 +36,8 @@ import {
  * Délègue la conversion des données brutes aux fonctions de mapping.
  */
 export const fetchInitialData = async () => {
+  logger.debug("api", "Début fetchInitialData");
+
   // PROTECTION : Si Supabase n'est pas configuré (ou placeholder), on ne lance pas les requêtes
   if (!isSupabaseConfigured()) {
     return {
@@ -138,6 +141,14 @@ export const fetchInitialData = async () => {
         position: mapped.position,
       });
     }
+  });
+
+  logger.debug("api", "fetchInitialData terminé", {
+    people: people.length,
+    accounts: accounts.length,
+    configs: configs.length,
+    paidItems: Object.keys(paidItems).length,
+    authorizedUsers: authorizedUsers.length,
   });
 
   return { people, accounts, categories, configs, incomeConfigs, paidItems, settings, transfers, variableTransactions, savedLabels, tags, authorizedUsers };

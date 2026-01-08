@@ -285,6 +285,13 @@ export const apiDeleteIncome = async (id: string) => supabase.from("income_confi
  * ```
  */
 export const apiSetPaidStatus = async (details: PaidItemDetails | null, instanceId: string) => {
+  logger.debug("crud", "apiSetPaidStatus", {
+    instanceId,
+    hasDetails: !!details,
+    amount: details?.amount,
+    tagAmounts: details?.tagAmounts?.length || 0,
+  });
+
   if (details) {
     // 1. Upsert du paid_item principal
     const result = await supabase.from("paid_items").upsert({

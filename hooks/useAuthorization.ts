@@ -56,6 +56,14 @@ export const useAuthorization = (session: Session | null) => {
 
         // Vérifier si l'utilisateur est autorisé
         const authorized = data.is_allowed === true;
+
+        logger.debug("authorization", "Vérification autorisation", {
+          email: userEmail,
+          isAllowed: authorized,
+          rawValue: data.is_allowed,
+          type: typeof data.is_allowed,
+        });
+
         setIsAuthorized(authorized);
 
         // Mettre à jour last_login_at et les infos si autorisé

@@ -23,6 +23,7 @@
  */
 import { useMemo } from "react";
 import { startOfMonth, endOfMonth, eachWeekOfInterval, getDate, getDaysInMonth } from "date-fns";
+import { logger } from "../services/logger";
 import {
   ExpenseConfig,
   IncomeConfig,
@@ -198,6 +199,12 @@ export const usePlanner = (
   const monthlyBudget = settings.monthly_envelope || 0;
 
   const periodBudgets = useMemo(() => {
+    logger.debug("planner", "Génération des périodes", {
+      month: currentMonthKey,
+      periodType: settings.period_type,
+      periodValue: settings.period_value,
+    });
+
     const periods: WeeklyBudget[] = [];
     const type = settings.period_type || "FIXED_DAYS";
     const val = settings.period_value || 7;

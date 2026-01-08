@@ -12,9 +12,31 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 ### Ajouté
 
 - **Champ `isExtraGlobal` dans PlannedItem** : Séparation du toggle Extra brut et du calcul dérivé
+
   - Source de vérité pour le toggle Extra global (sans influence des tags)
   - `isExtra` : Calcul dérivé (true si toggle global OU au moins un tag Extra)
   - `isExtraGlobal` : Valeur brute du toggle (pour calculs robustes)
+
+- **Système de logs de debug activable** : Logs détaillés activables en production via variable d'environnement
+
+  - Nouvelle méthode `logger.debug(namespace, ...args)` pour logs on-demand
+  - Activation via `VITE_ENABLE_DEBUG_LOGS=true` (local ou Vercel)
+  - Logs instrumentés aux points stratégiques :
+    - API : Chargement initial des données (fetchInitialData)
+    - Auth : Récupération session et changements d'état
+    - Authorization : Vérification whitelist avec valeurs brutes
+    - Drag & drop : Calcul des positions avec contexte (ASC/DESC)
+    - Calculs financiers : getEffectiveAmount() avec détails filtres
+    - Planner : Génération des périodes budgétaires
+    - CRUD : Opérations de pointage avec tags
+  - Permet diagnostiquer problèmes en prod sans redéployer
+
+- **Error Boundary global** : Capture des erreurs React avec UI élégante
+  - Composant `ErrorBoundary` wrappant toute l'application
+  - Page d'erreur user-friendly au lieu d'écran blanc
+  - Détails techniques pliables (message + stack trace)
+  - Actions : Rafraîchir la page ou retour à l'accueil
+  - Logs automatiques des erreurs dans la console
 
 ### Corrigé
 
@@ -47,15 +69,34 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
   - Résolution du bug : En DESC, les items étaient placés aux mauvaises positions
 
 - **Crash VariableTransactionForm** : Correction de l'accès à la propriété lors de la suppression
+
   - TypeError lors de la suppression d'une opération (accès à `form.label` au lieu de `label`)
   - Correction de la référence dans le message de confirmation de suppression
+
+- **Logs sensibles** : Retrait des logs affichant les emails en clair
+  - Nettoyage de `mapDbAuthorizedUser` (logs de mapping utilisateurs)
+  - Sécurité renforcée en développement
 
 ### Technique
 
 - **Robustesse des calculs** : Système plus fiable pour gérer la complexité (tags, extra, remboursements)
+
   - Source de vérité unique (`isExtraGlobal`) pour le toggle Extra
   - Calculs contextuels basés sur les filtres actifs
   - Support complet des cas d'usage mixtes
+
+- **Debugging amélioré** : Infrastructure de logs professionnelle
+
+  - Logs conditionnels (dev only par défaut)
+  - Activation on-demand en production sans redéploiement
+  - Namespace pour identifier l'origine des logs
+  - Documentation dans `default.env.txt`
+
+- **Gestion d'erreurs** : Architecture robuste avec Error Boundary
+  - Capture toutes les erreurs React non gérées
+  - UI de fallback élégante et informative
+  - Logging automatique avec stack traces
+  - Amélioration de l'expérience utilisateur en cas d'erreur
 
 ---
 

@@ -38,6 +38,8 @@ export const useAuth = () => {
       if (error) {
         logger.error("Error getting session:", error);
         setError(error.message);
+      } else {
+        logger.debug("auth", "Session récupérée", { hasSession: !!session, email: session?.user?.email });
       }
       setSession(session);
       setLoading(false);
@@ -47,6 +49,7 @@ export const useAuth = () => {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
+      logger.debug("auth", "AuthStateChange", { event: _event, hasSession: !!session });
       setSession(session);
       setLoading(false);
     });
