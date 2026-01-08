@@ -10,7 +10,6 @@ Guide complet pour configurer et déployer la base de données PostgreSQL avec S
 ## Étape 1 : Créer un nouveau projet
 
 1. **Connexion**
-
    - Rendez-vous sur [app.supabase.com](https://app.supabase.com)
    - Connectez-vous avec GitHub ou Email
 
@@ -28,17 +27,14 @@ Guide complet pour configurer et déployer la base de données PostgreSQL avec S
 ## Étape 2 : Exécuter le script SQL
 
 1. **Ouvrir SQL Editor**
-
    - Dans le menu latéral, cliquez sur "SQL Editor"
    - Cliquez sur "New query"
 
 2. **Copier le schéma complet**
-
    - Ouvrez le fichier `startup/database_complete.sql`
    - Copiez **TOUT** le contenu (Ctrl+A, Ctrl+C)
 
 3. **Exécuter**
-
    - Collez le contenu dans l'éditeur SQL
    - Cliquez sur "Run" (ou Ctrl+Enter)
    - ✅ Vérifiez qu'aucune erreur n'apparaît
@@ -62,7 +58,6 @@ Guide complet pour configurer et déployer la base de données PostgreSQL avec S
 ## Étape 3 : Configurer l'authentification
 
 1. **Activer Google Auth**
-
    - Allez dans "Authentication" > "Providers"
    - Cherchez "Google"
    - Activez le toggle
@@ -83,7 +78,6 @@ Guide complet pour configurer et déployer la base de données PostgreSQL avec S
 ## Étape 4 : Récupérer les identifiants du projet
 
 1. **Project ID**
-
    - Allez dans "Settings" > "General"
    - Notez le "Reference ID" (ex: `abcdefghijklmnop`)
 

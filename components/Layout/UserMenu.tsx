@@ -54,7 +54,9 @@ export const UserMenu: React.FC<UserMenuProps> = ({ userEmail, onLogout, session
         className="hidden md:flex items-center gap-2 hover:bg-slate-50 rounded-lg px-2 py-1 transition-colors focus:outline-none group"
         title="Voir les infos du compte"
       >
-        {avatarUrl && <img src={avatarUrl} alt="Avatar" className="w-8 h-8 rounded-full border-2 border-slate-200 group-hover:border-indigo-400 transition-colors" />}
+        {avatarUrl && (
+          <img src={avatarUrl} alt="Avatar" className="w-8 h-8 rounded-full border-2 border-slate-200 group-hover:border-indigo-400 transition-colors" />
+        )}
         <div className="flex flex-col items-end mr-1">
           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Connecté</span>
           <span className="text-xs font-medium text-slate-700 max-w-[100px] truncate">{userName || userEmail?.split("@")[0]}</span>

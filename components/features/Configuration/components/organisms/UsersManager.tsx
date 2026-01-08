@@ -105,7 +105,12 @@ export const UsersManager: React.FC<UsersManagerProps> = ({ users, onToggleAutho
               <div key={user.email} className="bg-white p-4 rounded-lg border border-amber-200 flex items-center justify-between gap-4">
                 <div className="flex items-center gap-3 flex-1 min-w-0">
                   {user.avatarUrl ? (
-                    <img src={user.avatarUrl} alt={user.name || user.email} referrerPolicy="no-referrer" className="w-10 h-10 rounded-full border-2 border-amber-200" />
+                    <img
+                      src={user.avatarUrl}
+                      alt={user.name || user.email}
+                      referrerPolicy="no-referrer"
+                      className="w-10 h-10 rounded-full border-2 border-amber-200"
+                    />
                   ) : (
                     <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-600">
                       <Mail size={18} />
@@ -207,7 +212,10 @@ export const UsersManager: React.FC<UsersManagerProps> = ({ users, onToggleAutho
                           >
                             Enregistrer
                           </button>
-                          <button onClick={handleCancelEditNotes} className="px-3 py-1.5 bg-slate-200 text-slate-700 rounded-lg text-xs font-medium hover:bg-slate-300">
+                          <button
+                            onClick={handleCancelEditNotes}
+                            className="px-3 py-1.5 bg-slate-200 text-slate-700 rounded-lg text-xs font-medium hover:bg-slate-300"
+                          >
                             Annuler
                           </button>
                         </div>

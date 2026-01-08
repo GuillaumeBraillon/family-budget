@@ -1,8 +1,7 @@
+import React from "react";
+import { ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
 
-import React from 'react';
-import { ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
-
-export type SortOrder = 'asc' | 'desc';
+export type SortOrder = "asc" | "desc";
 
 export interface SortOption {
   key: string;
@@ -17,16 +16,14 @@ interface ListSorterProps {
   className?: string;
 }
 
-export const ListSorter: React.FC<ListSorterProps> = ({ 
-  options, currentSort, currentOrder, onSortChange, className = '' 
-}) => {
+export const ListSorter: React.FC<ListSorterProps> = ({ options, currentSort, currentOrder, onSortChange, className = "" }) => {
   const handleClick = (key: string) => {
     if (currentSort === key) {
-      onSortChange(key, currentOrder === 'asc' ? 'desc' : 'asc');
+      onSortChange(key, currentOrder === "asc" ? "desc" : "asc");
     } else {
       // Par défaut descendant pour les dates et montants souvent préférés, ascendant pour le texte
       // Ici on simplifie : on bascule ou on initie en ASC par défaut
-      onSortChange(key, 'asc');
+      onSortChange(key, "asc");
     }
   };
 
@@ -36,22 +33,26 @@ export const ListSorter: React.FC<ListSorterProps> = ({
       {options.map((opt) => {
         const isActive = currentSort === opt.key;
         return (
-            <button
+          <button
             key={opt.key}
             onClick={() => handleClick(opt.key)}
             className={`px-2.5 py-1.5 rounded-lg text-[10px] sm:text-xs font-bold flex items-center gap-1.5 transition-all whitespace-nowrap border ${
-                isActive
-                ? 'bg-indigo-50 text-indigo-700 border-indigo-200 shadow-sm'
-                : 'bg-white text-slate-500 hover:text-slate-700 border-slate-200 hover:border-slate-300'
+              isActive
+                ? "bg-indigo-50 text-indigo-700 border-indigo-200 shadow-sm"
+                : "bg-white text-slate-500 hover:text-slate-700 border-slate-200 hover:border-slate-300"
             }`}
-            >
+          >
             {opt.label}
             {isActive ? (
-                currentOrder === 'asc' ? <ArrowUp size={10} strokeWidth={3} /> : <ArrowDown size={10} strokeWidth={3} />
+              currentOrder === "asc" ? (
+                <ArrowUp size={10} strokeWidth={3} />
+              ) : (
+                <ArrowDown size={10} strokeWidth={3} />
+              )
             ) : (
-                <ArrowUpDown size={10} className="opacity-30" />
+              <ArrowUpDown size={10} className="opacity-30" />
             )}
-            </button>
+          </button>
         );
       })}
     </div>

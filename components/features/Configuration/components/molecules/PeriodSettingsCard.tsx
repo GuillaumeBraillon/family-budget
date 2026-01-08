@@ -116,8 +116,8 @@ export const PeriodSettingsCard: React.FC<PeriodSettingsCardProps> = ({ settings
               <div className="flex items-start gap-2 bg-amber-50 p-2 rounded-lg border border-amber-100 text-amber-800">
                 <AlertTriangle size={14} className="mt-0.5 flex-shrink-0" />
                 <p className="text-[10px] leading-tight">
-                  <strong>Attention :</strong> La première et la dernière période du mois peuvent être incomplètes (ex: 2 jours si le mois commence un samedi), ce qui
-                  réduira proportionnellement leur budget alloué.
+                  <strong>Attention :</strong> La première et la dernière période du mois peuvent être incomplètes (ex: 2 jours si le mois commence un samedi),
+                  ce qui réduira proportionnellement leur budget alloué.
                 </p>
               </div>
             </div>
@@ -170,7 +170,13 @@ export const PeriodSettingsCard: React.FC<PeriodSettingsCardProps> = ({ settings
   );
 };
 
-const PeriodOption: React.FC<{ active: boolean; onClick: () => void; icon: React.ReactNode; label: string; desc: string }> = ({ active, onClick, icon, label, desc }) => (
+const PeriodOption: React.FC<{ active: boolean; onClick: () => void; icon: React.ReactNode; label: string; desc: string }> = ({
+  active,
+  onClick,
+  icon,
+  label,
+  desc,
+}) => (
   <button
     type="button"
     onClick={onClick}

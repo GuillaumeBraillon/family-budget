@@ -14,7 +14,14 @@ interface CategorySelectorProps {
   layout?: "grid" | "stack";
 }
 
-export const CategorySelector: React.FC<CategorySelectorProps> = ({ categories, type, selectedCategory, selectedSubCategory, onCategoryChange, onSubCategoryChange }) => {
+export const CategorySelector: React.FC<CategorySelectorProps> = ({
+  categories,
+  type,
+  selectedCategory,
+  selectedSubCategory,
+  onCategoryChange,
+  onSubCategoryChange,
+}) => {
   // Génération de la liste des suggestions
   // On privilégie l'affichage des catégories du type actif (ex: Revenus) en premier
   const suggestions = useMemo(() => {

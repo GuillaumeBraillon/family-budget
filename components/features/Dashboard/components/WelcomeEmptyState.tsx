@@ -1,6 +1,5 @@
-
-import React from 'react';
-import { WalletCards, ArrowRight } from 'lucide-react';
+import React from "react";
+import { WalletCards, ArrowRight } from "lucide-react";
 
 interface WelcomeEmptyStateProps {
   onStartConfig: () => void;
@@ -14,11 +13,9 @@ export const WelcomeEmptyState: React.FC<WelcomeEmptyStateProps> = ({ onStartCon
       </div>
       <div className="max-w-md space-y-2">
         <h2 className="text-2xl font-bold text-slate-900">Bienvenue sur votre Budget</h2>
-        <p className="text-slate-500">
-          Commencez par configurer les membres de votre foyer et vos comptes bancaires pour utiliser l'application.
-        </p>
+        <p className="text-slate-500">Commencez par configurer les membres de votre foyer et vos comptes bancaires pour utiliser l'application.</p>
       </div>
-      <button 
+      <button
         onClick={onStartConfig}
         className="bg-indigo-600 text-white px-8 py-3 rounded-xl font-bold text-lg shadow-xl shadow-indigo-200 hover:bg-indigo-700 hover:scale-105 transition-all flex items-center gap-2"
       >

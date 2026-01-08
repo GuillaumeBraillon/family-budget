@@ -29,12 +29,10 @@ Guide complet pour déployer l'application React sur Vercel avec connexion à Su
 ## Étape 2 : Créer le projet Vercel
 
 1. **Connexion**
-
    - Allez sur [vercel.com/new](https://vercel.com/new)
    - Connectez-vous avec GitHub
 
 2. **Import du projet**
-
    - Cliquez sur "Import Project"
    - Sélectionnez votre repository `family-budget`
    - Cliquez sur "Import"
@@ -51,7 +49,6 @@ Guide complet pour déployer l'application React sur Vercel avec connexion à Su
 ## Étape 3 : Configurer les variables d'environnement
 
 1. **Dans l'interface Vercel**
-
    - Avant de déployer, cliquez sur "Environment Variables"
    - Ajoutez les 2 variables suivantes :
 
@@ -70,7 +67,6 @@ Guide complet pour déployer l'application React sur Vercel avec connexion à Su
 ## Étape 4 : Déployer
 
 1. **Premier déploiement**
-
    - Cliquez sur "Deploy"
    - ⏳ Attendre 2-3 minutes
 
@@ -82,7 +78,6 @@ Guide complet pour déployer l'application React sur Vercel avec connexion à Su
 ## Étape 5 : Configurer le domaine (optionnel)
 
 1. **Domaine Vercel gratuit**
-
    - URL par défaut : `family-budget-xxx.vercel.app`
    - Personnalisez dans "Settings" > "Domains"
 
@@ -95,7 +90,6 @@ Guide complet pour déployer l'application React sur Vercel avec connexion à Su
 ## Étape 6 : Configurer les Redirect URLs Supabase
 
 1. **Retour sur Supabase**
-
    - Allez dans "Authentication" > "URL Configuration"
    - Ajoutez votre URL Vercel dans "Site URL" :
      ```
@@ -134,7 +128,6 @@ Chaque Pull Request crée un déploiement de preview :
    ```
 
 2. **Ouvrir une PR sur GitHub**
-
    - Vercel crée automatiquement un déploiement de test
    - URL unique : `family-budget-git-feature-xxx.vercel.app`
 
@@ -189,7 +182,6 @@ Dans `vercel.json` (créer à la racine) :
 ### Voir les logs
 
 1. **Logs de build**
-
    - Allez dans "Deployments"
    - Cliquez sur un déploiement
    - Onglet "Build Logs"
@@ -249,7 +241,6 @@ git push
 Si un déploiement cause des problèmes :
 
 1. **Rollback instantané**
-
    - Allez dans "Deployments"
    - Trouvez le dernier déploiement fonctionnel
    - Cliquez sur "⋯" > "Promote to Production"

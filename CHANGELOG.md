@@ -7,6 +7,20 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.2.2] - 2026-01-08
+
+### Corrigé
+
+- **Erreurs TypeScript** : Correction des problèmes de typage et d'imports
+  - Remplacement de `JSX.Element` par `React.ReactNode` dans `CyclicFilterButton` et `useFilterBarLogic`
+  - Ajout de l'import `React` manquant dans `useFilterBarLogic`
+  - Correction du chemin d'import de `FilterOption` (relatif depuis `hooks/filterBar/`)
+  - Import du type `FormMode` dans `VariableTransactionForm`
+  - Création de la constante typée `DEFAULT_MODE` pour résoudre les problèmes d'inférence de type
+  - Nettoyage des fichiers de sauvegarde `.bak` et `.bak2`
+
+---
+
 ## [2.2.1] - 2026-01-08
 
 ### Ajouté

@@ -76,7 +76,10 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({ categories, on
           >
             <div className="flex items-center justify-between p-3 bg-slate-50/50">
               <div className="flex items-center gap-2 flex-1">
-                <button onClick={() => setExpandedCat(expandedCat === cat.id ? null : cat.id)} className="text-slate-400 hover:text-slate-600 transition-colors">
+                <button
+                  onClick={() => setExpandedCat(expandedCat === cat.id ? null : cat.id)}
+                  className="text-slate-400 hover:text-slate-600 transition-colors"
+                >
                   {expandedCat === cat.id ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
                 </button>
 

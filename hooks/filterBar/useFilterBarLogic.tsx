@@ -47,7 +47,7 @@
  * );
  * ```
  */
-import { useState } from "react";
+import React, { useState } from "react";
 import {
   Star,
   Clock,
@@ -66,14 +66,14 @@ import {
   Users,
 } from "lucide-react";
 import { OperationFilters, Account, Person, AccountType, Tag as TagType } from "../../types";
-import { FilterOption } from "../ui/molecules/FilterDropdown";
+import { FilterOption } from "../../components/ui/molecules/FilterDropdown";
 
 /**
  * Configuration d'un bouton cyclique (label, icône, couleur).
  */
 export interface CyclicButtonConfig {
   label: string;
-  icon: JSX.Element;
+  icon: React.ReactNode;
   color: string;
 }
 

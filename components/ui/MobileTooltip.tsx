@@ -1,7 +1,6 @@
-
-import React, { useState, useRef, useLayoutEffect } from 'react';
-import { createPortal } from 'react-dom';
-import { Info, X } from 'lucide-react';
+import React, { useState, useRef, useLayoutEffect } from "react";
+import { createPortal } from "react-dom";
+import { Info, X } from "lucide-react";
 
 interface MobileTooltipProps {
   text: React.ReactNode;
@@ -11,12 +10,12 @@ interface MobileTooltipProps {
   widthClass?: string;
 }
 
-export const MobileTooltip: React.FC<MobileTooltipProps> = ({ 
-    text, 
-    icon,
-    iconSize = 14, 
-    iconClassName = "text-slate-300 hover:text-indigo-500",
-    widthClass = "w-56"
+export const MobileTooltip: React.FC<MobileTooltipProps> = ({
+  text,
+  icon,
+  iconSize = 14,
+  iconClassName = "text-slate-300 hover:text-indigo-500",
+  widthClass = "w-56",
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [position, setPosition] = useState({ top: 0, left: 0 });
@@ -27,35 +26,35 @@ export const MobileTooltip: React.FC<MobileTooltipProps> = ({
     e.stopPropagation();
     e.preventDefault();
     if (!isOpen) {
-        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-        setPosition({
-            top: rect.top,
-            left: rect.left + rect.width / 2
-        });
-        setAdjustedLeft(null);
+      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+      setPosition({
+        top: rect.top,
+        left: rect.left + rect.width / 2,
+      });
+      setAdjustedLeft(null);
     }
     setIsOpen(!isOpen);
   };
 
   useLayoutEffect(() => {
     if (isOpen && tooltipRef.current) {
-        const rect = tooltipRef.current.getBoundingClientRect();
-        const screenWidth = window.innerWidth;
-        const margin = 10;
-        
-        // Calcul du débordement
-        let newLeft = position.left;
-        const halfWidth = rect.width / 2;
+      const rect = tooltipRef.current.getBoundingClientRect();
+      const screenWidth = window.innerWidth;
+      const margin = 10;
 
-        if (newLeft + halfWidth > screenWidth - margin) {
-            newLeft = screenWidth - margin - halfWidth;
-        } else if (newLeft - halfWidth < margin) {
-            newLeft = margin + halfWidth;
-        }
+      // Calcul du débordement
+      let newLeft = position.left;
+      const halfWidth = rect.width / 2;
 
-        if (newLeft !== position.left) {
-            setAdjustedLeft(newLeft);
-        }
+      if (newLeft + halfWidth > screenWidth - margin) {
+        newLeft = screenWidth - margin - halfWidth;
+      } else if (newLeft - halfWidth < margin) {
+        newLeft = margin + halfWidth;
+      }
+
+      if (newLeft !== position.left) {
+        setAdjustedLeft(newLeft);
+      }
     }
   }, [isOpen, position.left]);
 
@@ -64,43 +63,46 @@ export const MobileTooltip: React.FC<MobileTooltipProps> = ({
 
   return (
     <>
-      <button 
-        type="button"
-        onClick={toggle}
-        className={`inline-flex align-middle transition-colors ml-1 ${iconClassName}`}
-      >
+      <button type="button" onClick={toggle} className={`inline-flex align-middle transition-colors ml-1 ${iconClassName}`}>
         {icon || <Info size={iconSize} />}
       </button>
-      {isOpen && createPortal(
-        <div className="relative z-[9999]">
-            <div className="fixed inset-0 cursor-default" onClick={(e) => { e.stopPropagation(); setIsOpen(false); }} />
-            
-            <div 
-                ref={tooltipRef}
-                className={`fixed ${widthClass} p-2 bg-slate-900 text-white text-[10px] rounded-lg shadow-xl animate-in zoom-in-95 fade-in duration-200 normal-case font-normal tracking-normal text-left`}
-                style={{ 
-                    top: position.top - 6, 
-                    left: currentLeft,
-                    transform: 'translate(-50%, -100%)' 
-                }}
-                onClick={(e) => e.stopPropagation()}
+      {isOpen &&
+        createPortal(
+          <div className="relative z-[9999]">
+            <div
+              className="fixed inset-0 cursor-default"
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsOpen(false);
+              }}
+            />
+
+            <div
+              ref={tooltipRef}
+              className={`fixed ${widthClass} p-2 bg-slate-900 text-white text-[10px] rounded-lg shadow-xl animate-in zoom-in-95 fade-in duration-200 normal-case font-normal tracking-normal text-left`}
+              style={{
+                top: position.top - 6,
+                left: currentLeft,
+                transform: "translate(-50%, -100%)",
+              }}
+              onClick={(e) => e.stopPropagation()}
             >
-                <div className="flex justify-between items-start mb-1 font-bold border-b border-slate-700 pb-1">
-                    <span>Détails</span>
-                    <X size={10} className="cursor-pointer hover:text-red-400" onClick={() => setIsOpen(false)} />
-                </div>
-                {text}
-                <div 
-                    className="absolute top-full border-4 border-transparent border-t-slate-900"
-                    style={{
-                        left: '50%',
-                        transform: `translateX(calc(-50% + ${arrowOffset}px))`
-                    }}
-                ></div>
+              <div className="flex justify-between items-start mb-1 font-bold border-b border-slate-700 pb-1">
+                <span>Détails</span>
+                <X size={10} className="cursor-pointer hover:text-red-400" onClick={() => setIsOpen(false)} />
+              </div>
+              {text}
+              <div
+                className="absolute top-full border-4 border-transparent border-t-slate-900"
+                style={{
+                  left: "50%",
+                  transform: `translateX(calc(-50% + ${arrowOffset}px))`,
+                }}
+              ></div>
             </div>
-        </div>,
-        document.body
-      )}
+          </div>,
+          document.body
+        )}
     </>
   );
 };

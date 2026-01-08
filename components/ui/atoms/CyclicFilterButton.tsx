@@ -34,7 +34,7 @@ interface CyclicFilterButtonProps {
   /** Label affiché dans le bouton */
   label: string;
   /** Icône Lucide React (14px recommandé) */
-  icon: JSX.Element;
+  icon: React.ReactNode;
   /** Classes Tailwind pour le style (bg, border, text, hover) */
   color: string;
   /** Handler du clic (cycle vers l'état suivant) */

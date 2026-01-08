@@ -17,7 +17,20 @@
  * ```
  */
 import React, { useState, useRef, useEffect } from "react";
-import { Save, TrendingUp, TrendingDown, Calendar, Trash2, Clock, CheckCircle2, Star, MessageSquare, ArrowRightLeft, ArrowDown, RefreshCcw } from "lucide-react";
+import {
+  Save,
+  TrendingUp,
+  TrendingDown,
+  Calendar,
+  Trash2,
+  Clock,
+  CheckCircle2,
+  Star,
+  MessageSquare,
+  ArrowRightLeft,
+  ArrowDown,
+  RefreshCcw,
+} from "lucide-react";
 import { VariableTransaction, Account, CategoryDef, Person, Transfer, SavedLabel, Tag, AccountType } from "../../../../types";
 import { CategorySelector } from "../../../ui/molecules/CategorySelector";
 import { TextInput, AmountInput, SearchableTextInput } from "../../../ui/molecules/FormInputs";
@@ -25,7 +38,9 @@ import { AccountSelector, BeneficiarySelector } from "../../../ui/molecules/Smar
 import { ConfirmModal } from "../../../ui/atoms/ConfirmModal";
 import { Modal } from "../../../ui/Modal";
 import { TagAmountSelector } from "../../../ui/molecules/TagAmountSelector";
-import { useTransactionForm } from "../../../../hooks/transactions";
+import { useTransactionForm, FormMode } from "../../../../hooks/transactions";
+
+const DEFAULT_MODE: FormMode = "STANDARD";
 
 interface VariableTransactionFormProps {
   isOpen: boolean;
@@ -41,7 +56,7 @@ interface VariableTransactionFormProps {
   labelsSuggestions?: string[];
   savedLabels?: SavedLabel[];
   editingTransaction?: VariableTransaction | null;
-  initialMode?: "STANDARD" | "TRANSFER";
+  initialMode?: FormMode;
   lockMode?: boolean;
 }
 
@@ -59,7 +74,7 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
   labelsSuggestions = [],
   savedLabels = [],
   editingTransaction,
-  initialMode = "STANDARD",
+  initialMode = DEFAULT_MODE,
   lockMode = false,
 }) => {
   // --- HOOKS SPÉCIALISÉS (LOGIQUE DÉLÉGUÉE) ---
@@ -248,8 +263,12 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
                 <Star size={14} fill={form.isExtra ? "currentColor" : "none"} />
               </div>
               <div className="flex-1">
-                <span className={`text-xs font-bold block ${form.isExtra ? "text-amber-800" : "text-slate-600"}`}>Dépense temporaire / Exceptionnelle (Hors Budget)</span>
-                {form.isExtra && <span className="text-[10px] text-amber-600 leading-none">Cette opération ne sera pas comptabilisée dans le budget courant.</span>}
+                <span className={`text-xs font-bold block ${form.isExtra ? "text-amber-800" : "text-slate-600"}`}>
+                  Dépense temporaire / Exceptionnelle (Hors Budget)
+                </span>
+                {form.isExtra && (
+                  <span className="text-[10px] text-amber-600 leading-none">Cette opération ne sera pas comptabilisée dans le budget courant.</span>
+                )}
               </div>
               <input type="checkbox" checked={form.isExtra} onChange={() => {}} className="pointer-events-none" />
             </div>

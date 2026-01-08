@@ -20,7 +20,8 @@ export const UnauthorizedView: React.FC<UnauthorizedViewProps> = ({ userEmail, o
         <h2 className="text-2xl font-bold text-slate-900 mb-3">Accès Refusé</h2>
 
         <p className="text-slate-600 mb-6 leading-relaxed">
-          Vous êtes connecté avec <span className="font-semibold text-slate-900">{userEmail}</span>, mais cet email n'est pas autorisé à accéder à cette application.
+          Vous êtes connecté avec <span className="font-semibold text-slate-900">{userEmail}</span>, mais cet email n'est pas autorisé à accéder à cette
+          application.
         </p>
 
         <div className="bg-slate-50 p-4 rounded-lg mb-6 border border-slate-200">

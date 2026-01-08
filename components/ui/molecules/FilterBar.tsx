@@ -154,8 +154,8 @@ export const FilterBar: React.FC<FilterBarProps> = ({ filters, onFilterChange, a
             showAllFilters
               ? "bg-slate-800 text-white border-slate-800"
               : hasActiveSecondary
-              ? "bg-indigo-50 text-indigo-600 border-indigo-200"
-              : "bg-white text-slate-500 border-slate-200 hover:border-slate-300"
+                ? "bg-indigo-50 text-indigo-600 border-indigo-200"
+                : "bg-white text-slate-500 border-slate-200 hover:border-slate-300"
           }`}
         >
           {showAllFilters ? (

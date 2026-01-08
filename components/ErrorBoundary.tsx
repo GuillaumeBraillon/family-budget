@@ -93,7 +93,9 @@ export class ErrorBoundary extends Component<Props, State> {
 
             {/* Détails techniques (pliable) */}
             <details className="mb-8 bg-slate-50 p-4 rounded-lg border border-slate-200">
-              <summary className="cursor-pointer font-bold text-slate-700 text-sm hover:text-slate-900 transition-colors">Détails techniques (pour debugging)</summary>
+              <summary className="cursor-pointer font-bold text-slate-700 text-sm hover:text-slate-900 transition-colors">
+                Détails techniques (pour debugging)
+              </summary>
               <div className="mt-4 space-y-2">
                 <div className="bg-white p-3 rounded border border-slate-200">
                   <p className="text-xs font-bold text-slate-500 mb-1">Message d'erreur :</p>
@@ -117,7 +119,10 @@ export class ErrorBoundary extends Component<Props, State> {
                 <RefreshCw size={18} />
                 Rafraîchir la page
               </button>
-              <button onClick={this.handleGoHome} className="flex-1 bg-slate-200 text-slate-700 px-6 py-3 rounded-lg font-bold hover:bg-slate-300 transition-colors">
+              <button
+                onClick={this.handleGoHome}
+                className="flex-1 bg-slate-200 text-slate-700 px-6 py-3 rounded-lg font-bold hover:bg-slate-300 transition-colors"
+              >
                 Retour à l'accueil
               </button>
             </div>

@@ -43,7 +43,8 @@ export const MonthlyEnvelopeCard: React.FC<MonthlyEnvelopeCardProps> = ({ settin
           <div className="bg-indigo-50 p-3 rounded-lg border border-indigo-100 flex items-start gap-2">
             <Layers size={14} className="text-indigo-600 mt-0.5 flex-shrink-0" />
             <p className="text-[11px] text-indigo-800 leading-relaxed italic">
-              Ce montant mensuel sera <strong>automatiquement réparti</strong> entre vos périodes de l'échéancier au prorata du nombre de jours de chaque période.
+              Ce montant mensuel sera <strong>automatiquement réparti</strong> entre vos périodes de l'échéancier au prorata du nombre de jours de chaque
+              période.
             </p>
           </div>
 
