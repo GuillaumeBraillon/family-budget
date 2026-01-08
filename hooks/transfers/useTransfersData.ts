@@ -29,10 +29,10 @@ import { Transfer, VariableTransaction, Account, AccountType } from "../../types
 /**
  * Type guard pour différencier Transfer et VariableTransaction.
  *
- * @param {any} item - Item à vérifier
+ * @param {Transfer | VariableTransaction} item - Item à vérifier
  * @returns {boolean} True si l'item est un Transfer
  */
-export const isTransfer = (item: any): item is Transfer => "sourceAccountId" in item;
+export const isTransfer = (item: Transfer | VariableTransaction): item is Transfer => "sourceAccountId" in item;
 
 /**
  * Type union pour les items combinés (virements + opérations directes).
@@ -363,7 +363,8 @@ export const useTransfersData = ({
     });
 
     // 10. Calcul du solde évolutif (si compte spécifique sélectionné)
-    let history: any[] = [];
+    type HistoryEntry = { date: string; balance: number; label: string; amount: number; type: string };
+    let history: HistoryEntry[] = [];
     if (specificAccountId) {
       const chronological = [...combinedOps].sort((a, b) => {
         const timeDiff = new Date(a.date).getTime() - new Date(b.date).getTime();
@@ -393,7 +394,19 @@ export const useTransfersData = ({
       motifs: Array.from(foundMotifs).sort(),
       historyWithBalances: history,
     };
-  }, [transfers, variableTransactions, currentDate, searchQuery, selectedMotif, sortKey, sortOrder, accountTypeFilter, specificAccountId, includeDirectOps, accounts]);
+  }, [
+    transfers,
+    variableTransactions,
+    currentDate,
+    searchQuery,
+    selectedMotif,
+    sortKey,
+    sortOrder,
+    accountTypeFilter,
+    specificAccountId,
+    includeDirectOps,
+    accounts,
+  ]);
 
   /**
    * Calcul des statistiques de mouvements.

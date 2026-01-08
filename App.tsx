@@ -27,7 +27,7 @@ const App: React.FC = () => {
   const { session, loading: authLoading, signInWithGoogle, signOut, error: authError } = useAuth();
 
   // 2. Autorisation (whitelist)
-  const { isAuthorized, loading: authzLoading, error: authzError } = useAuthorization(session);
+  const { isAuthorized, loading: authzLoading } = useAuthorization(session);
 
   // 3. État UI
   const [currentView, setCurrentView] = useState<ViewState>("dashboard");
@@ -61,7 +61,7 @@ const App: React.FC = () => {
 
   const onTouchStart = (e: React.TouchEvent) => {
     setTouchEnd(null);
-    let target = e.target as HTMLElement;
+    const target = e.target as HTMLElement;
     let isScrollable = false;
     let el = target;
     while (el && el !== e.currentTarget && el !== document.body) {

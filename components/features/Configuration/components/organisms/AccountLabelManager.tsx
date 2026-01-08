@@ -11,8 +11,8 @@ interface AccountLabelManagerProps {
   labels: SavedLabel[];
   onUpsertLabel: (l: SavedLabel) => void;
   onDeleteLabel: (id: string) => void;
-  onImportLabels?: () => Promise<any> | void;
-  onImportVirLabels?: () => Promise<any> | void;
+  onImportLabels?: () => Promise<{ count?: number; error?: Error }> | void;
+  onImportVirLabels?: () => Promise<{ count?: number; error?: Error }> | void;
 }
 
 // Utilisation directe des types pour les onglets
@@ -93,12 +93,15 @@ export const AccountLabelManager: React.FC<AccountLabelManagerProps> = ({ labels
     }
   };
 
-  const runImport = async (importFn: () => Promise<any> | void, sourceName: string) => {
+  const runImport = async (importFn: () => Promise<{ count?: number; error?: Error }> | void, sourceName: string) => {
     const result = await importFn();
 
     if (result && typeof result.count === "number") {
       if (result.count > 0) {
-        setImportStatus({ type: "success", message: `${result.count} libellé${result.count > 1 ? "s" : ""} (${sourceName}) importé${result.count > 1 ? "s" : ""}.` });
+        setImportStatus({
+          type: "success",
+          message: `${result.count} libellé${result.count > 1 ? "s" : ""} (${sourceName}) importé${result.count > 1 ? "s" : ""}.`,
+        });
       } else {
         setImportStatus({ type: "info", message: `Aucun nouveau libellé ${sourceName} à importer.` });
       }
@@ -226,8 +229,8 @@ export const AccountLabelManager: React.FC<AccountLabelManagerProps> = ({ labels
                   importStatus.type === "success"
                     ? "bg-emerald-100 text-emerald-700"
                     : importStatus.type === "info"
-                    ? "bg-slate-100 text-slate-600"
-                    : "bg-red-100 text-red-700"
+                      ? "bg-slate-100 text-slate-600"
+                      : "bg-red-100 text-red-700"
                 }`}
               >
                 {importStatus.type === "success" && <Check size={14} />}

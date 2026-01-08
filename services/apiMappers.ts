@@ -28,7 +28,6 @@ import {
   DbTransfer,
   DbSettings,
 } from "./dbTypes";
-import { logger } from "./logger";
 
 export const mapDbPerson = (person: DbPerson): Person => ({
   id: person.id,
@@ -164,7 +163,7 @@ export const mapDbSettings = (data: DbSettings | null): AppSettings => {
   if (!data) return { monthly_envelope: 2000, period_type: "FIXED_DAYS", period_value: 7 };
   return {
     monthly_envelope: Number(data.monthly_envelope || 2000),
-    period_type: (data.period_type || "FIXED_DAYS") as any,
+    period_type: (data.period_type || "FIXED_DAYS") as "FIXED_DAYS" | "CALENDAR_WEEKS" | "CUSTOM_SPLIT",
     period_value: Number(data.period_value || 7),
   };
 };

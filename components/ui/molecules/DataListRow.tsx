@@ -81,7 +81,7 @@ export const DataListRow: React.FC<DataListRowProps> = ({
         </div>
       ) : icon ? (
         <div className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center bg-indigo-50 text-indigo-600 rounded-lg border border-indigo-100">
-          {React.isValidElement(icon) ? React.cloneElement(icon as React.ReactElement<any>, { size: 20 }) : icon}
+          {React.isValidElement(icon) ? React.cloneElement(icon as React.ReactElement, { size: 20 }) : icon}
         </div>
       ) : null}
 
@@ -156,7 +156,9 @@ export const DataListRow: React.FC<DataListRowProps> = ({
             )}
           </div>
         )}
-        {onClick && <ChevronRight size={16} className="text-slate-300 group-hover:text-indigo-500 group-hover:translate-x-1 transition-all sm:w-[18px] sm:h-[18px]" />}
+        {onClick && (
+          <ChevronRight size={16} className="text-slate-300 group-hover:text-indigo-500 group-hover:translate-x-1 transition-all sm:w-[18px] sm:h-[18px]" />
+        )}
       </div>
     </div>
   );

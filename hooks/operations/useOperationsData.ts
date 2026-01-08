@@ -210,7 +210,10 @@ export const useOperationsData = ({
   const checkingAccountIds = useMemo(() => accounts.filter((a) => a.type === AccountType.CHECKING).map((a) => a.id), [accounts]);
 
   // 2. Filtrage des opérations sur comptes courants
-  const checkingTransactions = useMemo(() => variableTransactions.filter((t) => checkingAccountIds.includes(t.accountId)), [variableTransactions, checkingAccountIds]);
+  const checkingTransactions = useMemo(
+    () => variableTransactions.filter((t) => checkingAccountIds.includes(t.accountId)),
+    [variableTransactions, checkingAccountIds]
+  );
 
   const checkingConfigs = useMemo(() => configs.filter((c) => checkingAccountIds.includes(c.accountId)), [configs, checkingAccountIds]);
 
@@ -231,7 +234,10 @@ export const useOperationsData = ({
 
   // 4. Sélection de la portée (mois complet ou période spécifique)
   const currentWeekData = filteredPeriodBudgets.find((w) => w.weekNumber === activeWeek);
-  const unsortedItems = scope === "MONTH" ? filteredPeriodBudgets.flatMap((w) => w.items) : currentWeekData?.items || [];
+  const unsortedItems = useMemo(
+    () => (scope === "MONTH" ? filteredPeriodBudgets.flatMap((w) => w.items) : currentWeekData?.items || []),
+    [scope, filteredPeriodBudgets, currentWeekData]
+  );
 
   // 5. Calcul des statistiques rapides
   const quickStats = useMemo((): QuickStats => {
@@ -400,8 +406,8 @@ export const useOperationsData = ({
           filters.includedTagIds && filters.includedTagIds.length > 0
             ? amount // Utiliser montant effectif filtré pour le prévu
             : item.type === "INCOME" && isRefund
-            ? -item.originalAmount
-            : item.originalAmount;
+              ? -item.originalAmount
+              : item.originalAmount;
 
         target.planned += plannedAmount;
         if (item.isPaid) target.real += amount;
@@ -415,7 +421,7 @@ export const useOperationsData = ({
     });
 
     return stats;
-  }, [unsortedItems, categories, filters.includedTagIds]);
+  }, [unsortedItems, categories, filters.includedTagIds, filters.extra]);
 
   // 6. Formatage du mois court (ex: "jan.", "déc.")
   const monthShort = new Intl.DateTimeFormat("fr-FR", { month: "short" }).format(currentDate);

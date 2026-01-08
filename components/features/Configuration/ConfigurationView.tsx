@@ -43,13 +43,13 @@ interface ConfigurationViewProps {
   onAddIncome: (i: IncomeConfig) => void;
   onUpdateIncome: (i: IncomeConfig) => void;
   onDeleteIncome: (id: string) => void;
-  onImportLabels: () => Promise<any> | void;
-  onImportVirLabels: () => Promise<any> | void;
+  onImportLabels: () => Promise<{ count?: number; error?: Error }> | void;
+  onImportVirLabels: () => Promise<{ count?: number; error?: Error }> | void;
   onUpsertTag?: (t: TagType) => void;
   onDeleteTag?: (id: string) => void;
-  onToggleUserAuthorization?: (email: string, isAllowed: boolean) => Promise<any> | void;
-  onUpdateUserNotes?: (email: string, notes: string) => Promise<any> | void;
-  onDeleteUser?: (email: string) => Promise<any> | void;
+  onToggleUserAuthorization?: (email: string, isAllowed: boolean) => Promise<{ data?: unknown; error?: Error }> | void;
+  onUpdateUserNotes?: (email: string, notes: string) => Promise<{ data?: unknown; error?: Error }> | void;
+  onDeleteUser?: (email: string) => Promise<{ data?: unknown; error?: Error }> | void;
 }
 
 export const ConfigurationView: React.FC<ConfigurationViewProps> = ({
@@ -195,7 +195,12 @@ export const ConfigurationView: React.FC<ConfigurationViewProps> = ({
               description="Contrôlez qui peut accéder à l'application. Les utilisateurs non autorisés qui tentent de se connecter apparaissent ici en attente. Autorisez-les pour leur donner accès ou supprimez-les pour refuser définitivement."
               icon={<Shield size={18} />}
             />
-            <UsersManager users={authorizedUsers} onToggleAuthorization={onToggleUserAuthorization} onUpdateNotes={onUpdateUserNotes} onDeleteUser={onDeleteUser} />
+            <UsersManager
+              users={authorizedUsers}
+              onToggleAuthorization={onToggleUserAuthorization}
+              onUpdateNotes={onUpdateUserNotes}
+              onDeleteUser={onDeleteUser}
+            />
           </>
         )}
       </div>

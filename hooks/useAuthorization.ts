@@ -80,9 +80,10 @@ export const useAuthorization = (session: Session | null) => {
 
         setLoading(false);
         checkedRef.current = true;
-      } catch (err: any) {
-        logger.error("Authorization check error:", err);
-        setError(err.message || "Erreur lors de la vérification");
+      } catch (err) {
+        const error = err as Error;
+        logger.error("Authorization check error:", error);
+        setError(error.message || "Érreur lors de la vérification");
         setIsAuthorized(false);
         setLoading(false);
         checkedRef.current = true;

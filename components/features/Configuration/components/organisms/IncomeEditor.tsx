@@ -139,7 +139,17 @@ export const IncomeEditor: React.FC<IncomeEditorProps> = ({ incomeConfigs, peopl
     setValidationErrors([]);
     const final: IncomeConfig = {
       id: editingId || Date.now().toString(),
-      ...(formData as any),
+      label: formData.label,
+      amount: formData.amount,
+      accountId: formData.accountId,
+      beneficiaryId: formData.beneficiaryId,
+      dayOfMonth: formData.dayOfMonth,
+      category: formData.category,
+      subCategory: formData.subCategory,
+      isExtra: formData.isExtra,
+      isSalary: formData.isSalary,
+      startMonth: formData.startMonth,
+      endMonth: formData.endMonth,
     };
     editingId ? onUpdateIncome(final) : onAddIncome(final);
     resetForm();
@@ -158,7 +168,7 @@ export const IncomeEditor: React.FC<IncomeEditorProps> = ({ incomeConfigs, peopl
       if (sortKey === "label") {
         res = a.label.localeCompare(b.label);
       } else {
-        // @ts-ignore
+        // @ts-expect-error - Dynamic key access for sorting
         res = (a[sortKey] as number) - (b[sortKey] as number);
       }
       return sortOrder === "asc" ? res : -res;

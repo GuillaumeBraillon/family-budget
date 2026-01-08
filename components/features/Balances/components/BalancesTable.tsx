@@ -148,7 +148,7 @@ export const BalancesTable: React.FC<BalancesTableProps> = ({ rows, onUpdateBala
                           value={tempBalance}
                           onChange={(e) => setTempBalance(e.target.value)}
                           className="w-20 p-1 text-right text-xs border border-indigo-300 rounded bg-white text-slate-900 outline-none ring-2 ring-indigo-100 font-bold"
-                          onKeyDown={(e) => e.key === "Enter" && saveEdit(row.id, e as any)}
+                          onKeyDown={(e) => e.key === "Enter" && saveEdit(row.id, e as React.KeyboardEvent<HTMLInputElement>)}
                         />
                         <button onClick={(e) => saveEdit(row.id, e)} className="bg-emerald-100 text-emerald-600 p-1 rounded hover:bg-emerald-200">
                           <Check size={12} />
@@ -159,7 +159,9 @@ export const BalancesTable: React.FC<BalancesTableProps> = ({ rows, onUpdateBala
                       </div>
                     ) : (
                       <div className="flex items-center justify-end gap-2">
-                        <span className="font-mono font-medium text-slate-600 border-b border-dashed border-slate-300 pb-0.5 text-sm">{row.balance.toFixed(2)} €</span>
+                        <span className="font-mono font-medium text-slate-600 border-b border-dashed border-slate-300 pb-0.5 text-sm">
+                          {row.balance.toFixed(2)} €
+                        </span>
                         <div className="p-1.5 bg-slate-100 rounded-full text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors">
                           <Pencil size={12} />
                         </div>

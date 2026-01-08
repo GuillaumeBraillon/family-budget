@@ -47,7 +47,7 @@
  * );
  * ```
  */
-import React, { useState } from "react";
+import { useState } from "react";
 import {
   Star,
   Clock,
@@ -63,7 +63,6 @@ import {
   Layers,
   ShoppingBag,
   ListFilter,
-  CreditCard,
   Users,
 } from "lucide-react";
 import { OperationFilters, Account, Person, AccountType, Tag as TagType } from "../../types";
@@ -161,7 +160,11 @@ export const useFilterBarLogic = (
       case "INCOME":
         return { label: "Revenus", icon: <TrendingUp size={14} />, color: "bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100" };
       default:
-        return { label: "Flux: Tous", icon: <ArrowRightLeft size={14} />, color: "bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300" };
+        return {
+          label: "Flux: Tous",
+          icon: <ArrowRightLeft size={14} />,
+          color: "bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300",
+        };
     }
   };
 
@@ -185,7 +188,11 @@ export const useFilterBarLogic = (
       case "WAITING":
         return { label: "En attente", icon: <Clock size={14} />, color: "bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100" };
       default:
-        return { label: "Statut: Tous", icon: <ListFilter size={14} />, color: "bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300" };
+        return {
+          label: "Statut: Tous",
+          icon: <ListFilter size={14} />,
+          color: "bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300",
+        };
     }
   };
 
@@ -209,7 +216,11 @@ export const useFilterBarLogic = (
       case "VARIABLE":
         return { label: "Variable", icon: <ShoppingBag size={14} />, color: "bg-fuchsia-50 border-fuchsia-200 text-fuchsia-700 hover:bg-fuchsia-100" };
       default:
-        return { label: "Source: Toutes", icon: <List size={14} />, color: "bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300" };
+        return {
+          label: "Source: Toutes",
+          icon: <List size={14} />,
+          color: "bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300",
+        };
     }
   };
 
@@ -238,7 +249,11 @@ export const useFilterBarLogic = (
       case "ONLY":
         return { label: "Extras", icon: <Star size={14} />, color: "bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100" };
       default:
-        return { label: "Nature: Tout", icon: <Layers size={14} />, color: "bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300" };
+        return {
+          label: "Nature: Tout",
+          icon: <Layers size={14} />,
+          color: "bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300",
+        };
     }
   };
 

@@ -30,7 +30,16 @@ export const BalancesView: React.FC<BalancesViewProps> = ({
   onUpdateAccount,
 }) => {
   const currentDate = new Date();
-  const { calculatePeriodStatistics, filteredPeriodBudgets } = usePlanner(configs, incomeConfigs, paidItems, variableTransactions, currentDate, "", settings, categories);
+  const { calculatePeriodStatistics, filteredPeriodBudgets } = usePlanner(
+    configs,
+    incomeConfigs,
+    paidItems,
+    variableTransactions,
+    currentDate,
+    "",
+    settings,
+    categories
+  );
 
   const getWeekFromDate = (date: Date): number => {
     const day = date.getDate();
@@ -243,7 +252,8 @@ export const BalancesView: React.FC<BalancesViewProps> = ({
     pRows.sort((a, b) => a.name.localeCompare(b.name));
 
     return { jointRows: jRows, personalRows: pRows, totalPersonalRow, virLddsTotal: globalTransfer };
-  }, [accounts, people, budgetPeriodeGlobal, varExpenses, varIncome, totalPersonalBalance, jointAccount, personalAccounts, stats, distributableBalance]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accounts, people, budgetPeriodeGlobal, totalPersonalBalance, jointAccount, personalAccounts, stats, distributableBalance]);
 
   const handleUpdateBalance = (id: string, newBalance: number) => {
     const account = accounts.find((a) => a.id === id);

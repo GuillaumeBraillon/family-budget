@@ -108,7 +108,7 @@ const hasExtraAmounts = (isExtraGlobal: boolean, tagAmounts?: TagAmount[]): bool
  * hasStandardAmounts(false, 100, [{ tagId: 't1', amount: 50 }]) // true
  * ```
  */
-const hasStandardAmounts = (isExtraGlobal: boolean, totalAmount: number, tagAmounts?: TagAmount[]): boolean => {
+const _hasStandardAmounts = (isExtraGlobal: boolean, totalAmount: number, tagAmounts?: TagAmount[]): boolean => {
   // Si toggle global Extra : tout est Extra, rien de Standard
   if (isExtraGlobal) return false;
 
@@ -563,9 +563,12 @@ export const usePlanner = (
     const sum = (items: PlannedItem[], type: "EXPENSE" | "INCOME", useOriginal = false) =>
       items.filter((i) => i.type === type).reduce((acc, i) => acc + (useOriginal ? i.originalAmount : i.amount), 0);
 
-    const byAccount: Record<string, any> = {};
-    const expByBeneficiary: Record<string, any> = {};
-    const incByBeneficiary: Record<string, any> = {};
+    type AccountStats = { paid: number; remaining: number; planned: number; pendingCount: number };
+    type BeneficiaryStats = { paid: number; planned: number };
+
+    const byAccount: Record<string, AccountStats> = {};
+    const expByBeneficiary: Record<string, BeneficiaryStats> = {};
+    const incByBeneficiary: Record<string, BeneficiaryStats> = {};
 
     [...currentItems, ...previousUnpaidItems].forEach((item) => {
       if (!byAccount[item.accountId]) byAccount[item.accountId] = { paid: 0, remaining: 0, planned: 0, pendingCount: 0 };

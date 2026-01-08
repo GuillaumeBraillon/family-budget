@@ -5,7 +5,7 @@ import { DataListRow } from "../../../ui/molecules/DataListRow";
 import { SortableRow } from "../../../ui/molecules/SortableRow";
 import { ShoppingBag, CalendarClock, Plus, Briefcase, Download } from "lucide-react";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
-import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from "@dnd-kit/sortable";
 
 interface OperationsListProps {
   items: PlannedItem[];

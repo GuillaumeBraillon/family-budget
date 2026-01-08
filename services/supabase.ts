@@ -11,8 +11,9 @@ export const getSupabaseConfig = () => {
   let key = localStorage.getItem("supabase_key") || "";
 
   // Fallback sur les variables d'environnement
-  if (!projectId) projectId = (process as any).env?.SUPABASE_PROJECT_ID || "";
-  if (!key) key = (process as any).env?.SUPABASE_ANON_KEY || "";
+  type ProcessEnv = { env?: Record<string, string | undefined> };
+  if (!projectId) projectId = (process as ProcessEnv).env?.SUPABASE_PROJECT_ID || "";
+  if (!key) key = (process as ProcessEnv).env?.SUPABASE_ANON_KEY || "";
 
   const url = projectId ? `https://${projectId.trim()}.supabase.co` : "";
 
@@ -23,7 +24,7 @@ export const getSupabaseConfig = () => {
  * Instance initiale du client Supabase.
  */
 const config = getSupabaseConfig();
-export let supabase: SupabaseClient = createClient(config.url || "https://placeholder.supabase.co", config.key || "placeholder");
+export const supabase: SupabaseClient = createClient(config.url || "https://placeholder.supabase.co", config.key || "placeholder");
 
 /**
  * Nettoie uniquement le token d'authentification OAuth (session expirée).

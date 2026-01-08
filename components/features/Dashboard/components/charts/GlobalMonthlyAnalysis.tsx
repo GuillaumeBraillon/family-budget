@@ -1,6 +1,6 @@
 import React from "react";
 import { Card } from "../../../../ui/Card";
-import { Wallet, TrendingUp, TrendingDown, Landmark, ArrowRight } from "lucide-react";
+import { Landmark } from "lucide-react";
 
 interface MonthlyGlobalData {
   monthName: string;
@@ -71,7 +71,9 @@ export const GlobalMonthlyAnalysis: React.FC<GlobalMonthlyAnalysisProps> = ({ da
                   </td>
                   <td className="px-3 py-3 text-right">
                     {m.savingsRate !== 0 ? (
-                      <span className={`px-2 py-1 rounded text-[10px] font-bold ${m.savingsRate > 0 ? "bg-indigo-100 text-indigo-700" : "bg-rose-100 text-rose-700"}`}>
+                      <span
+                        className={`px-2 py-1 rounded text-[10px] font-bold ${m.savingsRate > 0 ? "bg-indigo-100 text-indigo-700" : "bg-rose-100 text-rose-700"}`}
+                      >
                         {m.savingsRate.toFixed(0)}%
                       </span>
                     ) : (

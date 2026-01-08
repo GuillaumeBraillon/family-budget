@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { Trash2, User, Users, Save, Baby } from "lucide-react";
+import { Trash2, User, Save, Baby } from "lucide-react";
 import { Person } from "../../../../../types";
 import { ConfirmModal } from "../../../../ui/atoms/ConfirmModal";
 import { DataList } from "../../../../ui/molecules/DataList";
@@ -85,7 +85,14 @@ export const PeopleManager: React.FC<PeopleManagerProps> = ({ people, onUpsertPe
 
       <Modal isOpen={isModalOpen} onClose={resetForm} title={editingPerson ? "Modifier le bénéficiaire" : "Ajouter un bénéficiaire"}>
         <div className="space-y-4">
-          <TextInput label="Prénom / Nom" value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex: Marie, Pierre, Enfant 1..." required autoFocus />
+          <TextInput
+            label="Prénom / Nom"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Ex: Marie, Pierre, Enfant 1..."
+            required
+            autoFocus
+          />
 
           <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
             <label className="flex items-center gap-3 cursor-pointer">

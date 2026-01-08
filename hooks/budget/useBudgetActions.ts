@@ -39,7 +39,7 @@ import {
   apiDeletePerson,
   apiUpsertAccount,
   apiDeleteAccount,
-  apiUpdateSettings,
+  apiUpdateSettings as _apiUpdateSettings,
   apiUpsertLabel,
   apiDeleteLabel,
   apiImportLabels,
@@ -148,45 +148,48 @@ export const useBudgetActions = (loadData: (silent?: boolean) => Promise<void>, 
    * ```
    */
   const wrapCrudWithReload =
-    (fn: (...args: any[]) => Promise<any>) =>
-    async (...args: any[]) => {
-      logger.log("🔧 wrapCrudWithReload: Opération en cours", {
-        functionName: fn.name,
-        argsCount: args.length,
-      });
-
-      try {
-        // Exécution de la fonction API
-        const res = await fn(...args);
-        logger.log("🔧 wrapCrudWithReload: Résultat API", {
-          hasError: !!res?.error,
-          hasData: !!res?.data,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    <T = unknown>(fn: (...args: any[]) => Promise<T>) =>
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      async (...args: any[]): Promise<T> => {
+        logger.log("🔧 wrapCrudWithReload: Opération en cours", {
+          functionName: fn.name,
+          argsCount: args.length,
         });
 
-        // Vérification du résultat
-        if (res && res.error) throw res.error;
+        try {
+          // Exécution de la fonction API
+          const res = await fn(...args);
+          logger.log("🔧 wrapCrudWithReload: Résultat API", {
+            hasError: !!res?.error,
+            hasData: !!res?.data,
+          });
 
-        // Rechargement silencieux des données
-        logger.log("🔧 wrapCrudWithReload: Appel de loadData...");
-        await loadData(true);
-        logger.log("🔧 wrapCrudWithReload: loadData terminé");
+          // Vérification du résultat
+          if (res && res.error) throw res.error;
 
-        return res;
-      } catch (err: any) {
-        // Gestion centralisée des erreurs
-        logger.error("❌ wrapCrudWithReload: Erreur", {
-          message: err.message,
-          code: err.code,
-          details: err.details,
-        });
+          // Rechargement silencieux des données
+          logger.log("🔧 wrapCrudWithReload: Appel de loadData...");
+          await loadData(true);
+          logger.log("🔧 wrapCrudWithReload: loadData terminé");
 
-        // Formatage pour l'utilisateur
-        const userMessage = formatDatabaseError(err.message || "Erreur lors de l'opération");
-        setErrorMessage(userMessage);
+          return res;
+        } catch (err) {
+          // Gestion centralisée des erreurs
+          const error = err as Error & { code?: string; details?: unknown };
+          logger.error("❌ wrapCrudWithReload: Erreur", {
+            message: error.message,
+            code: error.code,
+            details: error.details,
+          });
 
-        return { error: err };
-      }
-    };
+          // Formatage pour l'utilisateur
+          const userMessage = formatDatabaseError(err.message || "Erreur lors de l'opération");
+          setErrorMessage(userMessage);
+
+          return { error: err };
+        }
+      };
 
   // Exposition des actions wrappées
   return {

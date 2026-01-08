@@ -16,7 +16,7 @@ interface GlobalSettingsProps {
 /**
  * Organisme orchestrant les réglages globaux.
  */
-export const GlobalSettings: React.FC<GlobalSettingsProps> = ({ settings, onUpdate, onResetConnection, session }) => {
+export const GlobalSettings: React.FC<GlobalSettingsProps> = ({ settings, onUpdate, onResetConnection, session: _session }) => {
   const updateEnvelope = (newEnv: number) => {
     onUpdate({ ...settings, monthly_envelope: newEnv });
   };

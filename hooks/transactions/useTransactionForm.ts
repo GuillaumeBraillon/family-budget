@@ -21,7 +21,7 @@
  * - types.ts : Interfaces VariableTransaction, Transfer, Account, etc.
  * - useState, useEffect, useMemo : Hooks React pour l'état et la memoization
  */
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { VariableTransaction, Transfer, Account, AccountType, Person, SavedLabel, TagAmount } from "../../types";
 
 /**
@@ -266,7 +266,7 @@ export const useTransactionForm = ({
    * Réinitialise le formulaire aux valeurs par défaut.
    * Utilisé lors de la fermeture ou lors du switch vers création.
    */
-  const resetForm = () => {
+  const resetForm = useCallback(() => {
     setMode(initialMode);
     setDate(defaultDate);
     setLabel("");
@@ -281,7 +281,7 @@ export const useTransactionForm = ({
     setSelectedTagAmounts([]);
     if (checkingAccounts.length > 0) setAccountId(checkingAccounts[0].id);
     setValidationErrors([]);
-  };
+  }, [initialMode, defaultDate, checkingAccounts, defaultBeneficiary]);
 
   /**
    * Initialise le formulaire depuis editingTransaction ou reset.
@@ -327,7 +327,7 @@ export const useTransactionForm = ({
       }
       setValidationErrors([]);
     }
-  }, [isOpen, editingTransaction, defaultDate, defaultBeneficiary, initialMode, accounts, checkingAccounts]);
+  }, [isOpen, editingTransaction, defaultDate, defaultBeneficiary, initialMode, accounts, checkingAccounts, resetForm]);
 
   // --- VALIDATION & SOUMISSION ---
 

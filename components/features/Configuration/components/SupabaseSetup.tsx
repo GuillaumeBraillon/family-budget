@@ -6,7 +6,7 @@ interface SupabaseSetupProps {
   onConfigured: () => void;
 }
 
-export const SupabaseSetup: React.FC<SupabaseSetupProps> = ({ onConfigured }) => {
+export const SupabaseSetup: React.FC<SupabaseSetupProps> = ({ onConfigured: _onConfigured }) => {
   const [projectId, setProjectId] = useState("");
   const [key, setKey] = useState("");
 

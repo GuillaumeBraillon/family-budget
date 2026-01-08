@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useCallback } from "react";
 import { getDaysInMonth } from "date-fns";
 import { DashboardHeader } from "./components/DashboardHeader";
 import { SavingsSummaryCard } from "./components/SavingsSummaryCard";
@@ -49,11 +49,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const checkingAccountIds = useMemo(() => accounts.filter((a) => a.type === AccountType.CHECKING).map((a) => a.id), [accounts]);
 
   // Fonction utilitaire pour détecter les remboursements
-  const isRefundCategory = (categoryName: string) => {
-    if (categoryName === "Remboursement" || categoryName === "Dépenses") return true;
-    const catDef = categories.find((c) => c.name === categoryName);
-    return catDef?.type === "EXPENSE";
-  };
+  const isRefundCategory = useCallback(
+    (categoryName: string) => {
+      if (categoryName === "Remboursement" || categoryName === "Dépenses") return true;
+      const catDef = categories.find((c) => c.name === categoryName);
+      return catDef?.type === "EXPENSE";
+    },
+    [categories]
+  );
 
   // --- LOGIQUE 1 : TABLEAU MACRO (Salaires inclus) ---
   const globalMonthlyData = useMemo(() => {
@@ -134,7 +137,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       });
     }
     return data.reverse();
-  }, [selectedYear, configs, incomeConfigs, paidItems, variableTransactions, checkingAccountIds, categories]);
+  }, [selectedYear, configs, incomeConfigs, paidItems, variableTransactions, checkingAccountIds, isRefundCategory]);
 
   // --- LOGIQUE 2 : TABLEAU DÉTAILLÉ PAR PÉRIODE (Salaires EXCLUS) ---
   const annualData = useMemo(() => {
@@ -291,7 +294,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     }
 
     return monthsData.reverse();
-  }, [selectedYear, configs, incomeConfigs, paidItems, variableTransactions, settings, categories, checkingAccountIds]);
+  }, [selectedYear, configs, incomeConfigs, paidItems, variableTransactions, settings, checkingAccountIds, isRefundCategory]);
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">

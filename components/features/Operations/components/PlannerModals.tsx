@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { X, Check, MessageSquare } from "lucide-react";
 import { Modal } from "../../../ui/Modal";
-import { PlannedItem, Account, PaidItemDetails, Tag } from "../../../../types";
+import { Account, PaidItemDetails, Tag } from "../../../../types";
 
 interface PlannerModalsProps {
   confirmModal: { instanceId: string; newStatus: boolean } | null;
@@ -18,7 +18,7 @@ export const PlannerModals: React.FC<PlannerModalsProps> = ({
   confirmModal,
   uncheckModal,
   accounts,
-  tags = [],
+  tags: _tags = [],
   onTogglePaid,
   onCloseConfirm,
   onCloseUncheck,
@@ -102,7 +102,7 @@ export const PlannerModals: React.FC<PlannerModalsProps> = ({
                         comments: confirmModal.comments.trim() || undefined,
                         isWaiting: false,
                         isVariable: false,
-                      } as any,
+                      } as PaidItemDetails,
                       confirmModal.item.instanceId
                     );
                   }

@@ -61,7 +61,22 @@ import { apiUpsertAccount } from "../../services/api";
  * await handleVariableTransactionBalance(oldTx, newTx);
  * ```
  */
-export const useBudgetBalances = (budgetDataRef: React.MutableRefObject<any>, setBudgetData: React.Dispatch<React.SetStateAction<any>>) => {
+type BudgetData = {
+  accounts: Account[];
+  configs: unknown[];
+  incomeConfigs: unknown[];
+  categories: unknown[];
+  people: unknown[];
+  paidItems: Record<string, unknown>;
+  settings: unknown;
+  transfers: unknown[];
+  variableTransactions: unknown[];
+  savedLabels: unknown[];
+  tags: unknown[];
+  authorizedUsers: unknown[];
+};
+
+export const useBudgetBalances = (budgetDataRef: React.MutableRefObject<BudgetData>, setBudgetData: React.Dispatch<React.SetStateAction<BudgetData>>) => {
   /**
    * Ajuste le solde d'un compte bancaire d'un montant delta.
    *
@@ -100,7 +115,7 @@ export const useBudgetBalances = (budgetDataRef: React.MutableRefObject<any>, se
     const newBalance = account.currentBalance + amountDelta;
 
     // Optimistic Update : UI mise à jour immédiatement
-    setBudgetData((prev: any) => ({
+    setBudgetData((prev) => ({
       ...prev,
       accounts: prev.accounts.map((a: Account) => (a.id === accountId ? { ...a, currentBalance: newBalance } : a)),
     }));

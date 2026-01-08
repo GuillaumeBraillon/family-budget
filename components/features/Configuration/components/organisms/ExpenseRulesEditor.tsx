@@ -20,7 +20,15 @@ interface ExpenseRulesEditorProps {
   onDeleteConfig: (id: string) => void;
 }
 
-export const ExpenseRulesEditor: React.FC<ExpenseRulesEditorProps> = ({ configs, categories, people, accounts, onAddConfig, onUpdateConfig, onDeleteConfig }) => {
+export const ExpenseRulesEditor: React.FC<ExpenseRulesEditorProps> = ({
+  configs,
+  categories,
+  people,
+  accounts,
+  onAddConfig,
+  onUpdateConfig,
+  onDeleteConfig,
+}) => {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -136,7 +144,16 @@ export const ExpenseRulesEditor: React.FC<ExpenseRulesEditorProps> = ({ configs,
     setValidationErrors([]);
     const finalConfig: ExpenseConfig = {
       id: editingId || Date.now().toString(),
-      ...(formData as any),
+      label: formData.label,
+      amount: formData.amount,
+      category: formData.category,
+      subCategory: formData.subCategory,
+      beneficiaryId: formData.beneficiaryId,
+      accountId: formData.accountId,
+      dayOfMonth: formData.dayOfMonth,
+      startMonth: formData.startMonth,
+      endMonth: formData.endMonth,
+      isExtra: formData.isExtra,
     };
     editingId ? onUpdateConfig(finalConfig) : onAddConfig(finalConfig);
     resetForm();
@@ -155,7 +172,7 @@ export const ExpenseRulesEditor: React.FC<ExpenseRulesEditorProps> = ({ configs,
       if (sortKey === "label") {
         res = a.label.localeCompare(b.label);
       } else {
-        // @ts-ignore
+        // @ts-expect-error - Dynamic key access for sorting
         res = (a[sortKey] as number) - (b[sortKey] as number);
       }
       return sortOrder === "asc" ? res : -res;

@@ -222,8 +222,9 @@ export const useBudget = () => {
         tags: res.tags,
         authorizedUsers: res.authorizedUsers,
       });
-    } catch (err: any) {
-      setErrorMessage(err.message || "Erreur lors du chargement des données");
+    } catch (err) {
+      const error = err as Error;
+      setErrorMessage(error.message || "Erreur lors du chargement des données");
     } finally {
       if (!silent) setIsLoading(false);
     }
@@ -245,7 +246,8 @@ export const useBudget = () => {
     return () => {
       isMounted = false;
     };
-  }, []); // Dépendances vides = une seule fois
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Dépendances vides = une seule fois (loadData ne doit pas déclencher de re-render)
 
   // --- HOOKS SPÉCIALISÉS (DÉLÉGATION DE RESPONSABILITÉS) ---
 
@@ -315,8 +317,9 @@ export const useBudget = () => {
       // 3. Appel API
       const { error: apiErr } = await apiSetPaidStatus(details, instanceId);
       if (apiErr) throw apiErr;
-    } catch (err: any) {
-      setErrorMessage(err.message || "Erreur lors de la mise à jour du statut");
+    } catch (err) {
+      const error = err as Error;
+      setErrorMessage(error.message || "Erreur lors de la mise à jour du statut");
       loadData();
     }
   };
@@ -515,8 +518,9 @@ export const useBudget = () => {
       const { error: apiErr } = await apiUpdateSettings(settings);
       if (apiErr) throw apiErr;
       setBudgetData((prev) => ({ ...prev, settings }));
-    } catch (err: any) {
-      setErrorMessage(err.message || "Erreur lors de la mise à jour des paramètres");
+    } catch (err) {
+      const error = err as Error;
+      setErrorMessage(error.message || "Érreur lors de la mise à jour des paramètres");
       loadData();
     }
   };

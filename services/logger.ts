@@ -18,23 +18,26 @@ export const logger = {
   /**
    * Logs standards (uniquement en dev)
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   log: (...args: any[]) => {
-    if (isDev) console.log(...args);
+    if (isDev) console.log(...args); // eslint-disable-line no-console
   },
 
   /**
    * Logs de debug détaillés (activables en prod via VITE_ENABLE_DEBUG_LOGS)
    * Utile pour diagnostiquer des problèmes en production sans polluer les logs
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   debug: (namespace: string, ...args: any[]) => {
     if (isDev || isDebugEnabled) {
-      console.log(`[DEBUG ${namespace}]`, ...args);
+      console.log(`[DEBUG ${namespace}]`, ...args); // eslint-disable-line no-console
     }
   },
 
   /**
    * Warnings (uniquement en dev)
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   warn: (...args: any[]) => {
     if (isDev) console.warn(...args);
   },
@@ -42,6 +45,7 @@ export const logger = {
   /**
    * Erreurs (toujours affichées pour monitoring)
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   error: (...args: any[]) => {
     console.error(...args);
   },
@@ -51,9 +55,9 @@ export const logger = {
    */
   group: (label: string, fn: () => void) => {
     if (isDev || isDebugEnabled) {
-      console.group(label);
+      console.group(label); // eslint-disable-line no-console
       fn();
-      console.groupEnd();
+      console.groupEnd(); // eslint-disable-line no-console
     }
   },
 

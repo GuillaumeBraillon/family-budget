@@ -103,7 +103,7 @@ export const TransfersView: React.FC<TransfersViewProps> = ({
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingTransfer, setEditingTransfer] = useState<Transfer | null>(null);
-  const [editingVar, setEditingVar] = useState<any | null>(null);
+  const [editingVar, setEditingVar] = useState<VariableTransaction | null>(null);
 
   // --- HANDLERS ---
 
@@ -303,7 +303,9 @@ export const TransfersView: React.FC<TransfersViewProps> = ({
             <div className="pt-2 border-t border-slate-100">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-slate-700">Solde actuel</span>
-                <span className={`text-lg font-black ${historyWithBalances[historyWithBalances.length - 1].balanceAfter >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                <span
+                  className={`text-lg font-black ${historyWithBalances[historyWithBalances.length - 1].balanceAfter >= 0 ? "text-emerald-600" : "text-rose-600"}`}
+                >
                   {historyWithBalances[historyWithBalances.length - 1].balanceAfter.toFixed(2)} €
                 </span>
               </div>
@@ -400,7 +402,9 @@ export const TransfersView: React.FC<TransfersViewProps> = ({
                       <div className="flex items-center gap-2 text-xs">
                         {item.source === "TRANSFER" ? (
                           <>
-                            <span className="px-2 py-0.5 rounded bg-red-50 text-red-600 border border-red-100 font-medium">{getAccountName(item.sourceAccountId!)}</span>
+                            <span className="px-2 py-0.5 rounded bg-red-50 text-red-600 border border-red-100 font-medium">
+                              {getAccountName(item.sourceAccountId!)}
+                            </span>
                             <ArrowRight size={12} className="text-slate-400" />
                             <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-600 border border-emerald-100 font-medium">
                               {getAccountName(item.destinationAccountId!)}
@@ -443,7 +447,7 @@ export const TransfersView: React.FC<TransfersViewProps> = ({
         people={people}
         onAddTransaction={onUpsertTransaction}
         onUpsertTransfer={onUpsertTransfer}
-        onDeleteTransaction={(id) => {
+        onDeleteTransaction={(_id) => {
           if (editingTransfer) {
             onDeleteTransfer(editingTransfer.id);
           } else if (editingVar) {

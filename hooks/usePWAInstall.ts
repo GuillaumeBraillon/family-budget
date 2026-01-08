@@ -1,5 +1,11 @@
 import { useState, useEffect } from "react";
 
+// Type pour l'événement PWA beforeinstallprompt
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
+}
+
 /**
  * Hook de gestion de l'installation PWA (Progressive Web App).
  *
@@ -28,7 +34,7 @@ import { useState, useEffect } from "react";
  * ```
  */
 export const usePWAInstall = () => {
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isInstallable, setIsInstallable] = useState(false);
 
   useEffect(() => {

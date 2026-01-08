@@ -1,7 +1,7 @@
 import { supabase, isSupabaseConfigured } from "./supabase";
 import * as mappers from "./apiMappers";
-import { AppSettings, VariableTransaction } from "../types";
-import { DbPaidItem } from "./dbTypes";
+import { AppSettings, VariableTransaction, TagAmount, PaidItemDetails } from "../types";
+import { DbPaidItem, DbPaidItemTag } from "./dbTypes";
 import { logger } from "./logger";
 import {
   apiToggleUserAuthorization,
@@ -55,21 +55,33 @@ export const fetchInitialData = async () => {
     };
   }
 
-  const [peopleRes, accountsRes, categoriesRes, configsRes, incomesRes, paidItemsRes, settingsRes, transfersRes, savedLabelsRes, tagsRes, authUsersRes, tagAmountsRes] =
-    await Promise.all([
-      supabase.from("people").select("*"),
-      supabase.from("accounts").select("*"),
-      supabase.from("categories").select("*"),
-      supabase.from("expense_configs").select("*"),
-      supabase.from("income_configs").select("*"),
-      supabase.from("paid_items").select("*"),
-      supabase.from("app_settings").select("*").maybeSingle(),
-      supabase.from("transfers").select("*").order("date", { ascending: false }),
-      supabase.from("saved_labels").select("*"),
-      supabase.from("tags").select("*"),
-      supabase.from("authorized_users").select("*").order("added_at", { ascending: false }),
-      supabase.from("paid_item_tags").select("*"),
-    ]);
+  const [
+    peopleRes,
+    accountsRes,
+    categoriesRes,
+    configsRes,
+    incomesRes,
+    paidItemsRes,
+    settingsRes,
+    transfersRes,
+    savedLabelsRes,
+    tagsRes,
+    authUsersRes,
+    tagAmountsRes,
+  ] = await Promise.all([
+    supabase.from("people").select("*"),
+    supabase.from("accounts").select("*"),
+    supabase.from("categories").select("*"),
+    supabase.from("expense_configs").select("*"),
+    supabase.from("income_configs").select("*"),
+    supabase.from("paid_items").select("*"),
+    supabase.from("app_settings").select("*").maybeSingle(),
+    supabase.from("transfers").select("*").order("date", { ascending: false }),
+    supabase.from("saved_labels").select("*"),
+    supabase.from("tags").select("*"),
+    supabase.from("authorized_users").select("*").order("added_at", { ascending: false }),
+    supabase.from("paid_item_tags").select("*"),
+  ]);
 
   const responses = [
     peopleRes,
@@ -103,15 +115,15 @@ export const fetchInitialData = async () => {
   const authorizedUsers = (authUsersRes.data || []).map(mappers.mapDbAuthorizedUser);
 
   // Grouper les tag amounts par instance_id
-  const tagAmountsByInstance: Record<string, any[]> = {};
-  (tagAmountsRes.data || []).forEach((ta: any) => {
+  const tagAmountsByInstance: Record<string, TagAmount[]> = {};
+  (tagAmountsRes.data || []).forEach((ta: DbPaidItemTag) => {
     if (!tagAmountsByInstance[ta.paid_item_instance_id]) {
       tagAmountsByInstance[ta.paid_item_instance_id] = [];
     }
     tagAmountsByInstance[ta.paid_item_instance_id].push(mappers.mapDbTagAmount(ta));
   });
 
-  const paidItems: Record<string, any> = {};
+  const paidItems: Record<string, PaidItemDetails> = {};
   const variableTransactions: VariableTransaction[] = [];
 
   (paidItemsRes.data || []).forEach((item: DbPaidItem) => {

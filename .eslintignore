@@ -1,0 +1,18 @@
+# Ignorer les dossiers de build et dépendances
+
+node_modules
+dist
+build
+.vite
+.vercel
+
+# Ignorer les fichiers de config
+
+.env
+.env.local
+.env.production
+
+# Ignorer les fichiers générés
+
+\*.log
+coverage

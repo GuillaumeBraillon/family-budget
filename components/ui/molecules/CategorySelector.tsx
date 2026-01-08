@@ -18,7 +18,7 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({ categories, 
   // Génération de la liste des suggestions
   // On privilégie l'affichage des catégories du type actif (ex: Revenus) en premier
   const suggestions = useMemo(() => {
-    let sortedCats = [...categories];
+    const sortedCats = [...categories];
 
     if (type) {
       sortedCats.sort((a, b) => {

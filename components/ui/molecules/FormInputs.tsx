@@ -103,7 +103,7 @@ interface AmountInputProps extends BaseInputProps, Omit<React.InputHTMLAttribute
   color?: "indigo" | "emerald";
 }
 
-export const AmountInput: React.FC<AmountInputProps> = ({ label, icon: Icon, error, color = "indigo", className = "", ...props }) => {
+export const AmountInput: React.FC<AmountInputProps> = ({ label, icon: Icon, error: _error, color = "indigo", className = "", ...props }) => {
   const focusRing = color === "emerald" ? "focus:ring-emerald-500" : "focus:ring-indigo-500";
   const value = props.value ?? "";
 

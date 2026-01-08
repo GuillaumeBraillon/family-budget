@@ -48,10 +48,15 @@ export const HealthCard: React.FC<AnalyticsProps> = ({ data, onNavigate }) => {
             <span className="text-xs font-medium text-slate-500 mb-1">/ {formatEuro(data.plannedExpenses)}</span>
           </div>
           <div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden mb-2">
-            <div className={`h-full rounded-full transition-all duration-1000 ${isOver ? "bg-rose-500" : "bg-indigo-600"}`} style={{ width: `${progress}%` }}></div>
+            <div
+              className={`h-full rounded-full transition-all duration-1000 ${isOver ? "bg-rose-500" : "bg-indigo-600"}`}
+              style={{ width: `${progress}%` }}
+            ></div>
           </div>
 
-          <div className={`p-2 rounded-lg text-xs font-bold flex justify-between items-center ${isOver ? "bg-rose-50 text-rose-700" : "bg-emerald-50 text-emerald-700"}`}>
+          <div
+            className={`p-2 rounded-lg text-xs font-bold flex justify-between items-center ${isOver ? "bg-rose-50 text-rose-700" : "bg-emerald-50 text-emerald-700"}`}
+          >
             <span>{isOver ? "Dépassement" : "Reste à dépenser"}</span>
             <span>
               {isOver ? "+" : ""}
@@ -85,7 +90,7 @@ export const HealthCard: React.FC<AnalyticsProps> = ({ data, onNavigate }) => {
 // --- CARTE 2: FLUX DE TRÉSORERIE ---
 export const CashFlowCard: React.FC<AnalyticsProps> = ({ data, onNavigate }) => {
   // Hack pour éviter le rendu Recharts avant que le DOM ne soit prêt
-  const [isChartReady, setIsChartReady] = useState(false);
+  const [_isChartReady, setIsChartReady] = useState(false);
   useEffect(() => {
     const timer = requestAnimationFrame(() => setIsChartReady(true));
     return () => cancelAnimationFrame(timer);
@@ -195,10 +200,10 @@ export const ExtrasCard: React.FC<AnalyticsProps> = ({ data, onNavigate }) => {
 };
 
 // --- CARTE 4: TOP DÉPENSES ---
-export const TopExpensesCard: React.FC<AnalyticsProps> = ({ data, onNavigate }) => {
+export const TopExpensesCard: React.FC<AnalyticsProps> = ({ data, onNavigate: _onNavigate }) => {
   const [mode, setMode] = useState<"CAT" | "BEN">("CAT");
   // Hack pour éviter le rendu Recharts avant que le DOM ne soit prêt
-  const [isChartReady, setIsChartReady] = useState(false);
+  const [_isChartReady2, setIsChartReady] = useState(false);
   useEffect(() => {
     const timer = requestAnimationFrame(() => setIsChartReady(true));
     return () => cancelAnimationFrame(timer);

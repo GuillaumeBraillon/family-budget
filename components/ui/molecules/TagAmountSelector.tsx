@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Tag as TagIcon, Plus, X, AlertCircle, Star } from "lucide-react";
 import { Tag, TagAmount } from "../../../types";
 
@@ -115,7 +115,9 @@ export const TagAmountSelector: React.FC<TagAmountSelectorProps> = ({ tags, tota
         </div>
         <div className="flex justify-between border-t border-slate-200 pt-1">
           <span className="text-slate-600">{remaining > 0.01 ? "Sans tag (reste) :" : "Reste à ventiler :"}</span>
-          <span className={`font-bold ${remaining < -0.01 ? "text-rose-600" : remaining > 0.01 ? "text-blue-600" : "text-emerald-600"}`}>{remaining.toFixed(2)} €</span>
+          <span className={`font-bold ${remaining < -0.01 ? "text-rose-600" : remaining > 0.01 ? "text-blue-600" : "text-emerald-600"}`}>
+            {remaining.toFixed(2)} €
+          </span>
         </div>
       </div>
 
@@ -163,7 +165,11 @@ export const TagAmountSelector: React.FC<TagAmountSelectorProps> = ({ tags, tota
           >
             Ajouter
           </button>
-          <button type="button" onClick={() => setShowAddTag(false)} className="px-3 py-2 bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 transition-colors">
+          <button
+            type="button"
+            onClick={() => setShowAddTag(false)}
+            className="px-3 py-2 bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 transition-colors"
+          >
             <X size={18} />
           </button>
         </div>

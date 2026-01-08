@@ -75,12 +75,22 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
   // Hooks spécialisés (responsabilités déléguées)
   const ui = usePlannerUI(initialDate, initialWeek);
   const { filters, setFilters, resetFilters } = useOperationsFilters(initialFilters);
-  const { sortKey, sortOrder, setSorting, sortItems, isManualSort, sortOptions, getEffectivePosition } = useOperationsSorting();
+  const { sortKey, sortOrder, setSorting, sortItems, isManualSort, sortOptions, getEffectivePosition: _getEffectivePosition } = useOperationsSorting();
   const [scope, setScope] = useState<"MONTH" | "PERIOD">("PERIOD");
 
   // Récupération des périodes pour le WeekSelector
-  const checkingAccounts = accounts.filter((a) => a.type === "COURANT");
-  const { filteredPeriodBudgets } = usePlanner(configs, incomeConfigs, paidItems, variableTransactions, ui.currentDate, ui.searchQuery, settings, categories, filters);
+  const _checkingAccounts = accounts.filter((a) => a.type === "COURANT");
+  const { filteredPeriodBudgets } = usePlanner(
+    configs,
+    incomeConfigs,
+    paidItems,
+    variableTransactions,
+    ui.currentDate,
+    ui.searchQuery,
+    settings,
+    categories,
+    filters
+  );
 
   const { unsortedItems, quickStats, monthShort } = useOperationsData({
     accounts,
@@ -318,10 +328,20 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
           <SearchBar value={ui.searchQuery} onChange={ui.setSearchQuery} />
         </div>
 
-        {scope === "PERIOD" && <WeekSelector weeks={filteredPeriodBudgets} activeWeek={ui.activeWeek} onSelect={ui.setActiveWeek} searchQuery={ui.searchQuery} />}
+        {scope === "PERIOD" && (
+          <WeekSelector weeks={filteredPeriodBudgets} activeWeek={ui.activeWeek} onSelect={ui.setActiveWeek} searchQuery={ui.searchQuery} />
+        )}
 
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-4">
-          <FilterBar filters={filters} onFilterChange={setFilters} accounts={accounts} people={people} hiddenFilters={["transfer"]} tags={tags} onReset={resetFilters} />
+          <FilterBar
+            filters={filters}
+            onFilterChange={setFilters}
+            accounts={accounts}
+            people={people}
+            hiddenFilters={["transfer"]}
+            tags={tags}
+            onReset={resetFilters}
+          />
           <div className="pt-2 border-t border-slate-100 flex justify-between items-center">
             <div className="flex items-center gap-2">
               {isManualSort ? (

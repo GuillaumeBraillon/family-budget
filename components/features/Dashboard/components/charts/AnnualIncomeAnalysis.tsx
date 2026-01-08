@@ -1,6 +1,6 @@
 import React from "react";
 import { Card } from "../../../../ui/Card";
-import { TrendingUp, ChevronLeft, ChevronRight, CalendarClock, ShoppingBag, ArrowUpRight, ArrowDownLeft, Scale } from "lucide-react";
+import { ChevronLeft, ChevronRight, CalendarClock, ShoppingBag, ArrowUpRight, ArrowDownLeft, Scale } from "lucide-react";
 import { OperationFilters } from "../../../../../types";
 
 interface PeriodData {
@@ -137,7 +137,9 @@ export const AnnualIncomeAnalysis: React.FC<AnnualIncomeAnalysisProps> = ({ data
                         )}
                       </td>
                     ))}
-                    <td className="px-4 py-1.5 text-right bg-slate-50/30 text-emerald-600/70 font-medium border-l border-slate-100">{totIncRec.toFixed(2)} €</td>
+                    <td className="px-4 py-1.5 text-right bg-slate-50/30 text-emerald-600/70 font-medium border-l border-slate-100">
+                      {totIncRec.toFixed(2)} €
+                    </td>
                   </tr>
 
                   {/* LIGNE 2 : REVENUS VARIABLES */}
@@ -160,7 +162,9 @@ export const AnnualIncomeAnalysis: React.FC<AnnualIncomeAnalysisProps> = ({ data
                         )}
                       </td>
                     ))}
-                    <td className="px-4 py-1.5 text-right bg-slate-50/30 text-emerald-600/70 font-medium border-l border-slate-100">{totIncVar.toFixed(2)} €</td>
+                    <td className="px-4 py-1.5 text-right bg-slate-50/30 text-emerald-600/70 font-medium border-l border-slate-100">
+                      {totIncVar.toFixed(2)} €
+                    </td>
                   </tr>
 
                   {/* LIGNE 3 : TOTAL REVENUS */}
@@ -262,7 +266,9 @@ export const AnnualIncomeAnalysis: React.FC<AnnualIncomeAnalysisProps> = ({ data
                         </td>
                       );
                     })}
-                    <td className={`px-4 py-2 text-right bg-slate-100 font-black border-l border-slate-200 ${totBal >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                    <td
+                      className={`px-4 py-2 text-right bg-slate-100 font-black border-l border-slate-200 ${totBal >= 0 ? "text-emerald-600" : "text-rose-600"}`}
+                    >
                       {totBal >= 0 ? "+" : ""}
                       {totBal.toFixed(2)} €
                     </td>

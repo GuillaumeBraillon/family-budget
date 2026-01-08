@@ -34,7 +34,6 @@ import {
   VariableTransaction,
   SavedLabel,
   Tag,
-  AuthorizedUser,
 } from "../types";
 
 /**
