@@ -36,8 +36,13 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
     - Aucun filtre → **115.22€** (montant total)
 
 - **Positions manuelles drag & drop** : Gestion des collisions de positions identiques
+
   - Tri stable avec second critère (`instanceId`) en cas d'égalité de position
   - Décalage automatique des items suivants lors de collision
+
+- **Crash VariableTransactionForm** : Correction de l'accès à la propriété lors de la suppression
+  - TypeError lors de la suppression d'une opération (accès à `form.label` au lieu de `label`)
+  - Correction de la référence dans le message de confirmation de suppression
 
 ### Technique
 

@@ -108,7 +108,7 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
       <ConfirmModal
         isOpen={true}
         title="Supprimer ?"
-        message={`Voulez-vous supprimer "${editingTransaction?.form.label}" ?`}
+        message={`Voulez-vous supprimer "${editingTransaction?.label}" ?`}
         onConfirm={handleDelete}
         onCancel={() => setShowDeleteConfirm(false)}
       />
