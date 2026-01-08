@@ -7,28 +7,26 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 
 ---
 
-## [2.2.0] - 2026-01-08
+## [2.2.1] - 2026-01-08
 
 ### Ajouté
-
-- **Système de tri manuel intelligent** : Gestion robuste du drag & drop des opérations avec positions manuelles
-
-  - Système à deux niveaux : positions manuelles (< 1M) et automatiques (>= 1M)
-  - Intervalles larges (1000) pour scalabilité et éviter les conflits
-  - Gestion automatique des collisions avec décalage des items suivants
-  - Tri stable avec second critère (`instanceId`) en cas d'égalité de position
-  - Support de 8 cas d'insertion différents (première position, dernière, entre deux items avec/sans positions)
 
 - **Champ `isExtraGlobal` dans PlannedItem** : Séparation du toggle Extra brut et du calcul dérivé
   - Source de vérité pour le toggle Extra global (sans influence des tags)
   - `isExtra` : Calcul dérivé (true si toggle global OU au moins un tag Extra)
   - `isExtraGlobal` : Valeur brute du toggle (pour calculs robustes)
 
-### Amélioré
+### Corrigé
 
-- **Calcul des montants effectifs** : Refonte complète pour gérer les opérations mixtes Extra/Standard
+- **Calcul des statistiques QuickPeriodSummary** : Montants incorrects avec opérations mixtes Extra/Standard
 
-  - Fonction `getEffectiveAmount()` avec logique contextuelle selon filtres actifs
+  - Correction du calcul des totaux "Dépenses Période" et "Revenus Période"
+  - Prise en compte correcte des montants Extra et Standard selon filtre actif
+  - Résolution du bug : Opération 115.22€ (70€ Extra + 45.22€ Standard) affichait toujours 115.22€
+
+- **Calcul des montants effectifs** : Refonte complète de `getEffectiveAmount()` pour gérer les opérations mixtes
+
+  - Fonction avec logique contextuelle selon filtres actifs (Extra/Standard + Tags)
   - Support des double-filtres (Extra + Tags spécifiques)
   - Calcul précis des montants Extra vs Standard avec ventilation de tags
   - **Exemples** :
@@ -37,12 +35,36 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
     - Filtre "Nature: Standard" → **45.22€** (montant total - tags Extra)
     - Aucun filtre → **115.22€** (montant total)
 
+- **Positions manuelles drag & drop** : Gestion des collisions de positions identiques
+  - Tri stable avec second critère (`instanceId`) en cas d'égalité de position
+  - Décalage automatique des items suivants lors de collision
+
+### Technique
+
+- **Robustesse des calculs** : Système plus fiable pour gérer la complexité (tags, extra, remboursements)
+  - Source de vérité unique (`isExtraGlobal`) pour le toggle Extra
+  - Calculs contextuels basés sur les filtres actifs
+  - Support complet des cas d'usage mixtes
+
+---
+
+## [2.2.0] - 2026-01-08
+
+### Ajouté
+
+- **Système de tri manuel intelligent** : Gestion robuste du drag & drop des opérations avec positions manuelles
+  - Système à deux niveaux : positions manuelles (< 1M) et automatiques (>= 1M)
+  - Intervalles larges (1000) pour scalabilité et éviter les conflits
+  - Gestion automatique des collisions avec décalage des items suivants
+  - Support de 8 cas d'insertion différents (première position, dernière, entre deux items avec/sans positions)
+
+### Amélioré
+
 - **Logique de filtrage des opérations** : Amélioration du filtrage Nature (Extra/Standard)
 
   - Détection des opérations mixtes (montants à la fois Extra et Standard)
   - Opérations mixtes visibles dans les deux filtres (Extra ET Standard)
   - Calcul des montants effectifs dans `useOperationsData` au lieu du filtrage dans `usePlanner`
-  - Support des remboursements (revenus en dépenses) dans les calculs
 
 - **Architecture des hooks** : Refactorisation complète pour améliorer la maintenabilité
 
@@ -62,22 +84,15 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 
 ### Corrigé
 
-- **Calcul des statistiques QuickPeriodSummary** : Montants incorrects avec opérations mixtes Extra/Standard
-
-  - Correction du calcul des totaux "Dépenses Période" et "Revenus Période"
-  - Prise en compte correcte des montants Extra et Standard selon filtre actif
-  - Résolution du bug : Opération 115.22€ (70€ Extra + 45.22€ Standard) affichait toujours 115.22€
-
 - **Crash validation dans PlannerModals** : Suppression de la référence obsolète `tagIds: selectedTags`
 
   - Résolution de ReferenceError lors de la validation d'opérations
   - Les `tagAmounts` sont correctement préservés via le spread operator
 
-- **Positions manuelles drag & drop** : Correction de la détection des positions manuelles vs automatiques
+- **Positions manuelles** : Correction de la détection des positions manuelles vs automatiques
   - Ajout du seuil `< 1_000_000` dans `getManualPosition()` helper
   - Alignement des fonctions de scoring entre `usePlanner.ts` et `useOperationsSorting.ts`
   - Réduction de AUTO_BASE de 100B → 10M → 1M pour cohérence
-  - Gestion des collisions de positions identiques avec tri stable
 
 ### Technique
 
@@ -87,12 +102,6 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
   - Composition de hooks spécialisés plutôt que composants monolithiques
   - Logique métier isolée dans des hooks réutilisables
   - Réduction de la duplication de code (DRY)
-
-- **Robustesse des calculs** : Système plus fiable pour gérer la complexité (tags, extra, remboursements)
-
-  - Source de vérité unique (`isExtraGlobal`) pour le toggle Extra
-  - Calculs contextuels basés sur les filtres actifs
-  - Support complet des cas d'usage mixtes
 
 - **Documentation Technique** :
   - Ajout de JSDoc complet sur 15+ hooks avec exemples d'utilisation
