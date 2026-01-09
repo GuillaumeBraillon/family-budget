@@ -43,9 +43,9 @@ export interface BalanceRow {
 }
 
 interface UseBalancesRowsParams {
-  accounts: Account[];
+  _accounts: Account[];
   people: Person[];
-  budgetPeriodeGlobal: number;
+  _budgetPeriodeGlobal: number;
   totalPersonalBalance: number;
   distributableBalance: number;
   jointAccount: Account | undefined;

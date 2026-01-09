@@ -16,7 +16,7 @@
  *     Composant (render pur)
  * ```
  */
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef } from "react";
 import { useError } from "../../../../contexts/ErrorContext";
 import { TrendingUp, TrendingDown, Calendar, Trash2, Clock, CheckCircle2, Star, MessageSquare, RefreshCcw } from "lucide-react";
 import { VariableTransaction, Account, CategoryDef, Person, SavedLabel, Tag, AccountType } from "../../../../types";
@@ -26,7 +26,10 @@ import { AccountSelector, BeneficiarySelector } from "../../../ui/molecules/Smar
 import { ConfirmModal } from "../../../ui/atoms/ConfirmModal";
 import { Modal } from "../../../ui/Modal";
 import { TagAmountSelector } from "../../../ui/molecules/TagAmountSelector";
+import { ValidationErrorBlock } from "../../../ui/atoms/ValidationErrorBlock";
+import { useValidationScroll } from "../../../../hooks/useValidationScroll";
 import { useTransactionForm } from "../../../../hooks/transactions";
+import { AdvancedOptionsAccordion } from "../../../ui/molecules/AdvancedOptionsAccordion";
 
 interface VariableTransactionFormProps {
   isOpen: boolean;
@@ -72,14 +75,11 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
   });
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const errorBlockRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (form.validationErrors.length > 0 && errorBlockRef.current) {
-      errorBlockRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
-      errorBlockRef.current.focus();
-    }
-  }, [form.validationErrors]);
+  // Scroll automatique vers les erreurs de validation
+  useValidationScroll(form.validationErrors, errorBlockRef);
 
   const handleFormSubmit = async (targetIsWaiting: boolean) => {
     try {
@@ -118,24 +118,11 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={editingTransaction ? "Modifier l'opération" : "Nouvelle opération"}>
-      <div className="space-y-2">
-        {form.validationErrors.length > 0 && (
-          <div
-            ref={errorBlockRef}
-            tabIndex={-1}
-            className="bg-rose-50 border border-rose-200 rounded-xl p-3 animate-in fade-in slide-in-from-top-2 duration-200 outline-none focus:ring-2 focus:ring-rose-300"
-          >
-            <p className="text-xs font-bold text-rose-700 mb-1">⚠️ Champs manquants :</p>
-            <ul className="text-xs text-rose-600 space-y-0.5 list-disc list-inside">
-              {form.validationErrors.map((error, idx) => (
-                <li key={idx}>{error}</li>
-              ))}
-            </ul>
-          </div>
-        )}
+      <div className="space-y-2.5">
+        <ValidationErrorBlock errors={form.validationErrors} ref={errorBlockRef} />
 
-        <div className="mb-2">
-          <label className="text-xs font-medium text-slate-500 uppercase block mb-1">Type</label>
+        <div>
+          <label className="text-xs font-medium text-slate-500 uppercase block mb-1.5">Type</label>
           <div className="flex bg-slate-100 p-1 rounded-lg">
             <button
               type="button"
@@ -174,12 +161,12 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
           required
           autoFocus={!editingTransaction}
         />
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 gap-2.5">
           <AmountInput label="Montant" value={form.amount} onChange={(e) => form.setAmount(e.target.value)} color={form.themeColor} required />
           <TextInput label="Date" type="form.date" icon={Calendar} value={form.date} onChange={(e) => form.setDate(e.target.value)} required />
         </div>
 
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 gap-2.5">
           <AccountSelector
             label={form.isExpense ? (form.isRefund ? "Compte crédité (Remboursement)" : "Compte débité") : "Compte crédité"}
             accounts={accounts}
@@ -201,54 +188,6 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
           onSubCategoryChange={form.setSubCategory}
         />
 
-        <div className="border-t border-slate-100 pt-2"></div>
-
-        <TagAmountSelector
-          tags={tags}
-          selectedTagAmounts={form.selectedTagAmounts}
-          onTagAmountsChange={form.setSelectedTagAmounts}
-          totalAmount={parseFloat(form.amount) || 0}
-        />
-
-        {/* Toggle Extra Global - Compatible avec les tags individuels */}
-        <div
-          onClick={() => form.setIsExtra(!form.isExtra)}
-          className={`cursor-pointer px-3 py-2 rounded-lg border transition-all flex items-center gap-3 ${
-            form.isExtra ? "bg-amber-50 border-amber-200" : "bg-slate-50 border-transparent hover:border-slate-200"
-          }`}
-        >
-          <div className={`p-1 rounded ${form.isExtra ? "bg-amber-200 text-amber-700" : "bg-slate-200 text-slate-500"}`}>
-            <Star size={14} fill={form.isExtra ? "currentColor" : "none"} />
-          </div>
-          <div className="flex-1">
-            <span className={`text-xs font-bold block ${form.isExtra ? "text-amber-800" : "text-slate-600"}`}>
-              Dépense temporaire / Exceptionnelle (Hors Budget)
-            </span>
-            {form.isExtra && <span className="text-[10px] text-amber-600 leading-none">Cette opération ne sera pas comptabilisée dans le budget courant.</span>}
-          </div>
-          <input type="checkbox" checked={form.isExtra} onChange={() => {}} className="pointer-events-none" />
-        </div>
-
-        {form.isExpense && (
-          <div
-            onClick={() => form.setIsRefund(!form.isRefund)}
-            className={`cursor-pointer px-3 py-2 rounded-lg border transition-all flex items-center gap-3 ${
-              form.isRefund ? "bg-emerald-50 border-emerald-200" : "bg-slate-50 border-transparent hover:border-slate-200"
-            }`}
-          >
-            <div className={`p-1 rounded ${form.isRefund ? "bg-emerald-200 text-emerald-700" : "bg-slate-200 text-slate-500"}`}>
-              {form.isRefund ? <RefreshCcw size={14} /> : <TrendingDown size={14} />}
-            </div>
-            <div className="flex-1">
-              <span className={`text-xs font-bold block ${form.isRefund ? "text-emerald-800" : "text-slate-600"}`}>C'est un remboursement</span>
-              {form.isRefund && (
-                <span className="text-[10px] text-emerald-600 leading-none">Ce montant sera déduit de vos dépenses (ex: Mutuelle, Retour produit).</span>
-              )}
-            </div>
-            <input type="checkbox" checked={form.isRefund} onChange={() => {}} className="pointer-events-none" />
-          </div>
-        )}
-
         <TextInput
           label="Note / Commentaire"
           value={form.comments}
@@ -257,7 +196,57 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
           icon={MessageSquare}
         />
 
-        <div className="flex gap-2 pt-3 border-t border-slate-100">
+        <AdvancedOptionsAccordion isOpen={showAdvanced} onToggle={setShowAdvanced}>
+          <TagAmountSelector
+            tags={tags}
+            selectedTagAmounts={form.selectedTagAmounts}
+            onTagAmountsChange={form.setSelectedTagAmounts}
+            totalAmount={parseFloat(form.amount) || 0}
+          />
+
+          {/* Toggle Extra Global - Compatible avec les tags individuels */}
+          <div
+            onClick={() => form.setIsExtra(!form.isExtra)}
+            className={`cursor-pointer px-3 py-2.5 rounded-lg border transition-all flex items-center gap-3 ${
+              form.isExtra ? "bg-amber-50 border-amber-200" : "bg-white border-transparent hover:border-slate-200"
+            }`}
+          >
+            <div className={`p-1 rounded ${form.isExtra ? "bg-amber-200 text-amber-700" : "bg-slate-200 text-slate-500"}`}>
+              <Star size={14} fill={form.isExtra ? "currentColor" : "none"} />
+            </div>
+            <div className="flex-1">
+              <span className={`text-xs font-bold block ${form.isExtra ? "text-amber-800" : "text-slate-600"}`}>
+                Dépense temporaire / Exceptionnelle (Hors Budget)
+              </span>
+              {form.isExtra && (
+                <span className="text-[10px] text-amber-600 leading-none">Cette opération ne sera pas comptabilisée dans le budget courant.</span>
+              )}
+            </div>
+            <input type="checkbox" checked={form.isExtra} onChange={() => {}} className="pointer-events-none" />
+          </div>
+
+          {form.isExpense && (
+            <div
+              onClick={() => form.setIsRefund(!form.isRefund)}
+              className={`cursor-pointer px-3 py-2.5 rounded-lg border transition-all flex items-center gap-3 ${
+                form.isRefund ? "bg-emerald-50 border-emerald-200" : "bg-white border-transparent hover:border-slate-200"
+              }`}
+            >
+              <div className={`p-1 rounded ${form.isRefund ? "bg-emerald-200 text-emerald-700" : "bg-slate-200 text-slate-500"}`}>
+                {form.isRefund ? <RefreshCcw size={14} /> : <TrendingDown size={14} />}
+              </div>
+              <div className="flex-1">
+                <span className={`text-xs font-bold block ${form.isRefund ? "text-emerald-800" : "text-slate-600"}`}>C'est un remboursement</span>
+                {form.isRefund && (
+                  <span className="text-[10px] text-emerald-600 leading-none">Ce montant sera déduit de vos dépenses (ex: Mutuelle, Retour produit).</span>
+                )}
+              </div>
+              <input type="checkbox" checked={form.isRefund} onChange={() => {}} className="pointer-events-none" />
+            </div>
+          )}
+        </AdvancedOptionsAccordion>
+
+        <div className="flex gap-2.5 pt-3 border-t border-slate-100">
           {editingTransaction && onDeleteTransaction && (
             <button
               type="button"

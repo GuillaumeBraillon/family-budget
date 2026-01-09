@@ -1,8 +1,10 @@
-import React from "react";
+import React, { useState } from "react";
 import { X, Check, MessageSquare } from "lucide-react";
 import { Modal } from "../../../ui/Modal";
+import { FormField } from "../../../ui/atoms/FormField";
 import { Account, PaidItemDetails, Tag } from "../../../../types";
 import { useError } from "../../../../contexts/ErrorContext";
+import { AdvancedOptionsAccordion } from "../../../ui/molecules/AdvancedOptionsAccordion";
 
 interface PlannerModalsProps {
   confirmModal: { instanceId: string; newStatus: boolean } | null;
@@ -26,6 +28,7 @@ export const PlannerModals: React.FC<PlannerModalsProps> = ({
   setConfirmModal,
 }) => {
   const { showError } = useError();
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   return (
     <>
@@ -38,7 +41,7 @@ export const PlannerModals: React.FC<PlannerModalsProps> = ({
                 <X size={20} />
               </button>
             </div>
-            <div className="p-6 space-y-5 overflow-y-auto">
+            <div className="p-6 space-y-2.5 overflow-y-auto">
               <FormField label="Libellé">
                 <input
                   type="text"
@@ -47,7 +50,7 @@ export const PlannerModals: React.FC<PlannerModalsProps> = ({
                   className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-slate-900 font-medium"
                 />
               </FormField>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-2.5">
                 <FormField label="Montant (€)">
                   <input
                     type="number"
@@ -80,18 +83,21 @@ export const PlannerModals: React.FC<PlannerModalsProps> = ({
                 </select>
               </FormField>
 
-              <FormField label="Note / Commentaire">
-                <div className="relative">
-                  <MessageSquare size={14} className="absolute left-3 top-3 text-slate-400" />
-                  <input
-                    type="text"
-                    placeholder="Note optionnelle..."
-                    value={confirmModal.comments}
-                    onChange={(e) => setConfirmModal({ ...confirmModal, comments: e.target.value })}
-                    className="w-full p-2 pl-9 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-slate-900 text-sm"
-                  />
-                </div>
-              </FormField>
+              <AdvancedOptionsAccordion isOpen={showAdvanced} onToggle={setShowAdvanced}>
+                <FormField label="Note / Commentaire">
+                  <div className="relative">
+                    <MessageSquare size={14} className="absolute left-3 top-3 text-slate-400" />
+                    <input
+                      type="text"
+                      placeholder="Note optionnelle..."
+                      value={confirmModal.comments}
+                      onChange={(e) => setConfirmModal({ ...confirmModal, comments: e.target.value })}
+                      className="w-full p-2 pl-9 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-slate-900 text-sm"
+                    />
+                  </div>
+                </FormField>
+              </AdvancedOptionsAccordion>
+
               <button
                 onClick={async () => {
                   try {
@@ -116,7 +122,7 @@ export const PlannerModals: React.FC<PlannerModalsProps> = ({
                   }
                 }}
                 className={`w-full py-3 rounded-lg text-white font-medium shadow-sm hover:opacity-90 flex items-center justify-center gap-2 ${
-                  confirmModal.item?.type === "INCOME" ? "bg-emerald-600" : "bg-slate-900"
+                  confirmModal.item?.type === "INCOME" ? "bg-emerald-600" : "bg-indigo-600"
                 }`}
               >
                 <Check size={20} /> Valider l'opération
@@ -127,7 +133,7 @@ export const PlannerModals: React.FC<PlannerModalsProps> = ({
       )}
       <Modal isOpen={uncheckModal.isOpen} onClose={onCloseUncheck} title="Annuler le pointage ?">
         <p className="text-sm text-slate-600 mb-6">Remettre l'opération "{uncheckModal.item?.label}" en attente ?</p>
-        <div className="flex gap-3">
+        <div className="flex gap-2.5">
           <button onClick={onCloseUncheck} className="flex-1 py-2.5 rounded-lg border border-slate-200 text-sm font-medium hover:bg-slate-50">
             Garder
           </button>
@@ -151,10 +157,3 @@ export const PlannerModals: React.FC<PlannerModalsProps> = ({
     </>
   );
 };
-
-const FormField: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
-  <div className="space-y-1">
-    <label className="text-xs font-medium text-slate-500 uppercase block">{label}</label>
-    {children}
-  </div>
-);

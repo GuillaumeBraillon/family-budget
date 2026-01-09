@@ -17,7 +17,7 @@
  * - hooks/transfers/useTransferForm : Hook de logique métier
  * - components/ui : Composants atomiques réutilisables
  */
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef } from "react";
 import { useError } from "../../../../contexts/ErrorContext";
 import { Save, TrendingUp, Calendar, Trash2, ArrowRightLeft, ArrowDown } from "lucide-react";
 import { Transfer, Account, SavedLabel } from "../../../../types";
@@ -25,7 +25,10 @@ import { TextInput, AmountInput, SearchableTextInput } from "../../../ui/molecul
 import { AccountSelector } from "../../../ui/molecules/SmartSelectors";
 import { ConfirmModal } from "../../../ui/atoms/ConfirmModal";
 import { Modal } from "../../../ui/Modal";
+import { ValidationErrorBlock } from "../../../ui/atoms/ValidationErrorBlock";
+import { useValidationScroll } from "../../../../hooks/useValidationScroll";
 import { useTransferForm } from "../../../../hooks/transfers/useTransferForm";
+import { AdvancedOptionsAccordion } from "../../../ui/molecules/AdvancedOptionsAccordion";
 
 interface TransferFormProps {
   isOpen: boolean;
@@ -94,15 +97,11 @@ export const TransferForm: React.FC<TransferFormProps> = ({
   });
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const errorBlockRef = useRef<HTMLDivElement>(null);
 
-  // Scroll vers les erreurs de validation
-  useEffect(() => {
-    if (form.validationErrors.length > 0 && errorBlockRef.current) {
-      errorBlockRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
-      errorBlockRef.current.focus();
-    }
-  }, [form.validationErrors]);
+  // Scroll automatique vers les erreurs de validation
+  useValidationScroll(form.validationErrors, errorBlockRef);
 
   // --- HANDLERS ---
 
@@ -147,52 +146,17 @@ export const TransferForm: React.FC<TransferFormProps> = ({
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={editingTransfer ? "Modifier le virement" : "Nouveau virement"}>
-      <div className="space-y-3">
-        {/* Bloc d'erreurs de validation */}
-        {form.validationErrors.length > 0 && (
-          <div
-            ref={errorBlockRef}
-            tabIndex={-1}
-            className="bg-rose-50 border border-rose-200 rounded-xl p-3 animate-in fade-in slide-in-from-top-2 duration-200 outline-none focus:ring-2 focus:ring-rose-300"
-          >
-            <p className="text-xs font-bold text-rose-700 mb-1">⚠️ Champs manquants :</p>
-            <ul className="text-xs text-rose-600 space-y-0.5 list-disc list-inside">
-              {form.validationErrors.map((error, idx) => (
-                <li key={idx}>{error}</li>
-              ))}
-            </ul>
-          </div>
-        )}
+      <div className="space-y-2.5">
+        <ValidationErrorBlock errors={form.validationErrors} ref={errorBlockRef} />
 
         {/* InfoBox explicative */}
-        <div className="bg-indigo-50 border border-indigo-100 p-3 rounded-xl flex items-start gap-2">
+        <div className="bg-indigo-50 border border-indigo-100 p-3 rounded-xl flex items-start gap-2.5">
           <ArrowRightLeft className="text-indigo-600 mt-1" size={20} />
           <p className="text-xs text-indigo-800 leading-relaxed">Virement entre deux comptes. Crée un mouvement unique lié.</p>
         </div>
 
-        {/* Toggle Intérêts/Ajustement */}
-        <div
-          onClick={() => form.setIsInterest(!form.isInterest)}
-          className={`cursor-pointer px-3 py-2 rounded-lg border transition-all flex items-center gap-3 ${
-            form.isInterest ? "bg-emerald-50 border-emerald-200" : "bg-slate-50 border-transparent hover:border-slate-200"
-          }`}
-        >
-          <div className={`p-1 rounded ${form.isInterest ? "bg-emerald-200 text-emerald-700" : "bg-slate-200 text-slate-500"}`}>
-            <TrendingUp size={14} />
-          </div>
-          <div className="flex-1">
-            <span className={`text-xs font-bold block ${form.isInterest ? "text-emerald-800" : "text-slate-600"}`}>Intérêts ou Ajustement Exceptionnel</span>
-            {form.isInterest && (
-              <span className="text-[10px] text-emerald-600 leading-none">
-                Ce mouvement représente des intérêts bancaires ou un ajustement manuel du solde.
-              </span>
-            )}
-          </div>
-          <input type="checkbox" checked={form.isInterest} onChange={() => {}} className="pointer-events-none" />
-        </div>
-
         {/* Champs Montant et Date */}
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 gap-2.5">
           <AmountInput label="Montant" value={form.amount} onChange={(e) => form.setAmount(e.target.value)} color="indigo" required autoFocus />
           <TextInput label="Date" type="date" icon={Calendar} value={form.date} onChange={(e) => form.setDate(e.target.value)} required />
         </div>
@@ -200,7 +164,7 @@ export const TransferForm: React.FC<TransferFormProps> = ({
         {/* Sélection comptes Source → Destination */}
         <div className="relative">
           {!form.isInterest && <div className="absolute left-[13px] top-[34px] bottom-[34px] w-0.5 bg-slate-200 -z-10"></div>}
-          <div className="space-y-3">
+          <div className="space-y-2.5">
             {!form.isInterest && (
               <>
                 <AccountSelector
@@ -211,7 +175,7 @@ export const TransferForm: React.FC<TransferFormProps> = ({
                   color="indigo"
                   showBalance
                 />
-                <div className="flex justify-center -my-2 relative z-10">
+                <div className="flex justify-center -my-1.5 relative z-10">
                   <div className="bg-white p-1 rounded-full border border-slate-200 text-slate-400">
                     <ArrowDown size={14} />
                   </div>
@@ -240,8 +204,31 @@ export const TransferForm: React.FC<TransferFormProps> = ({
           required
         />
 
+        <AdvancedOptionsAccordion isOpen={showAdvanced} onToggle={setShowAdvanced}>
+          {/* Toggle Intérêts/Ajustement */}
+          <div
+            onClick={() => form.setIsInterest(!form.isInterest)}
+            className={`cursor-pointer px-3 py-2.5 rounded-lg border transition-all flex items-center gap-3 ${
+              form.isInterest ? "bg-emerald-50 border-emerald-200" : "bg-white border-transparent hover:border-slate-200"
+            }`}
+          >
+            <div className={`p-1 rounded ${form.isInterest ? "bg-emerald-200 text-emerald-700" : "bg-slate-200 text-slate-500"}`}>
+              <TrendingUp size={14} />
+            </div>
+            <div className="flex-1">
+              <span className={`text-xs font-bold block ${form.isInterest ? "text-emerald-800" : "text-slate-600"}`}>Intérêts ou Ajustement Exceptionnel</span>
+              {form.isInterest && (
+                <span className="text-[10px] text-emerald-600 leading-none">
+                  Ce mouvement représente des intérêts bancaires ou un ajustement manuel du solde.
+                </span>
+              )}
+            </div>
+            <input type="checkbox" checked={form.isInterest} onChange={() => {}} className="pointer-events-none" />
+          </div>
+        </AdvancedOptionsAccordion>
+
         {/* Boutons d'action */}
-        <div className="flex gap-2 pt-3 border-t border-slate-100">
+        <div className="flex gap-2.5 pt-3 border-t border-slate-100">
           {editingTransfer && onDeleteTransfer && (
             <button
               type="button"

@@ -9,6 +9,9 @@ import { DataListRow } from "../../../../ui/molecules/DataListRow";
 import { ConfirmModal } from "../../../../ui/atoms/ConfirmModal";
 import { Modal } from "../../../../ui/Modal";
 import { ListSorter, SortOrder } from "../../../../ui/molecules/ListSorter";
+import { ValidationErrorBlock } from "../../../../ui/atoms/ValidationErrorBlock";
+import { useValidationScroll } from "../../../../../hooks/useValidationScroll";
+import { AdvancedOptionsAccordion } from "../../../../ui/molecules/AdvancedOptionsAccordion";
 
 interface ExpenseRulesEditorProps {
   configs: ExpenseConfig[];
@@ -32,16 +35,12 @@ export const ExpenseRulesEditor: React.FC<ExpenseRulesEditorProps> = ({
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const errorBlockRef = useRef<HTMLDivElement>(null);
 
-  // Scroller vers le bloc d'erreur quand des erreurs apparaissent
-  useEffect(() => {
-    if (validationErrors.length > 0 && errorBlockRef.current) {
-      errorBlockRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
-      errorBlockRef.current.focus();
-    }
-  }, [validationErrors]);
+  // Scroll automatique vers les erreurs de validation
+  useValidationScroll(validationErrors, errorBlockRef);
 
   const [sortKey, setSortKey] = useState<string>("dayOfMonth");
   const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
@@ -211,21 +210,8 @@ export const ExpenseRulesEditor: React.FC<ExpenseRulesEditorProps> = ({
       </div>
 
       <Modal isOpen={isFormOpen} onClose={clearForm} title={editingId ? "Modifier la dépense" : "Nouvelle Dépense Récurrente"}>
-        <div className="space-y-2">
-          {validationErrors.length > 0 && (
-            <div
-              ref={errorBlockRef}
-              tabIndex={-1}
-              className="bg-rose-50 border border-rose-200 rounded-xl p-3 animate-in fade-in slide-in-from-top-2 duration-200 outline-none focus:ring-2 focus:ring-rose-300"
-            >
-              <p className="text-xs font-bold text-rose-700 mb-1">⚠️ Champs manquants :</p>
-              <ul className="text-xs text-rose-600 space-y-0.5 list-disc list-inside">
-                {validationErrors.map((error, idx) => (
-                  <li key={idx}>{error}</li>
-                ))}
-              </ul>
-            </div>
-          )}
+        <div className="space-y-2.5">
+          <ValidationErrorBlock errors={validationErrors} ref={errorBlockRef} />
 
           <TextInput
             label="Libellé"
@@ -288,84 +274,86 @@ export const ExpenseRulesEditor: React.FC<ExpenseRulesEditorProps> = ({
             onSubCategoryChange={(val) => setFormData((prev) => ({ ...prev, subCategory: val }))}
           />
 
-          <div className="bg-white/60 p-2.5 rounded-lg border border-slate-200 mt-2">
-            <div className="flex items-center gap-2 mb-2.5">
-              <input
-                type="checkbox"
-                id="extra"
-                checked={formData.isExtra}
-                onChange={(e) => {
-                  const val = e.target.checked;
-                  setFormData((prev) => ({ ...prev, isExtra: val }));
-                }}
-                className="h-4 w-4 text-indigo-600 rounded bg-white"
-              />
-              <label htmlFor="extra" className="text-sm font-bold text-slate-800 cursor-pointer">
-                Dépense temporaire / Exceptionnelle
-              </label>
-            </div>
-
-            {formData.isExtra && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 animate-in fade-in slide-in-from-top-2">
-                <TextInput
-                  label="Mois de début"
-                  type="month"
-                  value={formData.startMonth}
+          <AdvancedOptionsAccordion isOpen={showAdvanced} onToggle={setShowAdvanced}>
+            <div className="bg-white/60 p-3 rounded-lg border border-slate-200">
+              <div className="flex items-center gap-2 mb-2.5">
+                <input
+                  type="checkbox"
+                  id="extra"
+                  checked={formData.isExtra}
                   onChange={(e) => {
-                    const val = e.target.value;
-                    setFormData((prev) => ({ ...prev, startMonth: val }));
+                    const val = e.target.checked;
+                    setFormData((prev) => ({ ...prev, isExtra: val }));
                   }}
-                  required={formData.isExtra}
+                  className="h-4 w-4 text-indigo-600 rounded bg-white"
                 />
-
-                <div className="flex flex-col gap-2">
-                  <div className="flex gap-2 text-xs mb-1">
-                    <button
-                      type="button"
-                      onClick={() => setDurationMode("duration")}
-                      className={`px-2 py-1 rounded ${durationMode === "duration" ? "bg-indigo-100 text-indigo-700 font-medium" : "text-slate-500 hover:bg-slate-100"}`}
-                    >
-                      Par durée
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setDurationMode("dates")}
-                      className={`px-2 py-1 rounded ${durationMode === "dates" ? "bg-indigo-100 text-indigo-700 font-medium" : "text-slate-500 hover:bg-slate-100"}`}
-                    >
-                      Par date de fin
-                    </button>
-                  </div>
-                  {durationMode === "duration" ? (
-                    <div>
-                      <label className="text-xs font-medium text-slate-500 uppercase block mb-1">Durée (Mois)</label>
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="number"
-                          min="1"
-                          value={durationMonths}
-                          onChange={(e) => setDurationMonths(parseInt(e.target.value) || 1)}
-                          className="w-full p-2 rounded-lg border border-slate-300 bg-white text-slate-900"
-                        />
-                        <span className="text-xs text-slate-500 whitespace-nowrap bg-slate-100 px-2 py-2 rounded">Fin : {formData.endMonth || "?"}</span>
-                      </div>
-                    </div>
-                  ) : (
-                    <TextInput
-                      label="Mois de fin"
-                      type="month"
-                      value={formData.endMonth}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setDurationMonths(0);
-                        setFormData((prev) => ({ ...prev, endMonth: val }));
-                      }}
-                      required={formData.isExtra}
-                    />
-                  )}
-                </div>
+                <label htmlFor="extra" className="text-sm font-bold text-slate-800 cursor-pointer">
+                  Dépense temporaire / Exceptionnelle
+                </label>
               </div>
-            )}
-          </div>
+
+              {formData.isExtra && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 animate-in fade-in slide-in-from-top-2">
+                  <TextInput
+                    label="Mois de début"
+                    type="month"
+                    value={formData.startMonth}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setFormData((prev) => ({ ...prev, startMonth: val }));
+                    }}
+                    required={formData.isExtra}
+                  />
+
+                  <div className="flex flex-col gap-2">
+                    <div className="flex gap-2 text-xs mb-1">
+                      <button
+                        type="button"
+                        onClick={() => setDurationMode("duration")}
+                        className={`px-2 py-1 rounded ${durationMode === "duration" ? "bg-indigo-100 text-indigo-700 font-medium" : "text-slate-500 hover:bg-slate-100"}`}
+                      >
+                        Par durée
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDurationMode("dates")}
+                        className={`px-2 py-1 rounded ${durationMode === "dates" ? "bg-indigo-100 text-indigo-700 font-medium" : "text-slate-500 hover:bg-slate-100"}`}
+                      >
+                        Par date de fin
+                      </button>
+                    </div>
+                    {durationMode === "duration" ? (
+                      <div>
+                        <label className="text-xs font-medium text-slate-500 uppercase block mb-1">Durée (Mois)</label>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="number"
+                            min="1"
+                            value={durationMonths}
+                            onChange={(e) => setDurationMonths(parseInt(e.target.value) || 1)}
+                            className="w-full p-2 rounded-lg border border-slate-300 bg-white text-slate-900"
+                          />
+                          <span className="text-xs text-slate-500 whitespace-nowrap bg-slate-100 px-2 py-2 rounded">Fin : {formData.endMonth || "?"}</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <TextInput
+                        label="Mois de fin"
+                        type="month"
+                        value={formData.endMonth}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setDurationMonths(0);
+                          setFormData((prev) => ({ ...prev, endMonth: val }));
+                        }}
+                        required={formData.isExtra}
+                      />
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </AdvancedOptionsAccordion>
 
           <div className="flex gap-3 pt-2">
             {editingId && (
