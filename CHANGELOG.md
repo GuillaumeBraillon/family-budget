@@ -7,6 +7,67 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.2.4] - 2026-01-09
+
+### Corrigé
+
+- **Bug critique du filtre Extra/Standard** : Les opérations Extra apparaissaient dans le filtre Standard
+  - **Cause** : Toggle global `isExtraGlobal: true` avec tags non marqués Extra (`isExtra: false`)
+  - **Symptôme** : Opération 77,84€ Extra visible dans filtre "Nature: Standard"
+  - **Analyse** : La logique vérifiait `hasStandardTags` en cherchant des tags `!isExtra`, trouvait le tag avec `isExtra: false`, et considérait l'opération comme ayant du Standard
+  - **Solution** : Priorité absolue du toggle global sur les flags individuels des tags
+    - Si `isExtraGlobal: true` → Toute l'opération est Extra, peu importe les tags
+    - Simplification de la logique : 15 lignes → 3 lignes
+  - **Impact** : Filtre Standard maintenant cohérent (exclut correctement les opérations avec toggle Extra)
+
+### Amélioré
+
+- **Documentation du système Extra à deux niveaux** : Commentaires détaillés (60 lignes) dans `usePlanner.ts`
+  - **Concept clé** : Séparation entre affichage (filtrage) et calculs (montants effectifs)
+  - **Architecture à deux niveaux** :
+    1. Toggle global (`isExtraGlobal`) : Affecte TOUTE l'opération
+    2. Tags individuels (`tagAmounts[].isExtra`) : Affectent des PARTIES de l'opération
+  - **Règle de priorité** : Le toggle global a TOUJOURS la priorité absolue
+  - **4 scénarios d'exemples** avec résultats attendus :
+    - Scénario 1 : Opération 100% Extra (toggle activé, pas de tags)
+    - Scénario 2 : Opération 100% Standard (toggle désactivé, pas de tags)
+    - Scénario 3 : Opération mixte (toggle désactivé, tags variés)
+    - Scénario 4 : Toggle global prioritaire (toggle activé + tags Standard)
+  - **3 règles de filtrage** documentées inline :
+    - RÈGLE 1 : Toggle global Extra → Tout est Extra (priorité absolue)
+    - RÈGLE 2 : Pas de toggle → Analyser les tags individuels
+    - RÈGLE 3 : Avec tags → Calculer le reste Standard (total - extraSum)
+
+- **Cohérence TypeScript** : Ajout de `isExtraGlobal` pour les revenus récurrents
+  - Correction de l'erreur de compilation manquante
+  - Parité complète entre revenus et dépenses
+
+### Technique
+
+- **Logique de filtre simplifiée** :
+
+  ```typescript
+  // AVANT (INCORRECT - 15 lignes, complexe)
+  if (hasGlobalExtra) {
+    if (pas de tags) return false;
+    if (tags Standard) return true;  // ❌ Incohérent !
+    return false;
+  }
+
+  // APRÈS (CORRECT - 3 lignes, simple)
+  if (hasGlobalExtra) {
+    return false;  // ✅ Toggle Extra → Tout est Extra
+  }
+  ```
+
+- **Avantages de la simplification** :
+  - **Cohérence logique** : Toggle Extra = Tout Extra (pas d'ambiguïté)
+  - **Moins de code** : -80% de lignes dans la condition
+  - **Maintenabilité** : Logique claire et prévisible
+  - **Pas de synchro** : Pas besoin de forcer les tags à `isExtra: true`
+
+---
+
 ## [2.2.3] - 2026-01-09
 
 ### Ajouté
