@@ -18,30 +18,15 @@
  */
 import React, { useState, useRef, useEffect } from "react";
 import { useError } from "../../../../contexts/ErrorContext";
-import {
-  Save,
-  TrendingUp,
-  TrendingDown,
-  Calendar,
-  Trash2,
-  Clock,
-  CheckCircle2,
-  Star,
-  MessageSquare,
-  ArrowRightLeft,
-  ArrowDown,
-  RefreshCcw,
-} from "lucide-react";
-import { VariableTransaction, Account, CategoryDef, Person, Transfer, SavedLabel, Tag, AccountType } from "../../../../types";
+import { TrendingUp, TrendingDown, Calendar, Trash2, Clock, CheckCircle2, Star, MessageSquare, RefreshCcw } from "lucide-react";
+import { VariableTransaction, Account, CategoryDef, Person, SavedLabel, Tag, AccountType } from "../../../../types";
 import { CategorySelector } from "../../../ui/molecules/CategorySelector";
 import { TextInput, AmountInput, SearchableTextInput } from "../../../ui/molecules/FormInputs";
 import { AccountSelector, BeneficiarySelector } from "../../../ui/molecules/SmartSelectors";
 import { ConfirmModal } from "../../../ui/atoms/ConfirmModal";
 import { Modal } from "../../../ui/Modal";
 import { TagAmountSelector } from "../../../ui/molecules/TagAmountSelector";
-import { useTransactionForm, FormMode } from "../../../../hooks/transactions";
-
-const DEFAULT_MODE: FormMode = "STANDARD";
+import { useTransactionForm } from "../../../../hooks/transactions";
 
 interface VariableTransactionFormProps {
   isOpen: boolean;
@@ -52,13 +37,10 @@ interface VariableTransactionFormProps {
   tags?: Tag[];
   onAddTransaction: (t: VariableTransaction) => void;
   onDeleteTransaction?: (id: string) => void;
-  onUpsertTransfer?: (t: Transfer) => void;
   defaultDate: string;
   labelsSuggestions?: string[];
   savedLabels?: SavedLabel[];
   editingTransaction?: VariableTransaction | null;
-  initialMode?: FormMode;
-  lockMode?: boolean;
 }
 
 export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = ({
@@ -70,13 +52,10 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
   tags = [],
   onAddTransaction,
   onDeleteTransaction,
-  onUpsertTransfer,
   defaultDate,
   labelsSuggestions = [],
   savedLabels = [],
   editingTransaction,
-  initialMode = DEFAULT_MODE,
-  lockMode = false,
 }) => {
   const { showError } = useError();
   // --- HOOKS SPÉCIALISÉS (LOGIQUE DÉLÉGUÉE) ---
@@ -87,7 +66,7 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
     people,
     savedLabels,
     defaultDate,
-    initialMode,
+    initialMode: "STANDARD",
     labelsSuggestions,
     isOpen,
   });
@@ -106,11 +85,7 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
     try {
       const result = form.handleSubmit(targetIsWaiting, onClose);
       if (!result) return;
-      if (form.mode === "TRANSFER" && onUpsertTransfer) {
-        await onUpsertTransfer(result as Transfer);
-      } else {
-        await onAddTransaction(result as VariableTransaction);
-      }
+      await onAddTransaction(result as VariableTransaction);
     } catch (err) {
       showError(err as Error, "Sauvegarde de transaction");
     }
@@ -142,34 +117,8 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={editingTransaction ? "Modifier" : form.mode === "TRANSFER" ? "Nouveau virement" : "Nouvelle opération"}>
+    <Modal isOpen={isOpen} onClose={onClose} title={editingTransaction ? "Modifier l'opération" : "Nouvelle opération"}>
       <div className="space-y-2">
-        {!editingTransaction && !lockMode && (
-          <div className="flex bg-slate-100 p-1 rounded-lg mb-2">
-            <button
-              type="button"
-              onClick={() => form.setMode("STANDARD")}
-              className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-xs font-bold transition-all ${
-                form.mode === "STANDARD" ? "bg-white text-slate-800 shadow-sm" : "text-slate-500 hover:text-slate-700"
-              }`}
-            >
-              Opération Standard
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                form.setMode("TRANSFER");
-                form.setLabel("");
-              }}
-              className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-xs font-bold transition-all ${
-                form.mode === "TRANSFER" ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
-              }`}
-            >
-              <ArrowRightLeft size={12} /> Virement Interne
-            </button>
-          </div>
-        )}
-
         {form.validationErrors.length > 0 && (
           <div
             ref={errorBlockRef}
@@ -185,180 +134,128 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
           </div>
         )}
 
-        {form.mode === "STANDARD" ? (
-          <>
-            <div className="mb-2">
-              <label className="text-xs font-medium text-slate-500 uppercase block mb-1">Type</label>
-              <div className="flex bg-slate-100 p-1 rounded-lg">
-                <button
-                  type="button"
-                  onClick={() => {
-                    form.setType("EXPENSE");
-                    form.setIsRefund(false);
-                  }}
-                  className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm font-bold transition-all ${
-                    form.isExpense ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
-                  }`}
-                >
-                  <TrendingDown size={14} /> Dépense
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    form.setType("INCOME");
-                    form.setIsRefund(false);
-                  }}
-                  className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm font-bold transition-all ${
-                    !form.isExpense ? "bg-white text-emerald-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
-                  }`}
-                >
-                  <TrendingUp size={14} /> Revenu
-                </button>
-              </div>
-            </div>
-
-            <SearchableTextInput
-              label="Libellé"
-              value={form.label}
-              onChange={(e) => form.setLabel(e.target.value)}
-              onSelectSuggestion={form.setLabel}
-              placeholder={form.isExpense ? "Ex: Frais, Courses..." : "Ex: Vente, Remboursement..."}
-              suggestions={form.standardSuggestions}
-              required
-              autoFocus={!editingTransaction}
-            />
-            <div className="grid grid-cols-2 gap-2">
-              <AmountInput label="Montant" value={form.amount} onChange={(e) => form.setAmount(e.target.value)} color={form.themeColor} required />
-              <TextInput label="Date" type="form.date" icon={Calendar} value={form.date} onChange={(e) => form.setDate(e.target.value)} required />
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              <AccountSelector
-                label={form.isExpense ? (form.isRefund ? "Compte crédité (Remboursement)" : "Compte débité") : "Compte crédité"}
-                accounts={accounts}
-                value={form.accountId}
-                onChange={(e) => form.setAccountId(e.target.value)}
-                color={form.themeColor}
-                filterTypes={[AccountType.CHECKING]}
-              />
-
-              <BeneficiarySelector people={people} value={form.beneficiaryId} onChange={(e) => form.setBeneficiaryId(e.target.value)} color={form.themeColor} />
-            </div>
-
-            <CategorySelector
-              categories={categories}
-              type={form.type}
-              selectedCategory={form.category}
-              selectedSubCategory={form.subCategory}
-              onCategoryChange={form.setCategory}
-              onSubCategoryChange={form.setSubCategory}
-            />
-
-            <div className="border-t border-slate-100 pt-2"></div>
-
-            <TagAmountSelector
-              tags={tags}
-              selectedTagAmounts={form.selectedTagAmounts}
-              onTagAmountsChange={form.setSelectedTagAmounts}
-              totalAmount={parseFloat(form.amount) || 0}
-            />
-
-            {/* Toggle Extra Global - Compatible avec les tags individuels */}
-            <div
-              onClick={() => form.setIsExtra(!form.isExtra)}
-              className={`cursor-pointer px-3 py-2 rounded-lg border transition-all flex items-center gap-3 ${
-                form.isExtra ? "bg-amber-50 border-amber-200" : "bg-slate-50 border-transparent hover:border-slate-200"
+        <div className="mb-2">
+          <label className="text-xs font-medium text-slate-500 uppercase block mb-1">Type</label>
+          <div className="flex bg-slate-100 p-1 rounded-lg">
+            <button
+              type="button"
+              onClick={() => {
+                form.setType("EXPENSE");
+                form.setIsRefund(false);
+              }}
+              className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm font-bold transition-all ${
+                form.isExpense ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
               }`}
             >
-              <div className={`p-1 rounded ${form.isExtra ? "bg-amber-200 text-amber-700" : "bg-slate-200 text-slate-500"}`}>
-                <Star size={14} fill={form.isExtra ? "currentColor" : "none"} />
-              </div>
-              <div className="flex-1">
-                <span className={`text-xs font-bold block ${form.isExtra ? "text-amber-800" : "text-slate-600"}`}>
-                  Dépense temporaire / Exceptionnelle (Hors Budget)
-                </span>
-                {form.isExtra && (
-                  <span className="text-[10px] text-amber-600 leading-none">Cette opération ne sera pas comptabilisée dans le budget courant.</span>
-                )}
-              </div>
-              <input type="checkbox" checked={form.isExtra} onChange={() => {}} className="pointer-events-none" />
-            </div>
+              <TrendingDown size={14} /> Dépense
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                form.setType("INCOME");
+                form.setIsRefund(false);
+              }}
+              className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm font-bold transition-all ${
+                !form.isExpense ? "bg-white text-emerald-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
+              }`}
+            >
+              <TrendingUp size={14} /> Revenu
+            </button>
+          </div>
+        </div>
 
-            {form.isExpense && (
-              <div
-                onClick={() => form.setIsRefund(!form.isRefund)}
-                className={`cursor-pointer px-3 py-2 rounded-lg border transition-all flex items-center gap-3 ${
-                  form.isRefund ? "bg-emerald-50 border-emerald-200" : "bg-slate-50 border-transparent hover:border-slate-200"
-                }`}
-              >
-                <div className={`p-1 rounded ${form.isRefund ? "bg-emerald-200 text-emerald-700" : "bg-slate-200 text-slate-500"}`}>
-                  {form.isRefund ? <RefreshCcw size={14} /> : <TrendingDown size={14} />}
-                </div>
-                <div className="flex-1">
-                  <span className={`text-xs font-bold block ${form.isRefund ? "text-emerald-800" : "text-slate-600"}`}>C'est un remboursement</span>
-                  {form.isRefund && (
-                    <span className="text-[10px] text-emerald-600 leading-none">Ce montant sera déduit de vos dépenses (ex: Mutuelle, Retour produit).</span>
-                  )}
-                </div>
-                <input type="checkbox" checked={form.isRefund} onChange={() => {}} className="pointer-events-none" />
-              </div>
-            )}
+        <SearchableTextInput
+          label="Libellé"
+          value={form.label}
+          onChange={(e) => form.setLabel(e.target.value)}
+          onSelectSuggestion={form.setLabel}
+          placeholder={form.isExpense ? "Ex: Frais, Courses..." : "Ex: Vente, Remboursement..."}
+          suggestions={form.standardSuggestions}
+          required
+          autoFocus={!editingTransaction}
+        />
+        <div className="grid grid-cols-2 gap-2">
+          <AmountInput label="Montant" value={form.amount} onChange={(e) => form.setAmount(e.target.value)} color={form.themeColor} required />
+          <TextInput label="Date" type="form.date" icon={Calendar} value={form.date} onChange={(e) => form.setDate(e.target.value)} required />
+        </div>
 
-            <TextInput
-              label="Note / Commentaire"
-              value={form.comments}
-              onChange={(e) => form.setComments(e.target.value)}
-              placeholder="Infos complémentaires..."
-              icon={MessageSquare}
-            />
-          </>
-        ) : (
-          <div className="space-y-3 pt-1">
-            <div className="bg-indigo-50 border border-indigo-100 p-3 rounded-xl flex items-start gap-2">
-              <ArrowRightLeft className="text-indigo-600 mt-1" size={20} />
-              <p className="text-xs text-indigo-800 leading-relaxed">Virement entre deux comptes. Crée un mouvement unique lié.</p>
+        <div className="grid grid-cols-2 gap-2">
+          <AccountSelector
+            label={form.isExpense ? (form.isRefund ? "Compte crédité (Remboursement)" : "Compte débité") : "Compte crédité"}
+            accounts={accounts}
+            value={form.accountId}
+            onChange={(e) => form.setAccountId(e.target.value)}
+            color={form.themeColor}
+            filterTypes={[AccountType.CHECKING]}
+          />
+
+          <BeneficiarySelector people={people} value={form.beneficiaryId} onChange={(e) => form.setBeneficiaryId(e.target.value)} color={form.themeColor} />
+        </div>
+
+        <CategorySelector
+          categories={categories}
+          type={form.type}
+          selectedCategory={form.category}
+          selectedSubCategory={form.subCategory}
+          onCategoryChange={form.setCategory}
+          onSubCategoryChange={form.setSubCategory}
+        />
+
+        <div className="border-t border-slate-100 pt-2"></div>
+
+        <TagAmountSelector
+          tags={tags}
+          selectedTagAmounts={form.selectedTagAmounts}
+          onTagAmountsChange={form.setSelectedTagAmounts}
+          totalAmount={parseFloat(form.amount) || 0}
+        />
+
+        {/* Toggle Extra Global - Compatible avec les tags individuels */}
+        <div
+          onClick={() => form.setIsExtra(!form.isExtra)}
+          className={`cursor-pointer px-3 py-2 rounded-lg border transition-all flex items-center gap-3 ${
+            form.isExtra ? "bg-amber-50 border-amber-200" : "bg-slate-50 border-transparent hover:border-slate-200"
+          }`}
+        >
+          <div className={`p-1 rounded ${form.isExtra ? "bg-amber-200 text-amber-700" : "bg-slate-200 text-slate-500"}`}>
+            <Star size={14} fill={form.isExtra ? "currentColor" : "none"} />
+          </div>
+          <div className="flex-1">
+            <span className={`text-xs font-bold block ${form.isExtra ? "text-amber-800" : "text-slate-600"}`}>
+              Dépense temporaire / Exceptionnelle (Hors Budget)
+            </span>
+            {form.isExtra && <span className="text-[10px] text-amber-600 leading-none">Cette opération ne sera pas comptabilisée dans le budget courant.</span>}
+          </div>
+          <input type="checkbox" checked={form.isExtra} onChange={() => {}} className="pointer-events-none" />
+        </div>
+
+        {form.isExpense && (
+          <div
+            onClick={() => form.setIsRefund(!form.isRefund)}
+            className={`cursor-pointer px-3 py-2 rounded-lg border transition-all flex items-center gap-3 ${
+              form.isRefund ? "bg-emerald-50 border-emerald-200" : "bg-slate-50 border-transparent hover:border-slate-200"
+            }`}
+          >
+            <div className={`p-1 rounded ${form.isRefund ? "bg-emerald-200 text-emerald-700" : "bg-slate-200 text-slate-500"}`}>
+              {form.isRefund ? <RefreshCcw size={14} /> : <TrendingDown size={14} />}
             </div>
-            <div className="grid grid-cols-2 gap-2">
-              <AmountInput label="Montant" value={form.amount} onChange={(e) => form.setAmount(e.target.value)} color="indigo" required autoFocus />
-              <TextInput label="Date" type="form.date" icon={Calendar} value={form.date} onChange={(e) => form.setDate(e.target.value)} required />
+            <div className="flex-1">
+              <span className={`text-xs font-bold block ${form.isRefund ? "text-emerald-800" : "text-slate-600"}`}>C'est un remboursement</span>
+              {form.isRefund && (
+                <span className="text-[10px] text-emerald-600 leading-none">Ce montant sera déduit de vos dépenses (ex: Mutuelle, Retour produit).</span>
+              )}
             </div>
-            <div className="relative">
-              <div className="absolute left-[13px] top-[34px] bottom-[34px] w-0.5 bg-slate-200 -z-10"></div>
-              <div className="space-y-3">
-                <AccountSelector
-                  label="Depuis (Source)"
-                  accounts={form.filteredSourceAccounts}
-                  value={form.accountId}
-                  onChange={(e) => form.setAccountId(e.target.value)}
-                  color="indigo"
-                  showBalance
-                />
-                <div className="flex justify-center -my-2 relative z-10">
-                  <div className="bg-white p-1 rounded-full border border-slate-200 text-slate-400">
-                    <ArrowDown size={14} />
-                  </div>
-                </div>
-                <AccountSelector
-                  label="Vers (Destination)"
-                  accounts={form.filteredDestAccounts}
-                  value={form.destAccountId}
-                  onChange={(e) => form.setDestAccountId(e.target.value)}
-                  color="emerald"
-                  showBalance
-                />
-              </div>
-            </div>
-            <SearchableTextInput
-              label="Motif"
-              value={form.label}
-              onChange={(e) => form.setLabel(e.target.value)}
-              onSelectSuggestion={form.setLabel}
-              placeholder="Ex: Épargne, Remboursement..."
-              suggestions={form.transferSuggestions}
-              required
-            />
+            <input type="checkbox" checked={form.isRefund} onChange={() => {}} className="pointer-events-none" />
           </div>
         )}
+
+        <TextInput
+          label="Note / Commentaire"
+          value={form.comments}
+          onChange={(e) => form.setComments(e.target.value)}
+          placeholder="Infos complémentaires..."
+          icon={MessageSquare}
+        />
 
         <div className="flex gap-2 pt-3 border-t border-slate-100">
           {editingTransaction && onDeleteTransaction && (
@@ -371,31 +268,20 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
             </button>
           )}
 
-          {form.mode === "TRANSFER" ? (
-            <button
-              onClick={() => handleFormSubmit(false)}
-              className={`flex-1 text-white py-2 rounded-xl font-bold shadow-sm transition-colors flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700`}
-            >
-              <Save size={18} /> {editingTransaction ? "Mettre à jour" : "Exécuter le virement"}
-            </button>
-          ) : (
-            <>
-              <button
-                onClick={() => handleFormSubmit(true)}
-                className="flex-1 bg-amber-100 text-amber-700 border border-amber-200 py-2 rounded-xl font-bold shadow-sm transition-colors flex items-center justify-center gap-2 hover:bg-amber-200"
-              >
-                <Clock size={18} /> En attente
-              </button>
-              <button
-                onClick={() => handleFormSubmit(false)}
-                className={`flex-1 text-white py-2 rounded-xl font-bold shadow-sm transition-colors flex items-center justify-center gap-2 ${
-                  form.isExpense ? "bg-indigo-600 hover:bg-indigo-700" : "bg-emerald-600 hover:bg-emerald-700"
-                }`}
-              >
-                <CheckCircle2 size={18} /> Pointé (Réel)
-              </button>
-            </>
-          )}
+          <button
+            onClick={() => handleFormSubmit(true)}
+            className="flex-1 bg-amber-100 text-amber-700 border border-amber-200 py-2 rounded-xl font-bold shadow-sm transition-colors flex items-center justify-center gap-2 hover:bg-amber-200"
+          >
+            <Clock size={18} /> En attente
+          </button>
+          <button
+            onClick={() => handleFormSubmit(false)}
+            className={`flex-1 text-white py-2 rounded-xl font-bold shadow-sm transition-colors flex items-center justify-center gap-2 ${
+              form.isExpense ? "bg-indigo-600 hover:bg-indigo-700" : "bg-emerald-600 hover:bg-emerald-700"
+            }`}
+          >
+            <CheckCircle2 size={18} /> Pointé (Réel)
+          </button>
         </div>
       </div>
     </Modal>

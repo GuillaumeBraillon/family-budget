@@ -141,6 +141,7 @@ export const mapDbTransfer = (transfer: DbTransfer): Transfer => ({
   destinationAccountId: transfer.destination_account_id,
   createdAt: transfer.created_at,
   position: transfer.position !== null ? Number(transfer.position) : undefined,
+  isInterest: !!transfer.is_interest,
 });
 
 export const mapDbVariableTransaction = (transaction: DbPaidItem): VariableTransaction => ({

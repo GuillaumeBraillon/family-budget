@@ -94,9 +94,9 @@ interface UseBalancesRowsParams {
  * ```
  */
 export const useBalancesRows = ({
-  accounts,
+  _accounts,
   people,
-  budgetPeriodeGlobal,
+  _budgetPeriodeGlobal,
   totalPersonalBalance,
   distributableBalance,
   jointAccount,
@@ -226,5 +226,5 @@ export const useBalancesRows = ({
     pRows.sort((a, b) => a.name.localeCompare(b.name));
 
     return { jointRows: jRows, personalRows: pRows, totalPersonalRow, virLddsTotal: globalTransfer };
-  }, [accounts, people, budgetPeriodeGlobal, totalPersonalBalance, jointAccount, personalAccounts, stats, distributableBalance]);
+  }, [people, totalPersonalBalance, jointAccount, personalAccounts, stats, distributableBalance]);
 };

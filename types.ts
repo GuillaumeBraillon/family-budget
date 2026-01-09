@@ -73,6 +73,7 @@ export interface Transfer {
   destinationAccountId: string;
   createdAt?: string;
   position?: number;
+  isInterest?: boolean; // Indique si le virement est un ajout d'intérêts ou un ajustement exceptionnel
 }
 
 export interface SavingsTransaction {

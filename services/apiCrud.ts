@@ -349,6 +349,7 @@ export const apiUpsertTransfer = async (transfer: Transfer) =>
     source_account_id: transfer.sourceAccountId,
     destination_account_id: transfer.destinationAccountId,
     position: transfer.position,
+    is_interest: transfer.isInterest || false,
   });
 
 export const apiDeleteTransfer = async (id: string) => supabase.from("transfers").delete().eq("id", id);

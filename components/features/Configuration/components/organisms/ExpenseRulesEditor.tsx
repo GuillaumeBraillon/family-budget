@@ -156,13 +156,13 @@ export const ExpenseRulesEditor: React.FC<ExpenseRulesEditorProps> = ({
       isExtra: formData.isExtra,
     };
     editingId ? onUpdateConfig(finalConfig) : onAddConfig(finalConfig);
-    resetForm();
+    clearForm();
   };
 
   const handleDelete = () => {
     if (editingId) {
       onDeleteConfig(editingId);
-      resetForm();
+      clearForm();
     }
   };
 
@@ -172,7 +172,6 @@ export const ExpenseRulesEditor: React.FC<ExpenseRulesEditorProps> = ({
       if (sortKey === "label") {
         res = a.label.localeCompare(b.label);
       } else {
-        // @ts-expect-error - Dynamic key access for sorting
         res = (a[sortKey] as number) - (b[sortKey] as number);
       }
       return sortOrder === "asc" ? res : -res;

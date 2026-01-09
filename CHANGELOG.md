@@ -7,6 +7,111 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.4.2] - 2026-01-09
+
+### 🎨 Amélioration UX - Formulaire de Virement avec Intérêts
+
+**Interface adaptative selon le type de transaction**
+
+Amélioration de l'ergonomie du formulaire de virement pour mieux refléter la nature des transactions : virements internes classiques vs. ajouts d'intérêts/ajustements.
+
+#### **Composant** (`TransferForm.tsx`)
+
+- **Rendu conditionnel** : UI s'adapte automatiquement selon le toggle `isInterest`
+  - **Mode Virement classique** (`isInterest=false`) : Affiche Source → Flèche → Destination
+  - **Mode Intérêts** (`isInterest=true`) : Affiche uniquement "Compte concerné" (pas de source)
+- **Changements UI** :
+  - Sélecteur "Depuis (Source)" masqué quand `isInterest=true`
+  - Flèche indicateur masquée quand `isInterest=true`
+  - Ligne de connexion verticale masquée quand `isInterest=true`
+  - Label destination dynamique : "Vers (Destination)" → "Compte concerné"
+- **Justification** : Les intérêts/ajustements affectent UN seul compte (crédit/débit), pas DEUX (transfert)
+
+#### **Hook** (`useTransferForm.ts`)
+
+- **Filtrage intelligent** : Nouvelle règle pour `filteredDestAccounts`
+  - **Priorité 1** : Si `isInterest=true` → Uniquement comptes ÉPARGNE
+  - **Priorité 2** : Si source est ÉPARGNE → Destination doit être compte pivot
+  - **Priorité 3** : Cas général → Tous les comptes disponibles
+- **Documentation** : Commentaires JSDoc mis à jour avec les 3 règles
+- **Dépendances useMemo** : Ajout de `isInterest` aux dépendances pour réactivité
+
+#### **Qualité Code**
+
+- **Corrections ESLint** :
+  - `DashboardView.tsx` : Import `AccountType` non utilisé supprimé
+  - `TransfersView.tsx` : 4 paramètres préfixés avec `_` (`_people`, `_settings`, `_categories`, `_onUpsertTransaction`)
+  - `useBalancesRows.ts` : Paramètres `_accounts` et `_budgetPeriodeGlobal` préfixés, dépendances useMemo inutiles retirées
+- **Résultat** : 0 erreurs, 0 warnings ESLint
+
+#### **Impact Utilisateur**
+
+- ✅ **Clarté sémantique** : Le formulaire reflète visuellement la nature de l'opération
+- ✅ **Réduction de confusion** : Plus de sélecteur source inapproprié pour les intérêts
+- ✅ **Guidage utilisateur** : Seuls les comptes d'épargne sont proposés pour les intérêts bancaires
+
+---
+
+## [2.4.1] - 2026-01-09
+
+### ✨ Amélioration - Gestion des Intérêts et Ajustements
+
+**Nouveau champ `isInterest` pour les virements internes**
+
+Ajout d'une fonctionnalité permettant de marquer les virements comme ajouts d'intérêts bancaires ou ajustements exceptionnels. Cette distinction permet une meilleure catégorisation et un suivi plus précis des mouvements financiers.
+
+#### **Types** (`types.ts`)
+
+- **Ajout** : Nouveau champ optionnel `isInterest?: boolean` dans l'interface `Transfer`
+- **Documentation** : Commentaire JSDoc explicatif sur l'usage du champ
+
+#### **Hook** (`useTransactionForm.ts`)
+
+- **État** : Nouveau state `isInterest` avec getter/setter
+- **Initialisation** : Détection automatique depuis le label lors de l'édition
+  - Reconnaît les labels contenant "intérêt", "ajustement" ou commençant par "intérêts"
+- **Reset** : Réinitialisation à `false` lors du nettoyage du formulaire
+- **Soumission** : Champ inclus dans l'objet `Transfer` final lors de la création/modification
+
+#### **Interface Utilisateur** (`VariableTransactionForm.tsx`)
+
+- **Nouveau toggle** : Carte interactive "Intérêts ou Ajustement Exceptionnel"
+- **Design** :
+  - Icône `TrendingUp` avec couleur adaptative (emerald si actif, slate si inactif)
+  - Background emerald-50 + border emerald-200 quand activé
+  - Texte d'aide contextuel expliquant l'usage
+- **Placement** : Entre l'InfoBox de description et le formulaire de saisie
+- **UX** : Carte entièrement cliquable, feedback visuel immédiat
+
+#### **Base de Données**
+
+- **Migration** : `startup/migrations/002_add_is_interest_to_transfers.sql`
+- **Colonne** : `is_interest boolean DEFAULT false` ajoutée à la table `transfers`
+- **Index** : Index partiel sur `is_interest = true` pour optimiser les requêtes filtrées
+- **Rétrocompatibilité** : ✅ Champ optionnel, pas d'impact sur les données existantes
+
+#### **Services API**
+
+- **`dbTypes.ts`** : Ajout de `is_interest?: boolean` à l'interface `DbTransfer`
+- **`apiMappers.ts`** : Mapping bidirectionnel `is_interest ↔ isInterest` dans `mapDbTransfer`
+- **`apiCrud.ts`** : Champ `is_interest` inclus dans la fonction `apiUpsertTransfer`
+
+#### **Documentation**
+
+- **Guide complet** : `docs/FEATURE_INTERESTS_ADJUSTMENTS.md`
+  - Cas d'usage détaillés
+  - Instructions d'utilisation
+  - Tests recommandés
+  - Prochaines étapes possibles
+
+#### **Cas d'usage typiques**
+
+- 💰 **Intérêts bancaires** : Ajout automatique d'intérêts sur comptes épargne
+- 🔧 **Ajustement exceptionnel** : Correction manuelle après erreur bancaire
+- 📊 **Régularisation** : Virements de régularisation comptable
+
+---
+
 ## [2.4.0] - 2026-01-09
 
 ### ♻️ Refactorisation Architecturale Majeure

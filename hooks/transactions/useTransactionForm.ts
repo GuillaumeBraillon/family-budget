@@ -22,14 +22,13 @@
  * - useState, useEffect, useMemo : Hooks React pour l'état et la memoization
  */
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { VariableTransaction, Transfer, Account, AccountType, Person, SavedLabel, TagAmount } from "../../types";
+import { VariableTransaction, Account, AccountType, Person, SavedLabel, TagAmount } from "../../types";
 
 /**
  * Type du mode formulaire.
  * - STANDARD : Transaction variable classique (dépense/revenu)
- * - TRANSFER : Virement interne entre comptes
  */
-export type FormMode = "STANDARD" | "TRANSFER";
+export type FormMode = "STANDARD";
 
 /**
  * Type de transaction.
@@ -81,8 +80,6 @@ interface UseTransactionFormReturn {
 
   accountId: string;
   setAccountId: (accountId: string) => void;
-  destAccountId: string;
-  setDestAccountId: (destAccountId: string) => void;
 
   category: string;
   setCategory: (category: string) => void;
@@ -105,13 +102,10 @@ interface UseTransactionFormReturn {
   isExpense: boolean;
   themeColor: string;
   checkingAccounts: Account[];
-  filteredSourceAccounts: Account[];
-  filteredDestAccounts: Account[];
   standardSuggestions: string[];
-  transferSuggestions: string[];
 
   // --- ACTIONS ---
-  handleSubmit: (targetIsWaiting: boolean, onSuccess: () => void) => VariableTransaction | Transfer | null;
+  handleSubmit: (targetIsWaiting: boolean, onSuccess: () => void) => VariableTransaction | null;
   resetForm: () => void;
 }
 
@@ -188,7 +182,6 @@ export const useTransactionForm = ({
   const checkingAccounts = useMemo(() => accounts.filter((a) => a.type === AccountType.CHECKING), [accounts]);
 
   const [accountId, setAccountId] = useState(checkingAccounts[0]?.id || accounts[0]?.id || "");
-  const [destAccountId, setDestAccountId] = useState(accounts[1]?.id || accounts[0]?.id || "");
 
   const [category, setCategory] = useState("");
   const [subCategory, setSubCategory] = useState("");
@@ -201,13 +194,12 @@ export const useTransactionForm = ({
   const isExpense = type === "EXPENSE";
 
   /**
-   * Couleur du thème selon le mode/type.
-   * - TRANSFER : Indigo (virement)
+   * Couleur du thème selon le type.
    * - EXPENSE + Refund : Emerald (remboursement)
    * - EXPENSE : Indigo (dépense)
    * - INCOME : Emerald (revenu)
    */
-  const themeColor = mode === "TRANSFER" ? "indigo" : isExpense ? (isRefund ? "emerald" : "indigo") : "emerald";
+  const themeColor = isExpense ? (isRefund ? "emerald" : "indigo") : "emerald";
 
   /**
    * Suggestions de libellés pour mode STANDARD.
@@ -221,44 +213,6 @@ export const useTransactionForm = ({
       return labelsSuggestions;
     }
   }, [savedLabels, labelsSuggestions, isExpense]);
-
-  /**
-   * Suggestions de libellés pour mode TRANSFER.
-   * Filtre les libellés sauvegardés de type TRANSFER.
-   */
-  const transferSuggestions = useMemo(() => {
-    return savedLabels.filter((l) => l.type === AccountType.TRANSFER).map((l) => l.name);
-  }, [savedLabels]);
-
-  /**
-   * Filtrage des comptes sources pour virements.
-   *
-   * **Règle métier :**
-   * Si la destination est un compte ÉPARGNE, la source DOIT être le compte pivot (isJoint).
-   * Sinon, tous les comptes sont autorisés.
-   */
-  const filteredSourceAccounts = useMemo(() => {
-    const destAccount = accounts.find((a) => a.id === destAccountId);
-    if (destAccount && destAccount.type === AccountType.SAVINGS) {
-      return accounts.filter((a) => a.isJoint);
-    }
-    return accounts;
-  }, [accounts, destAccountId]);
-
-  /**
-   * Filtrage des comptes destinations pour virements.
-   *
-   * **Règle métier :**
-   * Si la source est un compte ÉPARGNE, la destination DOIT être le compte pivot (isJoint).
-   * Sinon, tous les comptes sont autorisés.
-   */
-  const filteredDestAccounts = useMemo(() => {
-    const srcAccount = accounts.find((a) => a.id === accountId);
-    if (srcAccount && srcAccount.type === AccountType.SAVINGS) {
-      return accounts.filter((a) => a.isJoint);
-    }
-    return accounts;
-  }, [accounts, accountId]);
 
   // --- INITIALISATION / RESET ---
 
@@ -306,17 +260,9 @@ export const useTransactionForm = ({
         setDate(editingTransaction.date);
         setLabel(editingTransaction.label);
 
-        // Mode TRANSFER : Charger comptes source/dest depuis comments
-        if (initialMode === "TRANSFER") {
-          setAccountId(editingTransaction.accountId);
-          if (editingTransaction.comments && accounts.some((a) => a.id === editingTransaction.comments)) {
-            setDestAccountId(editingTransaction.comments);
-          }
-        } else {
-          setAccountId(editingTransaction.accountId);
-          setComments(editingTransaction.comments || "");
-          setSelectedTagAmounts(editingTransaction.tagAmounts || []);
-        }
+        setAccountId(editingTransaction.accountId);
+        setComments(editingTransaction.comments || "");
+        setSelectedTagAmounts(editingTransaction.tagAmounts || []);
 
         setCategory(editingTransaction.category);
         setSubCategory(editingTransaction.subCategory || "");
@@ -336,24 +282,22 @@ export const useTransactionForm = ({
    *
    * @description
    * 1. Valide tous les champs obligatoires
-   * 2. Construit l'objet Transaction ou Transfer
+   * 2. Construit l'objet Transaction
    * 3. Appelle onSuccess si validation OK
    *
    * **Règles de validation :**
    * - Libellé non vide
    * - Montant > 0
    * - Compte source renseigné
-   * - (TRANSFER) Compte dest renseigné et différent de source
    * - (TAGS) Somme tags ≤ montant total
    *
    * **Gestion du montant final :**
-   * - MODE STANDARD + EXPENSE + isRefund : -Math.abs(amount)
-   * - MODE STANDARD : Math.abs(amount)
-   * - MODE TRANSFER : Math.abs(amount)
+   * - EXPENSE + isRefund : -Math.abs(amount)
+   * - Sinon : Math.abs(amount)
    *
    * @param {boolean} targetIsWaiting - Statut "en attente" ou "pointé"
    * @param {() => void} onSuccess - Callback appelé après validation réussie
-   * @returns {VariableTransaction | Transfer | null} Transaction construite ou null si erreur
+   * @returns {VariableTransaction | null} Transaction construite ou null si erreur
    *
    * @example
    * ```tsx
@@ -366,19 +310,13 @@ export const useTransactionForm = ({
    * }
    * ```
    */
-  const handleSubmit = (targetIsWaiting: boolean, onSuccess: () => void): VariableTransaction | Transfer | null => {
+  const handleSubmit = (targetIsWaiting: boolean, onSuccess: () => void): VariableTransaction | null => {
     const errors: string[] = [];
 
     // Validation des champs obligatoires
     if (!label.trim()) errors.push("Le libellé est obligatoire");
     if (!amount || parseFloat(amount) === 0) errors.push("Le montant est obligatoire et doit être différent de 0");
     if (!accountId) errors.push("Le compte est obligatoire");
-
-    // Validation spécifique MODE TRANSFER
-    if (mode === "TRANSFER") {
-      if (!destAccountId) errors.push("Le compte de destination est obligatoire");
-      if (accountId === destAccountId) errors.push("Le compte source et destination ne peuvent pas être identiques");
-    }
 
     // Validation des tagAmounts (permet ventilation partielle)
     if (selectedTagAmounts.length > 0) {
@@ -397,51 +335,34 @@ export const useTransactionForm = ({
 
     setValidationErrors([]);
 
-    // Construction de l'objet final
-    if (mode === "TRANSFER") {
-      if (!destAccountId || accountId === destAccountId) return null;
-
-      const transfer: Transfer = {
-        id: editingTransaction?.id || `tr_${Date.now()}`,
-        date,
-        label,
-        amount: parseFloat(amount),
-        sourceAccountId: accountId,
-        destinationAccountId: destAccountId,
-      };
-
-      onSuccess();
-      return transfer;
+    // Construction de la transaction
+    let finalAmount = parseFloat(amount);
+    if (type === "EXPENSE" && isRefund) {
+      // Remboursement : montant négatif
+      finalAmount = -Math.abs(finalAmount);
     } else {
-      // MODE STANDARD
-      let finalAmount = parseFloat(amount);
-      if (type === "EXPENSE" && isRefund) {
-        // Remboursement : montant négatif
-        finalAmount = -Math.abs(finalAmount);
-      } else {
-        finalAmount = Math.abs(finalAmount);
-      }
-
-      const transaction: VariableTransaction = {
-        id: editingTransaction?.id || `var_${Date.now()}`,
-        date,
-        label,
-        amount: finalAmount,
-        category,
-        subCategory,
-        accountId,
-        beneficiaryId,
-        type,
-        isWaiting: targetIsWaiting,
-        isExtra, // Toggle global au niveau opération
-        comments: comments.trim() || undefined,
-        tagAmounts: selectedTagAmounts.length > 0 ? selectedTagAmounts : undefined,
-        position: editingTransaction?.position,
-      };
-
-      onSuccess();
-      return transaction;
+      finalAmount = Math.abs(finalAmount);
     }
+
+    const transaction: VariableTransaction = {
+      id: editingTransaction?.id || `var_${Date.now()}`,
+      date,
+      label,
+      amount: finalAmount,
+      category,
+      subCategory,
+      accountId,
+      beneficiaryId,
+      type,
+      isWaiting: targetIsWaiting,
+      isExtra, // Toggle global au niveau opération
+      comments: comments.trim() || undefined,
+      tagAmounts: selectedTagAmounts.length > 0 ? selectedTagAmounts : undefined,
+      position: editingTransaction?.position,
+    };
+
+    onSuccess();
+    return transaction;
   };
 
   // --- RETOUR PUBLIC ---
@@ -464,8 +385,6 @@ export const useTransactionForm = ({
 
     accountId,
     setAccountId,
-    destAccountId,
-    setDestAccountId,
 
     category,
     setCategory,
@@ -488,10 +407,7 @@ export const useTransactionForm = ({
     isExpense,
     themeColor,
     checkingAccounts,
-    filteredSourceAccounts,
-    filteredDestAccounts,
     standardSuggestions,
-    transferSuggestions,
 
     // Actions
     handleSubmit,

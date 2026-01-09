@@ -121,6 +121,7 @@ export interface DbTransfer {
   destination_account_id: string;
   created_at?: string;
   position?: number;
+  is_interest?: boolean;
 }
 
 export interface DbSettings {

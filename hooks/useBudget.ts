@@ -441,14 +441,9 @@ export const useBudget = () => {
     await balanceHandlers.handleVariableTransactionBalance(oldTx, tx);
 
     // CRUD avec reload
-    return (
-      crudActions.upsertVariableTransaction?.(tx) ||
-      (async () => {
-        const res = await apiUpsertVariableTransaction(tx);
-        await loadData(true);
-        return res;
-      })()
-    );
+    const res = await apiUpsertVariableTransaction(tx);
+    await loadData(true);
+    return res;
   };
 
   const deleteVariableTransaction = async (id: string) => {
@@ -458,14 +453,9 @@ export const useBudget = () => {
     await balanceHandlers.handleVariableTransactionBalance(oldTx, null);
 
     // CRUD avec reload
-    return (
-      crudActions.deleteVariableTransaction?.(id) ||
-      (async () => {
-        const res = await apiDeleteVariableTransaction(id);
-        await loadData(true);
-        return res;
-      })()
-    );
+    const res = await apiDeleteVariableTransaction(id);
+    await loadData(true);
+    return res;
   };
 
   const upsertTransfer = async (t: Transfer) => {
@@ -475,14 +465,9 @@ export const useBudget = () => {
     await balanceHandlers.handleTransferBalances(oldTransfer, t);
 
     // CRUD avec reload
-    return (
-      crudActions.upsertTransfer?.(t) ||
-      (async () => {
-        const res = await apiUpsertTransfer(t);
-        await loadData(true);
-        return res;
-      })()
-    );
+    const res = await apiUpsertTransfer(t);
+    await loadData(true);
+    return res;
   };
 
   const deleteTransfer = async (id: string) => {
@@ -492,14 +477,9 @@ export const useBudget = () => {
     await balanceHandlers.handleTransferBalances(oldTransfer, null);
 
     // CRUD avec reload
-    return (
-      crudActions.deleteTransfer?.(id) ||
-      (async () => {
-        const res = await apiDeleteTransfer(id);
-        await loadData(true);
-        return res;
-      })()
-    );
+    const res = await apiDeleteTransfer(id);
+    await loadData(true);
+    return res;
   };
 
   const moveTransfer = async (transfer: Transfer, newPosition: number) => {

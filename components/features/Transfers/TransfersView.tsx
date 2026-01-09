@@ -47,7 +47,7 @@ import { ListSorter } from "../../ui/molecules/ListSorter";
 import { SortableRow } from "../../ui/molecules/SortableRow";
 
 // Imports Feature Components
-import { VariableTransactionForm } from "../Operations/components/VariableTransactionForm";
+import { TransferForm } from "./components/TransferForm";
 import { TransfersKPIs } from "./components/TransfersKPIs";
 
 interface TransfersViewProps {
@@ -68,12 +68,12 @@ export const TransfersView: React.FC<TransfersViewProps> = ({
   transfers,
   variableTransactions,
   accounts,
-  people,
-  settings,
-  categories,
+  _people,
+  _settings,
+  _categories,
   savedLabels,
   onUpsertTransfer,
-  onUpsertTransaction,
+  _onUpsertTransaction,
   onDeleteTransfer,
   onMoveTransfer,
 }) => {
@@ -105,37 +105,22 @@ export const TransfersView: React.FC<TransfersViewProps> = ({
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingTransfer, setEditingTransfer] = useState<Transfer | null>(null);
-  const [editingVar, setEditingVar] = useState<VariableTransaction | null>(null);
 
   // --- HANDLERS ---
 
   /**
-   * Ouvre le formulaire d'édition pour un virement ou une opération directe.
+   * Ouvre le formulaire d'édition pour un virement.
    *
    * @param {Transfer | VariableTransaction} item - Item à éditer
    */
   const handleEdit = (item: Transfer | VariableTransaction) => {
     if (isTransfer(item)) {
-      // Mapping Transfer → VariableTransaction pour réutiliser le formulaire
-      const mockTx: Partial<VariableTransaction> = {
-        id: item.id,
-        date: item.date,
-        label: item.label,
-        amount: item.amount,
-        category: "Virement Interne",
-        accountId: item.sourceAccountId,
-        isWaiting: false,
-        isExtra: false,
-        type: "EXPENSE",
-        comments: item.destinationAccountId,
-      };
       setEditingTransfer(item);
-      setEditingVar(mockTx);
       setIsFormOpen(true);
     } else {
-      setEditingTransfer(null);
-      setEditingVar(item);
-      setIsFormOpen(true);
+      // Opérations directes non supportées dans ce formulaire
+      // À implémenter: utiliser VariableTransactionForm pour les opérations directes
+      console.warn("Édition d'opération directe non supportée dans TransferForm");
     }
   };
 
@@ -385,7 +370,6 @@ export const TransfersView: React.FC<TransfersViewProps> = ({
           count={currentItems.length}
           onAdd={() => {
             setEditingTransfer(null);
-            setEditingVar(null);
             setIsFormOpen(true);
           }}
           addButtonLabel="Nouveau mouvement"
@@ -445,28 +429,15 @@ export const TransfersView: React.FC<TransfersViewProps> = ({
         </DataList>
       </div>
 
-      <VariableTransactionForm
+      <TransferForm
         isOpen={isFormOpen}
         onClose={() => setIsFormOpen(false)}
         accounts={accountsWithBalances}
-        categories={categories}
-        people={people}
-        onAddTransaction={onUpsertTransaction}
-        onUpsertTransfer={onUpsertTransfer}
-        onDeleteTransaction={(_id) => {
-          if (editingTransfer) {
-            onDeleteTransfer(editingTransfer.id);
-          } else if (editingVar) {
-            // Supprimer l'opération directe via variableTransactions
-            // À implémenter: onDeleteTransaction dans les props
-          }
-        }}
-        defaultDate={defaultDate}
         savedLabels={savedLabels}
-        labelsSuggestions={settings.variable_labels}
-        editingTransaction={editingVar}
-        initialMode={editingTransfer ? "TRANSFER" : "STANDARD"}
-        lockMode={!!editingTransfer}
+        editingTransfer={editingTransfer}
+        defaultDate={defaultDate}
+        onUpsertTransfer={onUpsertTransfer}
+        onDeleteTransfer={onDeleteTransfer}
       />
     </div>
   );

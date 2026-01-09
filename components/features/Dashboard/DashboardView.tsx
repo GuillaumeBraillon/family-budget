@@ -30,7 +30,6 @@ import {
   VariableTransaction,
   CategoryDef,
   OperationFilters,
-  AccountType,
 } from "../../../types";
 
 interface DashboardViewProps {
