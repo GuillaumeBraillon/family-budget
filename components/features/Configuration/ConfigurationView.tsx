@@ -100,21 +100,61 @@ export const ConfigurationView: React.FC<ConfigurationViewProps> = ({
       <ConfigurationTabs activeTab={activeTab} onTabChange={setActiveTab} />
 
       <div className="pt-2 space-y-6">
-        {activeTab === "general" && (
+        {/* ========== 1. CONFIGURATION DE BASE ========== */}
+
+        {activeTab === "family" && (
           <>
             <InfoBox
-              title="Paramètres Globaux"
-              description="Configurez ici les options de base de l'application, comme le montant du budget mensuel qui sera réparti entre vos périodes d'échéancier."
-              icon={<Sliders size={18} />}
+              title="Gestion des Bénéficiaires"
+              description="Gérez les membres du foyer. Les enfants sont exclus automatiquement des calculs de contribution et d'équité financière."
+              icon={<UserCircle size={18} />}
             />
-            <GlobalSettings settings={settings} onUpdate={onUpdateSettings} onResetConnection={onResetConnection} session={session} />
+            <PeopleManager people={people} onUpsertPerson={onUpsertPerson} onDeletePerson={onDeletePerson} />
           </>
         )}
+
+        {activeTab === "accounts" && (
+          <>
+            <InfoBox
+              title="Comptes Bancaires"
+              description="Gérez vos comptes courants et d'épargne. Assignez un propriétaire pour le suivi des soldes et des ratios de répartition."
+              icon={<CreditCard size={18} />}
+            />
+            <AccountManager accounts={accounts} people={people} onUpsertAccount={onUpsertAccount} onDeleteAccount={onDeleteAccount} />
+          </>
+        )}
+
+        {/* ========== 2. ORGANISATION & CLASSIFICATION ========== */}
+
+        {activeTab === "categories" && (
+          <>
+            <InfoBox
+              title="Catégories & Sous-Catégories"
+              description="Organisez vos flux financiers en catégories et sous-catégories. Utilisé pour classer et analyser vos opérations."
+              icon={<Tag size={18} />}
+            />
+            <CategoryManager categories={categories} onUpdateCategories={onUpdateCategories} />
+          </>
+        )}
+
+        {activeTab === "tags" && onUpsertTag && onDeleteTag && (
+          <>
+            <InfoBox
+              title="Tags Thématiques"
+              description="Étiquettes colorées pour regrouper vos opérations par projets ou événements transversaux (#Vacances, #Noël, #Travaux)."
+              icon={<Bookmark size={18} />}
+            />
+            <TagManager tags={tags} onUpsertTag={onUpsertTag} onDeleteTag={onDeleteTag} />
+          </>
+        )}
+
+        {/* ========== 3. OPÉRATIONS RÉCURRENTES ========== */}
+
         {activeTab === "operations" && (
           <>
             <InfoBox
-              title="Modèles d'opérations"
-              description="Définissez ici vos revenus (salaires, aides) et dépenses fixes (loyer, abonnements) qui reviennent chaque mois. Ces règles génèrent automatiquement votre échéancier."
+              title="Opérations Récurrentes"
+              description="Définissez vos revenus mensuels (salaires, aides) et dépenses fixes (loyer, abonnements). Génère automatiquement l'échéancier mensuel."
               icon={<CalendarRange size={18} />}
             />
             <OperationsManager
@@ -132,21 +172,12 @@ export const ConfigurationView: React.FC<ConfigurationViewProps> = ({
             />
           </>
         )}
-        {activeTab === "categories" && (
-          <>
-            <InfoBox
-              title="Classification des flux"
-              description="Personnalisez vos catégories et sous-catégories pour organiser vos dépenses et revenus. Une bonne classification permet une analyse plus fine de vos habitudes de consommation."
-              icon={<Tag size={18} />}
-            />
-            <CategoryManager categories={categories} onUpdateCategories={onUpdateCategories} />
-          </>
-        )}
+
         {activeTab === "labels" && (
           <>
             <InfoBox
               title="Libellés & Autocomplétion"
-              description="Gérez les listes de libellés pré-définis pour vos opérations. Ces libellés servent à accélérer la saisie lors de l'ajout de transactions manuelles."
+              description="Gérez vos libellés pré-enregistrés pour accélérer la saisie des opérations variables (courses, essence, restaurants, etc.)."
               icon={<List size={18} />}
             />
             <AccountLabelManager
@@ -158,41 +189,25 @@ export const ConfigurationView: React.FC<ConfigurationViewProps> = ({
             />
           </>
         )}
-        {activeTab === "tags" && onUpsertTag && onDeleteTag && (
+
+        {/* ========== 4. PARAMÈTRES SYSTÈME ========== */}
+
+        {activeTab === "general" && (
           <>
             <InfoBox
-              title="Tags & Étiquettes"
-              description="Créez des tags colorés pour regrouper vos opérations par thèmes transverses (ex: #Vacances, #Noël, #Travaux) indépendamment des catégories."
-              icon={<Bookmark size={18} />}
+              title="Réglages Globaux"
+              description="Budget mensuel, découpage des périodes (semaines/jours fixes/parts égales), stratégie de gestion des dépassements, et connexion base de données."
+              icon={<Sliders size={18} />}
             />
-            <TagManager tags={tags} onUpsertTag={onUpsertTag} onDeleteTag={onDeleteTag} />
+            <GlobalSettings settings={settings} onUpdate={onUpdateSettings} onResetConnection={onResetConnection} session={session} />
           </>
         )}
-        {activeTab === "family" && (
-          <>
-            <InfoBox
-              title="Gestion des Bénéficiaires"
-              description="Définissez les bénéficiaires de votre foyer. Marquer un membre comme 'Enfant' permet de le distinguer dans les KPIs d'équité (ils ne sont pas considérés comme contributeurs financiers)."
-              icon={<UserCircle size={18} />}
-            />
-            <PeopleManager people={people} onUpsertPerson={onUpsertPerson} onDeletePerson={onDeletePerson} />
-          </>
-        )}
-        {activeTab === "accounts" && (
-          <>
-            <InfoBox
-              title="Comptes Bancaires"
-              description="Gérez la liste de vos comptes. Chaque opération de l'échéancier doit être reliée à un compte pour calculer précisément les soldes prévisionnels."
-              icon={<CreditCard size={18} />}
-            />
-            <AccountManager accounts={accounts} people={people} onUpsertAccount={onUpsertAccount} onDeleteAccount={onDeleteAccount} />
-          </>
-        )}
+
         {activeTab === "users" && onToggleUserAuthorization && onUpdateUserNotes && onDeleteUser && (
           <>
             <InfoBox
-              title="Autorisations d'accès"
-              description="Contrôlez qui peut accéder à l'application. Les utilisateurs non autorisés qui tentent de se connecter apparaissent ici en attente. Autorisez-les pour leur donner accès ou supprimez-les pour refuser définitivement."
+              title="Utilisateurs Autorisés"
+              description="Contrôlez les accès à l'application. Whitelist des utilisateurs autorisés à se connecter via Google OAuth."
               icon={<Shield size={18} />}
             />
             <UsersManager

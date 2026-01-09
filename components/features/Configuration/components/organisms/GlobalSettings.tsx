@@ -32,16 +32,20 @@ export const GlobalSettings: React.FC<GlobalSettingsProps> = ({ settings, onUpda
 
   return (
     <div className="max-w-5xl mx-auto space-y-6 pb-12 animate-in fade-in duration-500">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
-        <MonthlyEnvelopeCard settings={settings} onUpdate={updateEnvelope} />
-        <PeriodSettingsCard settings={settings} onUpdate={updatePeriod} />
-      </div>
-
+      {/* Configuration budgétaire */}
+      <MonthlyEnvelopeCard settings={settings} onUpdate={updateEnvelope} />
+      <PeriodSettingsCard settings={settings} onUpdate={updatePeriod} />
       <CarryoverStrategyCard settings={settings} onUpdate={updateCarryoverStrategy} />
 
-      <div className="border-t border-slate-200 pt-6 space-y-6">
-        <LocalStorageManager />
-        <DatabaseConnectionCard onReset={onResetConnection} />
+      {/* Actions système */}
+      <div className="border-t border-slate-200 pt-6">
+        <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide mb-4 flex items-center gap-2">
+          <span className="text-slate-400">⚙️</span> Actions Système
+        </h3>
+        <div className="space-y-4">
+          <LocalStorageManager />
+          <DatabaseConnectionCard onReset={onResetConnection} />
+        </div>
       </div>
     </div>
   );

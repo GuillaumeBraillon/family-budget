@@ -88,9 +88,10 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 ### 🔧 Technique
 
 - **Types TypeScript** :
+
   ```typescript
   export type CarryoverStrategy = "NEXT_PERIOD" | "SPREAD_REMAINING";
-  
+
   export interface AppSettings {
     monthly_envelope: number;
     period_type: PeriodType;
@@ -108,6 +109,7 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
   - `BudgetDistributionSummary` (molecule) : Affichage contextuel
 
 - **Flux de données** :
+
   ```
   AppSettings.carryover_strategy
   ↓
@@ -125,6 +127,7 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 ### 📊 Exemples d'utilisation
 
 **Scénario 1 : NEXT_PERIOD avec dépassement**
+
 ```
 Mois divisé en 4 périodes de 500€ chacune
 P1: Consommation 778€ → Dépassement -278€
@@ -133,6 +136,7 @@ P3: Budget ajusté = 222€ + solde P2
 ```
 
 **Scénario 2 : SPREAD_REMAINING avec dépassement**
+
 ```
 Mois divisé en 4 périodes de 500€ chacune
 P1: Consommation 800€ → Dépassement -300€
@@ -144,6 +148,7 @@ P4: Budget ajusté = 500€ - 100€ = 400€
 ```
 
 **Scénario 3 : SPREAD_REMAINING avec reports multiples**
+
 ```
 P1: Dépassement -300€ → Étalé sur P2, P3, P4 → -100€ chacune
 P2: Dépassement -150€ (après ajustement de P1)

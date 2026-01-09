@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Tag as TagIcon, Trash2, Plus } from "lucide-react";
+import { Tag as TagIcon, Trash2, Plus, Edit2, X, Check } from "lucide-react";
 import { Tag } from "../../../../../types";
 import { Card, CardContent, CardHeader, CardTitle } from "../../../../ui/Card";
 import { ConfirmModal } from "../../../../ui/atoms/ConfirmModal";
@@ -29,6 +29,9 @@ export const TagManager: React.FC<TagManagerProps> = ({ tags, onUpsertTag, onDel
   const [name, setName] = useState("");
   const [selectedColor, setSelectedColor] = useState(PRESET_COLORS[0]);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [editingTagId, setEditingTagId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editColor, setEditColor] = useState("");
 
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,6 +47,30 @@ export const TagManager: React.FC<TagManagerProps> = ({ tags, onUpsertTag, onDel
     // Rotation couleur simple
     const nextColorIndex = (PRESET_COLORS.indexOf(selectedColor) + 1) % PRESET_COLORS.length;
     setSelectedColor(PRESET_COLORS[nextColorIndex]);
+  };
+
+  const handleStartEdit = (tag: Tag) => {
+    setEditingTagId(tag.id);
+    setEditName(tag.name);
+    setEditColor(tag.color);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingTagId(null);
+    setEditName("");
+    setEditColor("");
+  };
+
+  const handleSaveEdit = () => {
+    if (!editingTagId || !editName.trim()) return;
+
+    const updatedTag: Tag = {
+      id: editingTagId,
+      name: editName.trim(),
+      color: editColor,
+    };
+    onUpsertTag(updatedTag);
+    handleCancelEdit();
   };
 
   return (
@@ -107,18 +134,82 @@ export const TagManager: React.FC<TagManagerProps> = ({ tags, onUpsertTag, onDel
           </form>
 
           <div>
-            <label className="text-xs font-bold text-slate-500 uppercase block mb-3">Tags existants</label>
-            <div className="flex flex-wrap gap-2">
+            <label className="text-xs font-bold text-slate-500 uppercase block mb-3">Tags existants ({tags.length})</label>
+            <div className="space-y-3">
               {tags.map((tag) => (
-                <div
-                  key={tag.id}
-                  className="pl-3 pr-2 py-1.5 rounded-lg border flex items-center gap-2 text-white text-sm font-bold shadow-sm animate-in zoom-in duration-200"
-                  style={{ backgroundColor: tag.color, borderColor: tag.color }}
-                >
-                  {tag.name}
-                  <button onClick={() => setDeleteConfirm(tag.id)} className="p-1 hover:bg-white/20 rounded-md transition-colors">
-                    <Trash2 size={14} />
-                  </button>
+                <div key={tag.id}>
+                  {editingTagId === tag.id ? (
+                    // Mode édition
+                    <div className="p-4 bg-slate-50 rounded-xl border-2 border-indigo-300 space-y-3 animate-in fade-in duration-200">
+                      <div>
+                        <label className="text-xs font-bold text-slate-500 uppercase block mb-2">Nom du tag</label>
+                        <input
+                          type="text"
+                          value={editName}
+                          onChange={(e) => setEditName(e.target.value)}
+                          className="w-full p-2.5 rounded-lg border border-slate-300 outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+                          autoFocus
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-xs font-bold text-slate-500 uppercase block mb-2">Couleur</label>
+                        <div className="flex flex-wrap gap-2">
+                          {PRESET_COLORS.map((color) => (
+                            <button
+                              key={color}
+                              type="button"
+                              onClick={() => setEditColor(color)}
+                              className={`w-8 h-8 rounded-full border-2 transition-all ${
+                                editColor === color ? "border-slate-600 scale-110 shadow-sm" : "border-transparent hover:scale-105"
+                              }`}
+                              style={{ backgroundColor: color }}
+                            />
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="flex gap-2 pt-2">
+                        <button
+                          onClick={handleCancelEdit}
+                          className="flex-1 px-3 py-2 bg-slate-200 text-slate-700 rounded-lg font-bold hover:bg-slate-300 transition-colors flex items-center justify-center gap-2"
+                        >
+                          <X size={16} /> Annuler
+                        </button>
+                        <button
+                          onClick={handleSaveEdit}
+                          disabled={!editName.trim()}
+                          className="flex-1 px-3 py-2 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+                        >
+                          <Check size={16} /> Enregistrer
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    // Mode visualisation
+                    <div
+                      className="pl-4 pr-3 py-2.5 rounded-lg border-2 flex items-center justify-between text-white text-sm font-bold shadow-sm hover:shadow-md transition-all group"
+                      style={{ backgroundColor: tag.color, borderColor: tag.color }}
+                    >
+                      <span className="flex-1">{tag.name}</span>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => handleStartEdit(tag)}
+                          className="p-1.5 hover:bg-white/20 rounded-md transition-colors opacity-0 group-hover:opacity-100"
+                          title="Modifier"
+                        >
+                          <Edit2 size={14} />
+                        </button>
+                        <button
+                          onClick={() => setDeleteConfirm(tag.id)}
+                          className="p-1.5 hover:bg-white/20 rounded-md transition-colors opacity-0 group-hover:opacity-100"
+                          title="Supprimer"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
               {tags.length === 0 && <p className="text-xs text-slate-400 italic">Aucun tag créé.</p>}
