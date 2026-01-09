@@ -13,6 +13,16 @@ export interface BalanceRow {
   isJoint: boolean;
   ratio?: number;
   cap?: number;
+  // Nouvelles props pour explications des calculs
+  calculation?: {
+    sharePercent?: number; // Part en % (pour comptes persos)
+    theoreticalAmount?: number; // Montant théorique avant seuil
+    isContributor?: boolean; // Est-ce qu'il contribue (> 10€)
+    jointDebts?: number; // Dettes en attente (pour compte joint)
+    jointGap?: number; // Gap = dettes - solde (pour compte joint)
+    fromPersonals?: number; // Reçu des comptes persos (pour compte joint)
+    fromLdds?: number; // Reçu du LDDS (pour compte joint)
+  };
 }
 
 interface BalancesTableProps {
@@ -20,9 +30,10 @@ interface BalancesTableProps {
   onUpdateBalance: (accountId: string, newBalance: number) => void;
   title?: string;
   totalRow?: BalanceRow;
+  hasCurrentAccountsSurplus?: boolean;
 }
 
-export const BalancesTable: React.FC<BalancesTableProps> = ({ rows, onUpdateBalance, title, totalRow }) => {
+export const BalancesTable: React.FC<BalancesTableProps> = ({ rows, onUpdateBalance, title, totalRow, hasCurrentAccountsSurplus = false }) => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [tempBalance, setTempBalance] = useState<string>("");
 
@@ -49,6 +60,22 @@ export const BalancesTable: React.FC<BalancesTableProps> = ({ rows, onUpdateBala
 
   // Arrondi au multiple de 5 le plus proche pour les virements
   const roundTransfer = (amount: number) => Math.round(amount / 5) * 5;
+
+  // Fonction pour déterminer le label de virement intelligent
+  const getTransferLabel = (row: BalanceRow): string => {
+    if (row.transfer > 0) {
+      // Crédit : le compte reçoit de l'argent
+      if (row.isJoint) {
+        // Compte joint en besoin : privilégier les excédents des comptes courants
+        return hasCurrentAccountsSurplus ? "Depuis C. Courants" : "Depuis LDDS";
+      } else {
+        return "Depuis C. Joint";
+      }
+    } else {
+      // Débit : le compte donne de l'argent
+      return row.isJoint ? "Vers LDDS" : "Vers C. Joint";
+    }
+  };
 
   return (
     <Card className="overflow-hidden border-slate-200 shadow-sm flex flex-col">
@@ -178,17 +205,104 @@ export const BalancesTable: React.FC<BalancesTableProps> = ({ rows, onUpdateBala
                     {row.isJoint && <p className="text-[9px] text-slate-400 mt-0.5">Inclus factures</p>}
                   </td>
                   <td className="px-4 py-2.5 text-right bg-indigo-50/30 font-bold font-mono">
-                    <div className="flex flex-col items-end">
-                      <span
-                        className={`text-sm ${row.transfer > 0 ? "text-indigo-600" : "text-emerald-600"}`}
-                        title={`Exact: ${row.transfer > 0 ? "+" : ""}${row.transfer.toFixed(2)} €`}
-                      >
-                        {row.transfer > 0 ? "+" : ""}
-                        {roundedTransfer} €
-                      </span>
-                      <span className="text-[9px] text-indigo-400 uppercase font-medium">
-                        {row.transfer > 0 ? (row.isJoint ? "Depuis LDDS" : "Depuis C. Joint") : row.isJoint ? "Vers LDDS" : "Vers C. Joint"}
-                      </span>
+                    <div className="flex flex-col items-end gap-1">
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`text-sm ${row.transfer > 0 ? "text-indigo-600" : "text-emerald-600"}`}
+                          title={`Exact: ${row.transfer > 0 ? "+" : ""}${row.transfer.toFixed(2)} €`}
+                        >
+                          {row.transfer > 0 ? "+" : ""}
+                          {roundedTransfer} €
+                        </span>
+
+                        {/* Tooltip explicatif du calcul */}
+                        {row.calculation && (
+                          <MobileTooltip
+                            text={
+                              <div className="space-y-2 text-xs">
+                                {row.isJoint ? (
+                                  // Explication pour compte joint
+                                  <>
+                                    <p className="font-bold text-indigo-200 border-b border-white/10 pb-1">Calcul du virement reçu :</p>
+
+                                    <div className="space-y-1">
+                                      <div className="flex justify-between gap-3">
+                                        <span className="text-slate-300">Dettes en attente :</span>
+                                        <span className="font-mono font-bold text-white">{row.calculation.jointDebts?.toFixed(2)}€</span>
+                                      </div>
+                                      <div className="flex justify-between gap-3">
+                                        <span className="text-slate-300">Solde actuel :</span>
+                                        <span className="font-mono font-bold text-white">{row.balance.toFixed(2)}€</span>
+                                      </div>
+                                      <div className="flex justify-between gap-3 border-t border-white/10 pt-1 font-bold">
+                                        <span className="text-indigo-200">Gap (besoin) :</span>
+                                        <span className="font-mono text-indigo-200">{row.calculation.jointGap?.toFixed(2)}€</span>
+                                      </div>
+                                    </div>
+
+                                    <div className="border-t border-white/10 pt-2 space-y-1">
+                                      <p className="text-slate-300 text-[10px] uppercase tracking-wide">Couvert par :</p>
+                                      <div className="flex justify-between gap-3">
+                                        <span className="text-emerald-300">Excédents C. Persos :</span>
+                                        <span className="font-mono font-bold text-emerald-300">{row.calculation.fromPersonals?.toFixed(2)}€</span>
+                                      </div>
+                                      {row.calculation.fromLdds && row.calculation.fromLdds > 0 ? (
+                                        <div className="flex justify-between gap-3">
+                                          <span className="text-amber-300">Complément LDDS :</span>
+                                          <span className="font-mono font-bold text-amber-300">{row.calculation.fromLdds.toFixed(2)}€</span>
+                                        </div>
+                                      ) : (
+                                        <p className="text-emerald-300 text-[10px] italic">✓ Pas besoin du LDDS</p>
+                                      )}
+                                    </div>
+                                  </>
+                                ) : (
+                                  // Explication pour comptes personnels
+                                  <>
+                                    <p className="font-bold text-indigo-200 border-b border-white/10 pb-1">Calcul de la contribution :</p>
+
+                                    <div className="space-y-1">
+                                      <div className="flex justify-between gap-3">
+                                        <span className="text-slate-300">Solde actuel :</span>
+                                        <span className="font-mono font-bold text-white">{row.balance.toFixed(2)}€</span>
+                                      </div>
+                                      {row.calculation.sharePercent !== undefined && (
+                                        <div className="flex justify-between gap-3">
+                                          <span className="text-slate-300">Part du total :</span>
+                                          <span className="font-mono font-bold text-indigo-200">{row.calculation.sharePercent.toFixed(1)}%</span>
+                                        </div>
+                                      )}
+                                      {row.calculation.theoreticalAmount !== undefined && (
+                                        <div className="flex justify-between gap-3">
+                                          <span className="text-slate-300">Montant théorique :</span>
+                                          <span className="font-mono text-slate-300">{row.calculation.theoreticalAmount.toFixed(2)}€</span>
+                                        </div>
+                                      )}
+                                    </div>
+
+                                    <div className="border-t border-white/10 pt-2">
+                                      {row.calculation.isContributor ? (
+                                        <div className="bg-emerald-500/20 border border-emerald-400/30 rounded p-2">
+                                          <p className="text-emerald-200 text-[10px] font-bold mb-1">✓ CONTRIBUTEUR</p>
+                                          <p className="text-slate-300 text-[10px]">Montant ≥ 10€ : contribue au virement vers le compte joint.</p>
+                                        </div>
+                                      ) : (
+                                        <div className="bg-amber-500/20 border border-amber-400/30 rounded p-2">
+                                          <p className="text-amber-200 text-[10px] font-bold mb-1">○ NON-CONTRIBUTEUR</p>
+                                          <p className="text-slate-300 text-[10px]">Montant {"<"} 10€ : redistribué aux autres comptes contributeurs.</p>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </>
+                                )}
+                              </div>
+                            }
+                            icon={<Calculator size={12} className="text-indigo-400 hover:text-indigo-600" />}
+                            widthClass="w-80"
+                          />
+                        )}
+                      </div>
+                      <span className="text-[9px] text-indigo-400 uppercase font-medium">{getTransferLabel(row)}</span>
                     </div>
                   </td>
                 </tr>

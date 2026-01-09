@@ -8,6 +8,7 @@ import { BalancesHeader } from "./components/BalancesHeader";
 import { BalancesTable, BalanceRow } from "./components/BalancesTable";
 import { TransferSummaryCard } from "./components/TransferSummaryCard";
 import { BudgetDistributionSummary } from "./components/BudgetDistributionSummary";
+import { CalculationDetailsCard } from "./components/CalculationDetailsCard";
 
 interface BalancesViewProps {
   accounts: Account[];
@@ -518,35 +519,56 @@ export const BalancesView: React.FC<BalancesViewProps> = ({
     const jRows: BalanceRow[] = [];
     const pRows: BalanceRow[] = [];
 
-    // --- LOGIQUE COMPTES PERSONNELS (Méthode Enveloppe) ---
-    // 1. Calcul du Reste à Vivre Réel (Budget - Consommation)
-    const remainingBudget = distributableBalance;
+    // --- ÉTAPE 1 : Calculer le gap du compte joint ---
+    let jointGap = 0;
+    let jointTarget = 0;
 
-    // 2. Calcul du Montant Net à Distribuer (Reste à vivre - Ce qu'ils ont déjà)
-    const netDistributable = Math.max(0, remainingBudget - totalPersonalBalance);
+    if (jointAccount) {
+      const jointStats = stats.byAccount[jointAccount.id];
+      const pendingOnJoint = jointStats ? jointStats.remaining : 0;
+      jointTarget = pendingOnJoint;
+      jointGap = pendingOnJoint - jointAccount.currentBalance;
+    }
 
-    let totalTransfersToPersonals = 0;
+    // --- ÉTAPE 2 : Répartir la ponction proportionnellement aux soldes ---
+    const amountToTakeFromPersonals = Math.max(0, Math.min(jointGap, totalPersonalBalance - distributableBalance));
 
-    // Calcul pour chaque compte perso
+    const totalTransfersToPersonals = 0;
+    let totalSurplusFromPersonals = 0;
+
+    // PASSE 1 : Identifier qui peut contribuer (> seuil 10€)
+    const contributorAccounts = personalAccounts.filter((acc) => {
+      const shareOfTotal = totalPersonalBalance > 0 ? acc.currentBalance / totalPersonalBalance : 0;
+      const amountToTake = amountToTakeFromPersonals * shareOfTotal;
+      return amountToTake > 10;
+    });
+
+    // PASSE 2 : Calculer les transferts effectifs
+    // Si certains comptes ne peuvent pas contribuer (< seuil), on redistribue leur part aux contributeurs
+    const totalContributorBalance = contributorAccounts.reduce((sum, acc) => sum + acc.currentBalance, 0);
+
     for (const acc of personalAccounts) {
       const owner = people.find((p) => p.id === acc.ownerId);
-
       let transferAmount = 0;
 
-      // Application du Ratio sur le Net à Distribuer
-      if (acc.targetRatio !== undefined) {
-        const shareOfDistributable = netDistributable * (acc.targetRatio / 100);
-        const cap = acc.targetCap !== undefined ? acc.targetCap : Infinity;
-        transferAmount = Math.min(shareOfDistributable, cap);
+      const isContributor = contributorAccounts.some((c) => c.id === acc.id);
+      const shareOfTotal = totalPersonalBalance > 0 ? acc.currentBalance / totalPersonalBalance : 0;
+      const theoreticalAmount = amountToTakeFromPersonals * shareOfTotal;
+
+      if (isContributor && totalContributorBalance > 0) {
+        // Ce compte contribue : calculer sa part proportionnelle du total nécessaire
+        const shareOfContributors = acc.currentBalance / totalContributorBalance;
+        const amountToTake = amountToTakeFromPersonals * shareOfContributors;
+
+        transferAmount = -amountToTake; // Négatif car c'est un reversement
+        totalSurplusFromPersonals += amountToTake;
+      } else {
+        // Ce compte ne contribue pas (montant trop faible)
+        transferAmount = 0;
       }
 
       // Cible = Solde Actuel + Virement (Ce qu'ils devraient avoir au final)
       const targetBalance = acc.currentBalance + transferAmount;
-
-      // On cumule les virements positifs uniquement pour la synthèse
-      if (transferAmount > 0) {
-        totalTransfersToPersonals += transferAmount;
-      }
 
       pRows.push({
         id: acc.id,
@@ -554,32 +576,33 @@ export const BalancesView: React.FC<BalancesViewProps> = ({
         owner: owner?.name || "Inconnu",
         balance: acc.currentBalance,
         target: targetBalance,
-        transfer: transferAmount, // Peut être négatif si surplus (mais ignoré pour le global)
+        transfer: transferAmount,
         isJoint: false,
         ratio: acc.targetRatio,
         cap: acc.targetCap,
+        calculation: {
+          sharePercent: shareOfTotal * 100,
+          theoreticalAmount: theoreticalAmount,
+          isContributor: isContributor,
+        },
       });
     }
 
-    // --- LOGIQUE COMPTE JOINT (Méthode Couverture de Dettes) ---
+    // --- LOGIQUE COMPTE JOINT ---
     let jointTransferNeeded = 0;
-    let jointTarget = 0;
 
     if (jointAccount) {
       const owner = people.find((p) => p.id === jointAccount.ownerId);
 
-      // Besoin Joint = Somme de toutes les dettes en attente sur ce compte (Récurrentes + Variables)
-      const jointStats = stats.byAccount[jointAccount.id];
-      const pendingOnJoint = jointStats ? jointStats.remaining : 0;
+      // Si les comptes persos ont des excédents, on les utilise d'abord avant le LDDS
+      let remainingGap = jointGap;
+      if (remainingGap > 0 && totalSurplusFromPersonals > 0) {
+        const surplusUsed = Math.min(remainingGap, totalSurplusFromPersonals);
+        remainingGap -= surplusUsed;
+      }
 
-      // Le compte joint doit couvrir ses dettes.
-      jointTarget = pendingOnJoint;
-
-      // Virement nécessaire = Dettes - Solde Actuel
-      const gap = pendingOnJoint - jointAccount.currentBalance;
-
-      // Si le solde couvre les dettes (gap < 0), le virement est 0 pour la synthèse
-      jointTransferNeeded = Math.max(0, gap);
+      // Si le solde + excédents persos couvrent les dettes, pas besoin du LDDS
+      jointTransferNeeded = Math.max(0, remainingGap);
 
       jRows.push({
         id: jointAccount.id,
@@ -587,8 +610,14 @@ export const BalancesView: React.FC<BalancesViewProps> = ({
         owner: owner?.name || "Commun",
         balance: jointAccount.currentBalance,
         target: jointTarget,
-        transfer: gap, // On affiche le vrai gap même si négatif (excédent)
+        transfer: jointGap, // Gap total brut
         isJoint: true,
+        calculation: {
+          jointDebts: jointTarget,
+          jointGap: jointGap,
+          fromPersonals: totalSurplusFromPersonals,
+          fromLdds: jointTransferNeeded,
+        },
       });
     }
 
@@ -604,7 +633,7 @@ export const BalancesView: React.FC<BalancesViewProps> = ({
     };
 
     // --- SYNTHÈSE GLOBALE ---
-    // Le virement du LDDS doit couvrir le trou du Compte Joint + les Top-ups des comptes persos
+    // Le virement du LDDS doit couvrir le trou du Compte Joint (après excédents persos) + les Top-ups des comptes persos
     const globalTransfer = jointTransferNeeded + totalTransfersToPersonals;
 
     // Tri par libellé (name) pour un affichage cohérent
@@ -626,6 +655,9 @@ export const BalancesView: React.FC<BalancesViewProps> = ({
   const totalPendingHeader = checkingAccounts.reduce((sum, acc) => {
     return sum + (stats.byAccount[acc.id]?.remaining || 0);
   }, 0);
+
+  // Détection du surplus des comptes courants (pour labels intelligents)
+  const hasCurrentAccountsSurplus = personalRows.some((r) => r.transfer < -10);
 
   // Handlers de navigation
   const handlePrevMonth = () => {
@@ -681,7 +713,9 @@ export const BalancesView: React.FC<BalancesViewProps> = ({
         totalDetails={totalDebtDetails}
       />
 
-      {jointRows.length > 0 && <BalancesTable title="Compte Pivot" rows={jointRows} onUpdateBalance={handleUpdateBalance} />}
+      {jointRows.length > 0 && (
+        <BalancesTable title="Compte Pivot" rows={jointRows} onUpdateBalance={handleUpdateBalance} hasCurrentAccountsSurplus={hasCurrentAccountsSurplus} />
+      )}
 
       {/* SECTION RÉPARTITION BUDGÉTAIRE */}
       <BudgetDistributionSummary
@@ -692,6 +726,25 @@ export const BalancesView: React.FC<BalancesViewProps> = ({
         previousCarryover={scope === "PERIOD" && activeWeek > 1 ? periodCarryovers[activeWeek - 1]?.carryover : undefined}
         budgetBase={scope === "PERIOD" ? periodCarryovers[activeWeek]?.budgetBase : undefined}
         carryoverStrategy={settings.carryover_strategy || "NEXT_PERIOD"}
+      />
+
+      {/* SECTION DÉTAILS DES CALCULS */}
+      <CalculationDetailsCard
+        budgetPeriod={budgetPeriodeGlobal}
+        consumption={realConsumption}
+        distributable={distributableBalance}
+        totalPersonalBalance={totalPersonalBalance}
+        personalExcess={totalPersonalBalance - distributableBalance}
+        jointGap={jointAccount ? (stats.byAccount[jointAccount.id]?.remaining || 0) - jointAccount.currentBalance : 0}
+        amountToTake={Math.max(
+          0,
+          Math.min(
+            jointAccount ? (stats.byAccount[jointAccount.id]?.remaining || 0) - jointAccount.currentBalance : 0,
+            totalPersonalBalance - distributableBalance
+          )
+        )}
+        totalSurplus={personalRows.reduce((sum, r) => sum + Math.abs(Math.min(0, r.transfer)), 0)}
+        lddsNeeded={virLddsTotal}
       />
 
       <BalancesTable title="Comptes Courants" rows={personalRows} onUpdateBalance={handleUpdateBalance} totalRow={totalPersonalRow} />
