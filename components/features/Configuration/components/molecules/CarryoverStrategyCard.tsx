@@ -1,0 +1,140 @@
+import React from "react";
+import { AppSettings, CarryoverStrategy } from "../../../../../types";
+import { ArrowRightLeft, TrendingDown, Info } from "lucide-react";
+import { MobileTooltip } from "../../../../ui/MobileTooltip";
+
+interface CarryoverStrategyCardProps {
+  settings: AppSettings;
+  onUpdate: (strategy: CarryoverStrategy) => void;
+}
+
+/**
+ * Composant de configuration de la stratégie de gestion des dépassements budgétaires.
+ *
+ * @description
+ * Permet à l'utilisateur de choisir comment gérer les dépassements (ou économies)
+ * budgétaires d'une période vers les suivantes. Affiché dans Configuration > Réglages > Général.
+ *
+ * **Deux stratégies disponibles :**
+ *
+ * 1. **NEXT_PERIOD (Déduction simple)** :
+ *    - Icon : ArrowRightLeft
+ *    - Comportement : Report cumulatif sur la période suivante uniquement
+ *    - Exemple : P1 dépasse de 278€ → P2 = 500€ - 278€ = 222€
+ *    - Cas d'usage : Budget mensuel avec ajustements ponctuels
+ *
+ * 2. **SPREAD_REMAINING (Étalement sur périodes restantes)** :
+ *    - Icon : TrendingDown
+ *    - Comportement : Report réparti équitablement sur toutes les périodes suivantes
+ *    - Exemple : P1 dépasse de 300€ → P2, P3, P4 = 500€ - (300÷3) = 400€ chacune
+ *    - Cas d'usage : Lissage d'un gros dépassement exceptionnel
+ *
+ * **Intégration système :**
+ * - Mise à jour via `onUpdate(strategy: CarryoverStrategy)`
+ * - Persisté dans `AppSettings.carryover_strategy`
+ * - Impact immédiat sur les calculs de `periodCarryovers` dans BalancesView
+ * - Texte UI adapté dans BudgetDistributionSummary selon stratégie active
+ *
+ * **Design UI :**
+ * - Cards cliquables avec border highlight quand actif
+ * - Badge "ACTIF" sur l'option sélectionnée
+ * - Exemples chiffrés pour illustrer chaque stratégie
+ * - Tooltip explicatif avec icône Info
+ * - Couleur thématique : Purple (cohérence avec autres paramètres)
+ *
+ * @component
+ * @example
+ * ```tsx
+ * // Utilisation dans GlobalSettings
+ * <CarryoverStrategyCard
+ *   settings={settings}
+ *   onUpdate={(strategy) => onUpdate({ ...settings, carryover_strategy: strategy })}
+ * />
+ * ```
+ */
+export const CarryoverStrategyCard: React.FC<CarryoverStrategyCardProps> = ({ settings, onUpdate }) => {
+  const currentStrategy = settings.carryover_strategy || "NEXT_PERIOD";
+
+  return (
+    <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all">
+      <div className="flex items-center gap-3 mb-4">
+        <div className="p-2 bg-purple-100 rounded-lg">
+          <TrendingDown size={20} className="text-purple-600" />
+        </div>
+        <div className="flex-1">
+          <h3 className="text-sm font-bold text-slate-900">Gestion des Dépassements</h3>
+          <p className="text-xs text-slate-500">Stratégie de report en cas de dépassement budgétaire</p>
+        </div>
+        <MobileTooltip
+          text="Définit comment les dépassements d'une période sont gérés : déduction sur la période suivante uniquement, ou étalement sur toutes les périodes restantes."
+          icon={<Info size={16} className="text-slate-400 hover:text-slate-600" />}
+          widthClass="w-64"
+        />
+      </div>
+
+      <div className="space-y-3">
+        {/* Option 1 : Déduction simple */}
+        <button
+          onClick={() => onUpdate("NEXT_PERIOD")}
+          className={`w-full p-4 rounded-xl border-2 transition-all text-left ${
+            currentStrategy === "NEXT_PERIOD" ? "border-purple-500 bg-purple-50 shadow-sm" : "border-slate-200 hover:border-purple-300 bg-white"
+          }`}
+        >
+          <div className="flex items-start gap-3">
+            <div className={`p-2 rounded-lg ${currentStrategy === "NEXT_PERIOD" ? "bg-purple-100" : "bg-slate-100"}`}>
+              <ArrowRightLeft size={18} className={currentStrategy === "NEXT_PERIOD" ? "text-purple-600" : "text-slate-400"} />
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <span className={`text-sm font-bold ${currentStrategy === "NEXT_PERIOD" ? "text-purple-900" : "text-slate-700"}`}>Déduction simple</span>
+                {currentStrategy === "NEXT_PERIOD" && (
+                  <span className="px-2 py-0.5 text-[10px] font-bold text-purple-700 bg-purple-200 rounded-full">ACTIF</span>
+                )}
+              </div>
+              <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+                Le dépassement est déduit <strong>uniquement de la période suivante</strong>.
+              </p>
+              <div className="mt-2 p-2 bg-slate-50 rounded-lg">
+                <p className="text-[10px] text-slate-500 leading-tight">
+                  <strong>Exemple :</strong> Période 1 dépasse de 278€ → Période 2 = 500€ - 278€ = 222€
+                </p>
+              </div>
+            </div>
+          </div>
+        </button>
+
+        {/* Option 2 : Étalement */}
+        <button
+          onClick={() => onUpdate("SPREAD_REMAINING")}
+          className={`w-full p-4 rounded-xl border-2 transition-all text-left ${
+            currentStrategy === "SPREAD_REMAINING" ? "border-purple-500 bg-purple-50 shadow-sm" : "border-slate-200 hover:border-purple-300 bg-white"
+          }`}
+        >
+          <div className="flex items-start gap-3">
+            <div className={`p-2 rounded-lg ${currentStrategy === "SPREAD_REMAINING" ? "bg-purple-100" : "bg-slate-100"}`}>
+              <TrendingDown size={18} className={currentStrategy === "SPREAD_REMAINING" ? "text-purple-600" : "text-slate-400"} />
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <span className={`text-sm font-bold ${currentStrategy === "SPREAD_REMAINING" ? "text-purple-900" : "text-slate-700"}`}>
+                  Étalement sur périodes restantes
+                </span>
+                {currentStrategy === "SPREAD_REMAINING" && (
+                  <span className="px-2 py-0.5 text-[10px] font-bold text-purple-700 bg-purple-200 rounded-full">ACTIF</span>
+                )}
+              </div>
+              <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+                Le dépassement est <strong>réparti équitablement sur toutes les périodes restantes</strong>.
+              </p>
+              <div className="mt-2 p-2 bg-slate-50 rounded-lg">
+                <p className="text-[10px] text-slate-500 leading-tight">
+                  <strong>Exemple :</strong> Période 1 dépasse de 300€ → Périodes 2, 3, 4 = 500€ - (300÷3) = 400€ chacune
+                </p>
+              </div>
+            </div>
+          </div>
+        </button>
+      </div>
+    </div>
+  );
+};

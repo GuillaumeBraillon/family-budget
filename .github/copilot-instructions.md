@@ -190,6 +190,98 @@ Configuré via `AppSettings.period_type` :
 
 L'enveloppe mensuelle (`monthly_envelope`) est répartie proportionnellement par période dans [hooks/usePlanner.ts](../hooks/usePlanner.ts).
 
+## Système de Gestion des Dépassements (Carryover)
+
+**Concept clé :** Gestion flexible des dépassements/économies budgétaires entre périodes avec deux stratégies au choix.
+
+### Configuration
+
+Paramètre `AppSettings.carryover_strategy` avec deux valeurs possibles :
+
+- **NEXT_PERIOD** (défaut) : Déduction simple sur la période suivante uniquement
+- **SPREAD_REMAINING** : Étalement du dépassement sur toutes les périodes restantes
+
+### Stratégie 1 : NEXT_PERIOD (Déduction Simple)
+
+**Comportement :** Report cumulatif linéaire - chaque période hérite du solde complet de la période précédente.
+
+**Exemple avec dépassement :**
+
+```typescript
+P1: Budget 500€, Conso 778€ → Report = -278€
+P2: Budget ajusté = 500€ + (-278€) = 222€
+P3: Budget ajusté = 500€ + solde P2
+```
+
+**Cas d'usage :** Budget mensuel avec ajustements ponctuels, effet immédiat.
+
+### Stratégie 2 : SPREAD_REMAINING (Étalement Distribué)
+
+**Comportement :** Le dépassement/économie est réparti équitablement sur TOUTES les périodes suivantes.
+
+**Exemple avec dépassement :**
+
+```typescript
+P1: Budget 500€, Conso 800€ → Dépassement -300€
+Nombre de périodes restantes : 3 (P2, P3, P4)
+Part par période : -300€ ÷ 3 = -100€
+
+P2: Budget ajusté = 500€ - 100€ = 400€
+P3: Budget ajusté = 500€ - 100€ = 400€
+P4: Budget ajusté = 500€ - 100€ = 400€
+```
+
+**Gestion des reports multiples :**
+
+- P3 reçoit la part de P1 ET P2, mais ajuste pour éviter le double-comptage
+- Algorithme avec boucle imbriquée qui soustrait les ajustements déjà appliqués
+- Voir commentaires détaillés dans [components/features/Balances/BalancesView.tsx](../components/features/Balances/BalancesView.tsx)
+
+**Cas d'usage :** Lissage d'un gros dépassement exceptionnel sur plusieurs périodes.
+
+### Composants Concernés
+
+**Configuration UI :**
+
+- [CarryoverStrategyCard](../components/features/Configuration/components/molecules/CarryoverStrategyCard.tsx) : Sélection de la stratégie dans Settings > Général
+- Exemples chiffrés pour chaque stratégie
+- Icons : ArrowRightLeft (simple) / TrendingDown (étalement)
+
+**Calculs :**
+
+- [BalancesView.tsx](../components/features/Balances/BalancesView.tsx) : `periodCarryovers` useMemo avec dual-algorithm
+- Fonction `getStandardAmountForCarryover` : Exclut les montants Extra des calculs
+- Deux branches distinctes selon `settings.carryover_strategy`
+
+**Affichage :**
+
+- [BudgetDistributionSummary](../components/features/Balances/components/BudgetDistributionSummary.tsx) : Affichage contextuel
+- Banner de report avec texte adapté à la stratégie
+- Tooltip explicatif selon le mode actif
+
+### Règles Métier
+
+**Montants pris en compte :**
+
+- Seules les opérations **Standard** (non Extra) impactent les reports
+- Les virements internes (`Virement Interne`) sont exclus
+- Les intérêts d'épargne sont exclus
+
+**Calcul du report :**
+
+```typescript
+// Report d'une période = Budget ajusté - Consommation Standard
+const carryover = adjustedBudget - (expenses - income);
+
+// Si négatif → Dépassement
+// Si positif → Économie
+```
+
+**Persistance :**
+
+- Paramètre sauvegardé via `apiUpdateSettings` dans `app_settings` table
+- Changement immédiat de calcul (recalcul automatique via useMemo)
+
 ## Calculs d'Équité
 
 **Règle métier :** Les enfants (`Person.isChild = true`) sont exclus des calculs de contribution.
@@ -248,6 +340,12 @@ Voir [default.env.txt](../default.env.txt) pour le template. Les variables doive
 - [components/features/Operations/components/PlannerModals.tsx](../components/features/Operations/components/PlannerModals.tsx) : Modales de pointage
 - [components/features/Operations/components/VariableTransactionForm.tsx](../components/features/Operations/components/VariableTransactionForm.tsx) : Formulaire transactions variables
 - [components/ui/molecules/TagAmountSelector.tsx](../components/ui/molecules/TagAmountSelector.tsx) : Interface de ventilation des tags
+
+### Gestion Budgétaire et Soldes
+
+- [components/features/Balances/BalancesView.tsx](../components/features/Balances/BalancesView.tsx) : Vue soldes avec calcul `periodCarryovers` (dual-algorithm)
+- [components/features/Balances/components/BudgetDistributionSummary.tsx](../components/features/Balances/components/BudgetDistributionSummary.tsx) : Résumé budgétaire avec affichage contextuel des reports
+- [components/features/Configuration/components/molecules/CarryoverStrategyCard.tsx](../components/features/Configuration/components/molecules/CarryoverStrategyCard.tsx) : Configuration stratégie de gestion des dépassements
 
 ### Gestion d'Erreurs
 
@@ -482,3 +580,10 @@ L'application a subi plusieurs refactorings majeurs :
 
 **Version actuelle :** 2.2.3 (9 janvier 2026)
 **Qualité code :** 0 erreurs ESLint, 0 warnings, TypeScript strict
+
+**Dernières fonctionnalités ajoutées :**
+
+- Système de gestion des dépassements budgétaires avec deux stratégies (NEXT_PERIOD / SPREAD_REMAINING)
+- Configuration flexible dans Settings > Général via CarryoverStrategyCard
+- Calculs automatiques avec double-comptage évité (algorithme SPREAD_REMAINING)
+- UI contextuelle adaptée à la stratégie active dans BudgetDistributionSummary

@@ -1,8 +1,9 @@
 import React from "react";
 import { Session } from "@supabase/supabase-js";
-import { AppSettings, PeriodType } from "../../../../../types";
+import { AppSettings, PeriodType, CarryoverStrategy } from "../../../../../types";
 import { MonthlyEnvelopeCard } from "../molecules/WeeklyEnvelopeCard";
 import { PeriodSettingsCard } from "../molecules/PeriodSettingsCard";
+import { CarryoverStrategyCard } from "../molecules/CarryoverStrategyCard";
 import { DatabaseConnectionCard } from "../molecules/DatabaseConnectionCard";
 import { LocalStorageManager } from "../molecules/LocalStorageManager";
 
@@ -25,12 +26,18 @@ export const GlobalSettings: React.FC<GlobalSettingsProps> = ({ settings, onUpda
     onUpdate({ ...settings, period_type: type, period_value: value });
   };
 
+  const updateCarryoverStrategy = (strategy: CarryoverStrategy) => {
+    onUpdate({ ...settings, carryover_strategy: strategy });
+  };
+
   return (
     <div className="max-w-5xl mx-auto space-y-6 pb-12 animate-in fade-in duration-500">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
         <MonthlyEnvelopeCard settings={settings} onUpdate={updateEnvelope} />
         <PeriodSettingsCard settings={settings} onUpdate={updatePeriod} />
       </div>
+
+      <CarryoverStrategyCard settings={settings} onUpdate={updateCarryoverStrategy} />
 
       <div className="border-t border-slate-200 pt-6 space-y-6">
         <LocalStorageManager />

@@ -101,11 +101,13 @@ export interface VariableTransaction {
 }
 
 export type PeriodType = "FIXED_DAYS" | "CALENDAR_WEEKS" | "CUSTOM_SPLIT";
+export type CarryoverStrategy = "NEXT_PERIOD" | "SPREAD_REMAINING";
 
 export interface AppSettings {
   monthly_envelope: number;
   period_type: PeriodType;
   period_value: number;
+  carryover_strategy?: CarryoverStrategy;
   savings_labels?: string[];
   variable_labels?: string[];
 }
