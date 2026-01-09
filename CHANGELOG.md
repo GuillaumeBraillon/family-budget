@@ -7,6 +7,115 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.4.0] - 2026-01-09
+
+### ♻️ Refactorisation Architecturale Majeure
+
+**Architecture 100% Cohérente : Séparation Logique Métier / Présentation**
+
+Refactorisation complète de tous les composants majeurs pour appliquer le principe SRP (Single Responsibility Principle) avec architecture hook spécialisée. Tous les composants de vue suivent maintenant le même pattern : composant orchestrateur pur + hooks métier dédiés.
+
+#### **BalancesView.tsx** - Réduction 71% (788 → 230 lignes)
+
+**Création de `/hooks/balances/` avec 2 hooks spécialisés :**
+
+- **`useBalancesData.ts` (395 lignes)** : Logique de calcul des soldes
+  - Filtrage des comptes courants
+  - Calcul des reports de période (`periodCarryovers`) avec dual-algorithm
+  - Agrégation des consommations réelles (pointées + en attente)
+  - Calcul du solde distribuable
+  - Statistiques par compte et bénéficiaire
+  - Gestion des montants Extra et Standard avec helper `getStandardAmountForCarryover`
+  - Documentation JSDoc complète (workflow, exemples, cas d'usage)
+
+- **`useBalancesRows.ts` (230 lignes)** : Génération des lignes de tableau avec redistribution 2-pass
+  - Calcul des lignes Compte Pivot (joint) avec ratios configurables
+  - Calcul des lignes Comptes Persos avec distribution proportionnelle
+  - Algorithme 2-pass pour équilibrage optimal :
+    - Pass 1 : Répartition selon ratios bruts
+    - Pass 2 : Ajustement si gap Pivot négatif (prélèvement sur excédents)
+  - Calcul des virements LDDS nécessaires
+  - Gestion des arrondi (0€ et 5€) selon préférence utilisateur
+
+**Résultat :** Composant BalancesView.tsx réduit à un orchestrateur pur de ~230 lignes (appel hooks + render JSX)
+
+#### **DashboardView.tsx** - Réduction 71% (313 → 92 lignes)
+
+**Création de `/hooks/dashboard/` avec hook de calcul :**
+
+- **`useDashboardData.ts` (501 lignes)** : Centralisation de toute la logique dashboard
+  - **Filtrage préliminaire** : Extraction des comptes courants uniquement
+  - **Helper `isRefundCategory`** : Détection intelligente des remboursements
+    - Catégorie "Remboursement" ou "Dépenses" → refund
+    - Catégorie définie comme EXPENSE dans `categories` → refund
+  - **`globalMonthlyData` (88 lignes)** : Tableau macro annuel (12 mois)
+    - Agrégation des salaires (`isSalary=true`)
+    - Agrégation des autres revenus (récurrents + variables)
+    - Agrégation des dépenses (récurrents + variables)
+    - **Gestion des remboursements** : Réduit les dépenses au lieu d'augmenter les revenus
+    - Calcul du balance et taux d'épargne
+    - Retour inversé (décembre en premier)
+  - **`annualData` (158 lignes)** : Tableau détaillé par période (12 mois)
+    - **Génération des périodes** (3 stratégies) :
+      - `FIXED_DAYS` : Périodes de N jours fixes
+      - `CUSTOM_SPLIT` : Découpage du mois en N parts égales
+      - Fallback : Semaines de 7 jours
+    - **Initialisation des buckets** : Revenus/dépenses par période
+    - **Helper `addToPeriod`** : Affectation automatique aux bonnes périodes
+    - **Agrégation revenus récurrents** : EXCLUSION des salaires
+    - **Agrégation dépenses récurrentes**
+    - **Agrégation transactions variables**
+    - Calcul des totaux mensuels
+    - Retour inversé
+  - **Interfaces TypeScript exportées** :
+    - `GlobalMonthData` : Cashflow macro avec salaires (7 propriétés)
+    - `AnnualMonthData` : Détail mensuel avec périodes (5 propriétés)
+    - `PeriodData` : Données d'une période (4 objets imbriqués)
+  - **Documentation** : 132 lignes de JSDoc (architecture, responsabilités, workflow, exemples)
+  - **Optimisation** : Memoization complète (`useMemo` avec dépendances explicites)
+
+**Résultat :** Composant DashboardView.tsx réduit à un orchestrateur pur de ~92 lignes (1 hook call + 4 child components)
+
+### 📊 Statistiques Refactorisation
+
+**Avant refactorisation :**
+
+- BalancesView.tsx : 788 lignes (logique + UI mélangées)
+- DashboardView.tsx : 313 lignes (2 useMemo massifs + helpers)
+- **Total : 1,101 lignes monolithiques**
+
+**Après refactorisation :**
+
+- **Composants** : 230 + 92 = 322 lignes (-68% de code UI)
+- **Hooks spécialisés** : 395 + 230 + 501 = 1,126 lignes (+ documentation)
+- **Gain maintenabilité** :
+  - Logique métier testable indépendamment
+  - Séparation claire des responsabilités
+  - Documentation exhaustive de l'architecture
+  - Réutilisabilité des hooks
+
+**Architecture unifiée :**
+
+```
+✅ BalancesView → useBalancesData + useBalancesRows
+✅ DashboardView → useDashboardData
+✅ OperationsView → useOperationsData + useOperationsFilters + useOperationsSorting (déjà refactorisé)
+✅ TransfersView → useTransfersData + useTransfersFilters (déjà refactorisé)
+✅ VariableTransactionForm → useTransactionForm (déjà refactorisé)
+```
+
+**Résultat : 100% de cohérence architecturale sur toutes les vues majeures**
+
+### 🛠️ Technique
+
+- **Pattern appliqué** : Hook Specialization + SRP
+- **Memoization** : Tous les calculs lourds memoizés (`useMemo`, `useCallback`)
+- **Type Safety** : Toutes les interfaces exportées et documentées
+- **Zero Breaking Changes** : Pure refactorisation, aucun changement de comportement
+- **Compilation** : 0 erreur TypeScript, 0 warning ESLint
+
+---
+
 ## [2.3.0] - 2026-01-09
 
 ### 🎯 Ajouté
