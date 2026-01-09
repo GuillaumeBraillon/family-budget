@@ -7,6 +7,153 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.3.0] - 2026-01-09
+
+### 🎯 Ajouté
+
+- **Système de gestion des dépassements budgétaires avec stratégies configurables**
+  - **Nouveau type** : `CarryoverStrategy` avec deux valeurs possibles
+    - `NEXT_PERIOD` : Déduction simple sur la période suivante uniquement (défaut)
+    - `SPREAD_REMAINING` : Étalement équitable sur toutes les périodes restantes
+  - **Extension AppSettings** : Ajout du champ `carryover_strategy?: CarryoverStrategy`
+  - **Nouveau composant** : `CarryoverStrategyCard` dans Configuration > Réglages > Général
+    - Design purple-themed avec 2 options cliquables
+    - Badge "ACTIF" sur l'option sélectionnée
+    - Exemples chiffrés pour illustrer chaque stratégie :
+      - NEXT_PERIOD : "Période 1 dépasse de 278€ → Période 2 = 500€ - 278€ = 222€"
+      - SPREAD_REMAINING : "Période 1 dépasse de 300€ → Périodes 2, 3, 4 = 400€ chacune"
+    - Tooltip explicatif avec icône Info
+    - Icons : ArrowRightLeft (simple) / TrendingDown (étalement)
+  - **Persistance** : Configuration sauvegardée via `apiUpdateSettings` dans `app_settings` table
+  - **Impact immédiat** : Changement de stratégie recalcule automatiquement tous les budgets de période
+
+### 🧮 Amélioré
+
+- **Calcul des reports de période avec dual-algorithm dans BalancesView**
+  - **Stratégie NEXT_PERIOD (simple)** :
+    - Report cumulatif linéaire : chaque période hérite du solde complet de la période précédente
+    - Exemple : P1 (500€, conso 778€) → P2 (222€) → P3 (222€ + solde P2)
+    - Avantages : Simple, prévisible, effet immédiat
+  - **Stratégie SPREAD_REMAINING (distribué)** :
+    - Dépassement/économie réparti équitablement sur TOUTES les périodes restantes
+    - Algorithme complexe avec boucle imbriquée pour éviter le double-comptage
+    - Exemple : P1 (-300€) sur 3 périodes → P2, P3, P4 = 400€ chacune (500 - 100)
+    - Gestion des reports multiples : P3 accumule les parts de P1 ET P2
+    - Avantages : Lisse l'impact d'un gros dépassement exceptionnel
+  - **Fonction `getStandardAmountForCarryover`** : Exclut les montants Extra des calculs
+    - Toggle global Extra → 0€ (toute l'opération hors budget)
+    - Pas de tags → Montant total (tout Standard)
+    - Avec tags → Montant total - somme des tags Extra
+  - **Exclusions automatiques** : Virements internes et intérêts d'épargne ne comptent pas
+  - **Optimisation** : Recalcul via `useMemo` uniquement si `filteredPeriodBudgets` ou `carryover_strategy` change
+
+- **Affichage contextuel dans BudgetDistributionSummary**
+  - **Banner de report adaptatif** :
+    - Titre : "Report période précédente" (NEXT_PERIOD) vs "Report étalé" (SPREAD_REMAINING)
+    - Description : Texte explicatif selon la stratégie active
+    - Couleur : Rouge (dépassement) / Vert (économie)
+    - Transformation affichée : "500€ → 222€" pour visualiser l'impact
+  - **Tooltip stratégie-spécifique** :
+    - NEXT_PERIOD : "Budget ajusté avec le report de la période précédente"
+    - SPREAD_REMAINING : "Budget ajusté avec la part de report étalé des périodes précédentes"
+  - **Subtext budget initial** :
+    - "Budget ajusté avec report" vs "Budget ajusté avec étalement"
+  - **Footer message négatif** :
+    - NEXT_PERIOD : "Dépassement à déduire de la période suivante"
+    - SPREAD_REMAINING : "Dépassement à étaler sur les périodes restantes"
+
+### 📚 Documentation
+
+- **Commentaires JSDoc détaillés (200+ lignes)** :
+  - **BalancesView.tsx** :
+    - Documentation complète du `periodCarryovers` useMemo (50+ lignes)
+    - Fonction `getStandardAmountForCarryover` avec 3 exemples (30+ lignes)
+    - Stratégie NEXT_PERIOD : algorithme, avantages, exemples (20+ lignes)
+    - Stratégie SPREAD_REMAINING : algorithme complexe, cas d'usage, exemples (40+ lignes)
+    - Boucle imbriquée anti-double-comptage : problème, solution, exemple (30+ lignes)
+  - **BudgetDistributionSummary.tsx** :
+    - Props interface documentée avec rôle de chaque propriété (10 lignes)
+    - Composant principal : comportement, affichage contextuel, exemples (40+ lignes)
+  - **CarryoverStrategyCard.tsx** :
+    - Description des 2 stratégies avec icônes, exemples, cas d'usage (30+ lignes)
+    - Intégration système : persistence, impact, design UI
+    - Exemple d'utilisation dans GlobalSettings
+
+- **Mise à jour du fichier copilot-instructions.md** :
+  - Nouvelle section complète "Système de Gestion des Dépassements (Carryover)" (60+ lignes)
+  - Configuration, stratégies, composants, règles métier
+  - Ajout de la sous-section "Gestion Budgétaire et Soldes" dans "Fichiers Critiques"
+  - Mise à jour "Dernières fonctionnalités ajoutées"
+
+### 🔧 Technique
+
+- **Types TypeScript** :
+  ```typescript
+  export type CarryoverStrategy = "NEXT_PERIOD" | "SPREAD_REMAINING";
+  
+  export interface AppSettings {
+    monthly_envelope: number;
+    period_type: PeriodType;
+    period_value: number;
+    carryover_strategy?: CarryoverStrategy; // Nouveau champ
+    savings_labels?: string[];
+    variable_labels?: string[];
+  }
+  ```
+
+- **Architecture des composants** :
+  - `CarryoverStrategyCard` (molecule) : Configuration UI dans GlobalSettings
+  - `GlobalSettings` (organism) : Intégration avec handler `updateCarryoverStrategy`
+  - `BalancesView` (feature) : Calcul dual-algorithm + passage de props
+  - `BudgetDistributionSummary` (molecule) : Affichage contextuel
+
+- **Flux de données** :
+  ```
+  AppSettings.carryover_strategy
+  ↓
+  GlobalSettings (sélection utilisateur)
+  ↓
+  BalancesView (calcul periodCarryovers)
+  ↓
+  BudgetDistributionSummary (affichage adaptatif)
+  ```
+
+- **Rétrocompatibilité** : Défaut "NEXT_PERIOD" si champ absent (backward compatible)
+
+- **Validation** : 0 erreurs TypeScript sur les 5 fichiers modifiés
+
+### 📊 Exemples d'utilisation
+
+**Scénario 1 : NEXT_PERIOD avec dépassement**
+```
+Mois divisé en 4 périodes de 500€ chacune
+P1: Consommation 778€ → Dépassement -278€
+P2: Budget ajusté = 500€ - 278€ = 222€
+P3: Budget ajusté = 222€ + solde P2
+```
+
+**Scénario 2 : SPREAD_REMAINING avec dépassement**
+```
+Mois divisé en 4 périodes de 500€ chacune
+P1: Consommation 800€ → Dépassement -300€
+Périodes restantes : 3 (P2, P3, P4)
+Part par période : -300€ ÷ 3 = -100€
+P2: Budget ajusté = 500€ - 100€ = 400€
+P3: Budget ajusté = 500€ - 100€ = 400€
+P4: Budget ajusté = 500€ - 100€ = 400€
+```
+
+**Scénario 3 : SPREAD_REMAINING avec reports multiples**
+```
+P1: Dépassement -300€ → Étalé sur P2, P3, P4 → -100€ chacune
+P2: Dépassement -150€ (après ajustement de P1)
+    → Reste -50€ → Étalé sur P3, P4 → -25€ chacune
+P3: Budget ajusté = 500€ - 100€ (P1) - 25€ (P2) = 375€
+P4: Budget ajusté = 500€ - 100€ (P1) - 25€ (P2) = 375€
+```
+
+---
+
 ## [2.2.4] - 2026-01-09
 
 ### Corrigé
