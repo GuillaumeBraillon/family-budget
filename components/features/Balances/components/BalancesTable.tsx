@@ -29,7 +29,7 @@ export const BalancesTable: React.FC<BalancesTableProps> = ({ rows, onUpdateBala
   const startEdit = (id: string, balance: number, e?: React.MouseEvent) => {
     e?.stopPropagation();
     setEditingId(id);
-    setTempBalance(balance.toString());
+    setTempBalance(balance.toFixed(2));
   };
 
   const cancelEdit = (e?: React.MouseEvent) => {

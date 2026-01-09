@@ -157,14 +157,14 @@ export const useBudgetBalances = (budgetDataRef: React.MutableRefObject<BudgetDa
    * ```
    */
   const handleVariableTransactionBalance = async (oldTransaction: VariableTransaction | undefined, newTransaction: VariableTransaction | null) => {
-    // Annuler l'impact de l'ancienne transaction si elle était pointée
-    if (oldTransaction && !oldTransaction.isWaiting) {
+    // Annuler l'impact de l'ancienne transaction (peu importe son statut)
+    if (oldTransaction) {
       const sign = oldTransaction.type === "INCOME" ? -1 : 1;
       await adjustAccountBalance(oldTransaction.accountId, oldTransaction.amount * sign);
     }
 
-    // Appliquer l'impact de la nouvelle transaction si elle est pointée
-    if (newTransaction && !newTransaction.isWaiting) {
+    // Appliquer l'impact de la nouvelle transaction (peu importe son statut)
+    if (newTransaction) {
       const sign = newTransaction.type === "INCOME" ? 1 : -1;
       await adjustAccountBalance(newTransaction.accountId, newTransaction.amount * sign);
     }
@@ -248,14 +248,14 @@ export const useBudgetBalances = (budgetDataRef: React.MutableRefObject<BudgetDa
    * ```
    */
   const handlePaidItemBalance = async (oldItem: PaidItemDetails | undefined, newItem: PaidItemDetails | null) => {
-    // Annuler l'impact de l'ancien pointage si pointé
-    if (oldItem && !oldItem.isWaiting) {
+    // Annuler l'impact de l'ancien pointage (peu importe son statut)
+    if (oldItem) {
       const sign = oldItem.type === "INCOME" ? -1 : 1;
       await adjustAccountBalance(oldItem.accountId, oldItem.amount * sign);
     }
 
-    // Appliquer l'impact du nouveau pointage si pointé
-    if (newItem && !newItem.isWaiting) {
+    // Appliquer l'impact du nouveau pointage (peu importe son statut)
+    if (newItem) {
       const sign = newItem.type === "INCOME" ? 1 : -1;
       await adjustAccountBalance(newItem.accountId, newItem.amount * sign);
     }
