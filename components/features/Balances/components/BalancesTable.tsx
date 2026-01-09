@@ -2,28 +2,7 @@ import React, { useState } from "react";
 import { Card, CardHeader, CardTitle } from "../../../ui/Card";
 import { Wallet, Pencil, Check, X, Users, Percent, Ban, Calculator } from "lucide-react";
 import { MobileTooltip } from "../../../ui/MobileTooltip";
-
-export interface BalanceRow {
-  id: string;
-  name: string;
-  owner: string;
-  balance: number;
-  target: number;
-  transfer: number;
-  isJoint: boolean;
-  ratio?: number;
-  cap?: number;
-  // Nouvelles props pour explications des calculs
-  calculation?: {
-    sharePercent?: number; // Part en % (pour comptes persos)
-    theoreticalAmount?: number; // Montant théorique avant seuil
-    isContributor?: boolean; // Est-ce qu'il contribue (> 10€)
-    jointDebts?: number; // Dettes en attente (pour compte joint)
-    jointGap?: number; // Gap = dettes - solde (pour compte joint)
-    fromPersonals?: number; // Reçu des comptes persos (pour compte joint)
-    fromLdds?: number; // Reçu du LDDS (pour compte joint)
-  };
-}
+import { BalanceRow } from "../../../../hooks/balances";
 
 interface BalancesTableProps {
   rows: BalanceRow[];

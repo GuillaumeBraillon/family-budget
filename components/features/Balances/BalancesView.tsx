@@ -1,11 +1,27 @@
-import React, { useMemo, useState } from "react";
+/**
+ * @file Vue des soldes bancaires (refactorisée)
+ * @description Composant orchestrateur simplifié qui délègue les calculs aux hooks spécialisés.
+ * Applique les principes Atomic Design + SRP pour une architecture maintenable.
+ *
+ * @architecture
+ * **Refactorisation appliquée :**
+ * - Logique de calcul → useBalancesData (carryovers, consommations, détails)
+ * - Génération des lignes → useBalancesRows (personal/joint avec redistribution)
+ * - Composant → Orchestration pure (~150L au lieu de 788L)
+ *
+ * **Réduction de complexité :**
+ * - Avant : 788 lignes, logique mélangée avec UI
+ * - Après : ~150 lignes, séparation claire des responsabilités
+ * - Gain : -80% de code dans le composant, +testabilité
+ */
+import React, { useState } from "react";
 import { Account, Person, ExpenseConfig, IncomeConfig, PaidItemDetails, AppSettings, VariableTransaction, CategoryDef } from "../../../types";
-import { usePlanner } from "../../../hooks/usePlanner";
+import { useBalancesData, useBalancesRows } from "../../../hooks/balances";
 import { Calendar, CalendarRange } from "lucide-react";
 import { MonthNavigator } from "../../ui/molecules/MonthNavigator";
 import { WeekSelector } from "../../ui/molecules/WeekSelector";
 import { BalancesHeader } from "./components/BalancesHeader";
-import { BalancesTable, BalanceRow } from "./components/BalancesTable";
+import { BalancesTable } from "./components/BalancesTable";
 import { TransferSummaryCard } from "./components/TransferSummaryCard";
 import { BudgetDistributionSummary } from "./components/BudgetDistributionSummary";
 import { CalculationDetailsCard } from "./components/CalculationDetailsCard";
@@ -33,7 +49,7 @@ export const BalancesView: React.FC<BalancesViewProps> = ({
   categories,
   onUpdateAccount,
 }) => {
-  // État de navigation
+  // --- ÉTAT UI (Navigation) ---
   const [currentDate, setCurrentDate] = useState(new Date());
   const [scope, setScope] = useState<"MONTH" | "PERIOD">("PERIOD");
 
@@ -56,593 +72,51 @@ export const BalancesView: React.FC<BalancesViewProps> = ({
     return 1;
   });
 
-  const { calculatePeriodStatistics, filteredPeriodBudgets } = usePlanner(
+  // --- HOOKS SPÉCIALISÉS (Logique métier déléguée) ---
+
+  // Hook 1 : Calculs de données (carryovers, budget, consommation, détails)
+  const {
+    periodCarryovers,
+    budgetPeriodeGlobal,
+    pendingRecurring,
+    realConsumption,
+    distributableBalance,
+    checkingAccounts,
+    jointAccount,
+    personalAccounts,
+    totalPersonalBalance,
+    pendingVariablesDetails,
+    pendingRecurringDetails,
+    totalDebtDetails,
+    consumedDetails,
+    stats,
+    filteredPeriodBudgets,
+  } = useBalancesData({
+    accounts,
     configs,
     incomeConfigs,
     paidItems,
     variableTransactions,
-    currentDate,
-    "",
     settings,
-    categories
-  );
-
-  const stats = calculatePeriodStatistics(activeWeek);
-
-  /**
-   * Calcul des reports de dépassement budgétaire avec deux stratégies disponibles.
-   *
-   * @description
-   * Gère la cascade des dépassements/économies budgétaires entre périodes selon
-   * la stratégie configurée dans les paramètres (Settings > Général).
-   *
-   * **Deux stratégies de report :**
-   *
-   * 1. **NEXT_PERIOD (Déduction simple)** :
-   *    - Le dépassement/économie de la période N est reporté UNIQUEMENT sur la période N+1
-   *    - Report cumulatif : chaque période hérite du solde complet de la période précédente
-   *    - Exemple : P1 = +278€ → P2 = 500€ - 278€ = 222€ → P3 = 222€ + solde P2
-   *
-   * 2. **SPREAD_REMAINING (Étalement sur périodes restantes)** :
-   *    - Le dépassement/économie est RÉPARTI équitablement sur TOUTES les périodes suivantes
-   *    - Calcul proportionnel : montant / nombre de périodes restantes
-   *    - Exemple : P1 = +300€ avec 3 périodes restantes → P2, P3, P4 = 500€ - (300÷3) = 400€ chacune
-   *    - Gère les reports multiples : P3 accumule les parts de P1 ET P2
-   *
-   * **Workflow de calcul :**
-   * - ÉTAPE 1 : Calculer la consommation réelle de chaque période (dépenses - revenus, hors Extra)
-   * - ÉTAPE 2 : Appliquer la stratégie choisie pour calculer les budgets ajustés
-   *
-   * **Gestion des montants Extra :**
-   * - Fonction `getStandardAmountForCarryover` : exclut les montants Extra des calculs
-   * - Seuls les montants Standard impactent les budgets de période
-   * - Les montants Extra sont traités séparément (voir useOperationsData)
-   *
-   * @returns {Record<number, Object>} carryovers - Données budgétaires par période :
-   *   - budgetBase: Budget théorique de la période (enveloppe ÷ nb périodes)
-   *   - consumption: Consommation réelle (dépenses - revenus Standard)
-   *   - carryover: Solde restant après consommation (peut être négatif)
-   *   - adjustedBudget: Budget ajusté avec les reports (base + report(s))
-   *
-   * @example
-   * ```tsx
-   * // NEXT_PERIOD avec dépassement
-   * P1: budgetBase=500, consumption=778 → carryover=-278, adjustedBudget=500
-   * P2: budgetBase=500, consumption=150 → carryover=72, adjustedBudget=222 (500-278)
-   *
-   * // SPREAD_REMAINING avec dépassement
-   * P1: budgetBase=500, consumption=800 → carryover=-300, adjustedBudget=500
-   * P2: budgetBase=500, consumption=150 → adjustedBudget=400 (500 - 300÷3)
-   * P3: budgetBase=500, consumption=200 → adjustedBudget=400 (500 - 300÷3)
-   * P4: budgetBase=500, consumption=100 → adjustedBudget=400 (500 - 300÷3)
-   * ```
-   */
-  const periodCarryovers = useMemo(() => {
-    const carryovers: Record<number, { budgetBase: number; consumption: number; carryover: number; adjustedBudget: number }> = {};
-    // Récupération de la stratégie choisie (défaut : NEXT_PERIOD pour compatibilité)
-    const strategy = settings.carryover_strategy || "NEXT_PERIOD";
-
-    // ÉTAPE 1 : Calculer la consommation de chaque période
-    const periodConsumptions: Record<number, number> = {};
-    filteredPeriodBudgets.forEach((period) => {
-      const periodNumber = period.weekNumber;
-      const periodVariableItems = period.items.filter((i) => i.source === "VARIABLE" && i.category !== "Virement Interne" && i.subCategory !== "Intérêts");
-
-      /**
-       * Calcule le montant Standard d'un item pour les reports budgétaires.
-       *
-       * @description
-       * Exclut les montants Extra des calculs de consommation de période :
-       * - Si toggle Extra global activé → 0€ (toute l'opération est hors budget)
-       * - Si pas de tags → Montant total (tout est Standard)
-       * - Si tags présents → Montant total - somme des tags Extra
-       *
-       * **Logique de filtrage :**
-       * 1. Vérifier le toggle global (`isExtraGlobal`) en priorité
-       * 2. Si tags présents, soustraire uniquement les montants marqués `isExtra: true`
-       * 3. Retourner maximum entre 0 et montant calculé (éviter négatifs)
-       *
-       * @param {PlannedItem} item - Opération à analyser (dépense ou revenu)
-       * @returns {number} Montant Standard en € (0 si 100% Extra)
-       *
-       * @example
-       * ```tsx
-       * // Opération 100% Extra (toggle global)
-       * item = { amount: 150, isExtraGlobal: true, tagAmounts: [] }
-       * getStandardAmountForCarryover(item) // → 0€
-       *
-       * // Opération mixte (70€ Extra + 45€ Standard)
-       * item = { amount: 115, isExtraGlobal: false, tagAmounts: [
-       *   { tagId: 't1', amount: 70, isExtra: true },
-       *   { tagId: 't2', amount: 45, isExtra: false }
-       * ]}
-       * getStandardAmountForCarryover(item) // → 45€ (115 - 70)
-       *
-       * // Opération 100% Standard (pas de tags)
-       * item = { amount: 200, isExtraGlobal: false, tagAmounts: [] }
-       * getStandardAmountForCarryover(item) // → 200€
-       * ```
-       */
-      const getStandardAmountForCarryover = (item: PlannedItem): number => {
-        // Cas 1 : Toggle global Extra activé → Toute l'opération est hors budget
-        if (item.isExtraGlobal) return 0;
-        // Cas 2 : Pas de ventilation par tags → Tout le montant est Standard
-        if (!item.tagAmounts || item.tagAmounts.length === 0) return item.amount;
-        // Cas 3 : Ventilation par tags → Calculer montant Standard (total - Extra)
-        const extraSum = item.tagAmounts.filter((ta) => ta.isExtra === true).reduce((sum, ta) => sum + ta.amount, 0);
-        return Math.max(0, item.amount - extraSum);
-      };
-
-      let periodExpenses = 0;
-      let periodIncome = 0;
-
-      periodVariableItems.forEach((i) => {
-        const standardAmount = getStandardAmountForCarryover(i);
-        if (i.type === "EXPENSE") {
-          periodExpenses += standardAmount;
-        } else if (i.type === "INCOME") {
-          periodIncome += standardAmount;
-        }
-      });
-
-      periodConsumptions[periodNumber] = periodExpenses - periodIncome;
-    });
-
-    // ========== ÉTAPE 2 : Calculer les reports selon la stratégie ==========
-
-    if (strategy === "NEXT_PERIOD") {
-      /**
-       * STRATÉGIE 1 : NEXT_PERIOD (Déduction simple)
-       *
-       * @description
-       * Report cumulatif linéaire : chaque période hérite du solde complet de la période précédente.
-       *
-       * **Algorithme :**
-       * 1. Initialiser cumulativeCarryover = 0
-       * 2. Pour chaque période :
-       *    - Budget ajusté = Budget de base + Report cumulé
-       *    - Solde restant = Budget ajusté - Consommation
-       *    - Report cumulé (pour période suivante) = Solde restant
-       *
-       * **Avantages :**
-       * - Simple à comprendre et prévisible
-       * - Effet immédiat sur la période suivante
-       * - Pas de calculs complexes
-       *
-       * **Exemple avec dépassement :**
-       * P1: Budget 500€, Conso 778€ → Report = -278€
-       * P2: Budget 500€ + (-278€) = 222€ → Si conso 150€ → Report = +72€
-       * P3: Budget 500€ + 72€ = 572€ → Etc.
-       *
-       * **Exemple avec économie :**
-       * P1: Budget 500€, Conso 300€ → Report = +200€
-       * P2: Budget 500€ + 200€ = 700€ → Si conso 400€ → Report = +300€
-       * P3: Budget 500€ + 300€ = 800€ → Etc.
-       */
-      let cumulativeCarryover = 0;
-
-      filteredPeriodBudgets.forEach((period) => {
-        const periodNumber = period.weekNumber;
-        const periodBudget = period.periodLimit || 0;
-        const adjustedBudget = periodBudget + cumulativeCarryover;
-        const periodConsumption = periodConsumptions[periodNumber] || 0;
-        const remainingBalance = adjustedBudget - periodConsumption;
-
-        cumulativeCarryover = remainingBalance;
-
-        carryovers[periodNumber] = {
-          budgetBase: periodBudget,
-          consumption: periodConsumption,
-          carryover: remainingBalance,
-          adjustedBudget: adjustedBudget,
-        };
-      });
-    } else {
-      /**
-       * STRATÉGIE 2 : SPREAD_REMAINING (Étalement sur périodes restantes)
-       *
-       * @description
-       * Report distribué : les dépassements/économies sont répartis équitablement
-       * sur TOUTES les périodes restantes (pas seulement la suivante).
-       *
-       * **Algorithme complexe avec gestion multi-périodes :**
-       * 1. Pour chaque période N :
-       *    - Analyser toutes les périodes précédentes (0 à N-1)
-       *    - Pour chaque période précédente i :
-       *      a) Calculer son report brut (budget - consommation)
-       *      b) Soustraire les ajustements déjà appliqués par les périodes encore plus anciennes (0 à i-1)
-       *      c) Diviser le report "nettoyé" par le nombre de périodes restantes depuis i
-       *      d) Ajouter cette fraction au report total de la période N
-       *
-       * **Pourquoi soustraire les ajustements précédents ?**
-       * - Problème : Sans soustraction, risque de double-comptage
-       * - Exemple : P3 doit compter la part de P1 ET P2, mais le budget P2 inclut déjà une part de P1
-       * - Solution : Soustraire de P2 ce qu'elle a déjà reçu de P1 avant de calculer sa propre part
-       *
-       * **Avantages :**
-       * - Lisse l'impact d'un gros dépassement sur plusieurs périodes
-       * - Évite de "sacrifier" complètement la période suivante
-       * - Meilleure visibilité sur plusieurs périodes
-       *
-       * **Exemple avec dépassement P1 = -300€ (4 périodes) :**
-       * P1: Budget 500€, Conso 800€ → Part à étaler = -300€ sur 3 périodes restantes
-       * P2: Budget ajusté = 500€ + (-300÷3) = 400€
-       * P3: Budget ajusté = 500€ + (-300÷3) = 400€ (même part de P1)
-       * P4: Budget ajusté = 500€ + (-300÷3) = 400€ (même part de P1)
-       *
-       * **Exemple avec dépassements multiples :**
-       * P1: -300€ → Étalé sur P2, P3, P4 → -100€ chacune
-       * P2: -150€ (après ajustement -100€ de P1) → Reste -50€ → Étalé sur P3, P4 → -25€ chacune
-       * P3: Budget ajusté = 500€ - 100€ (part P1) - 25€ (part P2) = 375€
-       * P4: Budget ajusté = 500€ - 100€ (part P1) - 25€ (part P2) = 375€
-       */
-      filteredPeriodBudgets.forEach((period, index) => {
-        const periodNumber = period.weekNumber;
-        const periodBudget = period.periodLimit || 0;
-
-        // Calculer le report à appliquer pour cette période
-        let carryoverForThisPeriod = 0;
-
-        // Analyser toutes les périodes précédentes
-        for (let i = 0; i < index; i++) {
-          const prevPeriod = filteredPeriodBudgets[i];
-          const prevPeriodNumber = prevPeriod.weekNumber;
-          const prevBudget = prevPeriod.periodLimit || 0;
-          const prevConsumption = periodConsumptions[prevPeriodNumber] || 0;
-
-          // Report brut de cette période précédente
-          let prevRawCarryover = prevBudget - prevConsumption;
-
-          /**
-           * Soustraire les ajustements déjà appliqués par les périodes encore plus anciennes.
-           *
-           * @description
-           * Cette boucle imbriquée évite le double-comptage des reports multiples.
-           *
-           * **Problème à résoudre :**
-           * Si P1 a un dépassement de -300€ étalé sur P2, P3, P4 :
-           * - P2 reçoit -100€ (300÷3)
-           * - Le budget ajusté de P2 devient 400€ (500 - 100)
-           * - Si P2 consomme 300€, son report brut = 400 - 300 = 100€
-           * - MAIS ce 100€ inclut déjà l'effet du -100€ de P1
-           * - Donc pour calculer la vraie part de P2 à étaler sur P3 et P4,
-           *   il faut soustraire l'ajustement de P1 : 100€ - (-100€) = 200€
-           *
-           * **Algorithme :**
-           * Pour chaque période j antérieure à la période i en cours d'analyse :
-           * 1. Calculer le report brut de j (budget - consommation)
-           * 2. Calculer la part étalée de j (report brut ÷ périodes restantes)
-           * 3. Soustraire cette part du report brut de i
-           * 4. Répéter pour toutes les périodes j < i
-           *
-           * **Exemple concret :**
-           * ```
-           * P1: Budget 500, Conso 800 → Report brut = -300 → Part P1 sur 3 périodes = -100
-           * P2: Budget ajusté 400 (500-100), Conso 300 → Report brut = 100
-           *     Mais ce 100 inclut déjà l'effet -100 de P1
-           *     Report "nettoyé" = 100 - (-100) = 200
-           *     Part P2 sur 2 périodes restantes = 200÷2 = 100
-           * P3: Budget ajusté = 500 - 100 (P1) + 100 (P2) = 500
-           * ```
-           */
-          for (let j = 0; j < i; j++) {
-            const evenEarlierPeriod = filteredPeriodBudgets[j];
-            const evenEarlierNumber = evenEarlierPeriod.weekNumber;
-            const evenEarlierBudget = evenEarlierPeriod.periodLimit || 0;
-            const evenEarlierConsumption = periodConsumptions[evenEarlierNumber] || 0;
-            const evenEarlierRawCarryover = evenEarlierBudget - evenEarlierConsumption;
-
-            if (evenEarlierRawCarryover < 0) {
-              const remainingPeriods = filteredPeriodBudgets.length - evenEarlierNumber;
-              const spreadAmount = evenEarlierRawCarryover / remainingPeriods;
-              prevRawCarryover -= spreadAmount;
-            } else if (evenEarlierRawCarryover > 0) {
-              const remainingPeriods = filteredPeriodBudgets.length - evenEarlierNumber;
-              const spreadAmount = evenEarlierRawCarryover / remainingPeriods;
-              prevRawCarryover -= spreadAmount;
-            }
-          }
-
-          // Si dépassement, étaler sur les périodes restantes
-          if (prevRawCarryover < 0) {
-            const remainingPeriods = filteredPeriodBudgets.length - prevPeriodNumber;
-            const spreadAmount = prevRawCarryover / remainingPeriods;
-            carryoverForThisPeriod += spreadAmount;
-          } else if (prevRawCarryover > 0) {
-            // Si économie, étaler aussi
-            const remainingPeriods = filteredPeriodBudgets.length - prevPeriodNumber;
-            const spreadAmount = prevRawCarryover / remainingPeriods;
-            carryoverForThisPeriod += spreadAmount;
-          }
-        }
-
-        const adjustedBudget = periodBudget + carryoverForThisPeriod;
-        const periodConsumption = periodConsumptions[periodNumber] || 0;
-        const remainingBalance = adjustedBudget - periodConsumption;
-
-        carryovers[periodNumber] = {
-          budgetBase: periodBudget,
-          consumption: periodConsumption,
-          carryover: remainingBalance,
-          adjustedBudget: adjustedBudget,
-        };
-      });
-    }
-
-    return carryovers;
-  }, [filteredPeriodBudgets, settings.carryover_strategy]);
-
-  // Budget alloué pour la période (adapté selon le scope)
-  const budgetPeriodeGlobal =
-    scope === "MONTH"
-      ? filteredPeriodBudgets.reduce((sum, p) => sum + (p.periodLimit || 0), 0)
-      : periodCarryovers[activeWeek]?.adjustedBudget || stats.periodLimit;
-
-  // Calcul des opérations récurrentes en attente (Courant + Retard)
-  const pendingRecurring = stats.fixedToPay + stats.fixedDelays;
-
-  // 1. Identification des comptes
-  const checkingAccounts = useMemo(() => accounts.filter((a) => a.type === "COURANT"), [accounts]);
-  const jointAccount = checkingAccounts.find((a) => a.isJoint);
-  const personalAccounts = checkingAccounts.filter((a) => !a.isJoint);
-
-  // 2. Calcul du total des soldes personnels actuels
-  const totalPersonalBalance = personalAccounts.reduce((sum, acc) => sum + acc.currentBalance, 0);
-
-  // 3. Récupération des données selon le scope (Mois complet ou Période spécifique)
-  const scopeItems = useMemo(() => {
-    if (scope === "MONTH") {
-      return filteredPeriodBudgets.flatMap((w) => w.items);
-    } else {
-      const currentWeekData = filteredPeriodBudgets.find(
-        (w) => w.weekNumber === (filteredPeriodBudgets.some((w) => w.weekNumber === activeWeek) ? activeWeek : 1)
-      );
-      return currentWeekData?.items || [];
-    }
-  }, [scope, filteredPeriodBudgets, activeWeek]);
-
-  // Calcul de la consommation variable totale (Payé + En attente)
-  // Exclusion de "Virement Interne" ET "Intérêts"
-  const variableItems = scopeItems.filter((i) => i.source === "VARIABLE" && i.category !== "Virement Interne" && i.subCategory !== "Intérêts");
-
-  /**
-   * Calcule le montant Standard d'une opération (hors Extra).
-   * Gère les opérations mixtes avec tags Extra partiels.
-   *
-   * Logique :
-   * - Si toggle global Extra : 0€ (tout est Extra)
-   * - Sinon, si tags présents : montant total - somme des tags Extra
-   * - Sinon : montant total
-   */
-  const getStandardAmount = (item: PlannedItem): number => {
-    // Si toggle global Extra activé : tout est Extra, rien de Standard
-    if (item.isExtraGlobal) return 0;
-
-    // Pas de tags : tout le montant est Standard
-    if (!item.tagAmounts || item.tagAmounts.length === 0) {
-      return item.amount;
-    }
-
-    // Avec tags : calculer la somme des montants Extra
-    const extraSum = item.tagAmounts.filter((ta) => ta.isExtra === true).reduce((sum, ta) => sum + ta.amount, 0);
-
-    // Retourner le montant Standard (total - Extra)
-    return Math.max(0, item.amount - extraSum);
-  };
-
-  // LOGIQUE SIMPLIFIÉE GRÂCE AUX DÉPENSES NÉGATIVES
-  // Somme simple : Si dépense (100) -> +100. Si remboursement (-20) -> -20.
-  // Donc le total = Somme des montants dépenses
-  let varExpenses = 0;
-  let varIncome = 0;
-
-  variableItems.forEach((i) => {
-    const standardAmount = getStandardAmount(i);
-
-    if (i.type === "EXPENSE") {
-      varExpenses += standardAmount; // Uniquement la partie Standard
-    } else if (i.type === "INCOME") {
-      varIncome += standardAmount; // Uniquement la partie Standard
-    }
+    categories,
+    currentDate,
+    scope,
+    activeWeek,
   });
 
-  // Calculs pour le Header
-  const realConsumption = varExpenses - varIncome;
-  const distributableBalance = Math.max(0, budgetPeriodeGlobal - realConsumption);
+  // Hook 2 : Génération des lignes avec redistribution 2-pass
+  const { jointRows, personalRows, totalPersonalRow, virLddsTotal } = useBalancesRows({
+    accounts,
+    people,
+    budgetPeriodeGlobal,
+    totalPersonalBalance,
+    distributableBalance,
+    jointAccount,
+    personalAccounts,
+    stats,
+  });
 
-  // --- DÉTAILS PAR COMPTE ---
-
-  // 1. Opérations Variables En Attente
-  const pendingVariablesDetails = useMemo(() => {
-    return checkingAccounts
-      .map((acc) => {
-        const totalPending = filteredPeriodBudgets
-          .flatMap((w) => w.items)
-          .filter((i) => i.accountId === acc.id && i.source === "VARIABLE" && i.type === "EXPENSE" && !i.isPaid && i.subCategory !== "Intérêts")
-          .reduce((sum, i) => sum + i.amount, 0); // Marche aussi avec montants négatifs
-
-        return { name: acc.name, amount: totalPending };
-      })
-      .filter((x) => x.amount > 0); // On n'affiche que s'il y a une dette positive
-  }, [filteredPeriodBudgets, checkingAccounts]);
-
-  // 2. Opérations Récurrentes En Attente (Courant + Retards)
-  const pendingRecurringDetails = useMemo(() => {
-    const relevantItems = filteredPeriodBudgets
-      .filter((w) => w.weekNumber <= activeWeek)
-      .flatMap((w) => w.items)
-      .filter((i) => i.source === "RECURRING" && !i.isPaid && i.category !== "Virement Interne" && i.type === "EXPENSE");
-
-    return checkingAccounts
-      .map((acc) => {
-        const amount = relevantItems.filter((i) => i.accountId === acc.id).reduce((sum, i) => sum + i.amount, 0);
-        return { name: acc.name, amount };
-      })
-      .filter((x) => x.amount > 0);
-  }, [filteredPeriodBudgets, activeWeek, checkingAccounts]);
-
-  // 3. Total Dette (Reste à payer global)
-  const totalDebtDetails = useMemo(() => {
-    return checkingAccounts
-      .map((acc) => {
-        const remaining = stats.byAccount[acc.id]?.remaining || 0;
-        return { name: acc.name, amount: remaining };
-      })
-      .filter((x) => x.amount > 0);
-  }, [checkingAccounts, stats]);
-
-  // 4. Consommation Variable Réelle par compte
-  const consumedDetails = useMemo(() => {
-    return checkingAccounts
-      .map((acc) => {
-        const items = variableItems.filter((i) => i.accountId === acc.id);
-
-        let expense = 0;
-        let income = 0;
-
-        items.forEach((i) => {
-          const standardAmount = getStandardAmount(i);
-
-          if (i.type === "EXPENSE") {
-            expense += standardAmount;
-          } else if (i.type === "INCOME") {
-            income += standardAmount;
-          }
-        });
-
-        return { name: acc.name, amount: expense - income };
-      })
-      .filter((x) => Math.abs(x.amount) > 0.01);
-  }, [checkingAccounts, variableItems]);
-
-  const { jointRows, personalRows, totalPersonalRow, virLddsTotal } = useMemo(() => {
-    const jRows: BalanceRow[] = [];
-    const pRows: BalanceRow[] = [];
-
-    // --- ÉTAPE 1 : Calculer le gap du compte joint ---
-    let jointGap = 0;
-    let jointTarget = 0;
-
-    if (jointAccount) {
-      const jointStats = stats.byAccount[jointAccount.id];
-      const pendingOnJoint = jointStats ? jointStats.remaining : 0;
-      jointTarget = pendingOnJoint;
-      jointGap = pendingOnJoint - jointAccount.currentBalance;
-    }
-
-    // --- ÉTAPE 2 : Répartir la ponction proportionnellement aux soldes ---
-    const amountToTakeFromPersonals = Math.max(0, Math.min(jointGap, totalPersonalBalance - distributableBalance));
-
-    const totalTransfersToPersonals = 0;
-    let totalSurplusFromPersonals = 0;
-
-    // PASSE 1 : Identifier qui peut contribuer (> seuil 10€)
-    const contributorAccounts = personalAccounts.filter((acc) => {
-      const shareOfTotal = totalPersonalBalance > 0 ? acc.currentBalance / totalPersonalBalance : 0;
-      const amountToTake = amountToTakeFromPersonals * shareOfTotal;
-      return amountToTake > 10;
-    });
-
-    // PASSE 2 : Calculer les transferts effectifs
-    // Si certains comptes ne peuvent pas contribuer (< seuil), on redistribue leur part aux contributeurs
-    const totalContributorBalance = contributorAccounts.reduce((sum, acc) => sum + acc.currentBalance, 0);
-
-    for (const acc of personalAccounts) {
-      const owner = people.find((p) => p.id === acc.ownerId);
-      let transferAmount = 0;
-
-      const isContributor = contributorAccounts.some((c) => c.id === acc.id);
-      const shareOfTotal = totalPersonalBalance > 0 ? acc.currentBalance / totalPersonalBalance : 0;
-      const theoreticalAmount = amountToTakeFromPersonals * shareOfTotal;
-
-      if (isContributor && totalContributorBalance > 0) {
-        // Ce compte contribue : calculer sa part proportionnelle du total nécessaire
-        const shareOfContributors = acc.currentBalance / totalContributorBalance;
-        const amountToTake = amountToTakeFromPersonals * shareOfContributors;
-
-        transferAmount = -amountToTake; // Négatif car c'est un reversement
-        totalSurplusFromPersonals += amountToTake;
-      } else {
-        // Ce compte ne contribue pas (montant trop faible)
-        transferAmount = 0;
-      }
-
-      // Cible = Solde Actuel + Virement (Ce qu'ils devraient avoir au final)
-      const targetBalance = acc.currentBalance + transferAmount;
-
-      pRows.push({
-        id: acc.id,
-        name: acc.name,
-        owner: owner?.name || "Inconnu",
-        balance: acc.currentBalance,
-        target: targetBalance,
-        transfer: transferAmount,
-        isJoint: false,
-        ratio: acc.targetRatio,
-        cap: acc.targetCap,
-        calculation: {
-          sharePercent: shareOfTotal * 100,
-          theoreticalAmount: theoreticalAmount,
-          isContributor: isContributor,
-        },
-      });
-    }
-
-    // --- LOGIQUE COMPTE JOINT ---
-    let jointTransferNeeded = 0;
-
-    if (jointAccount) {
-      const owner = people.find((p) => p.id === jointAccount.ownerId);
-
-      // Si les comptes persos ont des excédents, on les utilise d'abord avant le LDDS
-      let remainingGap = jointGap;
-      if (remainingGap > 0 && totalSurplusFromPersonals > 0) {
-        const surplusUsed = Math.min(remainingGap, totalSurplusFromPersonals);
-        remainingGap -= surplusUsed;
-      }
-
-      // Si le solde + excédents persos couvrent les dettes, pas besoin du LDDS
-      jointTransferNeeded = Math.max(0, remainingGap);
-
-      jRows.push({
-        id: jointAccount.id,
-        name: jointAccount.name,
-        owner: owner?.name || "Commun",
-        balance: jointAccount.currentBalance,
-        target: jointTarget,
-        transfer: jointGap, // Gap total brut
-        isJoint: true,
-        calculation: {
-          jointDebts: jointTarget,
-          jointGap: jointGap,
-          fromPersonals: totalSurplusFromPersonals,
-          fromLdds: jointTransferNeeded,
-        },
-      });
-    }
-
-    // --- LIGNE DE TOTAL POUR COMPTES PERSONNELS ---
-    const totalPersonalRow: BalanceRow = {
-      id: "total",
-      name: "TOTAL",
-      owner: "",
-      balance: pRows.reduce((sum, r) => sum + r.balance, 0),
-      target: pRows.reduce((sum, r) => sum + r.target, 0),
-      transfer: pRows.reduce((sum, r) => sum + r.transfer, 0),
-      isJoint: false,
-    };
-
-    // --- SYNTHÈSE GLOBALE ---
-    // Le virement du LDDS doit couvrir le trou du Compte Joint (après excédents persos) + les Top-ups des comptes persos
-    const globalTransfer = jointTransferNeeded + totalTransfersToPersonals;
-
-    // Tri par libellé (name) pour un affichage cohérent
-    jRows.sort((a, b) => a.name.localeCompare(b.name));
-    pRows.sort((a, b) => a.name.localeCompare(b.name));
-
-    return { jointRows: jRows, personalRows: pRows, totalPersonalRow, virLddsTotal: globalTransfer };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [accounts, people, budgetPeriodeGlobal, totalPersonalBalance, jointAccount, personalAccounts, stats, distributableBalance]);
+  // --- HANDLERS ---
 
   const handleUpdateBalance = (id: string, newBalance: number) => {
     const account = accounts.find((a) => a.id === id);
