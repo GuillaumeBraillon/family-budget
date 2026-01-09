@@ -30,6 +30,7 @@
  */
 import React, { useState } from "react";
 import { usePlannerUI } from "../../../hooks/usePlannerUI";
+import { useError } from "../../../contexts/ErrorContext";
 import { useTransfersFilters } from "../../../hooks/transfers/useTransfersFilters";
 import { useTransfersData, isTransfer } from "../../../hooks/transfers/useTransfersData";
 import { Account, Person, Transfer, AppSettings, SavedLabel, AccountType, VariableTransaction, CategoryDef } from "../../../types";
@@ -76,6 +77,7 @@ export const TransfersView: React.FC<TransfersViewProps> = ({
   onDeleteTransfer,
   onMoveTransfer,
 }) => {
+  const { showError } = useError();
   // --- HOOKS SPÉCIALISÉS (LOGIQUE DÉLÉGUÉE) ---
 
   // Navigation et recherche (UI state global)
@@ -154,34 +156,38 @@ export const TransfersView: React.FC<TransfersViewProps> = ({
    * @param {DragEndEvent} event - Événement DnD
    */
   const handleDragEnd = (event: DragEndEvent) => {
-    if (!onMoveTransfer) return;
+    try {
+      if (!onMoveTransfer) return;
 
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
+      const { active, over } = event;
+      if (!over || active.id === over.id) return;
 
-    const transfersList = currentItems.filter((i) => i.source === "TRANSFER").map((i) => i.transferData!);
-    const oldIndex = transfersList.findIndex((t) => t.id === active.id);
-    const newIndex = transfersList.findIndex((t) => t.id === over.id);
+      const transfersList = currentItems.filter((i) => i.source === "TRANSFER").map((i) => i.transferData!);
+      const oldIndex = transfersList.findIndex((t) => t.id === active.id);
+      const newIndex = transfersList.findIndex((t) => t.id === over.id);
 
-    if (oldIndex === -1 || newIndex === -1) return;
+      if (oldIndex === -1 || newIndex === -1) return;
 
-    const movedTransfer = transfersList[oldIndex];
-    const reordered = arrayMove(transfersList, oldIndex, newIndex);
+      const movedTransfer = transfersList[oldIndex];
+      const reordered = arrayMove(transfersList, oldIndex, newIndex);
 
-    let newPosition: number;
-    if (newIndex === 0) {
-      const nextPos = getEffectivePosition(reordered[1] as Transfer);
-      newPosition = nextPos - 50_000_000;
-    } else if (newIndex === reordered.length - 1) {
-      const prevPos = getEffectivePosition(reordered[newIndex - 1] as Transfer);
-      newPosition = prevPos + 50_000_000;
-    } else {
-      const prevPos = getEffectivePosition(reordered[newIndex - 1] as Transfer);
-      const nextPos = getEffectivePosition(reordered[newIndex + 1] as Transfer);
-      newPosition = Math.floor((prevPos + nextPos) / 2);
+      let newPosition: number;
+      if (newIndex === 0) {
+        const nextPos = getEffectivePosition(reordered[1] as Transfer);
+        newPosition = nextPos - 50_000_000;
+      } else if (newIndex === reordered.length - 1) {
+        const prevPos = getEffectivePosition(reordered[newIndex - 1] as Transfer);
+        newPosition = prevPos + 50_000_000;
+      } else {
+        const prevPos = getEffectivePosition(reordered[newIndex - 1] as Transfer);
+        const nextPos = getEffectivePosition(reordered[newIndex + 1] as Transfer);
+        newPosition = Math.floor((prevPos + nextPos) / 2);
+      }
+
+      onMoveTransfer(movedTransfer, newPosition);
+    } catch (err) {
+      showError(err as Error, "Drag & drop de virement");
     }
-
-    onMoveTransfer(movedTransfer, newPosition);
   };
 
   const sortOptions = [

@@ -7,6 +7,115 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.2.3] - 2026-01-09
+
+### Ajouté
+
+- **Système global de gestion d'erreurs** : Architecture unifiée avec design élégant pour toutes les erreurs
+  - **ErrorContext** : State management global avec hook `useError`
+    - `showError(error, context?)` pour afficher ErrorModal
+    - `clearError()` pour fermer la modal
+    - Type `ErrorInfo` : `{ error, context, timestamp }`
+  - **ErrorDisplay** : Composant réutilisable pour affichage unifié
+    - Props flexibles pour ErrorModal (avec bouton Fermer) et ErrorBoundary (fullscreen)
+    - Design gradient header (rose-50 to orange-50)
+    - Stack trace pliable avec boutons chevron
+    - Conseils contextuels par type d'erreur (modal vs boundary)
+  - **ErrorModal** : Modal overlay pour erreurs de handlers (try/catch)
+    - Utilisé par tous les handlers critiques
+    - Boutons : Fermer, Rafraîchir, Retour accueil
+    - Affichage du contexte (ex: "Drag & drop d'opération")
+  - **ErrorBoundary redesigné** : Capture des erreurs React avec UI identique
+    - Design unifié avec ErrorModal via ErrorDisplay
+    - Contexte automatique : "Erreur dans le cycle de rendu React"
+    - Boutons : Rafraîchir, Retour accueil (pas de Fermer)
+
+- **Protection try/catch complète** : 7 handlers critiques sécurisés
+  - **OperationsView** : `handleReorder`, `handleDeleteVariable`
+  - **VariableTransactionForm** : `handleFormSubmit`, `handleDelete`
+  - **TransfersView** : `handleDragEnd`
+  - **PlannerModals** : Validation et annulation de pointage
+  - Tous les handlers utilisent `showError(err, context)` pour affichage élégant
+
+### Amélioré
+
+- **UX erreurs** : Remplacement de tous les `alert()` et `console.error()` par ErrorModal
+  - Messages utilisateur clairs et contextuels
+  - Stack trace accessible pour debug (pliable)
+  - Actions de récupération (Rafraîchir, Home, Fermer)
+  - Design professionnel avec gradient et couleurs sémantiques
+
+- **Architecture composants** : Refactorisation DRY avec ErrorDisplay
+  - **-54% de duplication** : 131 lignes (ErrorModal + ErrorBoundary) vs 286 lignes avant
+  - **Maintenabilité** : Une seule source de vérité pour le design d'erreur
+  - **Réutilisabilité** : Props flexibles pour différents contextes
+  - **Cohérence** : Design identique garanti entre ErrorModal et ErrorBoundary
+
+### Corrigé
+
+- **Gestion erreurs silencieuses** : Les erreurs de handlers ne crashent plus l'app
+  - Avant : Erreurs loggées dans console, utilisateur perdu
+  - Après : Modal élégante avec message + actions
+  - Expérience utilisateur grandement améliorée
+
+### Supprimé
+
+- **Artefacts de test** : Nettoyage complet du code de production
+  - Fichier `TestErrorBoundary.tsx` supprimé
+  - Boutons de test retirés d'OperationsView
+  - Import `TestErrorBoundary` nettoyé
+  - Code 100% production-ready
+
+### Technique
+
+- **Design System erreurs** : Palette cohérente
+  - Header : `bg-gradient-to-br from-rose-50 to-orange-50`
+  - Icône : `AlertCircle` dans badge `bg-rose-100 w-14 h-14 rounded-2xl`
+  - Contexte : `bg-blue-50 border-blue-200` avec texte `text-blue-700`
+  - Message : `bg-rose-50 border-rose-200` avec `font-mono text-rose-700`
+  - Stack : `bg-slate-900 text-slate-100 font-mono` (pliable)
+  - Conseils : `bg-amber-50 border-amber-200` avec bullet list
+  - Actions : `bg-indigo-600` (primaire) + `bg-slate-700` (secondaire)
+
+- **Pattern standard handlers** :
+
+  ```typescript
+  import { useError } from "../contexts/ErrorContext";
+
+  const { showError } = useError();
+
+  const handleAction = async () => {
+    try {
+      await riskyOperation();
+    } catch (err) {
+      showError(err as Error, "Contexte descriptif");
+    }
+  };
+  ```
+
+- **Flux d'erreurs** :
+  ```
+  Erreurs Applicatives
+          ↓
+  ┌───────────────────┬───────────────────┐
+  │  Handler Errors   │  Render Errors    │
+  │   try/catch       │ Error Boundary    │
+  │   → showError()   │ componentDidCatch │
+  └────────┬──────────┴────────┬──────────┘
+           ↓                   ↓
+      ErrorContext        ErrorBoundary
+           ↓                   ↓
+      ErrorModal          ErrorDisplay
+           ↓                   ↓
+           └───────────────────┘
+                ErrorDisplay
+         (composant réutilisable)
+  ```
+
+**Impact qualité** : Gestion d'erreurs professionnelle complète (0 alert, 0 console.error, UX élégante)
+
+---
+
 ## [2.2.2] - 2026-01-08
 
 ### Corrigé
@@ -90,7 +199,7 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
   - Nettoyage de `mapDbAuthorizedUser` (logs de mapping utilisateurs)
   - Sécurité renforcée en développement
 
-### Refactorisation - Code Portfolio-Ready
+### Refactorisation - Qualité de Code
 
 - **Qualité de code exemplaire** : Nettoyage complet pour standards professionnels
   - **89 problèmes ESLint → 0** (100% de réduction)
@@ -189,7 +298,7 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
   - Logging automatique avec stack traces
   - Amélioration de l'expérience utilisateur en cas d'erreur
 
-- **Standards professionnels** : Code portfolio-ready
+- **Standards professionnels** : Code de haute qualité
   - 100% type-safe (TypeScript strict)
   - Zero-defect standard (0 ESLint errors/warnings)
   - React best practices (hooks optimisés)

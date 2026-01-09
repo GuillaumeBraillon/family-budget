@@ -2,6 +2,7 @@ import React from "react";
 import { X, Check, MessageSquare } from "lucide-react";
 import { Modal } from "../../../ui/Modal";
 import { Account, PaidItemDetails, Tag } from "../../../../types";
+import { useError } from "../../../../contexts/ErrorContext";
 
 interface PlannerModalsProps {
   confirmModal: { instanceId: string; newStatus: boolean } | null;
@@ -24,6 +25,8 @@ export const PlannerModals: React.FC<PlannerModalsProps> = ({
   onCloseUncheck,
   setConfirmModal,
 }) => {
+  const { showError } = useError();
+
   return (
     <>
       {confirmModal.isOpen && (
@@ -90,23 +93,27 @@ export const PlannerModals: React.FC<PlannerModalsProps> = ({
                 </div>
               </FormField>
               <button
-                onClick={() => {
-                  if (confirmModal.item) {
-                    onTogglePaid(
-                      {
-                        ...confirmModal.item,
-                        amount: confirmModal.amount,
-                        paymentDate: confirmModal.paymentDate,
-                        accountId: confirmModal.accountId,
-                        label: confirmModal.label,
-                        comments: confirmModal.comments.trim() || undefined,
-                        isWaiting: false,
-                        isVariable: false,
-                      } as PaidItemDetails,
-                      confirmModal.item.instanceId
-                    );
+                onClick={async () => {
+                  try {
+                    if (confirmModal.item) {
+                      await onTogglePaid(
+                        {
+                          ...confirmModal.item,
+                          amount: confirmModal.amount,
+                          paymentDate: confirmModal.paymentDate,
+                          accountId: confirmModal.accountId,
+                          label: confirmModal.label,
+                          comments: confirmModal.comments.trim() || undefined,
+                          isWaiting: false,
+                          isVariable: false,
+                        } as PaidItemDetails,
+                        confirmModal.item.instanceId
+                      );
+                    }
+                    onCloseConfirm();
+                  } catch (err) {
+                    showError(err as Error, "Pointage d'opération");
                   }
-                  onCloseConfirm();
                 }}
                 className={`w-full py-3 rounded-lg text-white font-medium shadow-sm hover:opacity-90 flex items-center justify-center gap-2 ${
                   confirmModal.item?.type === "INCOME" ? "bg-emerald-600" : "bg-slate-900"
@@ -125,11 +132,15 @@ export const PlannerModals: React.FC<PlannerModalsProps> = ({
             Garder
           </button>
           <button
-            onClick={() => {
-              if (uncheckModal.item) {
-                onTogglePaid(null, uncheckModal.item.instanceId);
+            onClick={async () => {
+              try {
+                if (uncheckModal.item) {
+                  await onTogglePaid(null, uncheckModal.item.instanceId);
+                }
+                onCloseUncheck();
+              } catch (err) {
+                showError(err as Error, "Annulation du pointage");
               }
-              onCloseUncheck();
             }}
             className="flex-1 py-2.5 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700"
           >

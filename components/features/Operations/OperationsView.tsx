@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { usePlannerUI } from "../../../hooks/usePlannerUI";
 import { usePlanner } from "../../../hooks/usePlanner";
+import { useError } from "../../../contexts/ErrorContext";
 import { useOperationsFilters, useOperationsSorting, useOperationsData } from "../../../hooks/operations";
 import {
   ExpenseConfig,
@@ -18,6 +19,7 @@ import {
 } from "../../../types";
 import { Calendar, CalendarRange, GripVertical } from "lucide-react";
 import { arrayMove } from "@dnd-kit/sortable";
+import { logger } from "../../../services/logger";
 
 // Imports UI Atomic (Generic)
 import { Toast } from "../../ui/Toast";
@@ -72,6 +74,8 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
   onDeleteVariable,
   onMoveItem,
 }) => {
+  const { showError } = useError();
+
   // Hooks spécialisés (responsabilités déléguées)
   const ui = usePlannerUI(initialDate, initialWeek);
   const { filters, setFilters, resetFilters } = useOperationsFilters(initialFilters);
@@ -116,10 +120,14 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
   const currentItems = sortItems(unsortedItems);
 
   // Handlers
-  const handleDeleteVariable = (id: string) => {
-    onDeleteVariable(id);
-    setFeedback({ type: "success", message: "Opération supprimée" });
-    setTimeout(() => setFeedback(null), 3000);
+  const handleDeleteVariable = async (id: string) => {
+    try {
+      await onDeleteVariable(id);
+      setFeedback({ type: "success", message: "Opération supprimée" });
+      setTimeout(() => setFeedback(null), 3000);
+    } catch (err) {
+      showError(err as Error, "Suppression d'opération variable");
+    }
   };
 
   const handleItemClick = (item: PlannedItem) => {
@@ -191,114 +199,119 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
 
   // DRAG & DROP : SYSTÈME D'INTERVALLES LARGES (Scalable)
   const handleReorder = (item: PlannedItem, oldIndex: number, newIndex: number) => {
-    if (onMoveItem && sortKey === "manual") {
-      logger.debug("drag-drop", "Début handleReorder", {
-        item: item.label,
-        oldIndex,
-        newIndex,
-        sortOrder,
-        currentPosition: item.position,
-      });
+    try {
+      if (onMoveItem && sortKey === "manual") {
+        logger.debug("drag-drop", "Début handleReorder", {
+          item: item.label,
+          oldIndex,
+          newIndex,
+          sortOrder,
+          currentPosition: item.position,
+        });
 
-      // 1. Simuler le nouveau tableau après déplacement
-      const reorderedList = arrayMove(currentItems, oldIndex, newIndex);
+        // 1. Simuler le nouveau tableau après déplacement
+        const reorderedList = arrayMove(currentItems, oldIndex, newIndex);
 
-      // IMPORTANT : En mode DESC, l'ordre visuel est inversé
-      // prev devient next et vice-versa pour le calcul des positions
-      const isDescending = sortOrder === "desc";
-      const prevItem = (isDescending ? reorderedList[newIndex + 1] : reorderedList[newIndex - 1]) as PlannedItem | undefined;
-      const nextItem = (isDescending ? reorderedList[newIndex - 1] : reorderedList[newIndex + 1]) as PlannedItem | undefined;
+        // IMPORTANT : En mode DESC, l'ordre visuel est inversé
+        // prev devient next et vice-versa pour le calcul des positions
+        const isDescending = sortOrder === "desc";
+        const prevItem = (isDescending ? reorderedList[newIndex + 1] : reorderedList[newIndex - 1]) as PlannedItem | undefined;
+        const nextItem = (isDescending ? reorderedList[newIndex - 1] : reorderedList[newIndex + 1]) as PlannedItem | undefined;
 
-      // 2. Calculer la nouvelle position entre les voisins
-      const POSITION_STEP = 1000; // Intervalles larges (1000, 2000, 3000...)
-      const MIN_POSITION = 1; // Position minimale
-      const MAX_MANUAL = 999_999; // Position manuelle max (< 1M)
+        // 2. Calculer la nouvelle position entre les voisins
+        const POSITION_STEP = 1000; // Intervalles larges (1000, 2000, 3000...)
+        const MIN_POSITION = 1; // Position minimale
+        const MAX_MANUAL = 999_999; // Position manuelle max (< 1M)
 
-      // Helper : Récupère la position manuelle ou null (< 1M = manuel, >= 1M = auto)
-      const getManualPosition = (item: PlannedItem | undefined): number | null => {
-        if (!item) return null;
-        // Les positions manuelles sont < 1M (1, 2, 3... 999999)
-        // Les positions automatiques sont >= 1M (générées par jour + hash)
-        return item.position && item.position > 0 && item.position < 1_000_000 ? item.position : null;
-      };
+        // Helper : Récupère la position manuelle ou null (< 1M = manuel, >= 1M = auto)
+        const getManualPosition = (item: PlannedItem | undefined): number | null => {
+          if (!item) return null;
+          // Les positions manuelles sont < 1M (1, 2, 3... 999999)
+          // Les positions automatiques sont >= 1M (générées par jour + hash)
+          return item.position && item.position > 0 && item.position < 1_000_000 ? item.position : null;
+        };
 
-      const prevPos = getManualPosition(prevItem);
-      const nextPos = getManualPosition(nextItem);
+        const prevPos = getManualPosition(prevItem);
+        const nextPos = getManualPosition(nextItem);
 
-      let newPosition: number;
+        let newPosition: number;
 
-      if (!prevItem && !nextItem) {
-        // Liste vide
-        newPosition = POSITION_STEP;
-      } else if (!prevItem) {
-        // Première position
-        if (nextPos !== null && nextPos > POSITION_STEP) {
-          // Il y a de l'espace avant le suivant
-          newPosition = Math.floor(nextPos / 2);
-        } else {
-          // Pas d'espace : assigner 1, décaler le suivant
-          newPosition = MIN_POSITION;
-          if (nextItem) onMoveItem(nextItem, POSITION_STEP);
-        }
-      } else if (!nextItem) {
-        // Dernière position
-        if (prevPos !== null && prevPos < MAX_MANUAL - POSITION_STEP) {
-          newPosition = prevPos + POSITION_STEP;
-        } else {
-          // Prev n'a pas de position ou trop proche de la limite
-          if (prevItem) onMoveItem(prevItem, MAX_MANUAL - POSITION_STEP);
-          newPosition = MAX_MANUAL;
-        }
-      } else {
-        // Entre deux items
-        if (prevPos !== null && nextPos !== null) {
-          // Les deux ont des positions manuelles
-          const gap = nextPos - prevPos;
-          if (gap > 2) {
-            // Espace suffisant : moyenne
-            newPosition = Math.floor((prevPos + nextPos) / 2);
+        if (!prevItem && !nextItem) {
+          // Liste vide
+          newPosition = POSITION_STEP;
+        } else if (!prevItem) {
+          // Première position
+          if (nextPos !== null && nextPos > POSITION_STEP) {
+            // Il y a de l'espace avant le suivant
+            newPosition = Math.floor(nextPos / 2);
           } else {
-            // Espace trop petit : forcer un écart en décalant tout vers le haut
+            // Pas d'espace : assigner 1, décaler le suivant
+            newPosition = MIN_POSITION;
+            if (nextItem) onMoveItem(nextItem, POSITION_STEP);
+          }
+        } else if (!nextItem) {
+          // Dernière position
+          if (prevPos !== null && prevPos < MAX_MANUAL - POSITION_STEP) {
             newPosition = prevPos + POSITION_STEP;
-            // Décaler tous les items suivants de +POSITION_STEP
-            for (let i = newIndex + 1; i < reorderedList.length; i++) {
-              const futureItem = reorderedList[i];
-              const futurePos = getManualPosition(futureItem);
-              if (futurePos !== null) {
-                onMoveItem(futureItem, futurePos + POSITION_STEP);
+          } else {
+            // Prev n'a pas de position ou trop proche de la limite
+            if (prevItem) onMoveItem(prevItem, MAX_MANUAL - POSITION_STEP);
+            newPosition = MAX_MANUAL;
+          }
+        } else {
+          // Entre deux items
+          if (prevPos !== null && nextPos !== null) {
+            // Les deux ont des positions manuelles
+            const gap = nextPos - prevPos;
+            if (gap > 2) {
+              // Espace suffisant : moyenne
+              newPosition = Math.floor((prevPos + nextPos) / 2);
+            } else {
+              // Espace trop petit : forcer un écart en décalant tout vers le haut
+              newPosition = prevPos + POSITION_STEP;
+              // Décaler tous les items suivants de +POSITION_STEP
+              for (let i = newIndex + 1; i < reorderedList.length; i++) {
+                const futureItem = reorderedList[i];
+                const futurePos = getManualPosition(futureItem);
+                if (futurePos !== null) {
+                  onMoveItem(futureItem, futurePos + POSITION_STEP);
+                }
               }
             }
-          }
-        } else if (prevPos !== null && nextPos === null) {
-          // Seul prev a une position
-          newPosition = prevPos + POSITION_STEP;
-          if (nextItem) onMoveItem(nextItem, prevPos + 2 * POSITION_STEP);
-        } else if (prevPos === null && nextPos !== null) {
-          // Seul next a une position
-          if (nextPos > POSITION_STEP) {
-            if (prevItem) onMoveItem(prevItem, nextPos - 2 * POSITION_STEP);
-            newPosition = nextPos - POSITION_STEP;
+          } else if (prevPos !== null && nextPos === null) {
+            // Seul prev a une position
+            newPosition = prevPos + POSITION_STEP;
+            if (nextItem) onMoveItem(nextItem, prevPos + 2 * POSITION_STEP);
+          } else if (prevPos === null && nextPos !== null) {
+            // Seul next a une position
+            if (nextPos > POSITION_STEP) {
+              if (prevItem) onMoveItem(prevItem, nextPos - 2 * POSITION_STEP);
+              newPosition = nextPos - POSITION_STEP;
+            } else {
+              if (prevItem) onMoveItem(prevItem, MIN_POSITION);
+              newPosition = POSITION_STEP;
+              if (nextItem) onMoveItem(nextItem, 2 * POSITION_STEP);
+            }
           } else {
-            if (prevItem) onMoveItem(prevItem, MIN_POSITION);
-            newPosition = POSITION_STEP;
-            if (nextItem) onMoveItem(nextItem, 2 * POSITION_STEP);
+            // Aucun des deux n'a de position : initialiser séquentiellement
+            if (prevItem) onMoveItem(prevItem, POSITION_STEP);
+            newPosition = 2 * POSITION_STEP;
+            if (nextItem) onMoveItem(nextItem, 3 * POSITION_STEP);
           }
-        } else {
-          // Aucun des deux n'a de position : initialiser séquentiellement
-          if (prevItem) onMoveItem(prevItem, POSITION_STEP);
-          newPosition = 2 * POSITION_STEP;
-          if (nextItem) onMoveItem(nextItem, 3 * POSITION_STEP);
         }
-      }
 
-      // 3. Persister l'item déplacé
-      onMoveItem(item, newPosition);
+        // 3. Persister l'item déplacé
+        onMoveItem(item, newPosition);
+      }
+    } catch (err) {
+      showError(err as Error, "Drag & drop d'opération");
     }
   };
 
   return (
     <div className="space-y-6">
       {feedback && <Toast type={feedback.type} message={feedback.message} onClose={() => setFeedback(null)} />}
+
       <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
         <QuickPeriodSummary expenses={quickStats.expenses} income={quickStats.income} />
 

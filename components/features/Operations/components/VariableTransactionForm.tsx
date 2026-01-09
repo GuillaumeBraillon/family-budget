@@ -17,6 +17,7 @@
  * ```
  */
 import React, { useState, useRef, useEffect } from "react";
+import { useError } from "../../../../contexts/ErrorContext";
 import {
   Save,
   TrendingUp,
@@ -77,6 +78,7 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
   initialMode = DEFAULT_MODE,
   lockMode = false,
 }) => {
+  const { showError } = useError();
   // --- HOOKS SPÉCIALISÉS (LOGIQUE DÉLÉGUÉE) ---
 
   const form = useTransactionForm({
@@ -100,21 +102,30 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
     }
   }, [form.validationErrors]);
 
-  const handleFormSubmit = (targetIsWaiting: boolean) => {
-    const result = form.handleSubmit(targetIsWaiting, onClose);
-    if (!result) return;
-    if (form.mode === "TRANSFER" && onUpsertTransfer) {
-      onUpsertTransfer(result as Transfer);
-    } else {
-      onAddTransaction(result as VariableTransaction);
+  const handleFormSubmit = async (targetIsWaiting: boolean) => {
+    try {
+      const result = form.handleSubmit(targetIsWaiting, onClose);
+      if (!result) return;
+      if (form.mode === "TRANSFER" && onUpsertTransfer) {
+        await onUpsertTransfer(result as Transfer);
+      } else {
+        await onAddTransaction(result as VariableTransaction);
+      }
+    } catch (err) {
+      showError(err as Error, "Sauvegarde de transaction");
     }
   };
 
-  const handleDelete = () => {
-    if (editingTransaction && onDeleteTransaction) {
-      onDeleteTransaction(editingTransaction.id);
+  const handleDelete = async () => {
+    try {
+      if (editingTransaction && onDeleteTransaction) {
+        await onDeleteTransaction(editingTransaction.id);
+        setShowDeleteConfirm(false);
+        onClose();
+      }
+    } catch (err) {
+      showError(err as Error, "Suppression de transaction");
       setShowDeleteConfirm(false);
-      onClose();
     }
   };
 

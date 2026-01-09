@@ -4,6 +4,8 @@ import { useBudget } from "./hooks/useBudget";
 import { useAuth } from "./hooks/useAuth";
 import { useAuthorization } from "./hooks/useAuthorization";
 import { useConfigurationUI, ConfigTab } from "./hooks/useConfigurationUI";
+import { ErrorProvider, useError } from "./contexts/ErrorContext";
+import { ErrorModal } from "./components/ui/ErrorModal";
 import { Header } from "./components/Layout/Header";
 import { DashboardView } from "./components/features/Dashboard/DashboardView";
 import { BalancesView } from "./components/features/Balances/BalancesView";
@@ -21,7 +23,9 @@ type ViewState = "dashboard" | "balances" | "planner" | "transfers" | "config";
 
 const VIEWS: ViewState[] = ["dashboard", "balances", "planner", "transfers", "config"];
 
-const App: React.FC = () => {
+const AppContent: React.FC = () => {
+  const { currentError, clearError } = useError();
+
   // 1. Authentification & Configuration
   const [isConfigured, setIsConfigured] = useState(isSupabaseConfigured());
   const { session, loading: authLoading, signInWithGoogle, signOut, error: authError } = useAuth();
@@ -323,7 +327,18 @@ const App: React.FC = () => {
           />
         )}
       </main>
+
+      {/* Modale d'erreur globale */}
+      {currentError && <ErrorModal isOpen={true} error={currentError.error} context={currentError.context} onClose={clearError} />}
     </div>
+  );
+};
+
+const App: React.FC = () => {
+  return (
+    <ErrorProvider>
+      <AppContent />
+    </ErrorProvider>
   );
 };
 

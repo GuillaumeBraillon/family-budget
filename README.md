@@ -382,6 +382,14 @@ Le script crée automatiquement :
 - **ESLint** : Linter JavaScript/TypeScript
 - **PostCSS** : Processeur CSS pour Tailwind
 
+### Gestion d'erreurs
+
+- **ErrorContext** : State management global des erreurs
+- **ErrorDisplay** : Composant réutilisable pour UI unifiée
+- **ErrorModal** : Modal overlay pour erreurs de handlers
+- **ErrorBoundary** : Capture des erreurs React avec fallback UI
+- **Try/catch systématique** : 7 handlers critiques protégés
+
 ---
 
 ## 🏗️ Architecture
@@ -426,6 +434,67 @@ services/
 ├── logger.ts           # Logs développement
 └── errorFormatter.ts   # Messages d'erreur utilisateur
 ```
+
+### Gestion d'erreurs
+
+#### Architecture unifiée
+
+**Système global avec design élégant pour toutes les erreurs applicatives.**
+
+```
+Erreurs Applicatives
+        ↓
+┌───────────────────┬───────────────────┐
+│  Handler Errors   │  Render Errors    │
+│   try/catch       │ Error Boundary    │
+│   → showError()   │ componentDidCatch │
+└────────┬──────────┴────────┬──────────┘
+         ↓                   ↓
+    ErrorContext        ErrorBoundary
+         ↓                   ↓
+    ErrorModal          ErrorDisplay
+         ↓                   ↓
+         └───────────────────┘
+              ErrorDisplay
+       (composant réutilisable)
+```
+
+**Composants clés** :
+
+- **ErrorContext** : State management global (hook `useError`)
+- **ErrorDisplay** : Composant réutilisable avec design unifié
+- **ErrorModal** : Modal pour erreurs de handlers (try/catch)
+- **ErrorBoundary** : Capture erreurs React (render/lifecycle)
+
+**Pattern standard** :
+
+```typescript
+import { useError } from "../contexts/ErrorContext";
+
+const { showError } = useError();
+
+const handleAction = async () => {
+  try {
+    await riskyOperation();
+  } catch (err) {
+    showError(err as Error, "Contexte descriptif");
+  }
+};
+```
+
+**Design unifié** :
+
+- Header gradient rose-50 to orange-50
+- Stack trace pliable avec chevrons
+- Contexte coloré (blue pour info, rose pour erreur)
+- Actions : Fermer, Rafraîchir, Retour accueil
+
+**Handlers protégés** :
+
+1. Drag & drop opérations/virements
+2. Suppression opérations/transactions
+3. Soumission formulaires
+4. Pointage/dépointage opérations
 
 ### Concepts clés
 

@@ -60,14 +60,17 @@ const name = account.ownerId;
 
 Toutes les fonctions CRUD dans [services/apiCrud.ts](../services/apiCrud.ts) doivent convertir avant/après les appels Supabase.
 
-## Navigation Dual-Mode (Planner)
+## Navigation et Vues
 
-[components/BudgetPlanner/BudgetPlanner.tsx](../components/BudgetPlanner/BudgetPlanner.tsx) possède un état `viewMode` :
+**Architecture actuelle :** L'application utilise un système de vues avec navigation par tabs :
 
-- **'calendar'** : Suivi mensuel et pointage des opérations (`isPaid`)
-- **'models'** : Édition CRUD des règles récurrentes (configs)
+- **Dashboard** : Vue d'ensemble financière avec graphiques et analytics
+- **Balances** : Suivi des soldes par compte avec ratios cibles
+- **Operations (Planner)** : Échéancier mensuel avec pointage des opérations
+- **Transfers** : Gestion des virements internes et opérations d'épargne
+- **Configuration** : Réglages (comptes, membres, catégories, opérations récurrentes)
 
-Cette séparation rapproche la gestion des règles du contexte métier, contrairement à `ConfigurationView` qui gère uniquement les données structurelles (comptes, membres, catégories).
+La gestion des opérations récurrentes se fait dans la vue Configuration > Opérations, séparée du pointage mensuel dans Operations View.
 
 ## Système de Tags avec Montants (Tag Amounts)
 
@@ -102,12 +105,7 @@ operation: 100€
 ### Composants Clés
 
 - **[TagAmountSelector](../components/ui/molecules/TagAmountSelector.tsx)** : Interface de ventilation avec bouton ⭐ Extra par tag
-- **getEffectiveAmount()** : Fonction helper pour calculer les montants basés sur les filtres actifs
-
-### Migrations
-
-- `migrations/003_add_tag_amounts.sql` : Création table + migration automatique anciens tags
-- `migrations/004_add_tag_is_extra.sql` : Support Extra au niveau tag
+- **getEffectiveAmount()** : Fonction helper pour calculer les montants basés sur les filtres actifs (définie dans useOperationsData)
 
 ## Système Extra à Deux Niveaux
 
@@ -159,8 +157,6 @@ operation: 300€, isExtra: true
 → Toute l'opération hors budget (priorité au toggle global)
 ```
 
-Documentation complète : [docs/EXTRA_SYSTEM.md](../docs/EXTRA_SYSTEM.md)
-
 ## Calculs Intelligents et Filtres
 
 ### Montants Effectifs
@@ -168,7 +164,7 @@ Documentation complète : [docs/EXTRA_SYSTEM.md](../docs/EXTRA_SYSTEM.md)
 Quand des filtres de tags sont actifs, utiliser `getEffectiveAmount(item)` au lieu de `item.amount` :
 
 ```typescript
-// Dans quickStats (OperationsView.tsx)
+// Dans useOperationsData (hooks/operations/useOperationsData.ts)
 const getEffectiveAmount = (item: PlannedItem): number => {
   // Pas de filtre → montant total
   if (!filters.includedTagIds?.length) return item.amount;
@@ -208,7 +204,12 @@ npm run build      # Build production TypeScript + Vite
 npm run preview    # Preview build de production
 ```
 
-**Configuration Supabase :** Nécessite les variables d'environnement `SUPABASE_PROJECT_ID` et `SUPABASE_ANON_KEY` (voir [default.env.txt](../default.env.txt)).
+**Configuration Supabase :** Nécessite les variables d'environnement :
+
+- `VITE_SUPABASE_PROJECT_ID` : ID du projet Supabase
+- `VITE_SUPABASE_ANON_KEY` : Clé publique anon
+
+Voir [default.env.txt](../default.env.txt) pour le template. Les variables doivent avoir le préfixe `VITE_` pour être accessibles côté client avec Vite.
 
 ## Patterns UI/UX
 
@@ -220,13 +221,40 @@ npm run preview    # Preview build de production
 
 ## Fichiers Critiques à Connaître
 
+### Types et État Global
+
 - [types.ts](../types.ts) : Toutes les interfaces TypeScript (source de vérité)
-- [hooks/useBudget.ts](../hooks/useBudget.ts) : Hub central des données
+- [hooks/useBudget.ts](../hooks/useBudget.ts) : Hub central des données avec actions CRUD
+- [hooks/budget/useBudgetBalances.ts](../hooks/budget/useBudgetBalances.ts) : Gestion des soldes de comptes
+- [hooks/budget/useBudgetActions.ts](../hooks/budget/useBudgetActions.ts) : Actions CRUD wrappées
+
+### Planification et Opérations
+
 - [hooks/usePlanner.ts](../hooks/usePlanner.ts) : Génération des instances mensuelles + fonction `hasExtraAmounts`
-- [services/apiMappers.ts](../services/apiMappers.ts) : Conversion DB ↔ App (inclut `mapDbTagAmount`)
+- [hooks/operations/useOperationsData.ts](../hooks/operations/useOperationsData.ts) : Logique métier opérations (inclut `getEffectiveAmount`)
+- [hooks/operations/useOperationsFilters.ts](../hooks/operations/useOperationsFilters.ts) : État des filtres
+
+### API et Base de Données
+
+- [services/api.ts](../services/api.ts) : Chargement initial des données (READ)
 - [services/apiCrud.ts](../services/apiCrud.ts) : Opérations CRUD avec gestion des `paid_item_tags`
-- [components/ui/molecules/TagAmountSelector.tsx](../components/ui/molecules/TagAmountSelector.tsx) : Interface de ventilation des tags
+- [services/apiMappers.ts](../services/apiMappers.ts) : Conversion DB ↔ App (inclut `mapDbTagAmount`)
+- [services/dbTypes.ts](../services/dbTypes.ts) : Types PostgreSQL (snake_case)
+
+### Composants UI
+
 - [App.tsx](../App.tsx) : Point d'entrée, gestion des vues principales
+- [components/features/Operations/OperationsView.tsx](../components/features/Operations/OperationsView.tsx) : Vue échéancier avec filtres
+- [components/features/Operations/components/PlannerModals.tsx](../components/features/Operations/components/PlannerModals.tsx) : Modales de pointage
+- [components/features/Operations/components/VariableTransactionForm.tsx](../components/features/Operations/components/VariableTransactionForm.tsx) : Formulaire transactions variables
+- [components/ui/molecules/TagAmountSelector.tsx](../components/ui/molecules/TagAmountSelector.tsx) : Interface de ventilation des tags
+
+### Gestion d'Erreurs
+
+- [contexts/ErrorContext.tsx](../contexts/ErrorContext.tsx) : State management global des erreurs
+- [components/ui/ErrorDisplay.tsx](../components/ui/ErrorDisplay.tsx) : Composant réutilisable d'affichage
+- [components/ui/ErrorModal.tsx](../components/ui/ErrorModal.tsx) : Modal pour erreurs handlers
+- [components/ErrorBoundary.tsx](../components/ErrorBoundary.tsx) : Capture erreurs React
 
 ## Anti-Patterns à Éviter
 
@@ -238,13 +266,219 @@ npm run preview    # Preview build de production
 - ❌ Utiliser `tagIds` au lieu de `tagAmounts` (système obsolète)
 - ❌ Oublier `getEffectiveAmount()` dans les calculs avec filtres de tags
 - ❌ Utiliser `item.amount` directement quand des filtres de tags sont actifs
+- ❌ Utiliser `alert()` ou `console.error()` - utiliser le système global d'erreurs
+- ❌ Appeler Supabase dans un handler sans try/catch
+
+## Gestion d'Erreurs Globale
+
+**Architecture unifiée pour toutes les erreurs applicatives avec design élégant.**
+
+### 🎯 Composants Clés
+
+#### ErrorContext ([contexts/ErrorContext.tsx](../contexts/ErrorContext.tsx))
+
+Gestion d'état global des erreurs de handlers (try/catch).
+
+```typescript
+import { useError } from "../contexts/ErrorContext";
+
+const MyComponent = () => {
+  const { showError } = useError();
+
+  const handleAction = async () => {
+    try {
+      await riskyOperation();
+    } catch (err) {
+      showError(err as Error, "Contexte de l'erreur");
+    }
+  };
+};
+```
+
+**Méthodes :**
+
+- `showError(error: Error, context?: string)` : Affiche ErrorModal
+- `clearError()` : Ferme la modal
+
+#### ErrorDisplay ([components/ui/ErrorDisplay.tsx](../components/ui/ErrorDisplay.tsx))
+
+Composant réutilisable pour affichage unifié des erreurs.
+
+**Props :**
+
+- `error` : Objet Error à afficher
+- `context` : Contexte d'exécution (ex: "Drag & drop")
+- `showDetails` : État du toggle stack trace
+- `onToggleDetails` : Callback toggle
+- `onRefresh` : Action rafraîchir
+- `onGoHome` : Action retour accueil
+- `onClose?` : Action fermer (ErrorModal uniquement)
+- `isModal` : true = overlay modal, false = fullscreen
+
+**Design unifié :**
+
+- Header gradient rose-50 to orange-50
+- Icône AlertCircle dans badge rose-100
+- Contexte : fond blue-50, texte blue-700
+- Message : fond rose-50, texte rose-700 monospace
+- Stack trace : Pliable avec bouton chevron, fond slate-900
+- Conseils : fond amber-50 avec bullet points
+- Footer : Boutons indigo-600 (Rafraîchir) + slate-700 (Home)
+
+#### ErrorModal ([components/ui/ErrorModal.tsx](../components/ui/ErrorModal.tsx))
+
+Modal pour erreurs de handlers. Utilise ErrorDisplay.
+
+**Usage :**
+
+```typescript
+// Dans App.tsx
+const { currentError, clearError } = useError();
+
+{currentError && (
+  <ErrorModal
+    isOpen={true}
+    error={currentError.error}
+    context={currentError.context}
+    onClose={clearError}
+  />
+)}
+```
+
+#### ErrorBoundary ([components/ErrorBoundary.tsx](../components/ErrorBoundary.tsx))
+
+Capture les erreurs React (render/lifecycle). Utilise ErrorDisplay.
+
+**Usage :**
+
+```typescript
+// Dans index.tsx
+<ErrorBoundary>
+  <App />
+</ErrorBoundary>
+```
+
+**Méthodes :**
+
+- `componentDidCatch()` : Capture et log l'erreur
+- `getDerivedStateFromError()` : Met à jour l'état
+
+### 📋 Handlers Protégés
+
+**7 handlers critiques avec try/catch :**
+
+1. **OperationsView**
+   - `handleReorder` : Drag & drop d'opérations
+   - `handleDeleteVariable` : Suppression d'opération variable
+
+2. **VariableTransactionForm**
+   - `handleFormSubmit` : Sauvegarde de transaction
+   - `handleDelete` : Suppression de transaction
+
+3. **TransfersView**
+   - `handleDragEnd` : Drag & drop de virement
+
+4. **PlannerModals**
+   - `onClick` validation : Pointage d'opération
+   - `onClick` annulation : Dépointage d'opération
+
+### ✅ Pattern Standard
+
+```typescript
+import { useError } from "../contexts/ErrorContext";
+
+const MyComponent = () => {
+  const { showError } = useError();
+
+  const handleCriticalAction = async () => {
+    try {
+      // Opération risquée (API, calculs, etc.)
+      await actions.criticalOperation();
+    } catch (err) {
+      // Affichage élégant via ErrorModal
+      showError(err as Error, "Description du contexte");
+    }
+  };
+
+  return <button onClick={handleCriticalAction}>Action</button>;
+};
+```
+
+### 🚫 Anti-Patterns
+
+```typescript
+// ❌ MAUVAIS : alert() dispersés
+const handleAction = () => {
+  try {
+    riskyOperation();
+  } catch (err) {
+    alert("Erreur: " + err.message); // UX médiocre
+  }
+};
+
+// ❌ MAUVAIS : console.error() sans UI
+const handleAction = () => {
+  try {
+    riskyOperation();
+  } catch (err) {
+    console.error(err); // Utilisateur dans le noir
+  }
+};
+
+// ❌ MAUVAIS : Pas de try/catch
+const handleAction = async () => {
+  await actions.dangerousOperation(); // Crash silencieux
+};
+
+// ✅ BON : Système global
+const handleAction = async () => {
+  try {
+    await actions.dangerousOperation();
+  } catch (err) {
+    showError(err as Error, "Opération dangereuse");
+  }
+};
+```
+
+### 🎨 Avantages Architecture
+
+- **UX cohérente** : Design identique pour tous les types d'erreurs
+- **DRY** : Composant ErrorDisplay réutilisable (-54% de code)
+- **Maintenabilité** : Une seule source de vérité pour le design
+- **Debugging** : Stack trace accessible avec toggle
+- **Production-ready** : Messages utilisateur + logs développeur
+- **Type-safe** : Typage strict de toutes les props
 
 ## Contexte Projet
 
 L'application a subi plusieurs refactorings majeurs :
 
-1. **Architecture Opérations** : Déplacement de la gestion des opérations récurrentes dans l'échéancier (BudgetPlanner) pour rapprocher la configuration de l'action métier. ConfigurationView simplifiée pour les réglages structurels uniquement.
+1. **Architecture État Global (v2.2.1)** : Refactorisation complète de useBudget avec délégation aux hooks spécialisés
+   - `useBudgetBalances` : Gestion des soldes de comptes
+   - `useBudgetActions` : Actions CRUD wrappées avec reload
+   - Application des principes SOLID (SRP, DRY, Composition)
 
-2. **Système de Tags** : Migration complète de `tagIds` (JSONB simple) vers `tagAmounts` (table relationnelle avec montants). Support de la ventilation partielle et des calculs contextuels.
+2. **Système de Tags (v2.0.0)** : Migration complète de `tagIds` (JSONB simple) vers `tagAmounts` (table relationnelle avec montants)
+   - Support de la ventilation partielle et des calculs contextuels
+   - Table `paid_item_tags` avec foreign keys CASCADE
+   - Component `TagAmountSelector` pour interface de ventilation
 
-3. **Système Extra** : Évolution d'un simple flag booléen à un système à deux niveaux (opération + tags) pour une granularité maximale.
+3. **Système Extra (v2.0.0)** : Évolution d'un simple flag booléen à un système à deux niveaux
+   - Niveau opération : Toggle global
+   - Niveau tag : Marquage individuel par tag
+   - Fonction `hasExtraAmounts()` pour détection
+
+4. **Gestion d'Erreurs Globale (v2.2.3)** : Architecture unifiée avec design élégant
+   - `ErrorContext` : State management global
+   - `ErrorDisplay` : Composant réutilisable (-54% duplication)
+   - `ErrorModal` + `ErrorBoundary` : Coverage complète
+   - 7 handlers critiques protégés avec try/catch
+
+5. **Refactorisation Hooks (v2.2.0)** : Séparation des responsabilités
+   - `useOperationsData` : Logique métier (quickStats, getEffectiveAmount)
+   - `useOperationsFilters` : État des filtres
+   - `usePlannerUI` : État UI (navigation, recherche)
+   - Atomic Design appliqué aux hooks
+
+**Version actuelle :** 2.2.3 (9 janvier 2026)
+**Qualité code :** 0 erreurs ESLint, 0 warnings, TypeScript strict
