@@ -183,6 +183,8 @@ export const ConfigurationView: React.FC<ConfigurationViewProps> = ({
             <AccountLabelManager
               labels={savedLabels}
               categories={categories}
+              accounts={accounts}
+              people={people}
               onUpsertLabel={onUpsertLabel}
               onDeleteLabel={onDeleteLabel}
               onImportLabels={onImportLabels}

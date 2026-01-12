@@ -95,7 +95,9 @@ CREATE TABLE IF NOT EXISTS saved_labels (
   type text NOT NULL,
   is_expense boolean DEFAULT true NOT NULL,
   category_id text REFERENCES categories(id) ON DELETE SET NULL,
-  sub_category_id text REFERENCES sub_categories(id) ON DELETE SET NULL
+  sub_category_id text REFERENCES sub_categories(id) ON DELETE SET NULL,
+  account_id text REFERENCES accounts(id) ON DELETE SET NULL,
+  beneficiary_id text REFERENCES people(id) ON DELETE SET NULL
 );
 
 -- Table: expense_configs
@@ -298,6 +300,8 @@ COMMENT ON TABLE saved_labels IS 'Libellés pré-enregistrés avec association c
 
 COMMENT ON COLUMN saved_labels.category_id IS 'Catégorie suggérée pour auto-complétion (optionnel)';
 COMMENT ON COLUMN saved_labels.sub_category_id IS 'Sous-catégorie suggérée pour auto-complétion (optionnel)';
+COMMENT ON COLUMN saved_labels.account_id IS 'Compte suggéré pour auto-complétion (optionnel)';
+COMMENT ON COLUMN saved_labels.beneficiary_id IS 'Bénéficiaire suggéré pour auto-complétion (optionnel)';
 COMMENT ON TABLE expense_configs IS 'Modèles de dépenses récurrentes (loyer, abonnements, etc.)';
 COMMENT ON TABLE income_configs IS 'Modèles de revenus récurrents (salaires, etc.)';
 COMMENT ON TABLE paid_items IS 'Opérations réelles pointées (récurrentes + variables)';

@@ -375,16 +375,18 @@ export const useTransactionForm = ({
   };
 
   /**
-   * Gère le changement de libellé avec auto-suggestion de catégorie.
+   * Gère le changement de libellé avec auto-suggestion de catégorie, compte et bénéficiaire.
    *
    * @description
    * 1. Met à jour le libellé
-   * 2. Appelle l'auto-suggestion si ≥ 3 caractères
-   * 3. Pré-remplit catégorie/sous-catégorie si trouvée
+   * 2. Recherche dans savedLabels si correspondance exacte
+   * 3. Pré-remplit catégorie/sous-catégorie/compte/bénéficiaire si trouvés
    *
    * **Comportement :**
-   * - Recherche dans saved_labels via fonction SQL
+   * - Recherche directe dans savedLabels (plus rapide que RPC)
    * - Résout les IDs en noms pour affichage
+   * - Charge également account_id et beneficiary_id (v2.6.6)
+   * - Fallback sur RPC si savedLabels vide
    * - Non bloquant : erreur n'empêche pas saisie manuelle
    *
    * @param {string} newLabel - Nouveau libellé saisi
@@ -403,31 +405,68 @@ export const useTransactionForm = ({
       setLabel(newLabel);
 
       // Auto-suggestion si libellé assez long
-      if (newLabel.length >= 3 && categories.length > 0) {
-        const suggestion = await suggestFromLabel(newLabel);
+      if (newLabel.length >= 3) {
+        // PRIORITÉ 1 : Recherche directe dans savedLabels (plus complet)
+        const matchingLabel = savedLabels.find((sl) => sl.name.toLowerCase() === newLabel.toLowerCase() && sl.isExpense === isExpense);
 
-        if (suggestion) {
+        if (matchingLabel) {
           // Résoudre category_id → nom de catégorie
-          const cat = categories.find((c) => c.id === suggestion.category_id);
-          if (cat) {
-            setCategory(cat.name);
+          if (matchingLabel.categoryId) {
+            const cat = categories.find((c) => c.id === matchingLabel.categoryId);
+            if (cat) {
+              setCategory(cat.name);
 
-            // Résoudre sub_category_id → nom de sous-catégorie
-            if (suggestion.sub_category_id) {
-              const sub = cat.subCategories.find((sc) => sc.id === suggestion.sub_category_id);
-              if (sub) {
-                setSubCategory(sub.name);
+              // Résoudre sub_category_id → nom de sous-catégorie
+              if (matchingLabel.subCategoryId) {
+                const sub = cat.subCategories.find((sc) => sc.id === matchingLabel.subCategoryId);
+                if (sub) {
+                  setSubCategory(sub.name);
+                } else {
+                  setSubCategory("");
+                }
               } else {
                 setSubCategory("");
               }
-            } else {
-              setSubCategory("");
             }
+          }
+
+          // Auto-suggestion compte (v2.6.6)
+          if (matchingLabel.accountId) {
+            setAccountId(matchingLabel.accountId);
+          }
+
+          // Auto-suggestion bénéficiaire (v2.6.6)
+          if (matchingLabel.beneficiaryId) {
+            setBeneficiaryId(matchingLabel.beneficiaryId);
+          }
+        } else if (categories.length > 0) {
+          // FALLBACK : Utiliser RPC (seulement pour catégorie/sous-catégorie)
+          const suggestion = await suggestFromLabel(newLabel);
+
+          if (suggestion) {
+            // Résoudre category_id → nom de catégorie
+            const cat = categories.find((c) => c.id === suggestion.category_id);
+            if (cat) {
+              setCategory(cat.name);
+
+              // Résoudre sub_category_id → nom de sous-catégorie
+              if (suggestion.sub_category_id) {
+                const sub = cat.subCategories.find((sc) => sc.id === suggestion.sub_category_id);
+                if (sub) {
+                  setSubCategory(sub.name);
+                } else {
+                  setSubCategory("");
+                }
+              } else {
+                setSubCategory("");
+              }
+            }
+            // Note : RPC ne retourne pas account_id/beneficiary_id
           }
         }
       }
     },
-    [categories, suggestFromLabel]
+    [categories, suggestFromLabel, savedLabels, isExpense]
   );
 
   // --- RETOUR PUBLIC ---

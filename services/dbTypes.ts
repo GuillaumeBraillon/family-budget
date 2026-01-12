@@ -68,6 +68,8 @@ export interface DbSavedLabel {
   is_expense: boolean;
   category_id?: string;
   sub_category_id?: string;
+  account_id?: string;
+  beneficiary_id?: string;
 }
 
 export interface DbExpenseConfig {

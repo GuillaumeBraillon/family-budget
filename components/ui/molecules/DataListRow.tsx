@@ -14,7 +14,8 @@ interface DataListRowProps {
   subCategory?: string;
   beneficiary?: string;
   isChild?: boolean;
-  accountName?: string;
+  account?: string; // Nouveau: nom du compte (pour saved_labels)
+  accountName?: string; // Existant: nom du compte (pour operations)
   isPaid?: boolean;
   onClick?: () => void;
   badge?: React.ReactNode;
@@ -34,6 +35,7 @@ export const DataListRow: React.FC<DataListRowProps> = ({
   subCategory,
   beneficiary,
   isChild,
+  account,
   accountName,
   isPaid,
   onClick,
@@ -117,9 +119,9 @@ export const DataListRow: React.FC<DataListRowProps> = ({
               {isChild ? <User size={10} /> : <Users size={10} />} {beneficiary}
             </span>
           )}
-          {accountName && (
+          {(accountName || account) && (
             <span className="flex items-center gap-1 text-slate-400 font-medium px-1.5 py-0.5 rounded whitespace-nowrap">
-              <CreditCard size={10} /> {accountName}
+              <CreditCard size={10} /> {accountName || account}
             </span>
           )}
           {/* TAGS */}

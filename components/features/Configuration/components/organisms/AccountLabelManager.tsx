@@ -1,17 +1,20 @@
 import React, { useState } from "react";
 import { Trash2, Save, Tag, DownloadCloud, Search, Check, Info, TrendingDown, TrendingUp, ArrowRightLeft, PiggyBank, CreditCard } from "lucide-react";
-import { SavedLabel, AccountType, CategoryDef } from "../../../../../types";
+import { SavedLabel, AccountType, CategoryDef, Account, Person } from "../../../../../types";
 import { ConfirmModal } from "../../../../ui/atoms/ConfirmModal";
 import { DataList } from "../../../../ui/molecules/DataList";
 import { DataListRow } from "../../../../ui/molecules/DataListRow";
 import { Modal } from "../../../../ui/Modal";
 import { TextInput } from "../../../../ui/molecules/FormInputs";
 import { CategorySelector } from "../../../../ui/molecules/CategorySelector";
+import { AccountSelector, BeneficiarySelector } from "../../../../ui/molecules/SmartSelectors";
 import { AdvancedOptionsAccordion } from "../../../../ui/molecules/AdvancedOptionsAccordion";
 
 interface AccountLabelManagerProps {
   labels: SavedLabel[];
   categories: CategoryDef[];
+  accounts: Account[];
+  people: Person[];
   onUpsertLabel: (l: SavedLabel) => void;
   onDeleteLabel: (id: string) => void;
   onImportLabels?: () => Promise<{ count?: number; error?: Error }> | void;
@@ -24,6 +27,8 @@ type ManagerTab = AccountType;
 export const AccountLabelManager: React.FC<AccountLabelManagerProps> = ({
   labels,
   categories,
+  accounts,
+  people,
   onUpsertLabel,
   onDeleteLabel,
   onImportLabels,
@@ -41,6 +46,8 @@ export const AccountLabelManager: React.FC<AccountLabelManagerProps> = ({
   // Catégorie et sous-catégorie pour auto-suggestion
   const [category, setCategory] = useState("");
   const [subCategory, setSubCategory] = useState("");
+  const [accountId, setAccountId] = useState("");
+  const [beneficiaryId, setBeneficiaryId] = useState("");
 
   // Search & Feedback
   const [searchQuery, setSearchQuery] = useState("");
@@ -62,6 +69,8 @@ export const AccountLabelManager: React.FC<AccountLabelManagerProps> = ({
     setName("");
     setCategory("");
     setSubCategory("");
+    setAccountId("");
+    setBeneficiaryId("");
     setEditingLabel(null);
     setIsModalOpen(false);
     setDeleteConfirm(null);
@@ -73,6 +82,8 @@ export const AccountLabelManager: React.FC<AccountLabelManagerProps> = ({
     setName("");
     setCategory("");
     setSubCategory("");
+    setAccountId("");
+    setBeneficiaryId("");
     setShowAdvanced(false);
     setIsModalOpen(true);
   };
@@ -91,6 +102,16 @@ export const AccountLabelManager: React.FC<AccountLabelManagerProps> = ({
           if (sub) setSubCategory(sub.name);
         }
       }
+    }
+
+    // Charger compte si présent
+    if (label.accountId) {
+      setAccountId(label.accountId);
+    }
+
+    // Charger bénéficiaire si présent
+    if (label.beneficiaryId) {
+      setBeneficiaryId(label.beneficiaryId);
     }
 
     setShowAdvanced(false);
@@ -133,6 +154,8 @@ export const AccountLabelManager: React.FC<AccountLabelManagerProps> = ({
       isExpense: targetIsExpense,
       categoryId,
       subCategoryId,
+      accountId: accountId || undefined,
+      beneficiaryId: beneficiaryId || undefined,
     };
     onUpsertLabel(label);
     resetForm();
@@ -189,18 +212,45 @@ export const AccountLabelManager: React.FC<AccountLabelManagerProps> = ({
           <TextInput label="Libellé" value={name} onChange={(e) => setName(e.target.value)} placeholder={getPlaceholder()} required autoFocus />
 
           <AdvancedOptionsAccordion isOpen={showAdvanced} onToggle={setShowAdvanced}>
-            <div className="space-y-2">
-              <p className="text-xs text-slate-600 leading-relaxed">
-                Associez une catégorie à ce libellé pour activer l'auto-suggestion lors de la saisie d'opérations variables.
-              </p>
-              <CategorySelector
-                categories={categories}
-                type={isExpenseMode ? "EXPENSE" : "INCOME"}
-                selectedCategory={category}
-                selectedSubCategory={subCategory}
-                onCategoryChange={setCategory}
-                onSubCategoryChange={setSubCategory}
-              />
+            <div className="space-y-3">
+              <div>
+                <p className="text-xs text-slate-600 leading-relaxed mb-2">
+                  Associez une catégorie à ce libellé pour activer l'auto-suggestion lors de la saisie d'opérations variables.
+                </p>
+                <CategorySelector
+                  categories={categories}
+                  type={isExpenseMode ? "EXPENSE" : "INCOME"}
+                  selectedCategory={category}
+                  selectedSubCategory={subCategory}
+                  onCategoryChange={setCategory}
+                  onSubCategoryChange={setSubCategory}
+                />
+              </div>
+
+              <div>
+                <p className="text-xs text-slate-600 leading-relaxed mb-2">
+                  Associez un compte et/ou un bénéficiaire pour pré-remplir ces champs lors de la saisie.
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  <AccountSelector
+                    label="Compte suggéré"
+                    accounts={accounts}
+                    value={accountId}
+                    onChange={(e) => setAccountId(e.target.value)}
+                    color="indigo"
+                    filterTypes={[AccountType.CHECKING]}
+                    allowEmpty={true}
+                  />
+                  <BeneficiarySelector
+                    label="Bénéficiaire suggéré"
+                    people={people}
+                    value={beneficiaryId}
+                    onChange={(e) => setBeneficiaryId(e.target.value)}
+                    color="indigo"
+                    allowEmpty={true}
+                  />
+                </div>
+              </div>
             </div>
           </AdvancedOptionsAccordion>
 
@@ -365,6 +415,10 @@ export const AccountLabelManager: React.FC<AccountLabelManagerProps> = ({
             }
           }
 
+          // Résoudre les noms de compte et bénéficiaire à partir des IDs
+          const accountName = label.accountId ? accounts.find((a) => a.id === label.accountId)?.name : undefined;
+          const beneficiaryName = label.beneficiaryId ? people.find((p) => p.id === label.beneficiaryId)?.name : undefined;
+
           return (
             <DataListRow
               key={label.id}
@@ -372,6 +426,8 @@ export const AccountLabelManager: React.FC<AccountLabelManagerProps> = ({
               label={label.name}
               category={categoryName}
               subCategory={subCategoryName}
+              account={accountName}
+              beneficiary={beneficiaryName}
               onClick={() => handleEditClick(label)}
             />
           );

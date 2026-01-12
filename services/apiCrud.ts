@@ -154,13 +154,18 @@ export const apiUpsertLabel = async (label: SavedLabel) =>
     is_expense: label.isExpense,
     category_id: label.categoryId,
     sub_category_id: label.subCategoryId,
+    account_id: label.accountId,
+    beneficiary_id: label.beneficiaryId,
   });
 
 export const apiDeleteLabel = async (id: string) => supabase.from("saved_labels").delete().eq("id", id);
 
 export const apiImportLabels = async () => {
-  // Récupérer tous les paid_items CB avec leurs catégories
-  const { data: items, error: fetchError } = await supabase.from("paid_items").select("label, category, sub_category").ilike("label", "CB %");
+  // Récupérer tous les paid_items CB avec leurs catégories ET comptes/bénéficiaires
+  const { data: items, error: fetchError } = await supabase
+    .from("paid_items")
+    .select("label, category, sub_category, account_id, beneficiary_id")
+    .ilike("label", "CB %");
 
   if (fetchError) return { error: fetchError };
 
@@ -177,15 +182,31 @@ export const apiImportLabels = async () => {
 
   const existingSet = new Set(existing?.map((e) => e.name));
 
-  // Grouper par libellé et compter les occurrences de chaque catégorie
-  const labelStats: Record<string, Record<string, { count: number; subCategory?: string }>> = {};
+  // Grouper par libellé et compter les occurrences de chaque catégorie ET compte/bénéficiaire
+  const labelStats: Record<
+    string,
+    Record<
+      string,
+      {
+        count: number;
+        subCategory?: string;
+        accountId?: string;
+        beneficiaryId?: string;
+      }
+    >
+  > = {};
 
   items?.forEach((item) => {
     if (!item.label) return;
     if (!labelStats[item.label]) labelStats[item.label] = {};
-    const key = `${item.category}|${item.sub_category || ""}`;
+    const key = `${item.category}|${item.sub_category || ""}|${item.account_id || ""}|${item.beneficiary_id || ""}`;
     if (!labelStats[item.label][key]) {
-      labelStats[item.label][key] = { count: 0, subCategory: item.sub_category };
+      labelStats[item.label][key] = {
+        count: 0,
+        subCategory: item.sub_category,
+        accountId: item.account_id,
+        beneficiaryId: item.beneficiary_id,
+      };
     }
     labelStats[item.label][key].count++;
   });
@@ -193,11 +214,13 @@ export const apiImportLabels = async () => {
   const toInsert = Object.keys(labelStats)
     .filter((label) => label && !existingSet.has(label))
     .map((label) => {
-      // Trouver la catégorie la plus fréquente pour ce libellé
+      // Trouver la combinaison la plus fréquente pour ce libellé
       const stats = labelStats[label];
       let maxCount = 0;
       let mostFrequentCategory = "";
       let mostFrequentSubCategory = "";
+      let mostFrequentAccountId: string | undefined;
+      let mostFrequentBeneficiaryId: string | undefined;
 
       Object.entries(stats).forEach(([key, data]) => {
         if (data.count > maxCount) {
@@ -205,6 +228,8 @@ export const apiImportLabels = async () => {
           const [cat, sub] = key.split("|");
           mostFrequentCategory = cat;
           mostFrequentSubCategory = sub;
+          mostFrequentAccountId = data.accountId;
+          mostFrequentBeneficiaryId = data.beneficiaryId;
         }
       });
 
@@ -221,6 +246,8 @@ export const apiImportLabels = async () => {
         is_expense: true,
         category_id: categoryId || null,
         sub_category_id: subCategoryId || null,
+        account_id: mostFrequentAccountId || null,
+        beneficiary_id: mostFrequentBeneficiaryId || null,
       };
     });
 
@@ -232,8 +259,11 @@ export const apiImportLabels = async () => {
 };
 
 export const apiImportVirLabels = async () => {
-  // Récupérer tous les paid_items VIR avec leurs catégories
-  const { data: items, error: fetchError } = await supabase.from("paid_items").select("label, category, sub_category").ilike("label", "VIR %");
+  // Récupérer tous les paid_items VIR avec leurs catégories ET comptes/bénéficiaires
+  const { data: items, error: fetchError } = await supabase
+    .from("paid_items")
+    .select("label, category, sub_category, account_id, beneficiary_id")
+    .ilike("label", "VIR %");
 
   if (fetchError) return { error: fetchError };
 
@@ -250,15 +280,31 @@ export const apiImportVirLabels = async () => {
 
   const existingSet = new Set(existing?.map((e) => e.name));
 
-  // Grouper par libellé et compter les occurrences de chaque catégorie
-  const labelStats: Record<string, Record<string, { count: number; subCategory?: string }>> = {};
+  // Grouper par libellé et compter les occurrences de chaque catégorie ET compte/bénéficiaire
+  const labelStats: Record<
+    string,
+    Record<
+      string,
+      {
+        count: number;
+        subCategory?: string;
+        accountId?: string;
+        beneficiaryId?: string;
+      }
+    >
+  > = {};
 
   items?.forEach((item) => {
     if (!item.label) return;
     if (!labelStats[item.label]) labelStats[item.label] = {};
-    const key = `${item.category}|${item.sub_category || ""}`;
+    const key = `${item.category}|${item.sub_category || ""}|${item.account_id || ""}|${item.beneficiary_id || ""}`;
     if (!labelStats[item.label][key]) {
-      labelStats[item.label][key] = { count: 0, subCategory: item.sub_category };
+      labelStats[item.label][key] = {
+        count: 0,
+        subCategory: item.sub_category,
+        accountId: item.account_id,
+        beneficiaryId: item.beneficiary_id,
+      };
     }
     labelStats[item.label][key].count++;
   });
@@ -266,11 +312,13 @@ export const apiImportVirLabels = async () => {
   const toInsert = Object.keys(labelStats)
     .filter((label) => label && !existingSet.has(label))
     .map((label) => {
-      // Trouver la catégorie la plus fréquente pour ce libellé
+      // Trouver la combinaison la plus fréquente pour ce libellé
       const stats = labelStats[label];
       let maxCount = 0;
       let mostFrequentCategory = "";
       let mostFrequentSubCategory = "";
+      let mostFrequentAccountId: string | undefined;
+      let mostFrequentBeneficiaryId: string | undefined;
 
       Object.entries(stats).forEach(([key, data]) => {
         if (data.count > maxCount) {
@@ -278,6 +326,8 @@ export const apiImportVirLabels = async () => {
           const [cat, sub] = key.split("|");
           mostFrequentCategory = cat;
           mostFrequentSubCategory = sub;
+          mostFrequentAccountId = data.accountId;
+          mostFrequentBeneficiaryId = data.beneficiaryId;
         }
       });
 
@@ -294,6 +344,8 @@ export const apiImportVirLabels = async () => {
         is_expense: false,
         category_id: categoryId || null,
         sub_category_id: subCategoryId || null,
+        account_id: mostFrequentAccountId || null,
+        beneficiary_id: mostFrequentBeneficiaryId || null,
       };
     });
 

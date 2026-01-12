@@ -7,6 +7,119 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.6.6] - 2026-01-12
+
+### ✨ Nouvelles Fonctionnalités
+
+#### **Auto-complétion Compte & Bénéficiaire**
+
+Extension du système d'auto-suggestion des libellés sauvegardés pour inclure les comptes et bénéficiaires.
+
+**Architecture** :
+
+- Ajout de colonnes `account_id` et `beneficiary_id` dans la table `saved_labels`
+- Relations directes (foreign keys) vers `accounts` et `people`
+- Contraintes `ON DELETE SET NULL` pour préserver les labels si suppression compte/personne
+
+**Interface Utilisateur** :
+
+- **Configuration → Libellés** :
+  - Sélecteurs de compte et bénéficiaire dans l'accordéon "Options Avancées"
+  - Affichage des associations dans la liste (icônes 💳 Compte / 👤 Bénéficiaire)
+  - Chargement automatique lors de l'édition d'un libellé existant
+
+- **Nouvelle Opération** :
+  - Saisie ou sélection d'un libellé → Pré-remplissage automatique :
+    - ✅ Catégorie (existant v2.6.5)
+    - ✅ Sous-catégorie (existant v2.6.5)
+    - ✅ **Compte** (nouveau v2.6.6)
+    - ✅ **Bénéficiaire** (nouveau v2.6.6)
+
+**Import Intelligent** :
+
+Les fonctions **Import (CB)** et **Import (VIR)** détectent automatiquement le compte et bénéficiaire les plus fréquemment utilisés pour chaque libellé :
+
+**Fonctionnement** :
+
+1. Analyse de tous les `paid_items` correspondants
+2. Pour chaque libellé, calcul statistique de la combinaison catégorie + compte + bénéficiaire la plus fréquente
+3. Création des `saved_labels` avec tous les champs pré-remplis
+
+**Script SQL One-Shot** (fourni) :
+
+Pour mettre à jour les libellés existants avec les comptes/bénéficiaires historiques :
+
+```sql
+-- Analyse statistique des paid_items + mise à jour bulk des saved_labels
+WITH label_account_beneficiary_stats AS (
+  SELECT label, account_id, beneficiary_id, COUNT(*) as usage_count,
+         ROW_NUMBER() OVER (PARTITION BY label ORDER BY COUNT(*) DESC) as rn
+  FROM paid_items WHERE label IS NOT NULL
+  GROUP BY label, account_id, beneficiary_id
+)
+UPDATE saved_labels sl
+SET account_id = COALESCE(sl.account_id, mf.account_id),
+    beneficiary_id = COALESCE(sl.beneficiary_id, mf.beneficiary_id)
+FROM (SELECT label, account_id, beneficiary_id FROM label_account_beneficiary_stats WHERE rn = 1) mf
+WHERE sl.name = mf.label AND (sl.account_id IS NULL OR sl.beneficiary_id IS NULL);
+```
+
+**Avantages** :
+
+- ⚡ Saisie ultra-rapide des opérations (5 champs pré-remplis automatiquement)
+- 🎯 Cohérence des données (même libellé = mêmes catégorie/compte/bénéficiaire)
+- 🧠 Intelligence contextuelle (basée sur l'historique réel d'utilisation)
+
+### 🔧 Améliorations Techniques
+
+**Backend** :
+
+- `types.ts` : Ajout `accountId?: string` et `beneficiaryId?: string` dans `SavedLabel`
+- `dbTypes.ts` : Ajout `account_id?: string` et `beneficiary_id?: string` dans `DbSavedLabel`
+- `apiMappers.ts` : Mapping bidirectionnel pour les nouveaux champs
+- `apiCrud.ts` :
+  - `apiUpsertLabel` : Sauvegarde des nouveaux champs
+  - `apiImportLabels` / `apiImportVirLabels` : Détection intelligente compte + bénéficiaire
+- `database_complete.sql` : Schéma complet mis à jour avec foreign keys et commentaires
+
+**Frontend** :
+
+- `AccountLabelManager.tsx` :
+  - États `accountId` et `beneficiaryId`
+  - Handlers `resetForm`, `handleEditClick`, `handleFormSubmit` étendus
+  - UI : `AccountSelector` et `BeneficiarySelector` dans accordéon
+  - Affichage : Résolution ID → nom pour liste des libellés
+- `ConfigurationView.tsx` : Passage des props `accounts` et `people`
+- `DataListRow.tsx` : Support dual prop `account` / `accountName` (rétrocompatibilité)
+- `useTransactionForm.ts` :
+  - Recherche directe dans `savedLabels` (prioritaire sur RPC)
+  - Auto-complétion complète : catégorie + sous-catégorie + compte + bénéficiaire
+
+### 📖 Documentation
+
+- Commentaires inline dans tous les composants modifiés
+- Documentation SQL avec COMMENT ON COLUMN
+- CHANGELOG détaillé avec exemples SQL
+
+### 🗄️ Migration Base de Données
+
+**Script à exécuter dans Supabase Console** :
+
+```sql
+-- Ajout des colonnes avec foreign keys
+ALTER TABLE saved_labels
+ADD COLUMN account_id text REFERENCES accounts(id) ON DELETE SET NULL,
+ADD COLUMN beneficiary_id text REFERENCES people(id) ON DELETE SET NULL;
+
+-- Documentation des colonnes
+COMMENT ON COLUMN saved_labels.account_id IS 'Compte suggéré pour auto-complétion (optionnel)';
+COMMENT ON COLUMN saved_labels.beneficiary_id IS 'Bénéficiaire suggéré pour auto-complétion (optionnel)';
+```
+
+**Note** : Pour les installations existantes, exécuter d'abord la migration ALTER TABLE, puis optionnellement le script one-shot pour peupler avec l'historique.
+
+---
+
 ## [2.6.5] - 2026-01-12
 
 ### 🐛 Corrections Critiques (Post-v2.6.4)

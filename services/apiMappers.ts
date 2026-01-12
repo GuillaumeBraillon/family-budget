@@ -95,6 +95,8 @@ export const mapDbSavedLabel = (label: DbSavedLabel): SavedLabel => ({
   isExpense: label.is_expense !== false, // Default true si null/undefined pour rétrocompatibilité
   categoryId: label.category_id,
   subCategoryId: label.sub_category_id,
+  accountId: label.account_id,
+  beneficiaryId: label.beneficiary_id,
 });
 
 export const mapDbExpenseConfig = (config: DbExpenseConfig): ExpenseConfig => ({

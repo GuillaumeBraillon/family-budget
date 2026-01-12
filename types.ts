@@ -66,6 +66,8 @@ export interface SavedLabel {
   isExpense: boolean;
   categoryId?: string; // Catégorie suggérée pour auto-complétion
   subCategoryId?: string; // Sous-catégorie suggérée pour auto-complétion
+  accountId?: string; // Compte suggéré pour auto-complétion
+  beneficiaryId?: string; // Bénéficiaire suggéré pour auto-complétion
 }
 
 export enum TransactionType {
