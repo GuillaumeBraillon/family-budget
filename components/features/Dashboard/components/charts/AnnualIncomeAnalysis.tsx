@@ -1,6 +1,7 @@
 import React from "react";
 import { Card } from "../../../../ui/Card";
 import { ChevronLeft, ChevronRight, CalendarClock, ShoppingBag, ArrowUpRight, ArrowDownLeft, Scale } from "lucide-react";
+import { ClickableAmount } from "../../../../ui/atoms/ClickableAmount";
 import { OperationFilters } from "../../../../../types";
 
 interface PeriodData {
@@ -28,27 +29,6 @@ interface AnnualIncomeAnalysisProps {
 export const AnnualIncomeAnalysis: React.FC<AnnualIncomeAnalysisProps> = ({ data, year, onYearChange, onNavigateToPlanner }) => {
   const maxPeriods = data.reduce((max, m) => Math.max(max, m.periods.length), 0) || 4;
   const periodsHeader = Array.from({ length: maxPeriods }, (_, i) => i + 1);
-
-  const handleAmountClick = (
-    e: React.MouseEvent,
-    monthDate: Date,
-    periodId: number | undefined,
-    flux: "EXPENSE" | "INCOME",
-    source: "RECURRING" | "VARIABLE" | "ALL"
-  ) => {
-    e.stopPropagation();
-    onNavigateToPlanner(
-      monthDate,
-      {
-        flux: flux,
-        source: source,
-        status: "REAL",
-        extra: "ALL",
-        salary: "EXCLUDE",
-      },
-      periodId
-    );
-  };
 
   // Vérification s'il y a des données à afficher cette année
   const hasData = data.some((m) => Math.abs(m.totals.income) > 0.01 || Math.abs(m.totals.expenses) > 0.01);
@@ -132,7 +112,7 @@ export const AnnualIncomeAnalysis: React.FC<AnnualIncomeAnalysisProps> = ({ data
                           month.periods[idx]?.period.id,
                           "INCOME",
                           "RECURRING",
-                          handleAmountClick,
+                          onNavigateToPlanner,
                           "text-emerald-600"
                         )}
                       </td>
@@ -157,7 +137,7 @@ export const AnnualIncomeAnalysis: React.FC<AnnualIncomeAnalysisProps> = ({ data
                           month.periods[idx]?.period.id,
                           "INCOME",
                           "VARIABLE",
-                          handleAmountClick,
+                          onNavigateToPlanner,
                           "text-emerald-600"
                         )}
                       </td>
@@ -176,7 +156,7 @@ export const AnnualIncomeAnalysis: React.FC<AnnualIncomeAnalysisProps> = ({ data
                     </td>
                     {periodsHeader.map((p, idx) => (
                       <td key={idx} className="px-3 py-2 text-right font-bold text-emerald-700">
-                        {renderCell(month.periods[idx]?.income.total, month.dateObj, month.periods[idx]?.period.id, "INCOME", "ALL", handleAmountClick)}
+                        {renderCell(month.periods[idx]?.income.total, month.dateObj, month.periods[idx]?.period.id, "INCOME", "ALL", onNavigateToPlanner)}
                       </td>
                     ))}
                     <td className="px-4 py-2 text-right bg-emerald-100/30 font-black text-emerald-700 border-l border-slate-200">+{totInc.toFixed(2)} €</td>
@@ -197,7 +177,7 @@ export const AnnualIncomeAnalysis: React.FC<AnnualIncomeAnalysisProps> = ({ data
                           month.periods[idx]?.period.id,
                           "EXPENSE",
                           "RECURRING",
-                          handleAmountClick,
+                          onNavigateToPlanner,
                           "text-slate-600"
                         )}
                       </td>
@@ -220,7 +200,7 @@ export const AnnualIncomeAnalysis: React.FC<AnnualIncomeAnalysisProps> = ({ data
                           month.periods[idx]?.period.id,
                           "EXPENSE",
                           "VARIABLE",
-                          handleAmountClick,
+                          onNavigateToPlanner,
                           "text-indigo-600"
                         )}
                       </td>
@@ -237,7 +217,7 @@ export const AnnualIncomeAnalysis: React.FC<AnnualIncomeAnalysisProps> = ({ data
                     </td>
                     {periodsHeader.map((p, idx) => (
                       <td key={idx} className="px-3 py-2 text-right font-bold text-slate-700">
-                        {renderCell(month.periods[idx]?.expenses.total, month.dateObj, month.periods[idx]?.period.id, "EXPENSE", "ALL", handleAmountClick)}
+                        {renderCell(month.periods[idx]?.expenses.total, month.dateObj, month.periods[idx]?.period.id, "EXPENSE", "ALL", onNavigateToPlanner)}
                       </td>
                     ))}
                     <td className="px-4 py-2 text-right bg-rose-50/30 font-black text-rose-700 border-l border-slate-200">{totExp.toFixed(2)} €</td>
@@ -289,13 +269,33 @@ const renderCell = (
   periodId: number | undefined,
   flux: "EXPENSE" | "INCOME",
   source: "RECURRING" | "VARIABLE" | "ALL",
-  onClick: (data: { activePayload?: Array<{ payload: { month: string; actual: number } }> }) => void,
+  onNavigate: (date: Date, filters: Partial<OperationFilters>, weekNumber?: number) => void,
   colorClass?: string
 ) => {
   if (!value || value === 0) return <span className="text-slate-200 font-light">-</span>;
+
   return (
-    <button onClick={(e) => onClick(e, date, periodId, flux, source)} className={`hover:underline transition-colors ${colorClass || ""}`}>
+    <ClickableAmount
+      date={date}
+      filters={{
+        flux: flux,
+        source: source,
+        status: "REAL",
+        extra: "ALL",
+        salary: "EXCLUDE",
+        transfer: "EXCLUDE",
+        accountIds: [],
+        beneficiaryIds: [],
+        includedTagIds: [],
+        excludedTagIds: [],
+        tagPresence: "ALL",
+      }}
+      weekNumber={periodId}
+      onNavigate={onNavigate}
+      className={`hover:underline ${colorClass || ""}`}
+      as="button"
+    >
       {value.toFixed(2)} €
-    </button>
+    </ClickableAmount>
   );
 };

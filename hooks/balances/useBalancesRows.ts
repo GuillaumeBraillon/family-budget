@@ -32,8 +32,9 @@ export interface BalanceRow {
   isJoint: boolean;
   ratio?: number;
   cap?: number;
-  realBalance?: number; // Solde bancaire réel (sans les opérations en attente)
-  pendingAmount?: number; // Montant des opérations en attente
+  pendingAmount?: number; // Total des opérations en attente
+  pendingStandard?: number; // Opérations en attente Standard (dans le budget)
+  pendingExtra?: number; // Opérations en attente Extra (hors budget)
   calculation?: {
     sharePercent?: number;
     theoreticalAmount?: number;
@@ -141,7 +142,7 @@ export const useBalancesRows = ({
       for (const acc of personalAccounts) {
         const owner = people.find((p) => p.id === acc.ownerId);
         const pending = stats.byAccount[acc.id]?.remaining || 0;
-        const paid = stats.byAccount[acc.id]?.paid || 0;
+        const pendingStandard = (stats.byAccount[acc.id] as any)?.remainingStandard || 0;
 
         pRows.push({
           id: acc.id,
@@ -153,8 +154,9 @@ export const useBalancesRows = ({
           isJoint: false,
           ratio: acc.targetRatio,
           cap: acc.targetCap,
-          realBalance: paid,
           pendingAmount: pending,
+          pendingStandard: pendingStandard,
+          pendingExtra: pending - pendingStandard,
           calculation: {
             sharePercent: totalPersonalBalance > 0 ? (acc.currentBalance / totalPersonalBalance) * 100 : 0,
             theoreticalAmount: 0,
@@ -195,7 +197,7 @@ export const useBalancesRows = ({
 
         const targetBalance = acc.currentBalance + transferAmount;
         const pending = stats.byAccount[acc.id]?.remaining || 0;
-        const paid = stats.byAccount[acc.id]?.paid || 0;
+        const pendingStandard = (stats.byAccount[acc.id] as any)?.remainingStandard || 0;
 
         pRows.push({
           id: acc.id,
@@ -207,8 +209,9 @@ export const useBalancesRows = ({
           isJoint: false,
           ratio: acc.targetRatio,
           cap: acc.targetCap,
-          realBalance: paid,
           pendingAmount: pending,
+          pendingStandard: pendingStandard,
+          pendingExtra: pending - pendingStandard,
           calculation: {
             sharePercent: shareOfTotal * 100,
             theoreticalAmount: theoreticalAmount,
@@ -235,20 +238,7 @@ export const useBalancesRows = ({
       jointTransferNeeded = Math.max(0, remainingGap);
 
       const jointPending = stats.byAccount[jointAccount.id]?.remaining || 0;
-      const jointPaid = stats.byAccount[jointAccount.id]?.paid || 0;
-
-      logger.debug("💰 CALCUL realBalance Compte Joint:", {
-        currentBalance: jointAccount.currentBalance,
-        jointPending,
-        jointPaid,
-        realBalance: jointPaid,
-        statsFromPlanner: {
-          paid: stats.byAccount[jointAccount.id]?.paid,
-          remaining: stats.byAccount[jointAccount.id]?.remaining,
-          remainingStandard: stats.byAccount[jointAccount.id]?.remainingStandard,
-          pendingCount: stats.byAccount[jointAccount.id]?.pendingCount,
-        },
-      });
+      const jointPendingStandard = (stats.byAccount[jointAccount.id] as any)?.remainingStandard || 0;
 
       jRows.push({
         id: jointAccount.id,
@@ -258,8 +248,9 @@ export const useBalancesRows = ({
         target: jointTarget,
         transfer: jointGap,
         isJoint: true,
-        realBalance: jointPaid,
         pendingAmount: jointPending,
+        pendingStandard: jointPendingStandard,
+        pendingExtra: jointPending - jointPendingStandard,
         calculation: {
           jointDebts: jointTarget,
           jointGap: jointGap,
@@ -278,7 +269,6 @@ export const useBalancesRows = ({
       target: pRows.reduce((sum, r) => sum + r.target, 0),
       transfer: pRows.reduce((sum, r) => sum + r.transfer, 0),
       isJoint: false,
-      realBalance: pRows.reduce((sum, r) => sum + (r.realBalance || 0), 0),
       pendingAmount: pRows.reduce((sum, r) => sum + (r.pendingAmount || 0), 0),
     };
 

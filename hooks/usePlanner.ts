@@ -614,7 +614,7 @@ export const usePlanner = (
     const sum = (items: PlannedItem[], type: "EXPENSE" | "INCOME", useOriginal = false) =>
       items.filter((i) => i.type === type).reduce((acc, i) => acc + (useOriginal ? i.originalAmount : i.amount), 0);
 
-    type AccountStats = { paid: number; remaining: number; remainingStandard: number; planned: number; pendingCount: number };
+    type AccountStats = { paid: number; remaining: number; remainingStandard: number; paidStandard: number; planned: number; pendingCount: number };
     type BeneficiaryStats = { paid: number; planned: number };
 
     const byAccount: Record<string, AccountStats> = {};
@@ -622,13 +622,24 @@ export const usePlanner = (
     const incByBeneficiary: Record<string, BeneficiaryStats> = {};
 
     [...currentItems, ...previousUnpaidItems].forEach((item) => {
-      if (!byAccount[item.accountId]) byAccount[item.accountId] = { paid: 0, remaining: 0, remainingStandard: 0, planned: 0, pendingCount: 0 };
+      if (!byAccount[item.accountId]) byAccount[item.accountId] = { paid: 0, remaining: 0, remainingStandard: 0, paidStandard: 0, planned: 0, pendingCount: 0 };
       const val = item.amount;
       const originalVal = item.originalAmount;
 
       if (item.isPaid) {
         const impact = item.type === "EXPENSE" ? val : -val;
         byAccount[item.accountId].paid += impact;
+
+        // Calculer le montant Standard (hors Extra) pour paidStandard
+        let standardAmount = val;
+        if (item.isExtraGlobal) {
+          standardAmount = 0;
+        } else if (item.tagAmounts && item.tagAmounts.length > 0) {
+          const extraSum = item.tagAmounts.filter((ta) => ta.isExtra === true).reduce((sum, ta) => sum + ta.amount, 0);
+          standardAmount = Math.max(0, val - extraSum);
+        }
+        const standardImpact = item.type === "EXPENSE" ? standardAmount : -standardAmount;
+        byAccount[item.accountId].paidStandard += standardImpact;
       } else {
         const impact = item.type === "EXPENSE" ? val : -val;
         byAccount[item.accountId].remaining += impact;

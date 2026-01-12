@@ -198,7 +198,15 @@ export const BalancesView: React.FC<BalancesViewProps> = ({
       />
 
       {jointRows.length > 0 && (
-        <BalancesTable title="Compte Pivot" rows={jointRows} onUpdateBalance={handleUpdateBalance} hasCurrentAccountsSurplus={hasCurrentAccountsSurplus} />
+        <BalancesTable
+          title="Compte Pivot"
+          rows={jointRows}
+          onUpdateBalance={handleUpdateBalance}
+          hasCurrentAccountsSurplus={hasCurrentAccountsSurplus}
+          onNavigateToPlanner={onNavigateToPlanner}
+          currentDate={currentDate}
+          activeWeek={scope === "PERIOD" ? activeWeek : undefined}
+        />
       )}
 
       {/* SECTION RÉPARTITION BUDGÉTAIRE */}
@@ -231,7 +239,15 @@ export const BalancesView: React.FC<BalancesViewProps> = ({
         lddsNeeded={virLddsTotal}
       />
 
-      <BalancesTable title="Comptes Courants" rows={personalRows} onUpdateBalance={handleUpdateBalance} totalRow={totalPersonalRow} />
+      <BalancesTable
+        title="Comptes Courants"
+        rows={personalRows}
+        onUpdateBalance={handleUpdateBalance}
+        totalRow={totalPersonalRow}
+        onNavigateToPlanner={onNavigateToPlanner}
+        currentDate={currentDate}
+        activeWeek={scope === "PERIOD" ? activeWeek : undefined}
+      />
 
       <TransferSummaryCard amount={virLddsTotal} />
     </div>

@@ -2,7 +2,9 @@ import React, { useState } from "react";
 import { Card, CardHeader, CardTitle } from "../../../ui/Card";
 import { Wallet, Pencil, Check, X, Users, Percent, Ban, Calculator } from "lucide-react";
 import { MobileTooltip } from "../../../ui/MobileTooltip";
+import { ClickableAmount } from "../../../ui/atoms/ClickableAmount";
 import { BalanceRow } from "../../../../hooks/balances";
+import { OperationFilters } from "../../../../types";
 
 interface BalancesTableProps {
   rows: BalanceRow[];
@@ -12,7 +14,16 @@ interface BalancesTableProps {
   hasCurrentAccountsSurplus?: boolean;
 }
 
-export const BalancesTable: React.FC<BalancesTableProps> = ({ rows, onUpdateBalance, title, totalRow, hasCurrentAccountsSurplus = false }) => {
+export const BalancesTable: React.FC<BalancesTableProps> = ({
+  rows,
+  onUpdateBalance,
+  title,
+  totalRow,
+  hasCurrentAccountsSurplus = false,
+  onNavigateToPlanner,
+  currentDate,
+  activeWeek,
+}) => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [tempBalance, setTempBalance] = useState<string>("");
 
@@ -180,12 +191,91 @@ export const BalancesTable: React.FC<BalancesTableProps> = ({ rows, onUpdateBala
                             <Pencil size={12} />
                           </div>
                         </div>
-                        {/* Détail Réel / En attente */}
-                        {row.realBalance !== undefined && row.pendingAmount !== undefined && (
-                          <div className="flex items-center gap-1.5 text-[9px] text-slate-500">
-                            <span className="text-emerald-600 font-medium">Réel: {row.realBalance.toFixed(2)}€</span>
-                            <span className="text-slate-300">•</span>
-                            <span className="text-amber-600 font-medium">En attente: {row.pendingAmount.toFixed(2)}€</span>
+                        {/* Opérations en attente (vision rapide du futur) */}
+                        {row.pendingAmount !== undefined && row.pendingStandard !== undefined && row.pendingExtra !== undefined && (
+                          <div className="flex items-center gap-2 mt-1">
+                            <div className="flex items-center gap-2.5 text-[9px]">
+                              {onNavigateToPlanner && currentDate ? (
+                                <ClickableAmount
+                                  date={currentDate}
+                                  filters={{ status: "WAITING", accountIds: [row.id] }}
+                                  weekNumber={activeWeek}
+                                  onNavigate={onNavigateToPlanner}
+                                  className="flex items-center gap-1 hover:bg-amber-50 px-1 py-0.5 rounded"
+                                  title="Cliquer pour voir toutes les opérations en attente"
+                                >
+                                  <span className="text-amber-600 font-bold">En attente:</span>
+                                  <span className="text-amber-700 font-medium">{row.pendingAmount.toFixed(2)}€</span>
+                                </ClickableAmount>
+                              ) : (
+                                <div className="flex items-center gap-1">
+                                  <span className="text-amber-600 font-bold">En attente:</span>
+                                  <span className="text-amber-700 font-medium">{row.pendingAmount.toFixed(2)}€</span>
+                                </div>
+                              )}
+                              <span className="text-slate-300">|</span>
+                              {onNavigateToPlanner && currentDate ? (
+                                <ClickableAmount
+                                  date={currentDate}
+                                  filters={{ status: "WAITING", extra: "EXCLUDE", accountIds: [row.id] }}
+                                  weekNumber={activeWeek}
+                                  onNavigate={onNavigateToPlanner}
+                                  className="flex items-center gap-1 hover:bg-slate-50 px-1 py-0.5 rounded"
+                                  title="Cliquer pour voir les opérations Standard en attente"
+                                >
+                                  <span className="text-slate-500 font-bold">Standard:</span>
+                                  <span className="text-slate-700 font-medium">{row.pendingStandard.toFixed(2)}€</span>
+                                </ClickableAmount>
+                              ) : (
+                                <div className="flex items-center gap-1">
+                                  <span className="text-slate-500 font-bold">Standard:</span>
+                                  <span className="text-slate-700 font-medium">{row.pendingStandard.toFixed(2)}€</span>
+                                </div>
+                              )}
+                              <span className="text-slate-300">|</span>
+                              {onNavigateToPlanner && currentDate ? (
+                                <ClickableAmount
+                                  date={currentDate}
+                                  filters={{ status: "WAITING", extra: "ONLY", accountIds: [row.id] }}
+                                  weekNumber={activeWeek}
+                                  onNavigate={onNavigateToPlanner}
+                                  className="flex items-center gap-1 hover:bg-rose-50 px-1 py-0.5 rounded"
+                                  title="Cliquer pour voir les opérations Extra en attente"
+                                >
+                                  <span className="text-rose-500 font-bold">Extra:</span>
+                                  <span className="text-rose-700 font-medium">{row.pendingExtra.toFixed(2)}€</span>
+                                </ClickableAmount>
+                              ) : (
+                                <div className="flex items-center gap-1">
+                                  <span className="text-rose-500 font-bold">Extra:</span>
+                                  <span className="text-rose-700 font-medium">{row.pendingExtra.toFixed(2)}€</span>
+                                </div>
+                              )}
+                            </div>
+                            <MobileTooltip
+                              text={
+                                <div className="space-y-1.5 text-[10px]">
+                                  <p className="font-bold text-amber-300 border-b border-white/10 pb-1 mb-1">Opérations en attente</p>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-amber-300 font-bold">Total</span>
+                                    <span className="text-slate-300">Toutes les opérations à venir</span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-slate-300 font-bold">Standard</span>
+                                    <span className="text-slate-300">Part dans le budget</span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-rose-300 font-bold">Extra</span>
+                                    <span className="text-slate-300">Part hors budget</span>
+                                  </div>
+                                  <p className="text-slate-400 text-[9px] italic mt-1 pt-1 border-t border-white/10">
+                                    Le solde actuel inclut déjà ces opérations.
+                                  </p>
+                                </div>
+                              }
+                              icon={<Calculator size={10} className="text-slate-400 hover:text-slate-600" />}
+                              widthClass="w-56"
+                            />
                           </div>
                         )}
                       </div>
