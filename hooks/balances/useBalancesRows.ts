@@ -35,6 +35,9 @@ export interface BalanceRow {
   pendingAmount?: number; // Total des opérations en attente
   pendingStandard?: number; // Opérations en attente Standard (dans le budget)
   pendingExtra?: number; // Opérations en attente Extra (hors budget)
+  paidAmount?: number; // Total des opérations pointées
+  paidStandard?: number; // Opérations pointées Standard (dans le budget)
+  paidExtra?: number; // Opérations pointées Extra (hors budget)
   calculation?: {
     sharePercent?: number;
     theoreticalAmount?: number;
@@ -143,6 +146,8 @@ export const useBalancesRows = ({
         const owner = people.find((p) => p.id === acc.ownerId);
         const pending = stats.byAccount[acc.id]?.remaining || 0;
         const pendingStandard = (stats.byAccount[acc.id] as any)?.remainingStandard || 0;
+        const paid = (stats.byAccount[acc.id] as any)?.paid || 0;
+        const paidStandard = (stats.byAccount[acc.id] as any)?.paidStandard || 0;
 
         pRows.push({
           id: acc.id,
@@ -157,6 +162,9 @@ export const useBalancesRows = ({
           pendingAmount: pending,
           pendingStandard: pendingStandard,
           pendingExtra: pending - pendingStandard,
+          paidAmount: paid,
+          paidStandard: paidStandard,
+          paidExtra: paid - paidStandard,
           calculation: {
             sharePercent: totalPersonalBalance > 0 ? (acc.currentBalance / totalPersonalBalance) * 100 : 0,
             theoreticalAmount: 0,
@@ -188,8 +196,13 @@ export const useBalancesRows = ({
           const shareOfContributors = acc.currentBalance / totalContributorBalance;
           const amountToTake = amountToTakeFromPersonals * shareOfContributors;
 
-          transferAmount = -amountToTake;
-          totalSurplusFromPersonals += amountToTake;
+          // PROTECTION : Ne jamais mettre un compte courant en découvert
+          // On limite le prélèvement au solde disponible
+          const maxCanTake = Math.max(0, acc.currentBalance);
+          const actualAmountToTake = Math.min(amountToTake, maxCanTake);
+
+          transferAmount = -actualAmountToTake;
+          totalSurplusFromPersonals += actualAmountToTake;
         } else {
           // Ce compte ne contribue pas (montant trop faible)
           transferAmount = 0;
@@ -198,6 +211,8 @@ export const useBalancesRows = ({
         const targetBalance = acc.currentBalance + transferAmount;
         const pending = stats.byAccount[acc.id]?.remaining || 0;
         const pendingStandard = (stats.byAccount[acc.id] as any)?.remainingStandard || 0;
+        const paid = (stats.byAccount[acc.id] as any)?.paid || 0;
+        const paidStandard = (stats.byAccount[acc.id] as any)?.paidStandard || 0;
 
         pRows.push({
           id: acc.id,
@@ -212,6 +227,9 @@ export const useBalancesRows = ({
           pendingAmount: pending,
           pendingStandard: pendingStandard,
           pendingExtra: pending - pendingStandard,
+          paidAmount: paid,
+          paidStandard: paidStandard,
+          paidExtra: paid - paidStandard,
           calculation: {
             sharePercent: shareOfTotal * 100,
             theoreticalAmount: theoreticalAmount,
@@ -239,6 +257,8 @@ export const useBalancesRows = ({
 
       const jointPending = stats.byAccount[jointAccount.id]?.remaining || 0;
       const jointPendingStandard = (stats.byAccount[jointAccount.id] as any)?.remainingStandard || 0;
+      const jointPaid = (stats.byAccount[jointAccount.id] as any)?.paid || 0;
+      const jointPaidStandard = (stats.byAccount[jointAccount.id] as any)?.paidStandard || 0;
 
       jRows.push({
         id: jointAccount.id,
@@ -251,6 +271,9 @@ export const useBalancesRows = ({
         pendingAmount: jointPending,
         pendingStandard: jointPendingStandard,
         pendingExtra: jointPending - jointPendingStandard,
+        paidAmount: jointPaid,
+        paidStandard: jointPaidStandard,
+        paidExtra: jointPaid - jointPaidStandard,
         calculation: {
           jointDebts: jointTarget,
           jointGap: jointGap,

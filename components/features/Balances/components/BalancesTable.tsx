@@ -191,6 +191,91 @@ export const BalancesTable: React.FC<BalancesTableProps> = ({
                             <Pencil size={12} />
                           </div>
                         </div>
+                        {/* Opérations réelles (pointées) */}
+                        {row.paidAmount !== undefined && row.paidStandard !== undefined && row.paidExtra !== undefined && (
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <div className="flex items-center gap-2.5 text-[9px]">
+                              {onNavigateToPlanner && currentDate ? (
+                                <ClickableAmount
+                                  date={currentDate}
+                                  filters={{ status: "REAL", accountIds: [row.id] }}
+                                  weekNumber={activeWeek}
+                                  onNavigate={onNavigateToPlanner}
+                                  className="flex items-center gap-1 hover:bg-emerald-50 px-1 py-0.5 rounded"
+                                  title="Cliquer pour voir toutes les opérations réelles"
+                                >
+                                  <span className="text-emerald-600 font-bold">Réel:</span>
+                                  <span className="text-emerald-700 font-medium">{row.paidAmount.toFixed(2)}€</span>
+                                </ClickableAmount>
+                              ) : (
+                                <div className="flex items-center gap-1">
+                                  <span className="text-emerald-600 font-bold">Réel:</span>
+                                  <span className="text-emerald-700 font-medium">{row.paidAmount.toFixed(2)}€</span>
+                                </div>
+                              )}
+                              <span className="text-slate-300">|</span>
+                              {onNavigateToPlanner && currentDate ? (
+                                <ClickableAmount
+                                  date={currentDate}
+                                  filters={{ status: "REAL", extra: "EXCLUDE", accountIds: [row.id] }}
+                                  weekNumber={activeWeek}
+                                  onNavigate={onNavigateToPlanner}
+                                  className="flex items-center gap-1 hover:bg-blue-50 px-1 py-0.5 rounded"
+                                  title="Cliquer pour voir les opérations réelles Standard"
+                                >
+                                  <span className="text-blue-600 font-bold">Standard:</span>
+                                  <span className="text-blue-700 font-medium">{row.paidStandard.toFixed(2)}€</span>
+                                </ClickableAmount>
+                              ) : (
+                                <div className="flex items-center gap-1">
+                                  <span className="text-blue-600 font-bold">Standard:</span>
+                                  <span className="text-blue-700 font-medium">{row.paidStandard.toFixed(2)}€</span>
+                                </div>
+                              )}
+                              <span className="text-slate-300">|</span>
+                              {onNavigateToPlanner && currentDate ? (
+                                <ClickableAmount
+                                  date={currentDate}
+                                  filters={{ status: "REAL", extra: "ONLY", accountIds: [row.id] }}
+                                  weekNumber={activeWeek}
+                                  onNavigate={onNavigateToPlanner}
+                                  className="flex items-center gap-1 hover:bg-purple-50 px-1 py-0.5 rounded"
+                                  title="Cliquer pour voir les opérations réelles Extra (hors budget)"
+                                >
+                                  <span className="text-purple-600 font-bold">Extra:</span>
+                                  <span className="text-purple-700 font-medium">{row.paidExtra.toFixed(2)}€</span>
+                                </ClickableAmount>
+                              ) : (
+                                <div className="flex items-center gap-1">
+                                  <span className="text-purple-600 font-bold">Extra:</span>
+                                  <span className="text-purple-700 font-medium">{row.paidExtra.toFixed(2)}€</span>
+                                </div>
+                              )}
+                            </div>
+                            <MobileTooltip
+                              text={
+                                <div className="space-y-1.5 text-[10px]">
+                                  <p className="font-bold text-emerald-300 border-b border-white/10 pb-1 mb-1">Opérations réelles</p>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-emerald-300 font-bold">Réel</span>
+                                    <span className="text-slate-300">Toutes les opérations validées</span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-blue-300 font-bold">Standard</span>
+                                    <span className="text-slate-300">Part dans le budget</span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-purple-300 font-bold">Extra</span>
+                                    <span className="text-slate-300">Part hors budget</span>
+                                  </div>
+                                  <p className="text-slate-400 text-[9px] italic mt-1 pt-1 border-t border-white/10">Ces montants ont déjà impacté le solde.</p>
+                                </div>
+                              }
+                              icon={<Calculator size={10} className="text-slate-400 hover:text-slate-600" />}
+                              widthClass="w-56"
+                            />
+                          </div>
+                        )}
                         {/* Opérations en attente (vision rapide du futur) */}
                         {row.pendingAmount !== undefined && row.pendingStandard !== undefined && row.pendingExtra !== undefined && (
                           <div className="flex items-center gap-2 mt-1">
