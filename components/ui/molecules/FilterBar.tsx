@@ -42,6 +42,7 @@ import { OperationFilters, Account, Person, Tag as TagType } from "../../../type
 import { FilterDropdown } from "./FilterDropdown";
 import { CyclicFilterButton } from "../atoms/CyclicFilterButton";
 import { FilterBarHeader } from "./FilterBarHeader";
+import { ListSorter } from "./ListSorter";
 import { useFilterBarLogic } from "../../../hooks/filterBar";
 
 interface FilterBarProps {
@@ -59,6 +60,14 @@ interface FilterBarProps {
   hiddenFilters?: ("flux" | "source" | "status" | "extra" | "transfer" | "salary" | "accounts" | "beneficiaries" | "tags")[];
   /** Callback optionnel de réinitialisation personnalisée */
   onReset?: () => void;
+  /** Options de tri disponibles */
+  sortOptions?: { key: string; label: string }[];
+  /** Clé de tri actuelle */
+  sortKey?: string;
+  /** Ordre de tri actuel */
+  sortOrder?: "asc" | "desc";
+  /** Callback de changement de tri */
+  onSortChange?: (key: string, order: "asc" | "desc") => void;
 }
 
 /**
@@ -91,7 +100,19 @@ interface FilterBarProps {
  * - Composants atomiques réutilisables
  * - Affichage conditionnel intelligent (hasActiveSecondary)
  */
-export const FilterBar: React.FC<FilterBarProps> = ({ filters, onFilterChange, accounts, people, tags = [], hiddenFilters = [], onReset }) => {
+export const FilterBar: React.FC<FilterBarProps> = ({
+  filters,
+  onFilterChange,
+  accounts,
+  people,
+  tags = [],
+  hiddenFilters = [],
+  onReset,
+  sortOptions,
+  sortKey,
+  sortOrder,
+  onSortChange,
+}) => {
   // Logique métier déléguée au hook
   const {
     showAllFilters,
@@ -184,7 +205,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({ filters, onFilterChange, a
         <button
           onClick={clear}
           disabled={isDefaultFilters}
-          className={`ml-auto sm:ml-0 h-[30px] px-3 rounded-lg border text-[10px] font-black uppercase transition-colors flex items-center gap-1 ${
+          className={`h-[30px] px-3 rounded-lg border text-[10px] font-black uppercase transition-colors flex items-center gap-1 ${
             isDefaultFilters
               ? "border-slate-200 bg-slate-50 text-slate-300 cursor-not-allowed"
               : "border-rose-100 bg-rose-50 text-rose-500 hover:text-rose-700 hover:border-rose-200 cursor-pointer"
@@ -301,6 +322,13 @@ export const FilterBar: React.FC<FilterBarProps> = ({ filters, onFilterChange, a
               color="slate"
             />
           )}
+        </div>
+      )}
+
+      {/* SECTION TRI */}
+      {sortOptions && sortKey && sortOrder && onSortChange && (
+        <div className="pt-2 border-t border-slate-100 flex justify-end">
+          <ListSorter options={sortOptions} currentSort={sortKey} currentOrder={sortOrder} onSortChange={onSortChange} />
         </div>
       )}
     </div>

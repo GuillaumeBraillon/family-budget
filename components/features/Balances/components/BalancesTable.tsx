@@ -198,7 +198,7 @@ export const BalancesTable: React.FC<BalancesTableProps> = ({
                               {onNavigateToPlanner && currentDate ? (
                                 <ClickableAmount
                                   date={currentDate}
-                                  filters={{ status: "REAL", accountIds: [row.id] }}
+                                  filters={{ status: "REAL", extra: "ALL", accountIds: [row.id] }}
                                   weekNumber={activeWeek}
                                   onNavigate={onNavigateToPlanner}
                                   className="flex items-center gap-1 hover:bg-emerald-50 px-1 py-0.5 rounded"
@@ -283,7 +283,7 @@ export const BalancesTable: React.FC<BalancesTableProps> = ({
                               {onNavigateToPlanner && currentDate ? (
                                 <ClickableAmount
                                   date={currentDate}
-                                  filters={{ status: "WAITING", accountIds: [row.id] }}
+                                  filters={{ status: "WAITING", extra: "ALL", accountIds: [row.id] }}
                                   weekNumber={activeWeek}
                                   onNavigate={onNavigateToPlanner}
                                   className="flex items-center gap-1 hover:bg-amber-50 px-1 py-0.5 rounded"

@@ -113,12 +113,12 @@ export const DataListRow: React.FC<DataListRowProps> = ({
             </span>
           )}
           {beneficiary && (
-            <span className="flex items-center gap-1 text-slate-500 font-medium whitespace-nowrap">
+            <span className="hidden sm:flex items-center gap-1 text-slate-500 font-medium whitespace-nowrap">
               {isChild ? <User size={10} /> : <Users size={10} />} {beneficiary}
             </span>
           )}
           {accountName && (
-            <span className="hidden sm:flex items-center gap-1 text-slate-400 font-medium px-1.5 py-0.5 rounded whitespace-nowrap">
+            <span className="flex items-center gap-1 text-slate-400 font-medium px-1.5 py-0.5 rounded whitespace-nowrap">
               <CreditCard size={10} /> {accountName}
             </span>
           )}

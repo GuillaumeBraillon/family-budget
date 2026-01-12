@@ -31,7 +31,6 @@ export const BalancesHeader: React.FC<BalancesHeaderProps> = ({
   const handleRecurringClick = () => {
     if (onNavigateToOperations && currentDate) {
       onNavigateToOperations(currentDate, {
-        source: "RECURRING",
         status: "WAITING",
         extra: "ALL",
         accountIds: ["3"], // Compte Joint
@@ -42,7 +41,6 @@ export const BalancesHeader: React.FC<BalancesHeaderProps> = ({
   const handleVariableClick = () => {
     if (onNavigateToOperations && currentDate) {
       onNavigateToOperations(currentDate, {
-        source: "VARIABLE",
         status: "WAITING",
         extra: "ALL",
         accountIds: ["3"], // Compte Joint
@@ -53,7 +51,6 @@ export const BalancesHeader: React.FC<BalancesHeaderProps> = ({
   const handleTotalClick = () => {
     if (onNavigateToOperations && currentDate) {
       onNavigateToOperations(currentDate, {
-        source: "ALL",
         status: "WAITING",
         extra: "ALL",
         accountIds: ["3"], // Compte Joint

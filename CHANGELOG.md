@@ -7,6 +7,64 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.6.1] - 2026-01-12
+
+### 🐛 Corrections
+
+#### **Persistance des Filtres lors de la Navigation**
+
+Correction majeure du système de gestion des filtres dans la vue Opérations pour respecter les préférences utilisateur lors de la navigation entre vues.
+
+**Problèmes résolus** :
+
+- ❌ Les filtres personnalisés (flux, source, bénéficiaires, tags, salaires) se réinitialisaient au changement de vue
+- ❌ Le retour sur la vue Opérations perdait les réglages utilisateur
+- ❌ Le filtre "Salaires" restait coché alors qu'il devrait être masqué par défaut
+
+**Architecture mise en place** :
+
+- ✅ **Hook useOperationsFilters** : Application unique des `initialFilters` via `useRef` et `useState` initializer
+- ✅ **ClickableAmount** : Defaults complets et cohérents pour tous les filtres (10 propriétés)
+- ✅ **Navigation contextuelle** : Seuls les filtres contextuels (status, extra, accountIds) sont passés
+- ✅ **localStorage** : Préservation systématique des préférences utilisateur
+
+**Fichiers modifiés** :
+
+- `hooks/operations/useOperationsFilters.ts` : Suppression du useEffect problématique, application unique via useState
+- `components/ui/atoms/ClickableAmount.tsx` : Defaults complets (flux, source, extra, transfer, salary, beneficiaryIds, tags)
+- `components/features/Balances/components/BalancesTable.tsx` : Suppression de flux/source explicites (6 instances)
+- `components/features/Balances/components/BalancesHeader.tsx` : Suppression de source explicite (3 handlers)
+- `components/features/Dashboard/components/charts/AnnualIncomeAnalysis.tsx` : Suppression de flux/source/salary explicites
+
+**Comportement final** :
+
+1. **Premier accès** : Filtres par défaut + contexte de navigation appliqué
+2. **Personnalisation** : Utilisateur modifie flux/source/bénéficiaires → sauvegarde localStorage
+3. **Navigation** : Balances → Dashboard → Opérations
+4. **Retour** : Préférences utilisateur restaurées, contexte ignoré
+
+**Exemple concret** :
+
+```
+// Utilisateur configure :
+Flux: Dépenses, Source: Variables, Bénéficiaire: Guillaume
+
+// Navigation vers Balances, clic "En attente Standard"
+→ Applique SEULEMENT : status="WAITING", extra="EXCLUDE", accountIds=[...]
+→ PRÉSERVE : flux="EXPENSE", source="VARIABLE", beneficiaryIds=["Guillaume"]
+
+// Retour sur Opérations → Filtres restaurés depuis localStorage
+```
+
+**Impact UX** :
+
+- 🎯 Préférences utilisateur respectées
+- 🔄 Navigation contextuelle fonctionnelle
+- 💾 Persistance multi-sessions via localStorage
+- ⚖️ Balance parfaite entre contexte et autonomie
+
+---
+
 ## [2.6.0] - 2026-01-12
 
 ### ✨ Nouveau - Affichage de la Version et Changelog

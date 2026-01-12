@@ -45,6 +45,16 @@ interface ClickableAmountProps {
  * prédéfinis. Gère automatiquement le stopPropagation, le style hover et
  * l'accessibilité (cursor-pointer).
  *
+ * **ROBUSTESSE DES FILTRES :**
+ * Merge automatiquement des filtres par défaut robustes pour éviter les régressions :
+ * - flux: "ALL" (par défaut si non spécifié)
+ * - source: "ALL" (par défaut si non spécifié)
+ * - extra: "ALL" (par défaut si non spécifié)
+ *
+ * Les filtres fournis en props écrasent ces valeurs par défaut, garantissant
+ * ainsi que même si on oublie de passer ces props, les filtres fonctionneront
+ * correctement au lieu de garder les anciens filtres de l'utilisateur.
+ *
  * **Caractéristiques :**
  * - Empêche la propagation des clics (evite conflits avec containers)
  * - Style hover avec transition douce
@@ -62,9 +72,27 @@ interface ClickableAmountProps {
  * @returns {JSX.Element} Élément cliquable stylisé
  */
 export const ClickableAmount: React.FC<ClickableAmountProps> = ({ children, date, filters, weekNumber, onNavigate, className = "", title, as = "div" }) => {
+  // FILTRES PAR DÉFAUT ROBUSTES
+  // Ces valeurs garantissent que les filtres sont toujours réinitialisés proprement
+  // même si on oublie de les passer explicitement dans les props
+  const defaultFilters: Partial<OperationFilters> = {
+    flux: "ALL",
+    source: "ALL",
+    extra: "ALL",
+    transfer: "EXCLUDE", // Masquer les virements internes par défaut
+    salary: "EXCLUDE", // Masquer les salaires par défaut (revenus structurels)
+    beneficiaryIds: [], // Tous les bénéficiaires
+    includedTagIds: [], // Pas de filtre de tags inclus
+    excludedTagIds: [], // Pas de filtre de tags exclus
+    tagPresence: "ALL", // Avec ou sans tags
+  };
+
+  // Merge des filtres : les props écrasent les valeurs par défaut
+  const mergedFilters = { ...defaultFilters, ...filters };
+
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    onNavigate(date, filters, weekNumber);
+    onNavigate(date, mergedFilters, weekNumber);
   };
 
   const baseClasses = "cursor-pointer transition-colors";

@@ -342,16 +342,7 @@ export const TransfersView: React.FC<TransfersViewProps> = ({
             )}
           </div>
 
-          <div className="pt-2 border-t border-slate-100 flex justify-between items-center">
-            <div className="flex items-center gap-2">
-              {isManualSort ? (
-                <span className="text-[10px] text-indigo-600 font-bold bg-indigo-50 px-2 py-1 rounded flex items-center gap-1">
-                  <GripVertical size={12} /> Drag & Drop Actif
-                </span>
-              ) : (
-                <span className="text-[10px] text-slate-400 italic">Passez en mode "Manuel" pour réorganiser.</span>
-              )}
-            </div>
+          <div className="pt-2 border-t border-slate-100 flex justify-end">
             <ListSorter
               options={sortOptions}
               currentSort={filters.sortKey}

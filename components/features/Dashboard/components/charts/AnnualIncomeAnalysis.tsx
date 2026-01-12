@@ -278,17 +278,8 @@ const renderCell = (
     <ClickableAmount
       date={date}
       filters={{
-        flux: flux,
-        source: source,
         status: "REAL",
         extra: "ALL",
-        salary: "EXCLUDE",
-        transfer: "EXCLUDE",
-        accountIds: [],
-        beneficiaryIds: [],
-        includedTagIds: [],
-        excludedTagIds: [],
-        tagPresence: "ALL",
       }}
       weekNumber={periodId}
       onNavigate={onNavigate}

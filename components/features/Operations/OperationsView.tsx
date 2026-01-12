@@ -345,7 +345,7 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
           <WeekSelector weeks={filteredPeriodBudgets} activeWeek={ui.activeWeek} onSelect={ui.setActiveWeek} searchQuery={ui.searchQuery} />
         )}
 
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-4">
+        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
           <FilterBar
             filters={filters}
             onFilterChange={setFilters}
@@ -354,21 +354,11 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
             hiddenFilters={["transfer"]}
             tags={tags}
             onReset={resetFilters}
+            sortOptions={sortOptions}
+            sortKey={sortKey}
+            sortOrder={sortOrder}
+            onSortChange={setSorting}
           />
-          <div className="pt-2 border-t border-slate-100 flex justify-between items-center">
-            <div className="flex items-center gap-2">
-              {isManualSort ? (
-                <span className="text-[10px] text-indigo-600 font-bold bg-indigo-50 px-2 py-1 rounded flex items-center gap-1">
-                  <GripVertical size={12} /> Drag & Drop Actif
-                </span>
-              ) : (
-                <span className="text-[10px] text-slate-400 italic">Passez en mode "Manuel" pour réorganiser.</span>
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              <ListSorter options={sortOptions} currentSort={sortKey} currentOrder={sortOrder} onSortChange={setSorting} />
-            </div>
-          </div>
         </div>
 
         <OperationsList

@@ -22,7 +22,7 @@
  * @dependencies
  * - types.ts : OperationFilters
  */
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { OperationFilters } from "../../types";
 
 /**
@@ -88,13 +88,20 @@ const DEFAULT_FILTERS: OperationFilters = {
  *
  * // Dans OperationsView :
  * const { filters } = useOperationsFilters({ extra: "ONLY" });
- * // filters.extra sera "ONLY" au chargement initial
+ * // filters.extra sera "ONLY" au chargement initial UNIQUEMENT
+ * // Si l'utilisateur revient plus tard, ses filtres personnalisés sont préservés
  * ```
  *
  * **Persistance automatique :**
  * Chaque modification de filtres via `setFilters` déclenche une sauvegarde dans
  * localStorage (clé : `operationsView_filters`). Les préférences survivent aux
  * rechargements de page et changements de navigation.
+ *
+ * **IMPORTANT - Gestion des initialFilters :**
+ * Les `initialFilters` sont appliqués UNIQUEMENT lors du premier montage du composant.
+ * Si l'utilisateur quitte la vue puis revient, ses filtres personnalisés sont préservés
+ * depuis localStorage, et les `initialFilters` sont ignorés. Cela évite d'écraser
+ * les réglages de l'utilisateur à chaque navigation.
  *
  * **Réinitialisation :**
  * ```tsx
@@ -122,7 +129,8 @@ const DEFAULT_FILTERS: OperationFilters = {
  *
  * // Cas 2 : Navigation contextuelle (depuis Dashboard)
  * const { filters } = useOperationsFilters({ extra: "ONLY", flux: "EXPENSE" });
- * // Au premier rendu : filters = { ...DEFAULT_FILTERS, extra: "ONLY", flux: "EXPENSE" }
+ * // Premier montage : filters = { ...localStorage ou DEFAULT_FILTERS, extra: "ONLY", flux: "EXPENSE" }
+ * // Retour ultérieur : filters = localStorage (initialFilters ignorés)
  *
  * // Cas 3 : Réinitialisation
  * const { resetFilters } = useOperationsFilters();
@@ -133,35 +141,43 @@ const DEFAULT_FILTERS: OperationFilters = {
  * 1. **Initialisation (premier render)** :
  *    - Lecture localStorage → Si trouvé, parse JSON
  *    - Si erreur/absent → DEFAULT_FILTERS
- *    - Application de initialFilters par dessus si fourni
+ *    - Application de initialFilters par dessus si fourni (une seule fois)
  * 2. **Modifications utilisateur** :
  *    - setFilters(newFilters) → État React + localStorage
  * 3. **Navigation sortante puis retour** :
- *    - Restauration automatique depuis localStorage
+ *    - Restauration automatique depuis localStorage (initialFilters ignorés)
  * 4. **Réinitialisation** :
  *    - resetFilters() → DEFAULT_FILTERS + clear localStorage
  */
 export const useOperationsFilters = (initialFilters?: Partial<OperationFilters>) => {
+  // Ref pour tracker si les initialFilters ont déjà été appliqués
+  const hasAppliedInitialFilters = useRef(false);
+
   // Initialisation avec restauration depuis localStorage
   const [filters, setFilters] = useState<OperationFilters>(() => {
     const saved = localStorage.getItem("operationsView_filters");
+    let baseFilters = DEFAULT_FILTERS;
+
     if (saved) {
       try {
-        return JSON.parse(saved);
+        baseFilters = JSON.parse(saved);
       } catch {
         // Données corrompues → Retour aux défauts
-        return DEFAULT_FILTERS;
+        baseFilters = DEFAULT_FILTERS;
       }
     }
-    return DEFAULT_FILTERS;
+
+    // Appliquer initialFilters uniquement au premier montage
+    if (initialFilters) {
+      hasAppliedInitialFilters.current = true;
+      return { ...baseFilters, ...initialFilters };
+    }
+
+    return baseFilters;
   });
 
-  // Injection des filtres initiaux (navigation contextuelle)
-  useEffect(() => {
-    if (initialFilters) {
-      setFilters((prev) => ({ ...prev, ...initialFilters }));
-    }
-  }, [initialFilters]);
+  // SUPPRIMÉ : Le useEffect qui réappliquait les initialFilters à chaque changement
+  // Maintenant les initialFilters sont appliqués uniquement dans le useState initial
 
   // Persistance automatique à chaque modification
   useEffect(() => {
