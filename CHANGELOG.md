@@ -7,6 +7,282 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.5.0] - 2026-01-09
+
+### 🎉 Version Majeure - Amélioration UX et Persistence
+
+Cette version apporte des améliorations majeures à l'expérience utilisateur avec l'affichage détaillé des opérations pointées dans la vue Soldes, la persistance des paramètres de gestion des dépassements, et plusieurs fonctionnalités avancées pour les virements et l'interface utilisateur.
+
+---
+
+### ✨ Nouveau - Affichage des Opérations Pointées dans les Soldes
+
+**Visibilité complète de la consommation réelle**
+
+Les soldes affichent maintenant le détail des opérations "Réelles" (pointées) en plus des opérations "En attente", offrant une transparence totale sur la consommation budgétaire de chaque compte.
+
+#### **Interface Utilisateur Enrichie**
+
+**Nouvelle section "Opérations Réelles"** dans `BalancesTable` :
+
+- 💚 **Total Réel** : Somme de toutes les opérations pointées (émeraude)
+- 💙 **Standard** : Opérations dans le budget (bleu)
+- 💜 **Extra** : Opérations hors budget (violet)
+- 🖱️ **Navigation interactive** : Clic → Filtre automatique vers vue Opérations
+- 💡 **Tooltips explicatifs** : Aide contextuelle sur chaque montant
+
+**Terminologie clarifiée** :
+
+- ✅ "Réel" au lieu de "Pointé" (plus intuitif)
+- ⏳ "En attente" pour les opérations non confirmées
+
+#### **Nouveau Composant Réutilisable**
+
+**ClickableAmount** (`components/ui/atoms/ClickableAmount.tsx`)
+
+- Composant générique pour navigation filtrée
+- Props : `date`, `filters`, `weekNumber`, `onNavigate`, `className`, `title`
+- Utilisé dans `BalancesTable` et `AnnualIncomeAnalysis`
+- Hover effect + cursor pointer pour UX intuitive
+
+#### **Architecture Backend**
+
+**Interface BalanceRow étendue** (`hooks/balances/useBalancesRows.ts`) :
+
+```typescript
+interface BalanceRow {
+  // ... existant
+  paidAmount: number; // Total opérations pointées
+  paidStandard: number; // Montant Standard pointé
+  paidExtra: number; // Montant Extra pointé
+}
+```
+
+**Calculs de données** dans `useBalancesRows` :
+
+- **PASS 0** : Comptes persos (lignes 145-172) avec données pointées
+- **PASS 1+** : Itérations après redistributions (lignes 211-237)
+- **Joint Account** : Compte pivot (lignes 258-281)
+- Source données : `stats.byAccount[id]?.paid` et `?.paidStandard` depuis `usePlanner`
+
+**Protection contre découverts** (lignes 194-199) :
+
+- Si virement négatif > solde actuel → Ajustement avec solde minimal
+- Calcul intelligent pour éviter les découverts lors des transferts
+
+#### **Commits Associés**
+
+- `26adf37` : Add display of real (paid) operations in balances table
+- `4ef064a` : Add ClickableAmount component and enhance balances table
+
+---
+
+### 🔧 Correctif - Persistance Gestion des Dépassements
+
+**Sauvegarde des paramètres budgétaires**
+
+Correction du bug empêchant la persistance du choix de stratégie de gestion des dépassements budgétaires (NEXT_PERIOD vs SPREAD_REMAINING).
+
+#### **Migration Base de Données**
+
+**Migration 003** (`startup/migrations/003_add_carryover_strategy.sql`) :
+
+```sql
+ALTER TABLE public.app_settings
+ADD COLUMN IF NOT EXISTS carryover_strategy text
+DEFAULT 'NEXT_PERIOD' NOT NULL
+CHECK (carryover_strategy IN ('NEXT_PERIOD', 'SPREAD_REMAINING'));
+
+UPDATE public.app_settings
+SET carryover_strategy = 'NEXT_PERIOD'
+WHERE carryover_strategy IS NULL;
+```
+
+**Action requise** : Exécuter cette migration dans l'éditeur SQL Supabase
+
+#### **Modifications Backend**
+
+**Système de types** :
+
+- `DbSettings` interface : Ajout `carryover_strategy?: string`
+- `mapDbSettings` : Cast vers union type avec défaut `"NEXT_PERIOD"`
+- `apiUpdateSettings` : Upsert du champ avec fallback
+
+**Fichiers modifiés** :
+
+- `services/dbTypes.ts` : Interface DB étendue
+- `services/apiMappers.ts` : Mapping avec casting de type
+- `services/apiCrud.ts` : Sauvegarde du paramètre
+- `startup/database_complete.sql` : Schéma complet mis à jour
+
+**Contraintes** :
+
+- Valeurs valides : `'NEXT_PERIOD'` | `'SPREAD_REMAINING'`
+- Défaut : `'NEXT_PERIOD'`
+- NOT NULL avec CHECK constraint
+
+---
+
+### 🎯 Amélioration - Support des Intérêts d'Épargne
+
+**Distinction virements classiques vs ajustements**
+
+Ajout d'un flag `isInterest` pour différencier les virements d'épargne normaux des ajouts d'intérêts ou ajustements exceptionnels.
+
+#### **Migration Base de Données**
+
+**Migration 002** (`startup/migrations/002_add_is_interest_to_transfers.sql`) :
+
+```sql
+ALTER TABLE public.transfers
+ADD COLUMN IF NOT EXISTS is_interest boolean DEFAULT false NOT NULL;
+```
+
+#### **Interface Utilisateur**
+
+**TransferForm** enrichi :
+
+- Toggle "Intérêts ou Ajustement Exceptionnel"
+- Déplacé dans accordéon "Options Avancées"
+- UI simplifiée : champs essentiels (Montant/Date/Comptes/Motif) avant accordéon
+
+**Affichage adapté** :
+
+- Badge "INTÉRÊTS" (amber) dans `TransfersView` si `isInterest === true`
+- Badge "💰 ÉPARGNE" (bleu) pour virements classiques
+- Filtrage et analytics ajustés
+
+#### **Architecture Backend**
+
+- `Transfer` interface : Ajout `isInterest?: boolean`
+- `mapDbTransfer` : Mapping du flag depuis DB
+- `apiUpsertTransfer` : Sauvegarde du flag
+- `useTransferForm` : Gestion du toggle dans le formulaire
+
+**Commit** : `84eae29` - Add interest/adjustment support to transfers
+
+---
+
+### 🎨 Amélioration UI - Accordéon Options Avancées
+
+**Simplification des formulaires avec hiérarchie visuelle**
+
+Implémentation d'un accordéon intelligent "Options Avancées" pour masquer les champs rares et réduire la charge cognitive.
+
+#### **Nouveau Composant**
+
+**AdvancedOptionsAccordion** (`components/ui/molecules/AdvancedOptionsAccordion.tsx`)
+
+- Animation fluide (300ms) avec transition `max-height` + `opacity`
+- Badge indicateur : "Masquées" / "Affichées"
+- Icône Settings + chevron directionnel
+- **Optimisation automatique** : Si 1 seul enfant → affichage direct
+
+#### **Formulaires Refactorisés**
+
+**5 formulaires optimisés** :
+
+1. **VariableTransactionForm** :
+   - Tags, toggles Extra/Remboursement dans accordéon
+   - Note remontée avant accordéon (plus importante)
+
+2. **TransferForm** :
+   - Toggle "Intérêts" dans accordéon
+   - Champs essentiels prioritaires
+
+3. **ExpenseRulesEditor**, **IncomeRulesEditor**, **CategoryManager** :
+   - Options avancées masquées par défaut
+
+**Commit** : `48e7765` - feat(ui): accordéon Options Avancées avec affichage intelligent
+
+---
+
+### 🔄 Amélioration - Clarification Virements et Délais
+
+**Distinction nette virements internes vs opérations budgétaires**
+
+Amélioration des calculs budgétaires avec exclusion explicite des virements internes et ajout du suivi des retards.
+
+#### **Vue Soldes**
+
+- Calcul des délais (opérations en attente des périodes précédentes)
+- Exclusion systématique des "Virement Interne" des budgets
+- Clarification des labels : "Dette Totale" → "Dépenses À Venir"
+
+#### **Vue Échéancier**
+
+- Statistiques rapides : ajout des délais (`quickStats.expenses.delays`, `income.delays`)
+- Affichage contextuel : délais visibles uniquement en mode PERIOD
+- Filtrage optimisé : virements exclus des calculs de consommation
+
+**Commit** : `e428b24` - Improve balances and planner: add delays, clarify transfers
+
+---
+
+### 🧹 Nettoyage Codebase
+
+**Suppression de code obsolète**
+
+- Retrait formulaires dépréciés : `ExpenseForm`, `IncomeForm`
+- Suppression documentation migration obsolète : `001_README.md`, `002_README.md`
+- Simplification architecture : réduction duplication code
+
+**Commit** : `dc5b88e` - Remove obsolete form and migration documentation
+
+---
+
+### 📊 Statistiques Version
+
+**Depuis v2.4.0** :
+
+- **Commits** : 6
+- **Fichiers modifiés** : 33
+- **Insertions** : +3239 lignes
+- **Suppressions** : -1231 lignes
+
+**Nouveaux composants** :
+
+- `ClickableAmount.tsx` (80 lignes)
+- `AdvancedOptionsAccordion.tsx`
+- `TransferForm.tsx` (252 lignes)
+- `ValidationErrorBlock.tsx`
+
+**Nouveaux hooks** :
+
+- `useTransferForm.ts` (318 lignes)
+- `useValidationScroll.ts`
+
+**Migrations** :
+
+- 002 : `is_interest` pour transfers
+- 003 : `carryover_strategy` pour app_settings
+
+---
+
+### 🚀 Actions Requises
+
+**Pour les utilisateurs existants** :
+
+1. **Migration 002** : Exécuter dans l'éditeur SQL Supabase
+
+   ```sql
+   ALTER TABLE public.transfers
+   ADD COLUMN IF NOT EXISTS is_interest boolean DEFAULT false NOT NULL;
+   ```
+
+2. **Migration 003** : Exécuter dans l'éditeur SQL Supabase
+
+   ```sql
+   ALTER TABLE public.app_settings
+   ADD COLUMN IF NOT EXISTS carryover_strategy text
+   DEFAULT 'NEXT_PERIOD' NOT NULL
+   CHECK (carryover_strategy IN ('NEXT_PERIOD', 'SPREAD_REMAINING'));
+   ```
+
+3. **Rafraîchir la page** après application des migrations
+
+---
+
 ## [2.4.5] - 2026-01-09
 
 ### ✨ Amélioration UX - Accordéon "Options Avancées"

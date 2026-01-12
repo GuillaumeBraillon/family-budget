@@ -578,12 +578,34 @@ L'application a subi plusieurs refactorings majeurs :
    - `usePlannerUI` : État UI (navigation, recherche)
    - Atomic Design appliqué aux hooks
 
-**Version actuelle :** 2.2.3 (9 janvier 2026)
+6. **Affichage Opérations Réelles (v2.5.0)** : Vue détaillée des opérations pointées
+   - `BalancesTable` : Affichage Total/Standard/Extra pour opérations réelles
+   - `ClickableAmount` : Composant réutilisable pour navigation filtrée
+   - `useBalancesRows` : Extension interface avec `paidAmount`, `paidStandard`, `paidExtra`
+   - Terminologie : "Réel" au lieu de "Pointé"
+   - Suivi des délais : Opérations en attente des périodes précédentes
+
+7. **Gestion Dépassements Persistante (v2.5.0)** : Sauvegarde des paramètres budgétaires
+   - Migration 003 : Colonne `carryover_strategy` dans `app_settings`
+   - Stratégies : NEXT_PERIOD (déduction simple) / SPREAD_REMAINING (étalement)
+   - Persistance DB : CHECK constraint + défaut 'NEXT_PERIOD'
+   - UI : `CarryoverStrategyCard` avec exemples chiffrés
+
+8. **Support Intérêts d'Épargne (v2.5.0)** : Distinction virements classiques vs ajustements
+   - Migration 002 : Flag `is_interest` sur table `transfers`
+   - `TransferForm` : Toggle "Intérêts ou Ajustement Exceptionnel"
+   - Badge amber "INTÉRÊTS" vs bleu "💰 ÉPARGNE"
+   - Exclusion virements internes des calculs budgétaires
+
+**Version actuelle :** 2.5.0 (9 janvier 2026)
 **Qualité code :** 0 erreurs ESLint, 0 warnings, TypeScript strict
 
 **Dernières fonctionnalités ajoutées :**
 
-- Système de gestion des dépassements budgétaires avec deux stratégies (NEXT_PERIOD / SPREAD_REMAINING)
-- Configuration flexible dans Settings > Général via CarryoverStrategyCard
-- Calculs automatiques avec double-comptage évité (algorithme SPREAD_REMAINING)
-- UI contextuelle adaptée à la stratégie active dans BudgetDistributionSummary
+- Affichage détaillé des opérations réelles (pointées) dans BalancesTable avec ventilation Standard/Extra
+- ClickableAmount : Navigation filtrée contextuelle vers vue Opérations
+- Persistance du choix de stratégie de gestion des dépassements budgétaires
+- Support des intérêts d'épargne et ajustements exceptionnels
+- Accordéon "Options Avancées" dans tous les formulaires pour hiérarchie visuelle
+- Suivi des retards (délais) dans statistiques budgétaires
+- Exclusion systématique des virements internes des calculs de consommation
