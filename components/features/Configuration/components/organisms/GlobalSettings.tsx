@@ -6,6 +6,7 @@ import { PeriodSettingsCard } from "../molecules/PeriodSettingsCard";
 import { CarryoverStrategyCard } from "../molecules/CarryoverStrategyCard";
 import { DatabaseConnectionCard } from "../molecules/DatabaseConnectionCard";
 import { LocalStorageManager } from "../molecules/LocalStorageManager";
+import { VersionInfoCard } from "../molecules/VersionInfoCard";
 
 interface GlobalSettingsProps {
   settings: AppSettings;
@@ -43,6 +44,7 @@ export const GlobalSettings: React.FC<GlobalSettingsProps> = ({ settings, onUpda
           <span className="text-slate-400">⚙️</span> Actions Système
         </h3>
         <div className="space-y-4">
+          <VersionInfoCard />
           <LocalStorageManager />
           <DatabaseConnectionCard onReset={onResetConnection} />
         </div>
