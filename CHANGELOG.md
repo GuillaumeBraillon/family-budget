@@ -7,6 +7,72 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.6.3] - 2026-01-12
+
+### 🔧 Améliorations Techniques
+
+#### **Automatisation du Parser de CHANGELOG**
+
+Élimination de la duplication de contenu entre CHANGELOG.md et VersionInfoCard.tsx grâce à un système de parsing automatique.
+
+**Problème résolu** :
+
+- ❌ Avant : Notes de version maintenues manuellement dans 2 endroits
+- ❌ Risque d'oubli de mise à jour de la modale "Quoi de neuf ?"
+- ❌ Duplication de contenu source d'erreurs
+
+**Solution implémentée** :
+
+- ✅ **Source unique de vérité** : CHANGELOG.md est la seule source
+- ✅ **Parser automatique** : Extraction dynamique de la dernière version
+- ✅ **Simplification user-facing** : Filtrage des sections techniques
+- ✅ **Support Vite** : Import de `.md?raw` pour lecture du fichier
+
+**Architecture** :
+
+- `services/changelogParser.ts` :
+  - `getVersionNotes(version)` : Extrait une version spécifique
+  - `getLatestVersionNotes()` : Extrait automatiquement la dernière version
+  - Filtrage intelligent : Conserve uniquement les sections user-facing
+  - Suppression des blocs de code TypeScript, fichiers modifiés, formules
+
+- `components/features/Configuration/components/molecules/VersionInfoCard.tsx` :
+  - Remplacement du contenu hardcodé par `getLatestVersionNotes()`
+  - Plus besoin de mise à jour manuelle à chaque release
+
+- `vite-env.d.ts` :
+  - Déclaration de type pour `*.md?raw`
+  - Support TypeScript pour l'import de markdown
+
+**Workflow de release simplifié** :
+
+```bash
+# Avant (2 fichiers à éditer)
+1. Éditer CHANGELOG.md
+2. Éditer VersionInfoCard.tsx (❌ risque d'oubli)
+
+# Maintenant (1 seul fichier)
+1. Éditer CHANGELOG.md → ✅ Modale mise à jour automatiquement !
+```
+
+**Bénéfices** :
+
+- 🎯 **DRY** : Une seule source de vérité pour les notes de version
+- ⚡ **Maintenance simplifiée** : Plus de risque d'oubli
+- 🔄 **Toujours à jour** : La modale reflète toujours le CHANGELOG actuel
+- 🧹 **Clean Code** : Élimination de 20+ lignes de contenu dupliqué
+
+**Fichiers modifiés** :
+
+- `services/changelogParser.ts` : Nouveau fichier (parser automatique)
+- `vite-env.d.ts` : Ajout déclaration de type pour `.md?raw`
+- `components/features/Configuration/components/molecules/VersionInfoCard.tsx` :
+  - Import de `getLatestVersionNotes`
+  - Suppression du contenu hardcodé (20 lignes)
+  - Remplacement par appel dynamique
+
+---
+
 ## [2.6.2] - 2026-01-12
 
 ### ✨ Nouvelles Fonctionnalités

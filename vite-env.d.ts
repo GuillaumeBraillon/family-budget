@@ -12,3 +12,9 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
+
+// Support pour l'import de fichiers markdown en tant que raw text
+declare module "*.md?raw" {
+  const content: string;
+  export default content;
+}

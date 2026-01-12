@@ -3,6 +3,7 @@ import { Info, FileText, ExternalLink } from "lucide-react";
 import packageJson from "../../../../../package.json";
 import { MobileTooltip } from "../../../../ui/MobileTooltip";
 import { Modal } from "../../../../ui/Modal";
+import { getLatestVersionNotes } from "../../../../../services/changelogParser";
 
 /**
  * Composant d'affichage de la version et du changelog.
@@ -29,32 +30,9 @@ import { Modal } from "../../../../ui/Modal";
 export const VersionInfoCard: React.FC = () => {
   const [showChangelog, setShowChangelog] = useState(false);
 
-  // Extraction notes de la dernière version du CHANGELOG
-  const latestVersionNotes = `
-### ✨ Nouveautés v${packageJson.version}
-
-#### �️ Affichage de la Version et Changelog
-- **Badge version** : Version actuelle visible dans Settings
-- **Modale "Quoi de neuf ?"** : Notes de version formatées et structurées
-- **Changelog complet** : Lien direct vers GitHub
-- **Documentation** : Guide des bonnes pratiques (docs/VERSION_MANAGEMENT.md)
-
-#### 💰 Ventilation Détaillée Virements LDDS
-- **TransferSummaryCard enrichie** : Affichage du détail de ventilation
-- **Badge "Factures Joint"** : Montant pour le compte pivot
-- **Badge "Comptes Courants"** : Montant pour alimenter les comptes personnels
-- **Transparence** : Visualisation claire des flux LDDS → Joint → Personnels
-
-#### 🎨 Améliorations Techniques
-- **Source unique** : Version dans package.json uniquement
-- **TypeScript strict** : Déclarations de types pour Vite
-- **Backward compatible** : Props optionnelles dans TransferSummaryCard
-- **Documentation** : Bonnes pratiques de versioning documentées
-
-#### 🐛 Corrections
-- **Scope variables** : lddsToJoint/lddsToPersonals accessibles dans return
-- **JSX structure** : Modal correctement fermée dans VersionInfoCard
-  `.trim();
+  // Extraction AUTOMATIQUE des notes depuis CHANGELOG.md
+  // Plus besoin de mise à jour manuelle - source unique de vérité !
+  const latestVersionNotes = getLatestVersionNotes();
 
   return (
     <>
