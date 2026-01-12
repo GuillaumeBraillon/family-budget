@@ -73,7 +73,8 @@ CREATE TABLE IF NOT EXISTS app_settings (
   id text PRIMARY KEY,
   monthly_envelope numeric DEFAULT 2000 NOT NULL,
   period_value integer DEFAULT 4 NOT NULL CHECK (period_value > 0),
-  period_type text DEFAULT 'FIXED_DAYS' NOT NULL CHECK (period_type IN ('FIXED_DAYS', 'CALENDAR_WEEKS', 'CUSTOM_SPLIT'))
+  period_type text DEFAULT 'FIXED_DAYS' NOT NULL CHECK (period_type IN ('FIXED_DAYS', 'CALENDAR_WEEKS', 'CUSTOM_SPLIT')),
+  carryover_strategy text DEFAULT 'NEXT_PERIOD' NOT NULL CHECK (carryover_strategy IN ('NEXT_PERIOD', 'SPREAD_REMAINING'))
 );
 
 -- Table: saved_labels

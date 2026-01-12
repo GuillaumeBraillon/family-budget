@@ -201,6 +201,7 @@ export const apiUpdateSettings = async (settings: AppSettings) =>
     monthly_envelope: Number(settings.monthly_envelope),
     period_type: settings.period_type,
     period_value: Math.floor(Number(settings.period_value)),
+    carryover_strategy: settings.carryover_strategy || "NEXT_PERIOD",
   });
 
 /**

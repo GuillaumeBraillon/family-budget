@@ -161,10 +161,11 @@ export const mapDbVariableTransaction = (transaction: DbPaidItem): VariableTrans
 });
 
 export const mapDbSettings = (data: DbSettings | null): AppSettings => {
-  if (!data) return { monthly_envelope: 2000, period_type: "FIXED_DAYS", period_value: 7 };
+  if (!data) return { monthly_envelope: 2000, period_type: "FIXED_DAYS", period_value: 7, carryover_strategy: "NEXT_PERIOD" };
   return {
     monthly_envelope: Number(data.monthly_envelope || 2000),
     period_type: (data.period_type || "FIXED_DAYS") as "FIXED_DAYS" | "CALENDAR_WEEKS" | "CUSTOM_SPLIT",
     period_value: Number(data.period_value || 7),
+    carryover_strategy: (data.carryover_strategy || "NEXT_PERIOD") as "NEXT_PERIOD" | "SPREAD_REMAINING",
   };
 };

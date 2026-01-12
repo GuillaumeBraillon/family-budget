@@ -129,4 +129,5 @@ export interface DbSettings {
   monthly_envelope: number;
   period_type: string;
   period_value: number;
+  carryover_strategy?: string;
 }
