@@ -45,11 +45,18 @@ export interface Account {
   targetCap?: number;
 }
 
+export interface SubCategory {
+  id: string;
+  name: string;
+  categoryId: string;
+  createdAt?: string;
+}
+
 export interface CategoryDef {
   id: string;
   name: string;
   type: "EXPENSE" | "INCOME";
-  subCategories: string[];
+  subCategories: SubCategory[]; // Maintenant un tableau d'objets au lieu de strings
 }
 
 export interface SavedLabel {
@@ -57,6 +64,8 @@ export interface SavedLabel {
   name: string;
   type: AccountType;
   isExpense: boolean;
+  categoryId?: string; // Catégorie suggérée pour auto-complétion
+  subCategoryId?: string; // Sous-catégorie suggérée pour auto-complétion
 }
 
 export enum TransactionType {

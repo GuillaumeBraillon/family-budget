@@ -59,6 +59,7 @@ export const fetchInitialData = async () => {
     peopleRes,
     accountsRes,
     categoriesRes,
+    subCategoriesRes,
     configsRes,
     incomesRes,
     paidItemsRes,
@@ -72,6 +73,7 @@ export const fetchInitialData = async () => {
     supabase.from("people").select("*"),
     supabase.from("accounts").select("*"),
     supabase.from("categories").select("*"),
+    supabase.from("sub_categories").select("*"),
     supabase.from("expense_configs").select("*"),
     supabase.from("income_configs").select("*"),
     supabase.from("paid_items").select("*"),
@@ -87,6 +89,7 @@ export const fetchInitialData = async () => {
     peopleRes,
     accountsRes,
     categoriesRes,
+    subCategoriesRes,
     configsRes,
     incomesRes,
     paidItemsRes,
@@ -105,7 +108,8 @@ export const fetchInitialData = async () => {
 
   const people = (peopleRes.data || []).map(mappers.mapDbPerson);
   const accounts = (accountsRes.data || []).map(mappers.mapDbAccount);
-  const categories = (categoriesRes.data || []).map(mappers.mapDbCategory);
+  const subCategories = subCategoriesRes.data || [];
+  const categories = (categoriesRes.data || []).map((cat) => mappers.mapDbCategory(cat, subCategories));
   const configs = (configsRes.data || []).map(mappers.mapDbExpenseConfig);
   const incomeConfigs = (incomesRes.data || []).map(mappers.mapDbIncomeConfig);
   const settings = mappers.mapDbSettings(settingsRes.data);

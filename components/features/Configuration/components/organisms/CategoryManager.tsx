@@ -127,9 +127,9 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({ categories, on
             {expandedCat === cat.id && (
               <div className="p-3 bg-white border-t border-slate-100 animate-in slide-in-from-top-1 duration-200">
                 <div className="space-y-1">
-                  {cat.subCategories.map((sub, idx) => (
-                    <div key={idx} className="flex items-center justify-between text-sm pl-8 pr-2 py-1.5 hover:bg-slate-50 rounded group">
-                      {editingSubCat?.catId === cat.id && editingSubCat?.oldName === sub ? (
+                  {cat.subCategories.map((sub) => (
+                    <div key={sub.id} className="flex items-center justify-between text-sm pl-8 pr-2 py-1.5 hover:bg-slate-50 rounded group">
+                      {editingSubCat?.catId === cat.id && editingSubCat?.subCatId === sub.id ? (
                         <div className="flex items-center gap-2 flex-1 animate-in fade-in duration-200">
                           <input
                             autoFocus
@@ -147,18 +147,18 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({ categories, on
                         </div>
                       ) : (
                         <>
-                          <span className="text-slate-600">{sub}</span>
+                          <span className="text-slate-600">{sub.name}</span>
                           <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                             <button
                               onClick={() => {
-                                setEditingSubCat({ catId: cat.id, oldName: sub });
-                                setTempSubName(sub);
+                                setEditingSubCat({ catId: cat.id, subCatId: sub.id });
+                                setTempSubName(sub.name);
                               }}
                               className="text-slate-300 hover:text-indigo-500"
                             >
                               <Pencil size={14} />
                             </button>
-                            <button onClick={() => removeSubCat(cat.id, sub)} className="text-slate-300 hover:text-red-500">
+                            <button onClick={() => removeSubCat(cat.id, sub.id)} className="text-slate-300 hover:text-red-500">
                               <X size={14} />
                             </button>
                           </div>

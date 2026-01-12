@@ -51,7 +51,14 @@ export interface DbCategory {
   id: string;
   name: string;
   type: string;
-  sub_categories: string[];
+  // sub_categories supprimé - voir table sub_categories relationnelle
+}
+
+export interface DbSubCategory {
+  id: string;
+  name: string;
+  category_id: string;
+  created_at: string;
 }
 
 export interface DbSavedLabel {
@@ -59,6 +66,8 @@ export interface DbSavedLabel {
   name: string;
   type: string;
   is_expense: boolean;
+  category_id?: string;
+  sub_category_id?: string;
 }
 
 export interface DbExpenseConfig {

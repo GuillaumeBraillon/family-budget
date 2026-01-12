@@ -104,21 +104,41 @@ export const apiDeleteAccount = async (id: string) => supabase.from("accounts").
  * Opérations sur les Catégories
  */
 export const apiUpsertCategory = async (categoryOrList: CategoryDef | CategoryDef[]) => {
-  const payload = Array.isArray(categoryOrList)
-    ? categoryOrList.map((category) => ({
-        id: category.id,
-        name: category.name,
-        type: category.type,
-        sub_categories: category.subCategories,
-      }))
-    : {
-        id: categoryOrList.id,
-        name: categoryOrList.name,
-        type: categoryOrList.type,
-        sub_categories: categoryOrList.subCategories,
-      };
+  const categories = Array.isArray(categoryOrList) ? categoryOrList : [categoryOrList];
 
-  return supabase.from("categories").upsert(payload);
+  // Pour chaque catégorie, on doit :
+  // 1. Upsert la catégorie elle-même (sans sub_categories)
+  // 2. Gérer les sous-catégories dans la table séparée
+
+  for (const category of categories) {
+    // 1. Upsert la catégorie
+    const categoryPayload = {
+      id: category.id,
+      name: category.name,
+      type: category.type,
+    };
+
+    const { error: catError } = await supabase.from("categories").upsert(categoryPayload);
+    if (catError) return { error: catError };
+
+    // 2. Gérer les sous-catégories
+    if (category.subCategories && category.subCategories.length > 0) {
+      // Supprimer les anciennes sous-catégories
+      await supabase.from("sub_categories").delete().eq("category_id", category.id);
+
+      // Insérer les nouvelles
+      const subCategoriesPayload = category.subCategories.map((sc) => ({
+        id: sc.id,
+        name: sc.name,
+        category_id: category.id,
+      }));
+
+      const { error: subError } = await supabase.from("sub_categories").insert(subCategoriesPayload);
+      if (subError) return { error: subError };
+    }
+  }
+
+  return { data: null, error: null };
 };
 
 export const apiDeleteCategory = async (id: string) => supabase.from("categories").delete().eq("id", id);
@@ -132,6 +152,8 @@ export const apiUpsertLabel = async (label: SavedLabel) =>
     name: label.name,
     type: label.type,
     is_expense: label.isExpense,
+    category_id: label.categoryId,
+    sub_category_id: label.subCategoryId,
   });
 
 export const apiDeleteLabel = async (id: string) => supabase.from("saved_labels").delete().eq("id", id);

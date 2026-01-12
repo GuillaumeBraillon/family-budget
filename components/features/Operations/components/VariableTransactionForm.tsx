@@ -72,6 +72,7 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
     initialMode: "STANDARD",
     labelsSuggestions,
     isOpen,
+    categories, // Pour résolution des IDs lors de l'auto-suggestion
   });
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -154,13 +155,16 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
         <SearchableTextInput
           label="Libellé"
           value={form.label}
-          onChange={(e) => form.setLabel(e.target.value)}
-          onSelectSuggestion={form.setLabel}
+          onChange={(e) => form.handleLabelChange(e.target.value)}
+          onSelectSuggestion={(val) => form.handleLabelChange(val)}
           placeholder={form.isExpense ? "Ex: Frais, Courses..." : "Ex: Vente, Remboursement..."}
           suggestions={form.standardSuggestions}
           required
           autoFocus={!editingTransaction}
         />
+        {form.isSuggesting && (
+          <div className="text-xs text-indigo-600 italic animate-pulse -mt-1">✨ Recherche de suggestion...</div>
+        )}
         <div className="grid grid-cols-2 gap-2.5">
           <AmountInput label="Montant" value={form.amount} onChange={(e) => form.setAmount(e.target.value)} color={form.themeColor} required />
           <TextInput label="Date" type="form.date" icon={Calendar} value={form.date} onChange={(e) => form.setDate(e.target.value)} required />

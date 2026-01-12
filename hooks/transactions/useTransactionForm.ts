@@ -22,7 +22,8 @@
  * - useState, useEffect, useMemo : Hooks React pour l'état et la memoization
  */
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { VariableTransaction, Account, AccountType, Person, SavedLabel, TagAmount } from "../../types";
+import { VariableTransaction, Account, AccountType, Person, SavedLabel, TagAmount, CategoryDef } from "../../types";
+import { useCategoryAutoSuggest } from "../useCategoryAutoSuggest";
 
 /**
  * Type du mode formulaire.
@@ -57,6 +58,8 @@ interface UseTransactionFormProps {
   labelsSuggestions?: string[];
   /** Modale ouverte/fermée (pour reset) */
   isOpen: boolean;
+  /** Liste des catégories (pour résolution ID → nom) */
+  categories?: CategoryDef[];
 }
 
 /**
@@ -107,6 +110,8 @@ interface UseTransactionFormReturn {
   // --- ACTIONS ---
   handleSubmit: (targetIsWaiting: boolean, onSuccess: () => void) => VariableTransaction | null;
   resetForm: () => void;
+  handleLabelChange: (newLabel: string) => Promise<void>;
+  isSuggesting: boolean;
 }
 
 /**
@@ -163,7 +168,11 @@ export const useTransactionForm = ({
   initialMode = "STANDARD",
   labelsSuggestions = [],
   isOpen,
+  categories = [],
 }: UseTransactionFormProps): UseTransactionFormReturn => {
+  // --- HOOKS SPÉCIALISÉS ---
+  const { suggestFromLabel, isLoading: isSuggesting } = useCategoryAutoSuggest();
+
   // --- ÉTAT FORMULAIRE ---
 
   const [mode, setMode] = useState<FormMode>(initialMode);
@@ -365,6 +374,62 @@ export const useTransactionForm = ({
     return transaction;
   };
 
+  /**
+   * Gère le changement de libellé avec auto-suggestion de catégorie.
+   *
+   * @description
+   * 1. Met à jour le libellé
+   * 2. Appelle l'auto-suggestion si ≥ 3 caractères
+   * 3. Pré-remplit catégorie/sous-catégorie si trouvée
+   *
+   * **Comportement :**
+   * - Recherche dans saved_labels via fonction SQL
+   * - Résout les IDs en noms pour affichage
+   * - Non bloquant : erreur n'empêche pas saisie manuelle
+   *
+   * @param {string} newLabel - Nouveau libellé saisi
+   *
+   * @example
+   * ```tsx
+   * <input
+   *   value={form.label}
+   *   onChange={(e) => form.handleLabelChange(e.target.value)}
+   * />
+   * {form.isSuggesting && <Loader />}
+   * ```
+   */
+  const handleLabelChange = useCallback(
+    async (newLabel: string) => {
+      setLabel(newLabel);
+
+      // Auto-suggestion si libellé assez long
+      if (newLabel.length >= 3 && categories.length > 0) {
+        const suggestion = await suggestFromLabel(newLabel);
+
+        if (suggestion) {
+          // Résoudre category_id → nom de catégorie
+          const cat = categories.find((c) => c.id === suggestion.category_id);
+          if (cat) {
+            setCategory(cat.name);
+
+            // Résoudre sub_category_id → nom de sous-catégorie
+            if (suggestion.sub_category_id) {
+              const sub = cat.subCategories.find((sc) => sc.id === suggestion.sub_category_id);
+              if (sub) {
+                setSubCategory(sub.name);
+              } else {
+                setSubCategory("");
+              }
+            } else {
+              setSubCategory("");
+            }
+          }
+        }
+      }
+    },
+    [categories, suggestFromLabel]
+  );
+
   // --- RETOUR PUBLIC ---
 
   return {
@@ -412,5 +477,7 @@ export const useTransactionForm = ({
     // Actions
     handleSubmit,
     resetForm,
+    handleLabelChange,
+    isSuggesting,
   };
 };

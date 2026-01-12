@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { CategoryDef } from "../types";
+import { CategoryDef, SubCategory } from "../types";
 
 /**
  * Hook de gestion des catégories de dépenses/revenus.
@@ -7,7 +7,7 @@ import { CategoryDef } from "../types";
  * @description
  * Fournit une interface complète pour gérer les catégories et sous-catégories :
  * - Ajout, édition, suppression de catégories
- * - Gestion des sous-catégories
+ * - Gestion des sous-catégories (objets SubCategory)
  * - Filtre par type (EXPENSE/INCOME)
  * - Expansion/collapse des catégories
  * - Confirmation de suppression
@@ -36,7 +36,7 @@ export const useCategoryManager = (categories: CategoryDef[], onUpdateCategories
   const [tempName, setTempName] = useState("");
 
   const [newSubCat, setNewSubCat] = useState("");
-  const [editingSubCat, setEditingSubCat] = useState<{ catId: string; oldName: string } | null>(null);
+  const [editingSubCat, setEditingSubCat] = useState<{ catId: string; subCatId: string } | null>(null);
   const [tempSubName, setTempSubName] = useState("");
 
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string } | null>(null);
@@ -79,11 +79,14 @@ export const useCategoryManager = (categories: CategoryDef[], onUpdateCategories
     if (!newSubCat.trim()) return;
     const updated = currentList.map((c) => {
       if (c.id === catId) {
-        // Tri alphabétique aussi pour les sous-catégories lors de l'ajout/modif si souhaité,
-        // mais ici on ajoute simplement à la fin.
-        // Pour trier à l'affichage, c'est géré dans le composant ou ici.
-        // On ajoute et on laisse l'utilisateur gérer ou on trie tout le tableau :
-        const newSubs = [...c.subCategories, newSubCat].sort((a, b) => a.localeCompare(b));
+        // Créer un nouvel objet SubCategory
+        const newSubCategory: SubCategory = {
+          id: `sub_${Date.now()}`,
+          name: newSubCat.trim(),
+          categoryId: catId,
+        };
+        // Ajouter et trier par nom
+        const newSubs = [...c.subCategories, newSubCategory].sort((a, b) => a.name.localeCompare(b.name));
         return { ...c, subCategories: newSubs };
       }
       return c;
@@ -92,8 +95,8 @@ export const useCategoryManager = (categories: CategoryDef[], onUpdateCategories
     setNewSubCat("");
   };
 
-  const removeSubCat = (catId: string, subName: string) => {
-    const updated = currentList.map((c) => (c.id === catId ? { ...c, subCategories: c.subCategories.filter((s) => s !== subName) } : c));
+  const removeSubCat = (catId: string, subCatId: string) => {
+    const updated = currentList.map((c) => (c.id === catId ? { ...c, subCategories: c.subCategories.filter((s) => s.id !== subCatId) } : c));
     applyChanges(updated);
   };
 
@@ -101,7 +104,9 @@ export const useCategoryManager = (categories: CategoryDef[], onUpdateCategories
     if (!editingSubCat) return;
     const updated = currentList.map((c) => {
       if (c.id === editingSubCat.catId) {
-        const newSubs = c.subCategories.map((s) => (s === editingSubCat.oldName ? tempSubName : s)).sort((a, b) => a.localeCompare(b));
+        const newSubs = c.subCategories
+          .map((s) => (s.id === editingSubCat.subCatId ? { ...s, name: tempSubName } : s))
+          .sort((a, b) => a.name.localeCompare(b.name));
         return {
           ...c,
           subCategories: newSubs,

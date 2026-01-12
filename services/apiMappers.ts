@@ -2,6 +2,7 @@ import {
   Person,
   Account,
   CategoryDef,
+  SubCategory,
   ExpenseConfig,
   IncomeConfig,
   PaidItemDetails,
@@ -21,6 +22,7 @@ import {
   DbPaidItemTag,
   DbAccount,
   DbCategory,
+  DbSubCategory,
   DbSavedLabel,
   DbExpenseConfig,
   DbIncomeConfig,
@@ -72,18 +74,27 @@ export const mapDbAccount = (account: DbAccount): Account => ({
   targetCap: account.target_cap !== null && account.target_cap !== undefined ? Number(account.target_cap) : undefined,
 });
 
-export const mapDbCategory = (category: DbCategory): CategoryDef => ({
+export const mapDbSubCategory = (subCategory: DbSubCategory): SubCategory => ({
+  id: subCategory.id,
+  name: subCategory.name,
+  categoryId: subCategory.category_id,
+  createdAt: subCategory.created_at,
+});
+
+export const mapDbCategory = (category: DbCategory, subCategories: DbSubCategory[] = []): CategoryDef => ({
   id: category.id,
   name: category.name,
-  type: category.type || "EXPENSE",
-  subCategories: category.sub_categories || [],
+  type: (category.type as "EXPENSE" | "INCOME") || "EXPENSE",
+  subCategories: subCategories.filter((sc) => sc.category_id === category.id).map(mapDbSubCategory),
 });
 
 export const mapDbSavedLabel = (label: DbSavedLabel): SavedLabel => ({
   id: label.id,
   name: label.name,
-  type: label.type,
+  type: label.type as AccountType,
   isExpense: label.is_expense !== false, // Default true si null/undefined pour rétrocompatibilité
+  categoryId: label.category_id,
+  subCategoryId: label.sub_category_id,
 });
 
 export const mapDbExpenseConfig = (config: DbExpenseConfig): ExpenseConfig => ({

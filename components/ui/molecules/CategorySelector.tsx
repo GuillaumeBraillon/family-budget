@@ -44,7 +44,7 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
   // Récupération des sous-catégories si la catégorie saisie existe déjà dans les paramètres
   const activeSubCats = useMemo(() => {
     const cat = categories.find((c) => c.name.toLowerCase() === selectedCategory.toLowerCase());
-    return cat ? [...cat.subCategories].sort((a, b) => a.localeCompare(b)) : [];
+    return cat ? [...cat.subCategories].sort((a, b) => a.name.localeCompare(b.name)).map((sc) => sc.name) : [];
   }, [categories, selectedCategory]);
 
   return (

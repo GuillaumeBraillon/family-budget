@@ -7,6 +7,162 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.6.4] - 2026-01-12
+
+### ⚠️ BREAKING CHANGE
+
+**Migration Base de Données Requise** : Exécuter `startup/migrations/004_refactor_categories_to_relational.sql`
+
+Cette version refond complètement l'architecture des sous-catégories pour améliorer la robustesse et préparer l'auto-suggestion intelligente.
+
+### ✨ Nouvelles Fonctionnalités
+
+#### **Structure Relationnelle des Sous-Catégories**
+
+Refactorisation majeure de l'architecture database :
+
+**Avant (v2.6.3)** :
+- Sous-catégories stockées dans un array PostgreSQL (`sub_categories: TEXT[]`)
+- Pas de lien structurel entre libellés et catégories
+- Identification par nom uniquement (fragile)
+
+**Après (v2.6.4)** :
+- ✅ Table dédiée `sub_categories` avec foreign keys
+- ✅ Identifiants uniques (`id`, `category_id`)
+- ✅ Contraintes d'intégrité référentielle
+- ✅ RLS policies pour sécurité multi-tenant
+- ✅ Indexes pour performances optimales
+
+**Schéma relationnel** :
+```sql
+CREATE TABLE sub_categories (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  category_id TEXT NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+#### **Auto-Suggestion Intelligente de Catégories**
+
+Système d'apprentissage automatique basé sur les libellés enregistrés :
+
+**Fonctionnalités** :
+- ✨ **Suggestion automatique** : Pré-remplit catégorie/sous-catégorie lors de la saisie
+- 🎯 **Contexte intelligent** : Basé sur `saved_labels` (associations mémorisées)
+- ⚡ **Feedback visuel** : Indicateur "✨ Recherche de suggestion..." pendant l'appel
+- 🔄 **Non bloquant** : Pas de suggestion ? Saisie manuelle reste possible
+
+**Workflow utilisateur** :
+1. Saisir libellé dans formulaire de transaction : "Netflix"
+2. Auto-suggestion déclenche recherche dans base (≥3 caractères)
+3. Si trouvé → Catégorie "Loisirs" + Sous-catégorie "Streaming" pré-remplies
+4. Validation ou modification manuelle si nécessaire
+
+**Implémentation technique** :
+- Hook `useCategoryAutoSuggest` : Appel RPC à Supabase
+- Fonction SQL `suggest_category_from_label(p_label_name)` : Requête optimisée
+- Intégration transparente dans `VariableTransactionForm`
+
+**Exemple d'usage** :
+```typescript
+const { suggestFromLabel, isLoading } = useCategoryAutoSuggest();
+
+const handleLabelChange = async (label: string) => {
+  const suggestion = await suggestFromLabel(label);
+  if (suggestion) {
+    // Pré-remplir catégorie + sous-catégorie automatiquement
+    setCategory(suggestion.category_id);
+    setSubCategory(suggestion.sub_category_id);
+  }
+};
+```
+
+### 🔧 Améliorations Techniques
+
+#### **Migration 004 : Refactorisation Complète**
+
+Script SQL complet de migration en 8 étapes :
+
+1. **Sauvegarde** : Export des données existantes dans table temporaire
+2. **Création table** : Structure relationnelle avec contraintes
+3. **Migration données** : Transformation array → lignes relationnelles
+4. **Extension labels** : Ajout `category_id`, `sub_category_id` à `saved_labels`
+5. **Suppression array** : Colonne `sub_categories: TEXT[]` retirée de `categories`
+6. **RLS policies** : Sécurité multi-tenant activée
+7. **Fonctions helpers** : `get_sub_categories()`, `suggest_category_from_label()`
+8. **Vérification** : Validation de l'intégrité des données
+
+**Statistiques migration** :
+- ~300 lignes SQL documentées
+- 0 perte de données (backup temporaire)
+- Rollback possible via backup
+
+#### **Refactorisation Complète du Type System**
+
+Mise à jour de toute la chaîne de typage TypeScript :
+
+**Fichiers refactorisés** :
+- `services/dbTypes.ts` : Nouveaux types `DbSubCategory`, `DbPaidItemTag`
+- `types.ts` : Interface `SubCategory { id, name, categoryId }`
+- `services/apiMappers.ts` : Mapper `mapDbSubCategory()`
+- `services/api.ts` : Chargement relationnel des sous-catégories
+- `services/apiCrud.ts` : CRUD atomique avec gestion relationnelle
+
+**Pattern de mapping** :
+```typescript
+// AVANT (array simple)
+CategoryDef.subCategories: string[]
+
+// APRÈS (objets typés)
+CategoryDef.subCategories: SubCategory[]
+```
+
+#### **Composants UI Mis à Jour**
+
+Adaptation de tous les composants pour objets SubCategory :
+
+**Composants refactorisés** :
+- `hooks/useCategoryManager.ts` : Opérations CRUD sur SubCategory[]
+- `CategoryManager.tsx` : Affichage de `sub.name`, utilisation de `sub.id`
+- `CategorySelector.tsx` : Tri et mapping des noms de sous-catégories
+- `useTransactionForm.ts` : Hook avec auto-suggestion intégrée
+- `VariableTransactionForm.tsx` : UI avec indicateur de chargement
+
+**Exemple de changement** :
+```tsx
+// AVANT (string direct)
+{cat.subCategories.map((sub, idx) => (
+  <div key={idx}>{sub}</div>
+))}
+
+// APRÈS (objet structuré)
+{cat.subCategories.map((sub) => (
+  <div key={sub.id}>{sub.name}</div>
+))}
+```
+
+### 📦 Dépendances et Build
+
+- Build successful : **2161 modules** transformés
+- Bundle size : **838.18 kB** (gzip: 228.95 kB)
+- 0 erreurs TypeScript, 0 warnings ESLint
+
+### 🎯 Impact Utilisateur
+
+**Expérience améliorée** :
+- ⚡ Gain de temps : Catégories pré-remplies automatiquement
+- 🎯 Moins d'erreurs : Réutilisation des catégories déjà utilisées
+- 🧠 Apprentissage : Le système mémorise les associations
+
+**Migration utilisateur** :
+1. Exécuter migration 004 (script fourni)
+2. Actualiser l'application (build)
+3. Tester auto-suggestion sur libellés connus
+4. Profiter du gain de temps sur saisies répétitives
+
+---
+
 ## [2.6.3] - 2026-01-12
 
 ### 🔧 Améliorations Techniques
