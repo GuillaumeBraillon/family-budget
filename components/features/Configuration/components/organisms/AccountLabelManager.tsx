@@ -1,14 +1,17 @@
 import React, { useState } from "react";
 import { Trash2, Save, Tag, DownloadCloud, Search, Check, Info, TrendingDown, TrendingUp, ArrowRightLeft, PiggyBank, CreditCard } from "lucide-react";
-import { SavedLabel, AccountType } from "../../../../../types";
+import { SavedLabel, AccountType, CategoryDef } from "../../../../../types";
 import { ConfirmModal } from "../../../../ui/atoms/ConfirmModal";
 import { DataList } from "../../../../ui/molecules/DataList";
 import { DataListRow } from "../../../../ui/molecules/DataListRow";
 import { Modal } from "../../../../ui/Modal";
 import { TextInput } from "../../../../ui/molecules/FormInputs";
+import { CategorySelector } from "../../../../ui/molecules/CategorySelector";
+import { AdvancedOptionsAccordion } from "../../../../ui/molecules/AdvancedOptionsAccordion";
 
 interface AccountLabelManagerProps {
   labels: SavedLabel[];
+  categories: CategoryDef[];
   onUpsertLabel: (l: SavedLabel) => void;
   onDeleteLabel: (id: string) => void;
   onImportLabels?: () => Promise<{ count?: number; error?: Error }> | void;
@@ -18,7 +21,7 @@ interface AccountLabelManagerProps {
 // Utilisation directe des types pour les onglets
 type ManagerTab = AccountType;
 
-export const AccountLabelManager: React.FC<AccountLabelManagerProps> = ({ labels, onUpsertLabel, onDeleteLabel, onImportLabels, onImportVirLabels }) => {
+export const AccountLabelManager: React.FC<AccountLabelManagerProps> = ({ labels, categories, onUpsertLabel, onDeleteLabel, onImportLabels, onImportVirLabels }) => {
   const [currentTab, setCurrentTab] = useState<ManagerTab>(AccountType.CHECKING);
   const [isExpenseMode, setIsExpenseMode] = useState(true); // Utilisé uniquement pour l'onglet CHECKING
 
@@ -26,6 +29,11 @@ export const AccountLabelManager: React.FC<AccountLabelManagerProps> = ({ labels
   const [editingLabel, setEditingLabel] = useState<SavedLabel | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string } | null>(null);
   const [name, setName] = useState("");
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  
+  // Catégorie et sous-catégorie pour auto-suggestion
+  const [category, setCategory] = useState("");
+  const [subCategory, setSubCategory] = useState("");
 
   // Search & Feedback
   const [searchQuery, setSearchQuery] = useState("");
@@ -45,20 +53,40 @@ export const AccountLabelManager: React.FC<AccountLabelManagerProps> = ({ labels
 
   const resetForm = () => {
     setName("");
+    setCategory("");
+    setSubCategory("");
     setEditingLabel(null);
     setIsModalOpen(false);
     setDeleteConfirm(null);
+    setShowAdvanced(false);
   };
 
   const handleAddClick = () => {
     setEditingLabel(null);
     setName("");
+    setCategory("");
+    setSubCategory("");
+    setShowAdvanced(false);
     setIsModalOpen(true);
   };
 
   const handleEditClick = (label: SavedLabel) => {
     setEditingLabel(label);
     setName(label.name);
+    
+    // Charger catégorie/sous-catégorie si présentes
+    if (label.categoryId) {
+      const cat = categories.find(c => c.id === label.categoryId);
+      if (cat) {
+        setCategory(cat.name);
+        if (label.subCategoryId) {
+          const sub = cat.subCategories.find(sc => sc.id === label.subCategoryId);
+          if (sub) setSubCategory(sub.name);
+        }
+      }
+    }
+    
+    setShowAdvanced(false);
     setIsModalOpen(true);
   };
 
@@ -75,12 +103,29 @@ export const AccountLabelManager: React.FC<AccountLabelManagerProps> = ({ labels
 
     // Pour checking, on suit le mode expense/income. Pour le reste, peu importe (true par défaut)
     const targetIsExpense = currentTab === AccountType.CHECKING ? isExpenseMode : true;
+    
+    // RÉSOLUTION DES IDs DE CATÉGORIE/SOUS-CATÉGORIE
+    let categoryId: string | undefined;
+    let subCategoryId: string | undefined;
+    
+    if (category) {
+      const cat = categories.find(c => c.name === category);
+      if (cat) {
+        categoryId = cat.id;
+        if (subCategory) {
+          const sub = cat.subCategories.find(sc => sc.name === subCategory);
+          if (sub) subCategoryId = sub.id;
+        }
+      }
+    }
 
     const label: SavedLabel = {
       id: editingLabel ? editingLabel.id : newId,
       name: name.trim(),
       type: targetType,
       isExpense: targetIsExpense,
+      categoryId,
+      subCategoryId,
     };
     onUpsertLabel(label);
     resetForm();
@@ -135,6 +180,22 @@ export const AccountLabelManager: React.FC<AccountLabelManagerProps> = ({ labels
       <Modal isOpen={isModalOpen} onClose={resetForm} title={editingLabel ? "Modifier le libellé" : "Ajouter un libellé"}>
         <div className="space-y-4">
           <TextInput label="Libellé" value={name} onChange={(e) => setName(e.target.value)} placeholder={getPlaceholder()} required autoFocus />
+
+          <AdvancedOptionsAccordion isOpen={showAdvanced} onToggle={setShowAdvanced}>
+            <div className="space-y-2">
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Associez une catégorie à ce libellé pour activer l'auto-suggestion lors de la saisie d'opérations variables.
+              </p>
+              <CategorySelector
+                categories={categories}
+                type={isExpenseMode ? "EXPENSE" : "INCOME"}
+                selectedCategory={category}
+                selectedSubCategory={subCategory}
+                onCategoryChange={setCategory}
+                onSubCategoryChange={setSubCategory}
+              />
+            </div>
+          </AdvancedOptionsAccordion>
 
           <div className="flex gap-3 pt-2">
             {editingLabel && (

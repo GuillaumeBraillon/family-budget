@@ -7,6 +7,66 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.6.5] - 2026-01-12
+
+### 🐛 Corrections Critiques (Post-v2.6.4)
+
+**Migration Base de Données Requise** : Exécuter `startup/migrations/005_finalize_relational_structure.sql`
+
+Cette version patch corrige deux problèmes critiques découverts après la release v2.6.4 :
+
+#### **Problème #1 : Colonnes manquantes pour l'auto-suggestion**
+
+La table `saved_labels` ne comportait pas les colonnes `category_id` et `sub_category_id` nécessaires au stockage des associations catégories ↔ libellés pour l'auto-suggestion intelligente.
+
+**Solution** :
+- ✅ Ajout de `category_id` avec foreign key vers `categories(id)`
+- ✅ Ajout de `sub_category_id` avec foreign key vers `sub_categories(id)`
+- ✅ Indexes créés pour performances optimales
+- ✅ Migration 005 fournie pour mise à jour en production
+
+#### **Problème #2 : Colonnes array obsolètes encore présentes**
+
+Malgré la migration vers une architecture relationnelle pure (v2.6.4), certaines colonnes au format array PostgreSQL restaient dans le schema :
+
+**Colonnes supprimées** :
+- ❌ `categories.sub_categories text[]` → Utilise table `sub_categories`
+- ❌ `expense_configs.tag_ids text[]` → Utilise table `paid_item_tags`
+- ❌ `income_configs.tag_ids text[]` → Utilise table `paid_item_tags`
+- ❌ `paid_items.tag_ids text[]` → Utilise table `paid_item_tags`
+
+**Bénéfices** :
+- 🎯 Structure 100% relationnelle (plus d'arrays PostgreSQL)
+- 🔗 Intégrité référentielle complète avec CASCADE
+- 📊 Performances optimisées avec indexes appropriés
+- 🧹 Code simplifié (un seul modèle de données)
+
+#### **Problème #3 : Interface utilisateur incomplète**
+
+Aucune interface ne permettait de lier les catégories aux libellés sauvegardés dans "Configuration → Libellés".
+
+**Solution** :
+- ✅ Ajout de `<CategorySelector>` dans le modal "Modifier le libellé"
+- ✅ Sélection catégorie + sous-catégorie optionnelle
+- ✅ Interface dans accordéon "Options Avancées" (UX clean)
+- ✅ Chargement des associations existantes lors de l'édition
+- ✅ Sauvegarde automatique dans `saved_labels.category_id/sub_category_id`
+
+### 🔧 Améliorations Techniques
+
+- **Migration 005** : 4 `DROP COLUMN` + 2 `ADD COLUMN` + indexes + verification queries
+- **database_complete.sql** : 12 modifications pour cohérence complète
+- **AccountLabelManager.tsx** : Intégration `CategorySelector` avec handlers load/save
+- **Type Safety** : Aucune modification requise (types déjà conformes)
+
+### 📖 Documentation
+
+- Migration 005 inclut des requêtes de vérification SQL
+- Notes d'implémentation avec justifications techniques
+- CHANGELOG mis à jour avec détails des correctifs
+
+---
+
 ## [2.6.4] - 2026-01-12
 
 ### ⚠️ BREAKING CHANGE
@@ -22,11 +82,13 @@ Cette version refond complètement l'architecture des sous-catégories pour amé
 Refactorisation majeure de l'architecture database :
 
 **Avant (v2.6.3)** :
+
 - Sous-catégories stockées dans un array PostgreSQL (`sub_categories: TEXT[]`)
 - Pas de lien structurel entre libellés et catégories
 - Identification par nom uniquement (fragile)
 
 **Après (v2.6.4)** :
+
 - ✅ Table dédiée `sub_categories` avec foreign keys
 - ✅ Identifiants uniques (`id`, `category_id`)
 - ✅ Contraintes d'intégrité référentielle
@@ -34,6 +96,7 @@ Refactorisation majeure de l'architecture database :
 - ✅ Indexes pour performances optimales
 
 **Schéma relationnel** :
+
 ```sql
 CREATE TABLE sub_categories (
   id TEXT PRIMARY KEY,
@@ -48,23 +111,27 @@ CREATE TABLE sub_categories (
 Système d'apprentissage automatique basé sur les libellés enregistrés :
 
 **Fonctionnalités** :
+
 - ✨ **Suggestion automatique** : Pré-remplit catégorie/sous-catégorie lors de la saisie
 - 🎯 **Contexte intelligent** : Basé sur `saved_labels` (associations mémorisées)
 - ⚡ **Feedback visuel** : Indicateur "✨ Recherche de suggestion..." pendant l'appel
 - 🔄 **Non bloquant** : Pas de suggestion ? Saisie manuelle reste possible
 
 **Workflow utilisateur** :
+
 1. Saisir libellé dans formulaire de transaction : "Netflix"
 2. Auto-suggestion déclenche recherche dans base (≥3 caractères)
 3. Si trouvé → Catégorie "Loisirs" + Sous-catégorie "Streaming" pré-remplies
 4. Validation ou modification manuelle si nécessaire
 
 **Implémentation technique** :
+
 - Hook `useCategoryAutoSuggest` : Appel RPC à Supabase
 - Fonction SQL `suggest_category_from_label(p_label_name)` : Requête optimisée
 - Intégration transparente dans `VariableTransactionForm`
 
 **Exemple d'usage** :
+
 ```typescript
 const { suggestFromLabel, isLoading } = useCategoryAutoSuggest();
 
@@ -94,6 +161,7 @@ Script SQL complet de migration en 8 étapes :
 8. **Vérification** : Validation de l'intégrité des données
 
 **Statistiques migration** :
+
 - ~300 lignes SQL documentées
 - 0 perte de données (backup temporaire)
 - Rollback possible via backup
@@ -103,6 +171,7 @@ Script SQL complet de migration en 8 étapes :
 Mise à jour de toute la chaîne de typage TypeScript :
 
 **Fichiers refactorisés** :
+
 - `services/dbTypes.ts` : Nouveaux types `DbSubCategory`, `DbPaidItemTag`
 - `types.ts` : Interface `SubCategory { id, name, categoryId }`
 - `services/apiMappers.ts` : Mapper `mapDbSubCategory()`
@@ -110,6 +179,7 @@ Mise à jour de toute la chaîne de typage TypeScript :
 - `services/apiCrud.ts` : CRUD atomique avec gestion relationnelle
 
 **Pattern de mapping** :
+
 ```typescript
 // AVANT (array simple)
 CategoryDef.subCategories: string[]
@@ -123,6 +193,7 @@ CategoryDef.subCategories: SubCategory[]
 Adaptation de tous les composants pour objets SubCategory :
 
 **Composants refactorisés** :
+
 - `hooks/useCategoryManager.ts` : Opérations CRUD sur SubCategory[]
 - `CategoryManager.tsx` : Affichage de `sub.name`, utilisation de `sub.id`
 - `CategorySelector.tsx` : Tri et mapping des noms de sous-catégories
@@ -130,16 +201,17 @@ Adaptation de tous les composants pour objets SubCategory :
 - `VariableTransactionForm.tsx` : UI avec indicateur de chargement
 
 **Exemple de changement** :
+
 ```tsx
 // AVANT (string direct)
-{cat.subCategories.map((sub, idx) => (
-  <div key={idx}>{sub}</div>
-))}
+{
+  cat.subCategories.map((sub, idx) => <div key={idx}>{sub}</div>);
+}
 
 // APRÈS (objet structuré)
-{cat.subCategories.map((sub) => (
-  <div key={sub.id}>{sub.name}</div>
-))}
+{
+  cat.subCategories.map((sub) => <div key={sub.id}>{sub.name}</div>);
+}
 ```
 
 ### 📦 Dépendances et Build
@@ -151,11 +223,13 @@ Adaptation de tous les composants pour objets SubCategory :
 ### 🎯 Impact Utilisateur
 
 **Expérience améliorée** :
+
 - ⚡ Gain de temps : Catégories pré-remplies automatiquement
 - 🎯 Moins d'erreurs : Réutilisation des catégories déjà utilisées
 - 🧠 Apprentissage : Le système mémorise les associations
 
 **Migration utilisateur** :
+
 1. Exécuter migration 004 (script fourni)
 2. Actualiser l'application (build)
 3. Tester auto-suggestion sur libellés connus

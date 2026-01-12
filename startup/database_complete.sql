@@ -38,12 +38,22 @@ CREATE TABLE IF NOT EXISTS accounts (
 );
 
 -- Table: categories
--- Catégories de dépenses/revenus
+-- Catégories de dépenses/revenus (structure relationnelle via sub_categories)
 CREATE TABLE IF NOT EXISTS categories (
   id text PRIMARY KEY,
   name text NOT NULL,
-  sub_categories text[] DEFAULT '{}' NOT NULL,
   type text NOT NULL CHECK (type IN ('EXPENSE', 'INCOME'))
+);
+
+-- Table: sub_categories
+-- Sous-catégories liées aux catégories principales
+CREATE TABLE IF NOT EXISTS sub_categories (
+  id text PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  name text NOT NULL,
+  category_id text NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
+  created_at timestamptz DEFAULT now(),
+  
+  CONSTRAINT unique_sub_category UNIQUE(category_id, name)
 );
 
 -- Table: tags
@@ -78,12 +88,14 @@ CREATE TABLE IF NOT EXISTS app_settings (
 );
 
 -- Table: saved_labels
--- Libellés suggérés pour la saisie rapide
+-- Libellés suggérés pour la saisie rapide avec association catégorie
 CREATE TABLE IF NOT EXISTS saved_labels (
   id text PRIMARY KEY DEFAULT gen_random_uuid()::text,
   name text NOT NULL UNIQUE,
   type text NOT NULL,
-  is_expense boolean DEFAULT true NOT NULL
+  is_expense boolean DEFAULT true NOT NULL,
+  category_id text REFERENCES categories(id) ON DELETE SET NULL,
+  sub_category_id text REFERENCES sub_categories(id) ON DELETE SET NULL
 );
 
 -- Table: expense_configs
@@ -99,8 +111,7 @@ CREATE TABLE IF NOT EXISTS expense_configs (
   day_of_month integer NOT NULL CHECK (day_of_month >= 1 AND day_of_month <= 31),
   start_month text, -- Format: YYYY-MM
   end_month text,   -- Format: YYYY-MM
-  is_extra boolean DEFAULT false NOT NULL,
-  tag_ids text[] DEFAULT '{}'
+  is_extra boolean DEFAULT false NOT NULL
 );
 
 -- Table: income_configs
@@ -116,7 +127,6 @@ CREATE TABLE IF NOT EXISTS income_configs (
   sub_category text,
   is_extra boolean DEFAULT false NOT NULL,
   is_salary boolean DEFAULT false NOT NULL,
-  tag_ids text[] DEFAULT '{}',
   start_month text, -- Format: YYYY-MM
   end_month text    -- Format: YYYY-MM
 );
@@ -138,7 +148,6 @@ CREATE TABLE IF NOT EXISTS paid_items (
   is_extra boolean DEFAULT false NOT NULL,
   is_waiting boolean DEFAULT false NOT NULL,
   comments text,
-  tag_ids text[] DEFAULT '{}',
   position bigint DEFAULT 0,
   type text NOT NULL CHECK (type IN ('EXPENSE', 'INCOME'))
 );
@@ -187,6 +196,9 @@ CREATE INDEX IF NOT EXISTS idx_transfers_source ON transfers(source_account_id);
 CREATE INDEX IF NOT EXISTS idx_transfers_dest ON transfers(destination_account_id);
 CREATE INDEX IF NOT EXISTS idx_paid_item_tags_instance ON paid_item_tags(paid_item_instance_id);
 CREATE INDEX IF NOT EXISTS idx_paid_item_tags_tag ON paid_item_tags(tag_id);
+CREATE INDEX IF NOT EXISTS idx_sub_categories_category ON sub_categories(category_id);
+CREATE INDEX IF NOT EXISTS idx_saved_labels_category ON saved_labels(category_id);
+CREATE INDEX IF NOT EXISTS idx_saved_labels_sub_category ON saved_labels(sub_category_id);
 
 -- Index sur les colonnes de tri (drag & drop)
 CREATE INDEX IF NOT EXISTS idx_paid_items_position ON paid_items(position);
@@ -218,6 +230,7 @@ CREATE INDEX IF NOT EXISTS idx_paid_items_label_trgm ON paid_items USING gin(lab
 ALTER TABLE people ENABLE ROW LEVEL SECURITY;
 ALTER TABLE accounts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE sub_categories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE tags ENABLE ROW LEVEL SECURITY;
 ALTER TABLE authorized_users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE app_settings ENABLE ROW LEVEL SECURITY;
@@ -238,6 +251,9 @@ CREATE POLICY "Enable all for authenticated users" ON accounts
   FOR ALL USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
 
 CREATE POLICY "Enable all for authenticated users" ON categories
+  FOR ALL USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
+
+CREATE POLICY "Enable all for authenticated users" ON sub_categories
   FOR ALL USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
 
 CREATE POLICY "Enable all for authenticated users" ON tags
@@ -273,11 +289,15 @@ CREATE POLICY "Enable all for authenticated users" ON transfers
 
 COMMENT ON TABLE people IS 'Membres du foyer (famille)';
 COMMENT ON TABLE accounts IS 'Comptes bancaires (courants, épargne)';
-COMMENT ON TABLE categories IS 'Catégories hiérarchiques pour les dépenses/revenus';
+COMMENT ON TABLE categories IS 'Catégories hiérarchiques pour les dépenses/revenus (structure relationnelle via sub_categories)';
+COMMENT ON TABLE sub_categories IS 'Sous-catégories liées aux catégories principales avec contrainte d''unicité par catégorie';
 COMMENT ON TABLE tags IS 'Tags pour catégorisation avancée et filtrage';
 COMMENT ON TABLE authorized_users IS 'Whitelist des utilisateurs autorisés à accéder à l''application';
 COMMENT ON TABLE app_settings IS 'Paramètres globaux de l''application (enveloppe budgétaire, périodes)';
-COMMENT ON TABLE saved_labels IS 'Libellés pré-enregistrés pour auto-complétion';
+COMMENT ON TABLE saved_labels IS 'Libellés pré-enregistrés avec association catégorie/sous-catégorie pour auto-suggestion';
+
+COMMENT ON COLUMN saved_labels.category_id IS 'Catégorie suggérée pour auto-complétion (optionnel)';
+COMMENT ON COLUMN saved_labels.sub_category_id IS 'Sous-catégorie suggérée pour auto-complétion (optionnel)';
 COMMENT ON TABLE expense_configs IS 'Modèles de dépenses récurrentes (loyer, abonnements, etc.)';
 COMMENT ON TABLE income_configs IS 'Modèles de revenus récurrents (salaires, etc.)';
 COMMENT ON TABLE paid_items IS 'Opérations réelles pointées (récurrentes + variables)';
@@ -299,6 +319,7 @@ COMMENT ON COLUMN accounts.target_cap IS 'Plafond maximal du solde pour l''épar
 ANALYZE people;
 ANALYZE accounts;
 ANALYZE categories;
+ANALYZE sub_categories;
 ANALYZE tags;
 ANALYZE authorized_users;
 ANALYZE app_settings;
@@ -337,11 +358,12 @@ DÉPLOIEMENT :
 
 MIGRATIONS FUTURES :
 
-Ce schéma inclut déjà toutes les migrations jusqu'à v2.0.0 :
+Ce schéma inclut déjà toutes les migrations jusqu'à v2.6.5 :
 - 001_add_critical_indexes.sql : Index de performance
 - 002_add_types_and_validations.sql : Contraintes et validations
 - 003_add_tag_amounts.sql : Système de ventilation par tags
-- 004_add_tag_is_extra.sql : Extra au niveau des tags
+- 004_refactor_categories_to_relational.sql : Structure relationnelle sous-catégories
+- 005_finalize_relational_structure.sql : Suppression colonnes obsolètes + saved_labels
 
 Pour les futures modifications, créer de nouvelles migrations numérotées
 dans le dossier migrations/ et les documenter dans CHANGELOG.md.

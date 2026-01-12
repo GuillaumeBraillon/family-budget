@@ -162,9 +162,7 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
           required
           autoFocus={!editingTransaction}
         />
-        {form.isSuggesting && (
-          <div className="text-xs text-indigo-600 italic animate-pulse -mt-1">✨ Recherche de suggestion...</div>
-        )}
+        {form.isSuggesting && <div className="text-xs text-indigo-600 italic animate-pulse -mt-1">✨ Recherche de suggestion...</div>}
         <div className="grid grid-cols-2 gap-2.5">
           <AmountInput label="Montant" value={form.amount} onChange={(e) => form.setAmount(e.target.value)} color={form.themeColor} required />
           <TextInput label="Date" type="form.date" icon={Calendar} value={form.date} onChange={(e) => form.setDate(e.target.value)} required />
