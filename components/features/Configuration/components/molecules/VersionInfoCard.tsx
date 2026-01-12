@@ -33,29 +33,27 @@ export const VersionInfoCard: React.FC = () => {
   const latestVersionNotes = `
 ### ✨ Nouveautés v${packageJson.version}
 
-#### 🎯 Affichage Opérations Réelles
-- **Ventilation détaillée** : Colonne "Opérations Réelles" avec Total/Standard/Extra
-- **Navigation filtrée** : Clic sur montant → Vue Opérations pré-filtrée
-- **Suivi des retards** : Opérations en attente des périodes précédentes
+#### �️ Affichage de la Version et Changelog
+- **Badge version** : Version actuelle visible dans Settings
+- **Modale "Quoi de neuf ?"** : Notes de version formatées et structurées
+- **Changelog complet** : Lien direct vers GitHub
+- **Documentation** : Guide des bonnes pratiques (docs/VERSION_MANAGEMENT.md)
 
-#### 💰 Gestion Dépassements Persistante
-- **Stratégies configurables** : Déduction simple ou Étalement
-- **Configuration sauvegardée** : Choix persistant en base
-- **UI adaptative** : Texte explicatif selon stratégie active
+#### 💰 Ventilation Détaillée Virements LDDS
+- **TransferSummaryCard enrichie** : Affichage du détail de ventilation
+- **Badge "Factures Joint"** : Montant pour le compte pivot
+- **Badge "Comptes Courants"** : Montant pour alimenter les comptes personnels
+- **Transparence** : Visualisation claire des flux LDDS → Joint → Personnels
 
-#### 🏦 Support Intérêts d'Épargne
-- **Flag is_interest** : Distinction virements classiques vs ajustements
-- **Badge amber INTÉRÊTS** : Identification visuelle claire
-- **Exclusion calculs** : Intérêts non comptés dans budget
-
-#### 🎨 Améliorations UX
-- **Accordéon Options Avancées** : Hiérarchie visuelle dans formulaires
-- **TransferSummaryCard** : Ventilation LDDS (Joint vs Personnels)
-- **ClickableAmount** : Navigation contextuelle améliorée
+#### 🎨 Améliorations Techniques
+- **Source unique** : Version dans package.json uniquement
+- **TypeScript strict** : Déclarations de types pour Vite
+- **Backward compatible** : Props optionnelles dans TransferSummaryCard
+- **Documentation** : Bonnes pratiques de versioning documentées
 
 #### 🐛 Corrections
-- **Balance transfers** : Gestion des déficits budgétaires (3-case algorithm)
-- **LDDS calculation** : Flux bidirectionnel (Joint ↔ Personnels)
+- **Scope variables** : lddsToJoint/lddsToPersonals accessibles dans return
+- **JSX structure** : Modal correctement fermée dans VersionInfoCard
   `.trim();
 
   return (

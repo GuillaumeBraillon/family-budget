@@ -7,6 +7,137 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.6.0] - 2026-01-12
+
+### ✨ Nouveau - Affichage de la Version et Changelog
+
+**Transparence et traçabilité des releases**
+
+L'application affiche maintenant sa version et donne accès au changelog directement depuis l'interface, suivant les bonnes pratiques de gestion de version.
+
+#### **Composant VersionInfoCard**
+
+**Emplacement** : Configuration > Réglages > Actions Système
+
+**Fonctionnalités** :
+
+- 🏷️ **Badge version** : Affichage de la version actuelle (v2.6.0)
+- 📄 **Bouton "Quoi de neuf ?"** : Modale avec notes de version récente
+- 🔗 **Bouton "Changelog complet"** : Lien vers GitHub
+- 💡 **Tooltip explicatif** : Information sur le format SemVer
+
+**Architecture Technique** :
+
+- Source unique de vérité : `package.json`
+- Import direct : `import packageJson from "../../../../../package.json"`
+- Design élégant : Gradient indigo-purple avec badges
+- Format standard : Semantic Versioning (MAJOR.MINOR.PATCH)
+
+**Modale Changelog** :
+
+- Format structuré : Sections Nouveautés/Corrections/Améliorations
+- Parsing manuel du CHANGELOG.md
+- Notes importantes : Migrations DB, dépendances
+- Liens externes : GitHub Releases pour historique complet
+
+**Documentation** :
+
+- Nouveau fichier : `docs/VERSION_MANAGEMENT.md`
+- Bonnes pratiques détaillées
+- Workflow de release
+- Fonctionnalités optionnelles futures
+
+**Fichiers ajoutés** :
+
+- `components/features/Configuration/components/molecules/VersionInfoCard.tsx`
+- `docs/VERSION_MANAGEMENT.md`
+- `vite-env.d.ts` (déclarations TypeScript)
+
+---
+
+### 🎨 Amélioration - Ventilation Détaillée des Virements LDDS
+
+**Transparence des flux financiers**
+
+Le composant `TransferSummaryCard` affiche maintenant le détail de la ventilation des virements LDDS entre le compte joint et les comptes personnels.
+
+#### **Nouveau Props TransferSummaryCard**
+
+```typescript
+interface TransferSummaryCardProps {
+  amount: number;
+  toJoint?: number; // Nouveau : Montant pour compte joint
+  toPersonals?: number; // Nouveau : Montant pour comptes personnels
+}
+```
+
+**Affichage UI** :
+
+- 💙 **Badge indigo** : "Factures Joint" avec montant `lddsToJoint`
+- 💙 **Badge bleu** : "Comptes Courants (via Joint)" avec montant `lddsToPersonals`
+- Conditionnel : Badges affichés seulement si montants > 0.01€
+- Wrapping responsive : Flex-wrap pour mobile
+
+**Flux de données** :
+
+1. `useBalancesRows` : Calcul et exposition de `lddsToJoint` et `lddsToPersonals`
+2. `BalancesView` : Destructuration et passage des props
+3. `TransferSummaryCard` : Affichage conditionnel des badges
+
+**Exemple d'affichage** :
+
+```
+Vir LDDS vers Joint                    106€
+
+Montant total à transférer...
+
+[Factures Joint: 50.00€]
+[Comptes Courants (via Joint): 56.00€]
+```
+
+**Compatibilité** :
+
+- Props optionnelles : Backward compatible
+- Affichage graceful : Ne casse pas si props absentes
+
+**Fichiers modifiés** :
+
+- `hooks/balances/useBalancesRows.ts` : Exposition variables `lddsToJoint` et `lddsToPersonals`
+- `components/features/Balances/BalancesView.tsx` : Passage des nouvelles props
+- `components/features/Balances/components/TransferSummaryCard.tsx` : Affichage badges
+
+---
+
+### 🐛 Correctif - Scope des Variables dans useBalancesRows
+
+**Correction TypeScript**
+
+Les variables `lddsToJoint` et `lddsToPersonals` étaient déclarées avec `const` dans un scope local (bloc `if`), les rendant inaccessibles dans le `return` du `useMemo`.
+
+**Solution** :
+
+- Déclaration avec `let` au début du `useMemo`
+- Initialisation à `0`
+- Assignation dans le bloc `if (jointAccount)`
+- Disponibles pour le return de la fonction
+
+**Code corrigé** :
+
+```typescript
+return useMemo(() => {
+  let lddsToJoint = 0;
+  let lddsToPersonals = 0;
+  // ... calculs
+  if (jointAccount) {
+    lddsToJoint = Math.max(0, remainingGap);
+    lddsToPersonals = totalTransfersToPersonals;
+  }
+  return { ..., lddsToJoint, lddsToPersonals };
+}, [deps]);
+```
+
+---
+
 ## [2.5.0] - 2026-01-09
 
 ### 🎉 Version Majeure - Amélioration UX et Persistence
