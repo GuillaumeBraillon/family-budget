@@ -107,7 +107,7 @@ export const BalancesView: React.FC<BalancesViewProps> = ({
   });
 
   // Hook 2 : Génération des lignes avec redistribution 2-pass
-  const { jointRows, personalRows, totalPersonalRow, virLddsTotal } = useBalancesRows({
+  const { jointRows, personalRows, totalPersonalRow, virLddsTotal, lddsToJoint, lddsToPersonals } = useBalancesRows({
     accounts,
     people,
     budgetPeriodeGlobal,
@@ -249,7 +249,7 @@ export const BalancesView: React.FC<BalancesViewProps> = ({
         activeWeek={scope === "PERIOD" ? activeWeek : undefined}
       />
 
-      <TransferSummaryCard amount={virLddsTotal} />
+      <TransferSummaryCard amount={virLddsTotal} toJoint={lddsToJoint} toPersonals={lddsToPersonals} />
     </div>
   );
 };

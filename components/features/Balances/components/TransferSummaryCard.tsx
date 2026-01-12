@@ -4,9 +4,11 @@ import { ArrowRightLeft, PiggyBank } from "lucide-react";
 
 interface TransferSummaryCardProps {
   amount: number;
+  toJoint?: number;
+  toPersonals?: number;
 }
 
-export const TransferSummaryCard: React.FC<TransferSummaryCardProps> = ({ amount }) => {
+export const TransferSummaryCard: React.FC<TransferSummaryCardProps> = ({ amount, toJoint, toPersonals }) => {
   // Arrondi au multiple de 5 SUPERIEUR pour sécurité (Exception)
   const roundedAmount = Math.ceil(amount / 5) * 5;
 
@@ -25,6 +27,22 @@ export const TransferSummaryCard: React.FC<TransferSummaryCardProps> = ({ amount
                   ? "Montant total à transférer de votre Livret d'Épargne vers le Compte Joint pour couvrir les factures globales ET les besoins de trésorerie des comptes personnels."
                   : "Aucun virement nécessaire depuis le LDDS. Le Compte Joint dispose d'assez de provision."}
               </p>
+              {roundedAmount > 0 && toJoint !== undefined && toPersonals !== undefined && (toJoint > 0.01 || toPersonals > 0.01) && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {toJoint > 0.01 && (
+                    <div className="flex items-center gap-2 bg-indigo-50 border border-indigo-200 rounded-lg px-3 py-1.5">
+                      <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-wide">Factures Joint</span>
+                      <span className="text-sm font-black text-indigo-700">{toJoint.toFixed(2)} €</span>
+                    </div>
+                  )}
+                  {toPersonals > 0.01 && (
+                    <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-lg px-3 py-1.5">
+                      <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wide">Comptes Courants (via Joint)</span>
+                      <span className="text-sm font-black text-blue-700">{toPersonals.toFixed(2)} €</span>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
           <div className="text-right">
