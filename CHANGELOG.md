@@ -7,6 +7,82 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.6.2] - 2026-01-12
+
+### ✨ Nouvelles Fonctionnalités
+
+#### **Édition Bidirectionnelle des Soldes Bancaires**
+
+Amélioration majeure de la vue Soldes avec affichage et édition de deux perspectives de solde : avec et sans opérations en attente.
+
+**Nouveaux Affichages** :
+
+- ✅ **Solde avec attente** : Solde projeté incluant les opérations non validées (valeur principale cliquable)
+- ✅ **Solde hors attente** : Solde réel excluant les opérations futures (ligne secondaire cliquable avec icône ✏️)
+- ✅ **Tooltip explicatif** : Description détaillée des deux visions avec calcul transparent
+- ✅ **Prévisualisation temps réel** : Affichage du solde complémentaire pendant la saisie
+
+**Système d'Édition Dual** :
+
+- 🖱️ Cliquer sur **Solde Actuel** → Éditer directement le solde avec attente
+- 🖱️ Cliquer sur **Hors attente** → Éditer le solde sans attente avec recalcul automatique
+- ⚡ Mode d'édition affiché : "Édition: Avec attente" ou "Édition: Hors attente"
+- 🔄 Calcul intelligent : Le système convertit automatiquement la valeur pour la base de données
+- 📊 Prévisualisation en direct : Montre l'autre solde pendant la saisie
+
+**Formules de Calcul** :
+
+```typescript
+// Affichage
+Solde hors attente = Solde actuel + Montant en attente
+// (Le montant en attente est négatif pour les dépenses)
+
+// Sauvegarde
+Si édition "Hors attente" :
+  Solde à sauvegarder = Solde hors attente - Montant en attente
+Sinon :
+  Solde à sauvegarder = Valeur saisie
+```
+
+**Exemple d'Usage** :
+
+```
+Situation : Compte avec 1000€, opérations en attente -200€
+Affichage :
+  - Solde actuel (avec attente) : 1000€ ✏️
+  - Hors attente : 1200€ ✏️
+
+Scénario 1 : Éditer "Solde actuel"
+  → Saisir 950€
+  → Prévisualisation : "Hors attente: 1150€"
+  → Sauvegarde : 950€
+
+Scénario 2 : Éditer "Hors attente"
+  → Saisir 1300€
+  → Prévisualisation : "Avec attente: 1100€"
+  → Sauvegarde : 1100€ (conversion automatique)
+```
+
+**Fichiers modifiés** :
+
+- `components/features/Balances/components/BalancesTable.tsx` :
+  - État `editMode` pour tracker la perspective d'édition
+  - Fonction `startEdit` avec paramètre mode (WITH_PENDING | WITHOUT_PENDING)
+  - Fonction `saveEdit` avec calcul inversé pour mode WITHOUT_PENDING
+  - UI en colonne avec prévisualisation temps réel
+  - Ligne "Hors attente" cliquable avec icône crayon
+  - Tooltips enrichis avec calculs détaillés
+
+**Bénéfices UX** :
+
+- 🎯 **Flexibilité maximale** : Éditer depuis la perspective la plus naturelle
+- 🧮 **Transparence totale** : Calculs expliqués avec tooltip détaillé
+- ⚡ **Feedback immédiat** : Prévisualisation en temps réel de l'autre solde
+- 🔒 **Intégrité des données** : Conversion automatique garantit la cohérence
+- 📱 **Responsive** : Interface adaptée mobile avec icônes minimalistes
+
+---
+
 ## [2.6.1] - 2026-01-12
 
 ### 🐛 Corrections

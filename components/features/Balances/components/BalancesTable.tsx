@@ -26,10 +26,12 @@ export const BalancesTable: React.FC<BalancesTableProps> = ({
 }) => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [tempBalance, setTempBalance] = useState<string>("");
+  const [editMode, setEditMode] = useState<"WITH_PENDING" | "WITHOUT_PENDING">("WITH_PENDING");
 
-  const startEdit = (id: string, balance: number, e?: React.MouseEvent) => {
-    e?.stopPropagation();
+  const startEdit = (id: string, balance: number, e: React.MouseEvent, mode: "WITH_PENDING" | "WITHOUT_PENDING" = "WITH_PENDING") => {
+    e.stopPropagation();
     setEditingId(id);
+    setEditMode(mode);
     setTempBalance(balance.toFixed(2));
   };
 
@@ -39,11 +41,14 @@ export const BalancesTable: React.FC<BalancesTableProps> = ({
     setTempBalance("");
   };
 
-  const saveEdit = (id: string, e?: React.MouseEvent) => {
-    e?.stopPropagation();
-    const newBalance = parseFloat(tempBalance);
-    if (!isNaN(newBalance)) {
-      onUpdateBalance(id, newBalance);
+  const saveEdit = (id: string, e: React.MouseEvent | React.KeyboardEvent, pendingAmount?: number) => {
+    e.stopPropagation();
+    const editedValue = parseFloat(tempBalance);
+    if (!isNaN(editedValue)) {
+      // Si on édite le solde hors attente, il faut recalculer le solde actuel
+      // Solde actuel = Solde hors attente - Pending
+      const finalBalance = editMode === "WITHOUT_PENDING" && pendingAmount !== undefined ? editedValue - pendingAmount : editedValue;
+      onUpdateBalance(id, finalBalance);
     }
     setEditingId(null);
   };
@@ -97,7 +102,20 @@ export const BalancesTable: React.FC<BalancesTableProps> = ({
               <th className="px-4 py-2.5 text-right">
                 Solde Actuel
                 <MobileTooltip
-                  text="Solde bancaire incluant les opérations en attente. Cliquez pour le modifier."
+                  text={
+                    <div className="space-y-1.5 text-[10px]">
+                      <p className="font-bold text-indigo-300 border-b border-white/10 pb-1 mb-1">Deux visions du solde :</p>
+                      <div className="flex items-start gap-2">
+                        <span className="text-indigo-300 font-bold">Avec attente</span>
+                        <span className="text-slate-300">Solde réel incluant les opérations non encore validées</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <span className="text-slate-300 font-bold">Hors attente</span>
+                        <span className="text-slate-300">Solde en excluant les opérations à venir</span>
+                      </div>
+                      <p className="text-slate-400 text-[9px] italic mt-1 pt-1 border-t border-white/10">Cliquez sur le solde pour le modifier.</p>
+                    </div>
+                  }
                   iconClassName="text-indigo-300 hover:text-indigo-100 transition-colors"
                 />
               </th>
@@ -160,37 +178,98 @@ export const BalancesTable: React.FC<BalancesTableProps> = ({
                   <td
                     className="px-4 py-2.5 text-right cursor-pointer"
                     onClick={(e) => {
-                      if (editingId !== row.id) startEdit(row.id, row.balance, e);
+                      if (editingId !== row.id) startEdit(row.id, row.balance, e, "WITH_PENDING");
                     }}
                   >
                     {editingId === row.id ? (
-                      <div className="flex items-center justify-end gap-2 animate-in fade-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
-                        <input
-                          autoFocus
-                          type="number"
-                          step="0.01"
-                          value={tempBalance}
-                          onChange={(e) => setTempBalance(e.target.value)}
-                          className="w-20 p-1 text-right text-xs border border-indigo-300 rounded bg-white text-slate-900 outline-none ring-2 ring-indigo-100 font-bold"
-                          onKeyDown={(e) => e.key === "Enter" && saveEdit(row.id, e as React.KeyboardEvent<HTMLInputElement>)}
-                        />
-                        <button onClick={(e) => saveEdit(row.id, e)} className="bg-emerald-100 text-emerald-600 p-1 rounded hover:bg-emerald-200">
-                          <Check size={12} />
-                        </button>
-                        <button onClick={(e) => cancelEdit(e)} className="bg-slate-100 text-slate-500 p-1 rounded hover:bg-slate-200">
-                          <X size={12} />
-                        </button>
+                      <div className="flex flex-col items-end gap-1.5 animate-in fade-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-2">
+                          <input
+                            autoFocus
+                            type="number"
+                            step="0.01"
+                            value={tempBalance}
+                            onChange={(e) => setTempBalance(e.target.value)}
+                            className="w-24 p-1 text-right text-xs border border-indigo-300 rounded bg-white text-slate-900 outline-none ring-2 ring-indigo-100 font-bold"
+                            onKeyDown={(e) => e.key === "Enter" && saveEdit(row.id, e as React.KeyboardEvent<HTMLInputElement>, row.pendingAmount)}
+                          />
+                          <button
+                            onClick={(e) => saveEdit(row.id, e, row.pendingAmount)}
+                            className="bg-emerald-100 text-emerald-600 p-1 rounded hover:bg-emerald-200"
+                          >
+                            <Check size={12} />
+                          </button>
+                          <button onClick={(e) => cancelEdit(e)} className="bg-slate-100 text-slate-500 p-1 rounded hover:bg-slate-200">
+                            <X size={12} />
+                          </button>
+                        </div>
+                        <div className="text-[9px] text-slate-500 flex items-center gap-1.5">
+                          <span className="font-medium">{editMode === "WITH_PENDING" ? "Édition: Avec attente" : "Édition: Hors attente"}</span>
+                          {row.pendingAmount !== undefined && Math.abs(row.pendingAmount) > 0.01 && (
+                            <>
+                              <span className="text-slate-300">→</span>
+                              <span className="font-medium">{editMode === "WITH_PENDING" ? "Hors attente:" : "Avec attente:"}</span>
+                              <span className="font-mono font-bold text-slate-700">
+                                {editMode === "WITH_PENDING"
+                                  ? (parseFloat(tempBalance || "0") + row.pendingAmount).toFixed(2)
+                                  : (parseFloat(tempBalance || "0") - row.pendingAmount).toFixed(2)}{" "}
+                                €
+                              </span>
+                            </>
+                          )}
+                        </div>
                       </div>
                     ) : (
-                      <div className="flex flex-col items-end gap-0.5">
-                        <div className="flex items-center justify-end gap-2">
-                          <span className="font-mono font-medium text-slate-600 border-b border-dashed border-slate-300 pb-0.5 text-sm">
-                            {row.balance.toFixed(2)} €
-                          </span>
-                          <div className="p-1.5 bg-slate-100 rounded-full text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors">
-                            <Pencil size={12} />
+                      <div className="flex flex-col items-end">
+                        <div
+                          className="inline-flex items-center gap-1.5 px-1.5 py-0.5 bg-slate-100 rounded font-mono font-bold text-xs text-slate-700 hover:bg-slate-200 transition-colors cursor-pointer"
+                          title="Cliquer pour modifier le solde"
+                        >
+                          {row.balance.toFixed(2)} €
+                          <div className="p-0.5 bg-slate-200 rounded-full text-slate-400 hover:text-indigo-600 transition-colors">
+                            <Pencil size={10} />
                           </div>
                         </div>
+                        {/* Ligne "Hors attente" cliquable */}
+                        {row.pendingAmount !== undefined && Math.abs(row.pendingAmount) > 0.01 && (
+                          <div
+                            className="text-[9px] text-slate-500 flex items-center gap-1 mt-0.5 cursor-pointer hover:bg-slate-50 px-1 py-0.5 rounded transition-colors"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              startEdit(row.id, row.balance + row.pendingAmount, e, "WITHOUT_PENDING");
+                            }}
+                          >
+                            <span className="font-medium">Hors attente:</span>
+                            <span className="font-mono font-bold text-slate-700">{(row.balance + row.pendingAmount).toFixed(2)} €</span>
+                            <div className="p-0.5 bg-slate-100 rounded-full text-slate-400 hover:text-indigo-600 transition-colors">
+                              <Pencil size={8} />
+                            </div>
+                            <MobileTooltip
+                              text={
+                                <div className="space-y-1 text-[10px]">
+                                  <p className="font-bold text-slate-300 border-b border-white/10 pb-1 mb-1">Calcul :</p>
+                                  <div className="flex justify-between gap-4">
+                                    <span className="text-slate-400">Solde actuel (avec attente)</span>
+                                    <span className="font-mono font-bold text-slate-200">{row.balance.toFixed(2)}€</span>
+                                  </div>
+                                  <div className="flex justify-between gap-4">
+                                    <span className="text-slate-400">Retrait de l'impact</span>
+                                    <span className="font-mono font-bold text-emerald-300">+{row.pendingAmount.toFixed(2)}€</span>
+                                  </div>
+                                  <div className="flex justify-between gap-4 border-t border-white/10 pt-1">
+                                    <span className="text-slate-300 font-bold">Hors attente</span>
+                                    <span className="font-mono font-bold text-slate-100">{(row.balance + row.pendingAmount).toFixed(2)}€</span>
+                                  </div>
+                                  <p className="text-slate-400 text-[9px] italic mt-1 pt-1 border-t border-white/10">
+                                    Solde réel sans l'impact des opérations futures.
+                                  </p>
+                                </div>
+                              }
+                              icon={<Calculator size={9} className="text-slate-400 hover:text-slate-600" />}
+                              widthClass="w-48"
+                            />
+                          </div>
+                        )}
                         {/* Opérations réelles (pointées) */}
                         {row.paidAmount !== undefined && row.paidStandard !== undefined && row.paidExtra !== undefined && (
                           <div className="flex items-center gap-2 mt-0.5">
