@@ -19,6 +19,31 @@ La table `saved_labels` possédait déjà les colonnes `category_id` et `sub_cat
 
 **Solution** :
 
+- Ajout de `<CategorySelector>` dans la modal "Modifier le libellé" (sous accordéon "Options Avancées")
+- Affichage des catégories/sous-catégories associées dans la liste des libellés
+- Impact : Pré-remplissage automatique des catégories lors de la saisie de transactions
+
+#### **Amélioration : Import intelligent des catégories**
+
+Les fonctions **Import (CB)** et **Import (VIR)** détectent maintenant automatiquement la catégorie/sous-catégorie la plus fréquemment utilisée pour chaque libellé dans l'historique :
+
+**Fonctionnement** :
+
+1. Analyse de tous les `paid_items` correspondants (CB % ou VIR %)
+2. Pour chaque libellé, détection de la catégorie la plus fréquente
+3. Résolution automatique des noms de catégories → IDs relationnels
+4. Création des `saved_labels` avec catégories pré-remplies
+
+**Impact** : Gain de temps considérable lors de l'import massif de libellés depuis l'historique.
+
+#### **Correction : Modal de suppression de libellé**
+
+**Problème** : La modal de confirmation de suppression d'un libellé ne se fermait pas après validation (clic sur "Supprimer")
+
+**Cause** : Appel à `clearForm()` (fonction inexistante) au lieu de `resetForm()` dans le handler `handleDelete()`
+
+**Solution** : Correction pour appeler la bonne fonction de réinitialisation qui ferme la modal
+
 - ✅ Ajout de `<CategorySelector>` dans le modal "Modifier le libellé"
 - ✅ Sélection catégorie + sous-catégorie optionnelle
 - ✅ Interface dans accordéon "Options Avancées" (UX clean)

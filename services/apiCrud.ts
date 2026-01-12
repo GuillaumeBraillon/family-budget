@@ -159,7 +159,8 @@ export const apiUpsertLabel = async (label: SavedLabel) =>
 export const apiDeleteLabel = async (id: string) => supabase.from("saved_labels").delete().eq("id", id);
 
 export const apiImportLabels = async () => {
-  const { data: items, error: fetchError } = await supabase.from("paid_items").select("label").ilike("label", "CB %");
+  // Récupérer tous les paid_items CB avec leurs catégories
+  const { data: items, error: fetchError } = await supabase.from("paid_items").select("label, category, sub_category").ilike("label", "CB %");
 
   if (fetchError) return { error: fetchError };
 
@@ -167,17 +168,61 @@ export const apiImportLabels = async () => {
 
   if (existError) return { error: existError };
 
-  const existingSet = new Set(existing?.map((e) => e.name));
-  const distinctLabels = [...new Set(items?.map((i) => i.label))];
+  // Récupérer toutes les catégories pour résoudre les IDs
+  const { data: categories, error: catError } = await supabase.from("categories").select("id, name");
+  if (catError) return { error: catError };
 
-  const toInsert = distinctLabels
-    .filter((l) => l && !existingSet.has(l))
-    .map((l) => ({
-      id: `lbl_imp_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
-      name: l,
-      type: "COURANT",
-      is_expense: true,
-    }));
+  const { data: subCategories, error: subCatError } = await supabase.from("sub_categories").select("id, name, category_id");
+  if (subCatError) return { error: subCatError };
+
+  const existingSet = new Set(existing?.map((e) => e.name));
+
+  // Grouper par libellé et compter les occurrences de chaque catégorie
+  const labelStats: Record<string, Record<string, { count: number; subCategory?: string }>> = {};
+
+  items?.forEach((item) => {
+    if (!item.label) return;
+    if (!labelStats[item.label]) labelStats[item.label] = {};
+    const key = `${item.category}|${item.sub_category || ""}`;
+    if (!labelStats[item.label][key]) {
+      labelStats[item.label][key] = { count: 0, subCategory: item.sub_category };
+    }
+    labelStats[item.label][key].count++;
+  });
+
+  const toInsert = Object.keys(labelStats)
+    .filter((label) => label && !existingSet.has(label))
+    .map((label) => {
+      // Trouver la catégorie la plus fréquente pour ce libellé
+      const stats = labelStats[label];
+      let maxCount = 0;
+      let mostFrequentCategory = "";
+      let mostFrequentSubCategory = "";
+
+      Object.entries(stats).forEach(([key, data]) => {
+        if (data.count > maxCount) {
+          maxCount = data.count;
+          const [cat, sub] = key.split("|");
+          mostFrequentCategory = cat;
+          mostFrequentSubCategory = sub;
+        }
+      });
+
+      // Résoudre les IDs à partir des noms
+      const categoryId = categories?.find((c) => c.name === mostFrequentCategory)?.id;
+      const subCategoryId = mostFrequentSubCategory
+        ? subCategories?.find((sc) => sc.name === mostFrequentSubCategory && sc.category_id === categoryId)?.id
+        : null;
+
+      return {
+        id: `lbl_imp_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+        name: label,
+        type: "COURANT",
+        is_expense: true,
+        category_id: categoryId || null,
+        sub_category_id: subCategoryId || null,
+      };
+    });
 
   if (toInsert.length === 0) return { count: 0 };
 
@@ -187,7 +232,8 @@ export const apiImportLabels = async () => {
 };
 
 export const apiImportVirLabels = async () => {
-  const { data: items, error: fetchError } = await supabase.from("paid_items").select("label").ilike("label", "VIR %");
+  // Récupérer tous les paid_items VIR avec leurs catégories
+  const { data: items, error: fetchError } = await supabase.from("paid_items").select("label, category, sub_category").ilike("label", "VIR %");
 
   if (fetchError) return { error: fetchError };
 
@@ -195,17 +241,61 @@ export const apiImportVirLabels = async () => {
 
   if (existError) return { error: existError };
 
-  const existingSet = new Set(existing?.map((e) => e.name));
-  const distinctLabels = [...new Set(items?.map((i) => i.label))];
+  // Récupérer toutes les catégories pour résoudre les IDs
+  const { data: categories, error: catError } = await supabase.from("categories").select("id, name");
+  if (catError) return { error: catError };
 
-  const toInsert = distinctLabels
-    .filter((l) => l && !existingSet.has(l))
-    .map((l) => ({
-      id: `lbl_vir_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
-      name: l,
-      type: "COURANT",
-      is_expense: false,
-    }));
+  const { data: subCategories, error: subCatError } = await supabase.from("sub_categories").select("id, name, category_id");
+  if (subCatError) return { error: subCatError };
+
+  const existingSet = new Set(existing?.map((e) => e.name));
+
+  // Grouper par libellé et compter les occurrences de chaque catégorie
+  const labelStats: Record<string, Record<string, { count: number; subCategory?: string }>> = {};
+
+  items?.forEach((item) => {
+    if (!item.label) return;
+    if (!labelStats[item.label]) labelStats[item.label] = {};
+    const key = `${item.category}|${item.sub_category || ""}`;
+    if (!labelStats[item.label][key]) {
+      labelStats[item.label][key] = { count: 0, subCategory: item.sub_category };
+    }
+    labelStats[item.label][key].count++;
+  });
+
+  const toInsert = Object.keys(labelStats)
+    .filter((label) => label && !existingSet.has(label))
+    .map((label) => {
+      // Trouver la catégorie la plus fréquente pour ce libellé
+      const stats = labelStats[label];
+      let maxCount = 0;
+      let mostFrequentCategory = "";
+      let mostFrequentSubCategory = "";
+
+      Object.entries(stats).forEach(([key, data]) => {
+        if (data.count > maxCount) {
+          maxCount = data.count;
+          const [cat, sub] = key.split("|");
+          mostFrequentCategory = cat;
+          mostFrequentSubCategory = sub;
+        }
+      });
+
+      // Résoudre les IDs à partir des noms
+      const categoryId = categories?.find((c) => c.name === mostFrequentCategory)?.id;
+      const subCategoryId = mostFrequentSubCategory
+        ? subCategories?.find((sc) => sc.name === mostFrequentSubCategory && sc.category_id === categoryId)?.id
+        : null;
+
+      return {
+        id: `lbl_vir_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+        name: label,
+        type: "COURANT",
+        is_expense: false,
+        category_id: categoryId || null,
+        sub_category_id: subCategoryId || null,
+      };
+    });
 
   if (toInsert.length === 0) return { count: 0 };
 

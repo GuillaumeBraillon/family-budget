@@ -141,7 +141,7 @@ export const AccountLabelManager: React.FC<AccountLabelManagerProps> = ({
   const handleDelete = () => {
     if (deleteConfirm) {
       onDeleteLabel(deleteConfirm.id);
-      clearForm();
+      resetForm();
     }
   };
 
@@ -349,9 +349,33 @@ export const AccountLabelManager: React.FC<AccountLabelManagerProps> = ({
         addButtonLabel="Ajouter un libellé"
         emptyMessage={searchQuery ? "Aucun libellé ne correspond à votre recherche." : "Aucun libellé défini pour cette section."}
       >
-        {filteredList.map((label) => (
-          <DataListRow key={label.id} icon={<Tag size={20} className={getIconColor()} />} label={label.name} onClick={() => handleEditClick(label)} />
-        ))}
+        {filteredList.map((label) => {
+          // Résoudre les noms de catégorie et sous-catégorie à partir des IDs
+          let categoryName: string | undefined;
+          let subCategoryName: string | undefined;
+
+          if (label.categoryId) {
+            const cat = categories.find((c) => c.id === label.categoryId);
+            if (cat) {
+              categoryName = cat.name;
+              if (label.subCategoryId) {
+                const sub = cat.subCategories.find((sc) => sc.id === label.subCategoryId);
+                if (sub) subCategoryName = sub.name;
+              }
+            }
+          }
+
+          return (
+            <DataListRow
+              key={label.id}
+              icon={<Tag size={20} className={getIconColor()} />}
+              label={label.name}
+              category={categoryName}
+              subCategory={subCategoryName}
+              onClick={() => handleEditClick(label)}
+            />
+          );
+        })}
       </DataList>
     </div>
   );
