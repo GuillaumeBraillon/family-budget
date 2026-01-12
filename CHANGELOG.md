@@ -11,59 +11,35 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 
 ### 🐛 Corrections Critiques (Post-v2.6.4)
 
-**Migration Base de Données Requise** : Exécuter `startup/migrations/005_finalize_relational_structure.sql`
+Cette version patch corrige un problème critique découvert après la release v2.6.4 :
 
-Cette version patch corrige deux problèmes critiques découverts après la release v2.6.4 :
+#### **Problème : Interface manquante pour l'auto-suggestion**
 
-#### **Problème #1 : Colonnes manquantes pour l'auto-suggestion**
-
-La table `saved_labels` ne comportait pas les colonnes `category_id` et `sub_category_id` nécessaires au stockage des associations catégories ↔ libellés pour l'auto-suggestion intelligente.
+La table `saved_labels` possédait déjà les colonnes `category_id` et `sub_category_id`, mais aucune interface ne permettait de les renseigner lors de la création ou modification d'un libellé sauvegardé.
 
 **Solution** :
-- ✅ Ajout de `category_id` avec foreign key vers `categories(id)`
-- ✅ Ajout de `sub_category_id` avec foreign key vers `sub_categories(id)`
-- ✅ Indexes créés pour performances optimales
-- ✅ Migration 005 fournie pour mise à jour en production
 
-#### **Problème #2 : Colonnes array obsolètes encore présentes**
-
-Malgré la migration vers une architecture relationnelle pure (v2.6.4), certaines colonnes au format array PostgreSQL restaient dans le schema :
-
-**Colonnes supprimées** :
-- ❌ `categories.sub_categories text[]` → Utilise table `sub_categories`
-- ❌ `expense_configs.tag_ids text[]` → Utilise table `paid_item_tags`
-- ❌ `income_configs.tag_ids text[]` → Utilise table `paid_item_tags`
-- ❌ `paid_items.tag_ids text[]` → Utilise table `paid_item_tags`
-
-**Bénéfices** :
-- 🎯 Structure 100% relationnelle (plus d'arrays PostgreSQL)
-- 🔗 Intégrité référentielle complète avec CASCADE
-- 📊 Performances optimisées avec indexes appropriés
-- 🧹 Code simplifié (un seul modèle de données)
-
-#### **Problème #3 : Interface utilisateur incomplète**
-
-Aucune interface ne permettait de lier les catégories aux libellés sauvegardés dans "Configuration → Libellés".
-
-**Solution** :
 - ✅ Ajout de `<CategorySelector>` dans le modal "Modifier le libellé"
 - ✅ Sélection catégorie + sous-catégorie optionnelle
 - ✅ Interface dans accordéon "Options Avancées" (UX clean)
 - ✅ Chargement des associations existantes lors de l'édition
 - ✅ Sauvegarde automatique dans `saved_labels.category_id/sub_category_id`
 
+**Impact utilisateur** :
+
+Lors de la création d'opérations variables, l'application peut maintenant pré-remplir automatiquement la catégorie et sous-catégorie en fonction du libellé saisi, grâce aux associations définies dans "Configuration → Libellés".
+
 ### 🔧 Améliorations Techniques
 
-- **Migration 005** : 4 `DROP COLUMN` + 2 `ADD COLUMN` + indexes + verification queries
-- **database_complete.sql** : 12 modifications pour cohérence complète
+- **database_complete.sql** : Schéma complet mis à jour pour nouvelles installations
 - **AccountLabelManager.tsx** : Intégration `CategorySelector` avec handlers load/save
+- **ConfigurationView.tsx** : Ajout du passage de la prop `categories`
 - **Type Safety** : Aucune modification requise (types déjà conformes)
 
 ### 📖 Documentation
 
-- Migration 005 inclut des requêtes de vérification SQL
-- Notes d'implémentation avec justifications techniques
-- CHANGELOG mis à jour avec détails des correctifs
+- CHANGELOG mis à jour avec détails du correctif
+- Commentaires inline dans les composants modifiés
 
 ---
 

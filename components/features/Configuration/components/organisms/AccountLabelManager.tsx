@@ -21,7 +21,14 @@ interface AccountLabelManagerProps {
 // Utilisation directe des types pour les onglets
 type ManagerTab = AccountType;
 
-export const AccountLabelManager: React.FC<AccountLabelManagerProps> = ({ labels, categories, onUpsertLabel, onDeleteLabel, onImportLabels, onImportVirLabels }) => {
+export const AccountLabelManager: React.FC<AccountLabelManagerProps> = ({
+  labels,
+  categories,
+  onUpsertLabel,
+  onDeleteLabel,
+  onImportLabels,
+  onImportVirLabels,
+}) => {
   const [currentTab, setCurrentTab] = useState<ManagerTab>(AccountType.CHECKING);
   const [isExpenseMode, setIsExpenseMode] = useState(true); // Utilisé uniquement pour l'onglet CHECKING
 
@@ -30,7 +37,7 @@ export const AccountLabelManager: React.FC<AccountLabelManagerProps> = ({ labels
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string } | null>(null);
   const [name, setName] = useState("");
   const [showAdvanced, setShowAdvanced] = useState(false);
-  
+
   // Catégorie et sous-catégorie pour auto-suggestion
   const [category, setCategory] = useState("");
   const [subCategory, setSubCategory] = useState("");
@@ -73,19 +80,19 @@ export const AccountLabelManager: React.FC<AccountLabelManagerProps> = ({ labels
   const handleEditClick = (label: SavedLabel) => {
     setEditingLabel(label);
     setName(label.name);
-    
+
     // Charger catégorie/sous-catégorie si présentes
     if (label.categoryId) {
-      const cat = categories.find(c => c.id === label.categoryId);
+      const cat = categories.find((c) => c.id === label.categoryId);
       if (cat) {
         setCategory(cat.name);
         if (label.subCategoryId) {
-          const sub = cat.subCategories.find(sc => sc.id === label.subCategoryId);
+          const sub = cat.subCategories.find((sc) => sc.id === label.subCategoryId);
           if (sub) setSubCategory(sub.name);
         }
       }
     }
-    
+
     setShowAdvanced(false);
     setIsModalOpen(true);
   };
@@ -103,17 +110,17 @@ export const AccountLabelManager: React.FC<AccountLabelManagerProps> = ({ labels
 
     // Pour checking, on suit le mode expense/income. Pour le reste, peu importe (true par défaut)
     const targetIsExpense = currentTab === AccountType.CHECKING ? isExpenseMode : true;
-    
+
     // RÉSOLUTION DES IDs DE CATÉGORIE/SOUS-CATÉGORIE
     let categoryId: string | undefined;
     let subCategoryId: string | undefined;
-    
+
     if (category) {
-      const cat = categories.find(c => c.name === category);
+      const cat = categories.find((c) => c.name === category);
       if (cat) {
         categoryId = cat.id;
         if (subCategory) {
-          const sub = cat.subCategories.find(sc => sc.name === subCategory);
+          const sub = cat.subCategories.find((sc) => sc.name === subCategory);
           if (sub) subCategoryId = sub.id;
         }
       }
