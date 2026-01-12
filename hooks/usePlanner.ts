@@ -199,12 +199,6 @@ export const usePlanner = (
   const monthlyBudget = settings.monthly_envelope || 0;
 
   const periodBudgets = useMemo(() => {
-    logger.debug("planner", "Génération des périodes", {
-      month: currentMonthKey,
-      periodType: settings.period_type,
-      periodValue: settings.period_value,
-    });
-
     const periods: WeeklyBudget[] = [];
     const type = settings.period_type || "FIXED_DAYS";
     const val = settings.period_value || 7;
@@ -587,7 +581,7 @@ export const usePlanner = (
    * @returns {number} periodLimit - Budget alloué à cette période
    * @returns {number} varRemaining - Reste disponible (periodLimit + varIncome - varExpenses)
    * @returns {number} totalIncomeReal - Total des revenus pointés
-   * @returns {Record<string, Object>} byAccount - Statistiques par compte (paid, remaining, planned, pendingCount)
+   * @returns {Record<string, Object>} byAccount - Statistiques par compte (paid, remaining, remainingStandard, planned, pendingCount)
    * @returns {Record<string, Object>} expByBeneficiary - Dépenses par bénéficiaire (paid, planned)
    * @returns {Record<string, Object>} incByBeneficiary - Revenus par bénéficiaire (paid, planned)
    *
@@ -620,7 +614,7 @@ export const usePlanner = (
     const sum = (items: PlannedItem[], type: "EXPENSE" | "INCOME", useOriginal = false) =>
       items.filter((i) => i.type === type).reduce((acc, i) => acc + (useOriginal ? i.originalAmount : i.amount), 0);
 
-    type AccountStats = { paid: number; remaining: number; planned: number; pendingCount: number };
+    type AccountStats = { paid: number; remaining: number; remainingStandard: number; planned: number; pendingCount: number };
     type BeneficiaryStats = { paid: number; planned: number };
 
     const byAccount: Record<string, AccountStats> = {};
@@ -628,15 +622,30 @@ export const usePlanner = (
     const incByBeneficiary: Record<string, BeneficiaryStats> = {};
 
     [...currentItems, ...previousUnpaidItems].forEach((item) => {
-      if (!byAccount[item.accountId]) byAccount[item.accountId] = { paid: 0, remaining: 0, planned: 0, pendingCount: 0 };
+      if (!byAccount[item.accountId]) byAccount[item.accountId] = { paid: 0, remaining: 0, remainingStandard: 0, planned: 0, pendingCount: 0 };
       const val = item.amount;
       const originalVal = item.originalAmount;
 
       if (item.isPaid) {
-        byAccount[item.accountId].paid += item.type === "EXPENSE" ? val : -val;
+        const impact = item.type === "EXPENSE" ? val : -val;
+        byAccount[item.accountId].paid += impact;
       } else {
-        byAccount[item.accountId].remaining += item.type === "EXPENSE" ? val : -val;
+        const impact = item.type === "EXPENSE" ? val : -val;
+        byAccount[item.accountId].remaining += impact;
         byAccount[item.accountId].pendingCount++;
+
+        // Calculer le montant Standard (hors Extra) pour remainingStandard
+        let standardAmount = val;
+        if (item.isExtraGlobal) {
+          // Toggle Extra global : tout est Extra, rien de Standard
+          standardAmount = 0;
+        } else if (item.tagAmounts && item.tagAmounts.length > 0) {
+          // Avec tags : soustraire les montants Extra
+          const extraSum = item.tagAmounts.filter((ta) => ta.isExtra === true).reduce((sum, ta) => sum + ta.amount, 0);
+          standardAmount = Math.max(0, val - extraSum);
+        }
+        const standardImpact = item.type === "EXPENSE" ? standardAmount : -standardAmount;
+        byAccount[item.accountId].remainingStandard += standardImpact;
       }
 
       if (item.source === "RECURRING") {
@@ -680,6 +689,14 @@ export const usePlanner = (
           varIncome += item.amount;
         }
       }
+    });
+
+    logger.debug("📈 RÉSULTAT FINAL byAccount (Compte Joint ID=3):", {
+      paid: byAccount["3"]?.paid,
+      remaining: byAccount["3"]?.remaining,
+      remainingStandard: byAccount["3"]?.remainingStandard,
+      planned: byAccount["3"]?.planned,
+      pendingCount: byAccount["3"]?.pendingCount,
     });
 
     return {

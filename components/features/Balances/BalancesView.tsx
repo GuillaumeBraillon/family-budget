@@ -15,7 +15,7 @@
  * - Gain : -80% de code dans le composant, +testabilité
  */
 import React, { useState } from "react";
-import { Account, Person, ExpenseConfig, IncomeConfig, PaidItemDetails, AppSettings, VariableTransaction, CategoryDef } from "../../../types";
+import { Account, Person, ExpenseConfig, IncomeConfig, PaidItemDetails, AppSettings, VariableTransaction, CategoryDef, OperationFilters } from "../../../types";
 import { useBalancesData, useBalancesRows } from "../../../hooks/balances";
 import { Calendar, CalendarRange } from "lucide-react";
 import { MonthNavigator } from "../../ui/molecules/MonthNavigator";
@@ -36,6 +36,7 @@ interface BalancesViewProps {
   settings: AppSettings;
   categories: CategoryDef[];
   onUpdateAccount: (account: Account) => void;
+  onNavigateToPlanner: (date: Date, filters?: Partial<OperationFilters>, weekNumber?: number) => void;
 }
 
 export const BalancesView: React.FC<BalancesViewProps> = ({
@@ -48,6 +49,7 @@ export const BalancesView: React.FC<BalancesViewProps> = ({
   settings,
   categories,
   onUpdateAccount,
+  onNavigateToPlanner,
 }) => {
   // --- ÉTAT UI (Navigation) ---
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -133,6 +135,11 @@ export const BalancesView: React.FC<BalancesViewProps> = ({
   // Détection du surplus des comptes courants (pour labels intelligents)
   const hasCurrentAccountsSurplus = personalRows.some((r) => r.transfer < -10);
 
+  // Handler pour navigation vers Opérations
+  const handleNavigateToOperations = (date: Date, filters: Record<string, unknown>) => {
+    onNavigateToPlanner(date, filters as Partial<OperationFilters>, scope === "PERIOD" ? activeWeek : undefined);
+  };
+
   // Handlers de navigation
   const handlePrevMonth = () => {
     const newDate = new Date(currentDate);
@@ -180,11 +187,14 @@ export const BalancesView: React.FC<BalancesViewProps> = ({
       {scope === "PERIOD" && <WeekSelector weeks={filteredPeriodBudgets} activeWeek={activeWeek} onSelect={setActiveWeek} searchQuery="" showBadge={false} />}
 
       <BalancesHeader
-        resteAPayer={totalPendingHeader}
-        pendingRecurring={pendingRecurring}
-        pendingVariablesDetails={pendingVariablesDetails}
-        pendingRecurringDetails={pendingRecurringDetails}
-        totalDetails={totalDebtDetails}
+        resteAPayer={jointAccount ? stats.byAccount[jointAccount.id]?.remaining || 0 : 0}
+        pendingRecurring={jointAccount ? pendingRecurringDetails.find((d) => d.name === jointAccount.name)?.amount || 0 : 0}
+        pendingVariablesDetails={jointAccount ? pendingVariablesDetails.filter((d) => d.name === jointAccount.name) : []}
+        pendingRecurringDetails={jointAccount ? pendingRecurringDetails.filter((d) => d.name === jointAccount.name) : []}
+        totalDetails={jointAccount ? totalDebtDetails.filter((d) => d.name === jointAccount.name) : []}
+        currentDate={currentDate}
+        activeWeek={scope === "PERIOD" ? activeWeek : undefined}
+        onNavigateToOperations={handleNavigateToOperations}
       />
 
       {jointRows.length > 0 && (

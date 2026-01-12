@@ -54,14 +54,16 @@ import {
  *   expenses: {
  *     real: 450€,      // Dépenses pointées
  *     planned: 600€,   // Total prévu (configs)
- *     pending: 150€,   // En attente
- *     extra: 50€       // Hors budget
+ *     pending: 150€,   // En attente période courante
+ *     extra: 50€,      // Hors budget
+ *     delays: 100€     // En attente périodes précédentes (retards)
  *   },
  *   income: {
  *     real: 2500€,     // Revenus pointés
  *     planned: 2500€,  // Total prévu
- *     pending: 0€,     // En attente
- *     extra: 0€        // Hors budget (rare pour revenus)
+ *     pending: 0€,     // En attente période courante
+ *     extra: 0€,       // Hors budget (rare pour revenus)
+ *     delays: 0€       // En attente périodes précédentes
  *   }
  * }
  * ```
@@ -70,6 +72,7 @@ import {
  * - Composant QuickPeriodSummary (affichage du résumé en haut de page)
  * - Calcul du reste disponible (income.real - expenses.real)
  * - Détection des dépassements (real > planned)
+ * - Suivi des retards (delays) pour transparence budgétaire
  */
 interface QuickStats {
   expenses: {
@@ -77,12 +80,14 @@ interface QuickStats {
     planned: number;
     pending: number;
     extra: number;
+    delays: number; // En attente des périodes précédentes
   };
   income: {
     real: number;
     planned: number;
     pending: number;
     extra: number;
+    delays: number; // En attente des périodes précédentes
   };
 }
 
@@ -275,15 +280,6 @@ export const useOperationsData = ({
       const hasTagFilter = filters.includedTagIds && filters.includedTagIds.length > 0;
       const hasExtraFilter = filters.extra === "ONLY" || filters.extra === "EXCLUDE";
 
-      logger.debug("calculations", "getEffectiveAmount", {
-        label: item.label,
-        amount: item.amount,
-        isExtraGlobal: item.isExtraGlobal,
-        hasTagFilter,
-        hasExtraFilter,
-        tagAmounts: item.tagAmounts?.length || 0,
-      });
-
       // Cas 1 : Filtre Extra/Standard actif
       if (hasExtraFilter) {
         // Utiliser le toggle global stocké dans isExtraGlobal (source de vérité)
@@ -356,8 +352,8 @@ export const useOperationsData = ({
 
     // Initialisation des accumulateurs
     const stats: QuickStats = {
-      expenses: { real: 0, planned: 0, pending: 0, extra: 0 },
-      income: { real: 0, planned: 0, pending: 0, extra: 0 },
+      expenses: { real: 0, planned: 0, pending: 0, extra: 0, delays: 0 },
+      income: { real: 0, planned: 0, pending: 0, extra: 0, delays: 0 },
     };
 
     // Parcours des items et accumulation
@@ -420,8 +416,40 @@ export const useOperationsData = ({
       }
     });
 
+    // Calcul des delays (retards) : opérations en attente des périodes précédentes
+    // Uniquement en mode PERIOD pour éviter duplication en mode MONTH
+    if (scope === "PERIOD" && activeWeek > 1) {
+      // Récupérer les opérations des périodes précédentes (1 à activeWeek-1)
+      const previousPeriodsItems = filteredPeriodBudgets
+        .filter((w) => w.weekNumber < activeWeek)
+        .flatMap((w) => w.items)
+        .filter((i) => !i.isPaid && i.category !== "Virement Interne"); // Seulement les opérations en attente
+
+      previousPeriodsItems.forEach((item) => {
+        const isRefund =
+          item.type === "INCOME" &&
+          (item.category === "Dépenses" || item.category === "Remboursement" || categories.find((c) => c.name === item.category)?.type === "EXPENSE");
+
+        let target;
+        let amount = getEffectiveAmount(item);
+
+        // Sélection de la cible (dépenses ou revenus)
+        if (item.type === "EXPENSE") {
+          target = stats.expenses;
+        } else if (isRefund) {
+          target = stats.expenses;
+          amount = -amount;
+        } else {
+          target = stats.income;
+        }
+
+        // Accumulation dans delays
+        target.delays += amount;
+      });
+    }
+
     return stats;
-  }, [unsortedItems, categories, filters.includedTagIds, filters.extra]);
+  }, [unsortedItems, categories, filters.includedTagIds, filters.extra, scope, activeWeek, filteredPeriodBudgets]);
 
   // 6. Formatage du mois court (ex: "jan.", "déc.")
   const monthShort = new Intl.DateTimeFormat("fr-FR", { month: "short" }).format(currentDate);

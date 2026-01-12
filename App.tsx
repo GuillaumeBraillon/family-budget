@@ -247,6 +247,7 @@ const AppContent: React.FC = () => {
             settings={settings}
             categories={categories}
             onUpdateAccount={actions.upsertAccount}
+            onNavigateToPlanner={navigateToPlannerWithContext}
           />
         )}
 

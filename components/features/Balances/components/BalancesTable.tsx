@@ -37,16 +37,28 @@ export const BalancesTable: React.FC<BalancesTableProps> = ({ rows, onUpdateBala
     setEditingId(null);
   };
 
-  // Arrondi au multiple de 5 le plus proche pour les virements
-  const roundTransfer = (amount: number) => Math.round(amount / 5) * 5;
-
   // Fonction pour déterminer le label de virement intelligent
   const getTransferLabel = (row: BalanceRow): string => {
     if (row.transfer > 0) {
       // Crédit : le compte reçoit de l'argent
       if (row.isJoint) {
-        // Compte joint en besoin : privilégier les excédents des comptes courants
-        return hasCurrentAccountsSurplus ? "Depuis C. Courants" : "Depuis LDDS";
+        // Compte joint : analyser les sources de financement
+        const fromPersonals = row.calculation?.fromPersonals || 0;
+        const fromLdds = row.calculation?.fromLdds || 0;
+
+        if (fromPersonals > 0 && fromLdds > 0) {
+          // Les deux sources contribuent
+          return "Depuis C. Courants + LDDS";
+        } else if (fromPersonals > 0) {
+          // Uniquement comptes courants
+          return "Depuis C. Courants";
+        } else if (fromLdds > 0) {
+          // Uniquement LDDS
+          return "Depuis LDDS";
+        } else {
+          // Cas par défaut (ne devrait pas arriver)
+          return "Depuis Épargne";
+        }
       } else {
         return "Depuis C. Joint";
       }
@@ -72,9 +84,9 @@ export const BalancesTable: React.FC<BalancesTableProps> = ({ rows, onUpdateBala
             <tr>
               <th className="px-4 py-2.5">Libellés</th>
               <th className="px-4 py-2.5 text-right">
-                Solde Actuel (Réel)
+                Solde Actuel
                 <MobileTooltip
-                  text="Montant réel présent sur votre compte bancaire. Cliquez pour le modifier."
+                  text="Solde bancaire incluant les opérations en attente. Cliquez pour le modifier."
                   iconClassName="text-indigo-300 hover:text-indigo-100 transition-colors"
                 />
               </th>
@@ -88,7 +100,7 @@ export const BalancesTable: React.FC<BalancesTableProps> = ({ rows, onUpdateBala
               <th className="px-4 py-2.5 text-right bg-indigo-50/50 text-indigo-900">
                 Virement
                 <MobileTooltip
-                  text="Montant à ajouter pour atteindre la cible (arrondi à 5€). Si Négatif, c'est un excédent à virer vers le compte pivot."
+                  text="Montant exact à transférer pour atteindre la cible. Si négatif, c'est un excédent à virer vers le compte pivot."
                   iconClassName="text-indigo-600 hover:text-indigo-400 transition-colors"
                 />
               </th>
@@ -96,11 +108,6 @@ export const BalancesTable: React.FC<BalancesTableProps> = ({ rows, onUpdateBala
           </thead>
           <tbody className="divide-y divide-slate-100">
             {rows.map((row) => {
-              // Pour assurer la cohérence visuelle A + B = C
-              const roundedTransfer = roundTransfer(row.transfer);
-              // On recalcule le solde prévu affiché basé sur le solde exact + virement arrondi
-              const displayedTarget = row.balance + roundedTransfer;
-
               return (
                 <tr key={row.id} className={`hover:bg-slate-50 transition-colors ${row.isJoint ? "bg-purple-50/30" : ""}`}>
                   <td className="px-4 py-2.5">
@@ -164,34 +171,36 @@ export const BalancesTable: React.FC<BalancesTableProps> = ({ rows, onUpdateBala
                         </button>
                       </div>
                     ) : (
-                      <div className="flex items-center justify-end gap-2">
-                        <span className="font-mono font-medium text-slate-600 border-b border-dashed border-slate-300 pb-0.5 text-sm">
-                          {row.balance.toFixed(2)} €
-                        </span>
-                        <div className="p-1.5 bg-slate-100 rounded-full text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors">
-                          <Pencil size={12} />
+                      <div className="flex flex-col items-end gap-0.5">
+                        <div className="flex items-center justify-end gap-2">
+                          <span className="font-mono font-medium text-slate-600 border-b border-dashed border-slate-300 pb-0.5 text-sm">
+                            {row.balance.toFixed(2)} €
+                          </span>
+                          <div className="p-1.5 bg-slate-100 rounded-full text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors">
+                            <Pencil size={12} />
+                          </div>
                         </div>
+                        {/* Détail Réel / En attente */}
+                        {row.realBalance !== undefined && row.pendingAmount !== undefined && (
+                          <div className="flex items-center gap-1.5 text-[9px] text-slate-500">
+                            <span className="text-emerald-600 font-medium">Réel: {row.realBalance.toFixed(2)}€</span>
+                            <span className="text-slate-300">•</span>
+                            <span className="text-amber-600 font-medium">En attente: {row.pendingAmount.toFixed(2)}€</span>
+                          </div>
+                        )}
                       </div>
                     )}
                   </td>
                   <td className="px-4 py-2.5 text-right">
-                    <div
-                      className="inline-block px-1.5 py-0.5 bg-slate-100 rounded text-slate-700 font-mono font-bold text-xs"
-                      title={`Exact: ${row.target.toFixed(2)} €`}
-                    >
-                      {displayedTarget.toFixed(2)} €
-                    </div>
+                    <div className="inline-block px-1.5 py-0.5 bg-slate-100 rounded text-slate-700 font-mono font-bold text-xs">{row.target.toFixed(2)} €</div>
                     {row.isJoint && <p className="text-[9px] text-slate-400 mt-0.5">Inclus factures</p>}
                   </td>
                   <td className="px-4 py-2.5 text-right bg-indigo-50/30 font-bold font-mono">
                     <div className="flex flex-col items-end gap-1">
                       <div className="flex items-center gap-2">
-                        <span
-                          className={`text-sm ${row.transfer > 0 ? "text-indigo-600" : "text-emerald-600"}`}
-                          title={`Exact: ${row.transfer > 0 ? "+" : ""}${row.transfer.toFixed(2)} €`}
-                        >
+                        <span className={`text-sm ${row.transfer > 0 ? "text-indigo-600" : "text-emerald-600"}`}>
                           {row.transfer > 0 ? "+" : ""}
-                          {roundedTransfer} €
+                          {row.transfer.toFixed(2)} €
                         </span>
 
                         {/* Tooltip explicatif du calcul */}
@@ -302,13 +311,10 @@ export const BalancesTable: React.FC<BalancesTableProps> = ({ rows, onUpdateBala
                   <Calculator size={14} /> TOTAL
                 </td>
                 <td className="px-4 py-2.5 text-right">{totalRow.balance.toFixed(2)} €</td>
-                <td className="px-4 py-2.5 text-right">
-                  {/* Cohérence aussi pour le total : Solde + Virement */}
-                  {(totalRow.balance + roundTransfer(totalRow.transfer)).toFixed(2)} €
-                </td>
+                <td className="px-4 py-2.5 text-right">{totalRow.target.toFixed(2)} €</td>
                 <td className="px-4 py-2.5 text-right bg-indigo-100/50 text-indigo-800">
-                  {roundTransfer(totalRow.transfer) > 0 ? "+" : ""}
-                  {roundTransfer(totalRow.transfer)} €
+                  {totalRow.transfer > 0 ? "+" : ""}
+                  {totalRow.transfer.toFixed(2)} €
                 </td>
               </tr>
             </tfoot>

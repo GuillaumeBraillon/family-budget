@@ -1,11 +1,12 @@
 import React from "react";
-import { TrendingDown, TrendingUp, Wallet, Clock, Calendar, Star } from "lucide-react";
+import { TrendingDown, TrendingUp, Wallet, Clock, Calendar, Star, AlertCircle } from "lucide-react";
 
 interface SummaryStats {
   real: number;
   planned: number;
   pending: number;
   extra: number;
+  delays: number; // Opérations en attente des périodes précédentes
 }
 
 interface QuickPeriodSummaryProps {
@@ -16,7 +17,7 @@ interface QuickPeriodSummaryProps {
 export const QuickPeriodSummary: React.FC<QuickPeriodSummaryProps> = ({ expenses, income }) => {
   const netReal = income.real - expenses.real;
   const netPlanned = income.planned - expenses.planned;
-  const netPending = income.pending - expenses.pending;
+  const netPending = income.pending + income.delays - (expenses.pending + expenses.delays);
   const isPositive = netReal >= 0;
 
   return (
@@ -30,12 +31,13 @@ export const QuickPeriodSummary: React.FC<QuickPeriodSummaryProps> = ({ expenses
           <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Dépenses Période</span>
         </div>
         <div className="flex items-baseline gap-2">
-          <span className="text-2xl font-black">{(expenses.real + expenses.pending).toFixed(2)} €</span>
+          <span className="text-2xl font-black">{(expenses.real + expenses.pending + expenses.delays).toFixed(2)} €</span>
         </div>
         <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1">
           <MetricLabel icon={<Star size={10} />} label="Extra" value={expenses.extra} color="text-rose-300" />
           <MetricLabel icon={<Calendar size={10} />} label="Prévu" value={expenses.planned} color="text-slate-400" />
           <MetricLabel icon={<Clock size={10} />} label="Attente" value={expenses.pending} color="text-amber-400" />
+          {expenses.delays > 0.01 && <MetricLabel icon={<AlertCircle size={10} />} label="Retards" value={expenses.delays} color="text-orange-500" />}
         </div>
       </div>
 
@@ -50,12 +52,13 @@ export const QuickPeriodSummary: React.FC<QuickPeriodSummaryProps> = ({ expenses
           <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Revenus Période</span>
         </div>
         <div className="flex items-baseline gap-2">
-          <span className="text-2xl font-black">{(income.real + income.pending).toFixed(2)} €</span>
+          <span className="text-2xl font-black">{(income.real + income.pending + income.delays).toFixed(2)} €</span>
         </div>
         <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1">
           <MetricLabel icon={<Star size={10} />} label="Extra" value={income.extra} color="text-emerald-300" />
           <MetricLabel icon={<Calendar size={10} />} label="Prévu" value={income.planned} color="text-slate-400" />
           <MetricLabel icon={<Clock size={10} />} label="Attente" value={income.pending} color="text-amber-400" />
+          {income.delays > 0.01 && <MetricLabel icon={<AlertCircle size={10} />} label="Retards" value={income.delays} color="text-orange-500" />}
         </div>
       </div>
 

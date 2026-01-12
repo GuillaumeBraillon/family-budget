@@ -299,9 +299,14 @@ export const useBalancesData = ({
 
   // 9. Détails par compte (pour tooltips/affichage)
   const pendingVariablesDetails = useMemo(() => {
+    // Filtrer les périodes selon le scope
+    // MONTH : toutes les périodes
+    // PERIOD : cumul des périodes 1 à activeWeek (cohérence avec récurrentes)
+    const relevantPeriods = scope === "MONTH" ? filteredPeriodBudgets : filteredPeriodBudgets.filter((w) => w.weekNumber <= activeWeek);
+
     return checkingAccounts
       .map((acc) => {
-        const totalPending = filteredPeriodBudgets
+        const totalPending = relevantPeriods
           .flatMap((w) => w.items)
           .filter((i) => i.accountId === acc.id && i.source === "VARIABLE" && i.type === "EXPENSE" && !i.isPaid && i.subCategory !== "Intérêts")
           .reduce((sum, i) => sum + i.amount, 0);
@@ -309,11 +314,15 @@ export const useBalancesData = ({
         return { name: acc.name, amount: totalPending };
       })
       .filter((x) => x.amount > 0);
-  }, [filteredPeriodBudgets, checkingAccounts]);
+  }, [filteredPeriodBudgets, checkingAccounts, scope, activeWeek]);
 
   const pendingRecurringDetails = useMemo(() => {
-    const relevantItems = filteredPeriodBudgets
-      .filter((w) => w.weekNumber <= activeWeek)
+    // Filtrer les périodes selon le scope
+    // MONTH : toutes les périodes
+    // PERIOD : cumul des périodes 1 à activeWeek (car opération peut tomber plus tard)
+    const relevantPeriods = scope === "MONTH" ? filteredPeriodBudgets : filteredPeriodBudgets.filter((w) => w.weekNumber <= activeWeek);
+
+    const relevantItems = relevantPeriods
       .flatMap((w) => w.items)
       .filter((i) => i.source === "RECURRING" && !i.isPaid && i.category !== "Virement Interne" && i.type === "EXPENSE");
 
@@ -323,7 +332,7 @@ export const useBalancesData = ({
         return { name: acc.name, amount };
       })
       .filter((x) => x.amount > 0);
-  }, [filteredPeriodBudgets, activeWeek, checkingAccounts]);
+  }, [filteredPeriodBudgets, activeWeek, checkingAccounts, scope]);
 
   const totalDebtDetails = useMemo(() => {
     return checkingAccounts
