@@ -466,10 +466,10 @@ export const usePlanner = (
          * - Un toggle global simple qui écrase tout pour les dépenses exceptionnelles
          * - Une ventilation granulaire par tag pour les opérations complexes
          */
-        if (filters.extra === "ONLY") {
+        if (filters.nature === "ONLY") {
           // Afficher les opérations qui ont des montants Extra (même partiellement)
           items = items.filter((i) => i.isExtra === true);
-        } else if (filters.extra === "EXCLUDE") {
+        } else if (filters.nature === "EXCLUDE") {
           // Afficher les opérations qui ont des montants Standard (même partiellement)
           // Une opération mixte (70€ Extra + 45€ Standard) doit apparaître ici
           items = items.filter((i) => {

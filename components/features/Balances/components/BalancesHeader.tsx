@@ -31,9 +31,17 @@ export const BalancesHeader: React.FC<BalancesHeaderProps> = ({
   const handleRecurringClick = () => {
     if (onNavigateToOperations && currentDate) {
       onNavigateToOperations(currentDate, {
+        flux: "ALL",
+        source: "RECURRING",
         status: "WAITING",
-        extra: "ALL",
+        nature: "ALL",
+        transfer: "EXCLUDE",
+        salary: "EXCLUDE",
         accountIds: ["3"], // Compte Joint
+        beneficiaryIds: [],
+        includedTagIds: [],
+        excludedTagIds: [],
+        tagPresence: "ALL",
       });
     }
   };
@@ -41,9 +49,17 @@ export const BalancesHeader: React.FC<BalancesHeaderProps> = ({
   const handleVariableClick = () => {
     if (onNavigateToOperations && currentDate) {
       onNavigateToOperations(currentDate, {
+        flux: "ALL",
+        source: "VARIABLE",
         status: "WAITING",
-        extra: "ALL",
+        nature: "ALL",
+        transfer: "EXCLUDE",
+        salary: "EXCLUDE",
         accountIds: ["3"], // Compte Joint
+        beneficiaryIds: [],
+        includedTagIds: [],
+        excludedTagIds: [],
+        tagPresence: "ALL",
       });
     }
   };
@@ -51,16 +67,24 @@ export const BalancesHeader: React.FC<BalancesHeaderProps> = ({
   const handleTotalClick = () => {
     if (onNavigateToOperations && currentDate) {
       onNavigateToOperations(currentDate, {
+        flux: "ALL",
+        source: "ALL",
         status: "WAITING",
-        extra: "ALL",
+        nature: "ALL",
+        transfer: "EXCLUDE",
+        salary: "EXCLUDE",
         accountIds: ["3"], // Compte Joint
+        beneficiaryIds: [],
+        includedTagIds: [],
+        excludedTagIds: [],
+        tagPresence: "ALL",
       });
     }
   };
 
   const renderTooltipContent = (details: { name: string; amount: number }[]) => (
     <div className="space-y-1">
-      <p className="font-bold text-indigo-200 border-b border-white/10 pb-1 mb-1">Détail par compte :</p>
+      <p className="font-bold text-indigo-700 border-b border-slate-200 pb-1 mb-1">Détail par compte :</p>
       {details.length > 0 ? (
         details.map((d, i) => (
           <div key={i} className="flex justify-between gap-4">
@@ -86,7 +110,7 @@ export const BalancesHeader: React.FC<BalancesHeaderProps> = ({
             <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Récurrentes</span>
             <MobileTooltip
               text={renderTooltipContent(pendingRecurringDetails)}
-              icon={<Info size={12} className="text-slate-500 hover:text-white" />}
+              icon={<Info size={12} className="text-slate-600 hover:text-slate-800" />}
               widthClass="w-56"
             />
           </div>
@@ -115,7 +139,7 @@ export const BalancesHeader: React.FC<BalancesHeaderProps> = ({
             <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Variables</span>
             <MobileTooltip
               text={renderTooltipContent(pendingVariablesDetails)}
-              icon={<Info size={12} className="text-indigo-400 hover:text-white" />}
+              icon={<Info size={12} className="text-indigo-500 hover:text-indigo-700" />}
               widthClass="w-56"
             />
           </div>
@@ -142,7 +166,11 @@ export const BalancesHeader: React.FC<BalancesHeaderProps> = ({
             <div className="p-1 bg-white/10 rounded text-white">
               <Wallet size={14} />
             </div>
-            <MobileTooltip text={renderTooltipContent(totalDetails)} icon={<Info size={12} className="text-slate-500 hover:text-white" />} widthClass="w-56" />
+            <MobileTooltip
+              text={renderTooltipContent(totalDetails)}
+              icon={<Info size={12} className="text-slate-600 hover:text-slate-800" />}
+              widthClass="w-56"
+            />
           </div>
           <div className="flex items-baseline gap-1.5">
             <button

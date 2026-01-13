@@ -49,7 +49,7 @@ interface ClickableAmountProps {
  * Merge automatiquement des filtres par défaut robustes pour éviter les régressions :
  * - flux: "ALL" (par défaut si non spécifié)
  * - source: "ALL" (par défaut si non spécifié)
- * - extra: "ALL" (par défaut si non spécifié)
+ * - nature: "ALL" (par défaut si non spécifié)
  *
  * Les filtres fournis en props écrasent ces valeurs par défaut, garantissant
  * ainsi que même si on oublie de passer ces props, les filtres fonctionneront

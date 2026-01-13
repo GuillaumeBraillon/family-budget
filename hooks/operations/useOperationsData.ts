@@ -252,7 +252,7 @@ export const useOperationsData = ({
      * @description
      * Calcul contextuel basé sur plusieurs filtres :
      *
-     * **1. Filtre Extra/Standard (`filters.extra`)** :
+     * **1. Filtre Extra/Standard (`filters.nature`)** :
      * - Si "ONLY" (Extra uniquement) : Calcule uniquement les montants Extra
      *   * Opération avec toggle Extra global : Montant total
      *   * Opération avec tags : Somme des tags marqués `isExtra: true`
@@ -278,14 +278,14 @@ export const useOperationsData = ({
      */
     const getEffectiveAmount = (item: PlannedItem): number => {
       const hasTagFilter = filters.includedTagIds && filters.includedTagIds.length > 0;
-      const hasExtraFilter = filters.extra === "ONLY" || filters.extra === "EXCLUDE";
+      const hasExtraFilter = filters.nature === "ONLY" || filters.nature === "EXCLUDE";
 
       // Cas 1 : Filtre Extra/Standard actif
       if (hasExtraFilter) {
         // Utiliser le toggle global stocké dans isExtraGlobal (source de vérité)
         const hasGlobalExtra = item.isExtraGlobal;
 
-        if (filters.extra === "ONLY") {
+        if (filters.nature === "ONLY") {
           // Extra uniquement : calculer les montants Extra
           if (hasGlobalExtra) {
             // Toggle global : tout est Extra
@@ -449,7 +449,7 @@ export const useOperationsData = ({
     }
 
     return stats;
-  }, [unsortedItems, categories, filters.includedTagIds, filters.extra, scope, activeWeek, filteredPeriodBudgets]);
+  }, [unsortedItems, categories, filters.includedTagIds, filters.nature, scope, activeWeek, filteredPeriodBudgets]);
 
   // 6. Formatage du mois court (ex: "jan.", "déc.")
   const monthShort = new Intl.DateTimeFormat("fr-FR", { month: "short" }).format(currentDate);

@@ -67,7 +67,7 @@ export const CarryoverStrategyCard: React.FC<CarryoverStrategyCardProps> = ({ se
         </div>
         <MobileTooltip
           text="Définit comment les dépassements d'une période sont gérés : déduction sur la période suivante uniquement, ou étalement sur toutes les périodes restantes."
-          icon={<Info size={16} className="text-slate-400 hover:text-slate-600" />}
+          icon={<Info size={16} className="text-slate-600 hover:text-slate-800" />}
           widthClass="w-64"
         />
       </div>

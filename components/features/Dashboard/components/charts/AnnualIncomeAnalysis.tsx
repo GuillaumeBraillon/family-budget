@@ -279,7 +279,7 @@ const renderCell = (
       date={date}
       filters={{
         status: "REAL",
-        extra: "ALL",
+        nature: "ALL",
       }}
       weekNumber={periodId}
       onNavigate={onNavigate}

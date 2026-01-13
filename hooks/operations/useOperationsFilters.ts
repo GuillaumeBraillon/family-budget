@@ -55,7 +55,7 @@ const DEFAULT_FILTERS: OperationFilters = {
   flux: "ALL",
   source: "VARIABLE",
   status: "REAL",
-  extra: "EXCLUDE",
+  nature: "EXCLUDE",
   transfer: "EXCLUDE",
   salary: "EXCLUDE",
   accountIds: [],
@@ -84,11 +84,11 @@ const DEFAULT_FILTERS: OperationFilters = {
  * **3. Navigation contextuelle (Dashboard → Opérations) :**
  * ```tsx
  * // Depuis Dashboard : Clic sur "Dépenses Extra"
- * onNavigateToPlanner(currentDate, { extra: "ONLY" });
+ * onNavigateToPlanner(currentDate, { nature: "ONLY" });
  *
  * // Dans OperationsView :
- * const { filters } = useOperationsFilters({ extra: "ONLY" });
- * // filters.extra sera "ONLY" au chargement initial UNIQUEMENT
+ * const { filters } = useOperationsFilters({ nature: "ONLY" });
+ * // filters.nature sera "ONLY" au chargement initial UNIQUEMENT
  * // Si l'utilisateur revient plus tard, ses filtres personnalisés sont préservés
  * ```
  *
@@ -125,11 +125,11 @@ const DEFAULT_FILTERS: OperationFilters = {
  * const { filters, setFilters } = useOperationsFilters();
  *
  * // Modifier un filtre
- * setFilters({ ...filters, extra: "ONLY" });
+ * setFilters({ ...filters, nature: "ONLY" });
  *
  * // Cas 2 : Navigation contextuelle (depuis Dashboard)
- * const { filters } = useOperationsFilters({ extra: "ONLY", flux: "EXPENSE" });
- * // Premier montage : filters = { ...localStorage ou DEFAULT_FILTERS, extra: "ONLY", flux: "EXPENSE" }
+ * const { filters } = useOperationsFilters({ nature: "ONLY", flux: "EXPENSE" });
+ * // Premier montage : filters = { ...localStorage ou DEFAULT_FILTERS, nature: "ONLY", flux: "EXPENSE" }
  * // Retour ultérieur : filters = localStorage (initialFilters ignorés)
  *
  * // Cas 3 : Réinitialisation

@@ -47,7 +47,7 @@ export const VersionInfoCard: React.FC = () => {
           </div>
           <MobileTooltip
             text="La version suit le format SemVer (MAJOR.MINOR.PATCH). Consultez le changelog pour voir les nouveautés."
-            icon={<Info size={16} className="text-slate-400 hover:text-slate-600" />}
+            icon={<Info size={16} className="text-slate-600 hover:text-slate-800" />}
             widthClass="w-64"
           />
         </div>

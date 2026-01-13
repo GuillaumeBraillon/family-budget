@@ -7,6 +7,199 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.6.7] - 2026-01-13
+
+### 🚀 Changements Majeurs
+
+#### **Refonte Complète des Tooltips : Fond Blanc & Lisibilité**
+
+Migration de tous les tooltips de l'application vers un fond blanc avec amélioration majeure de la lisibilité.
+
+**Changement de Design** :
+
+- **Ancien** : Fond sombre (`bg-slate-900`) adapté aux superpositions modales
+- **Nouveau** : Fond blanc (`bg-white`) avec bordures (`border-slate-300`) pour design moderne
+
+**Impact Architecture** :
+
+- Fichier source : `components/ui/MobileTooltip.tsx`
+- Couleur flèche : `border-t-slate-900` → `border-t-white`
+- Séparateur header : `border-slate-700` → `border-slate-200`
+- Bouton fermeture : `hover:text-red-400` → `hover:text-red-500`
+
+**Harmonisation des Contenus** :
+Cette migration a nécessité la mise à jour de **TOUS** les contenus de tooltips pour garantir un contraste optimal (WCAG AA).
+
+### 🔧 Refactorisation Technique
+
+#### **Renommage du Filtre `extra` → `nature`**
+
+Amélioration de la sémantique des filtres d'opérations pour une meilleure clarté du code.
+
+**Motivation** :
+
+- Le terme "extra" était ambigu (extra quoi ?)
+- "nature" décrit mieux la **nature de l'opération** (Standard vs Hors Budget)
+- Cohérence avec la terminologie métier
+
+**Impact Code** :
+
+- **Type modifié** : `OperationFilters.extra` → `OperationFilters.nature` (types.ts)
+- **Valeurs inchangées** : "ALL" | "ONLY" | "EXCLUDE"
+- **Aucun impact utilisateur** : Fonctionnalité identique, seul le code interne change
+
+**Fichiers mis à jour** (10+ fichiers) :
+
+- `types.ts` - Interface `OperationFilters`
+- `hooks/operations/useOperationsData.ts` - Logique de filtrage (6 occurrences)
+- `hooks/operations/useOperationsFilters.ts` - Filtres par défaut et persistance
+- `hooks/filterBar/useFilterBarLogic.tsx` - Détection filtre actif
+- `hooks/usePlanner.ts` - Application des filtres (2 occurrences)
+- `components/ui/atoms/ClickableAmount.tsx` - Documentation et filtres par défaut
+- `components/features/Balances/components/BalancesHeader.tsx` - Filtres navigation
+- `components/features/Balances/components/BalancesTable.tsx` - Filtres tooltips
+- `components/features/Dashboard/components/AnnualIncomeAnalysis.tsx` - Filtres graphique
+
+**Migration automatique** :
+
+- LocalStorage : Les préférences existantes restent compatibles
+- Pas de migration de données nécessaire
+
+#### **Amélioration de la Navigation Contextuelle (ClickableAmount)**
+
+Ajout de **filtres par défaut robustes** dans `ClickableAmount` pour éviter les régressions.
+
+**Problème résolu** :
+
+- Avant : Si props `filters` manquante → Navigation sans filtres → Résultats incohérents
+- Après : Filtres par défaut garantissent un comportement prévisible
+
+**Filtres par défaut** :
+
+```typescript
+const defaultFilters: Partial<OperationFilters> = {
+  flux: "ALL",
+  source: "ALL",
+  nature: "ALL", // Anciennement "extra"
+  transfer: "EXCLUDE", // Masquer virements internes par défaut
+  salary: "EXCLUDE", // Masquer salaires par défaut
+  accountIds: [],
+  beneficiaryIds: [],
+  includedTagIds: [],
+  excludedTagIds: [],
+  tagPresence: "ALL",
+};
+```
+
+**Impact** :
+
+- Navigation Dashboard → Opérations : Plus fiable même si props oubliées
+- Clics sur montants : Filtrage cohérent garanti
+
+**Fichier modifié** :
+
+- `components/ui/atoms/ClickableAmount.tsx`
+
+### ✨ Nouvelles Fonctionnalités
+
+#### **Validation Renforcée des Virements Épargne (Règle Pivot)**
+
+Implémentation stricte de la **règle du compte pivot** pour les virements impliquant des comptes d'épargne.
+
+**Règle Métier** :
+
+- ✅ Virement **DEPUIS épargne** → DOIT aller vers **compte joint** (pivot)
+- ✅ Virement **VERS épargne** → DOIT provenir **du compte joint** (pivot)
+- ❌ Virement **épargne ↔ compte personnel** : **INTERDIT**
+
+**Validation** :
+
+```typescript
+// Si source = ÉPARGNE et destination ≠ joint → ERREUR
+"Les virements depuis un compte d'épargne doivent aller vers le compte joint (pivot).";
+
+// Si destination = ÉPARGNE et source ≠ joint → ERREUR
+"Les virements vers un compte d'épargne doivent provenir du compte joint (pivot).";
+```
+
+**Améliorations UX** :
+
+1. **Initialisation intelligente** : Compte joint sélectionné par défaut comme source
+2. **Auto-ajustement** : Si épargne sélectionnée → Force compte joint sur l'autre côté
+3. **Messages clairs** : Explications précises en cas d'erreur
+
+**Avantages** :
+
+- Empêche les opérations financières invalides
+- Guide l'utilisateur vers les bonnes pratiques
+- Garantit la cohérence du pivot budgétaire
+
+**Fichier modifié** :
+
+- `hooks/transfers/useTransferForm.ts` (+80 lignes de validation)
+
+### 🎨 Harmonisation des Couleurs des Tooltips
+
+**Application de la nouvelle charte graphique** suite au changement de fond des tooltips.
+
+**Principe** :
+
+- Fond sombre → Variantes claires (`-200` à `-400`)
+- **Fond blanc → Variantes sombres (`-600` à `-900`)** ✨
+
+**Problématique** :
+
+- Les tooltips utilisent maintenant un fond blanc (`MobileTooltip.tsx`)
+- Certains textes conservaient des couleurs claires (`-200`, `-300`, `-400`) adaptées aux fonds sombres
+- **Contraste insuffisant → difficulté de lecture**
+
+**Phase 1 - Textes des tooltips** (`BalancesTable.tsx`) :
+
+- Titres : `text-indigo-300` → `text-indigo-700`
+- Labels : `text-slate-300/400` → `text-slate-700/800`
+- Notes : `text-slate-400` → `text-slate-600`
+- Séparateurs : `border-white/10` → `border-slate-200`
+
+**Phase 2 - Icônes des tooltips** (6 fichiers) :
+
+- `BalancesHeader.tsx` : 3 icônes Info
+- `BudgetDistributionSummary.tsx` : 3 icônes Info
+- `CalculationDetailsCard.tsx` : 1 icône Info
+- `CarryoverStrategyCard.tsx` : 1 icône Info
+- `VersionInfoCard.tsx` : 1 icône Info
+- `DataListRow.tsx` : 1 icône Info
+
+Standard appliqué :
+
+- Neutre : `text-slate-400/500` → `text-slate-600` (hover: `text-slate-800`)
+- Accent indigo : `text-indigo-400` → `text-indigo-500/600` (hover: `text-indigo-700/800`)
+
+**Phase 3 - Contenus des tooltips** (2 fichiers) :
+
+- `BudgetDistributionSummary.tsx` : Tooltip "Consommation Variables"
+  - Titre : `text-indigo-200` → `text-indigo-700`
+  - Note : `text-indigo-300/80` → `text-indigo-600`
+- `BalancesHeader.tsx` : Fonction `renderTooltipContent()`
+  - Titre : `text-indigo-200` → `text-indigo-700`
+
+**Impact** :
+
+- ✅ Tous les tooltips ont maintenant un contraste optimal (WCAG AA)
+- ✅ Cohérence visuelle sur toute l'application
+- ✅ Design system unifié : variants `-600` à `-900` sur fond blanc
+
+**Fichiers modifiés** :
+
+- `components/features/Balances/components/BalancesTable.tsx`
+- `components/features/Balances/components/BalancesHeader.tsx`
+- `components/features/Balances/components/BudgetDistributionSummary.tsx`
+- `components/features/Balances/components/CalculationDetailsCard.tsx`
+- `components/features/Configuration/components/molecules/CarryoverStrategyCard.tsx`
+- `components/features/Configuration/components/molecules/VersionInfoCard.tsx`
+- `components/ui/molecules/DataListRow.tsx`
+
+---
+
 ## [2.6.6] - 2026-01-12
 
 ### ✨ Nouvelles Fonctionnalités

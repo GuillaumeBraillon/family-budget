@@ -79,7 +79,7 @@ export const MobileTooltip: React.FC<MobileTooltipProps> = ({
 
             <div
               ref={tooltipRef}
-              className={`fixed ${widthClass} p-2 bg-slate-900 text-white text-[10px] rounded-lg shadow-xl animate-in zoom-in-95 fade-in duration-200 normal-case font-normal tracking-normal text-left`}
+              className={`fixed ${widthClass} p-2 bg-white border border-slate-300 text-slate-800 text-[10px] rounded-lg shadow-xl animate-in zoom-in-95 fade-in duration-200 normal-case font-normal tracking-normal text-left`}
               style={{
                 top: position.top - 6,
                 left: currentLeft,
@@ -87,13 +87,13 @@ export const MobileTooltip: React.FC<MobileTooltipProps> = ({
               }}
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex justify-between items-start mb-1 font-bold border-b border-slate-700 pb-1">
+              <div className="flex justify-between items-start mb-1 font-bold border-b border-slate-200 pb-1">
                 <span>Détails</span>
-                <X size={10} className="cursor-pointer hover:text-red-400" onClick={() => setIsOpen(false)} />
+                <X size={10} className="cursor-pointer hover:text-red-500" onClick={() => setIsOpen(false)} />
               </div>
               {text}
               <div
-                className="absolute top-full border-4 border-transparent border-t-slate-900"
+                className="absolute top-full border-4 border-transparent border-t-white"
                 style={{
                   left: "50%",
                   transform: `translateX(calc(-50% + ${arrowOffset}px))`,

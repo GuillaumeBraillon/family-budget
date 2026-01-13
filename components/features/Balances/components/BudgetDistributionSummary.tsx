@@ -131,7 +131,7 @@ export const BudgetDistributionSummary: React.FC<BudgetDistributionSummaryProps>
                     : "Budget de base ajusté avec le report (dépassement ou économie) de la période précédente."
                   : "Montant théorique alloué en début de période (Enveloppe Mensuelle ÷ Nombre de Périodes)."
               }
-              icon={<Info size={14} className="text-slate-500 hover:text-white" />}
+              icon={<Info size={14} className="text-slate-600 hover:text-slate-800" />}
               widthClass="w-48"
             />
           </div>
@@ -162,7 +162,7 @@ export const BudgetDistributionSummary: React.FC<BudgetDistributionSummaryProps>
             <MobileTooltip
               text={
                 <div className="space-y-1">
-                  <p className="font-bold text-indigo-200 border-b border-white/10 pb-1 mb-1">Détail par compte :</p>
+                  <p className="font-bold text-indigo-700 border-b border-slate-200 pb-1 mb-1">Détail par compte :</p>
                   {consumedDetails.length > 0 ? (
                     consumedDetails.map((d, i) => (
                       <div key={i} className="flex justify-between gap-4">
@@ -173,12 +173,12 @@ export const BudgetDistributionSummary: React.FC<BudgetDistributionSummaryProps>
                   ) : (
                     <span className="italic opacity-70">Aucune consommation.</span>
                   )}
-                  <div className="border-t border-white/10 pt-1 mt-1 text-[10px] text-indigo-300/80">
+                  <div className="border-t border-slate-200 pt-1 mt-1 text-[10px] text-indigo-600">
                     Opérations variables standard (Source: Variable, Nature: Standard, Statut: Tous).
                   </div>
                 </div>
               }
-              icon={<Info size={14} className="text-slate-500 hover:text-white" />}
+              icon={<Info size={14} className="text-slate-600 hover:text-slate-800" />}
               widthClass="w-60"
             />
           </div>
@@ -202,7 +202,7 @@ export const BudgetDistributionSummary: React.FC<BudgetDistributionSummaryProps>
             </div>
             <MobileTooltip
               text="Budget Initial - Consommation Réelle. Base de calcul pour la répartition aux comptes persos selon les % configurés."
-              icon={<Info size={14} className="text-slate-500 hover:text-white" />}
+              icon={<Info size={14} className="text-slate-600 hover:text-slate-800" />}
               widthClass="w-56"
             />
           </div>

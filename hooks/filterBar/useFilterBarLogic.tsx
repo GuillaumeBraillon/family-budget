@@ -433,7 +433,7 @@ export const useFilterBarLogic = (
   /**
    * Détecte si le filtre Extra est actif (différent du défaut "ALL").
    */
-  const isExtraActive = filters.extra !== "ALL";
+  const isExtraActive = filters.nature !== "ALL";
 
   /**
    * Détecte si le filtre Salaires est actif (différent du défaut "EXCLUDE").
@@ -493,7 +493,7 @@ export const useFilterBarLogic = (
     filters.flux === "ALL" &&
     filters.source === "VARIABLE" &&
     filters.status === "REAL" &&
-    filters.extra === "EXCLUDE" &&
+    filters.nature === "EXCLUDE" &&
     filters.transfer === "EXCLUDE" &&
     filters.salary === "EXCLUDE" &&
     filters.accountIds.length === 0 &&

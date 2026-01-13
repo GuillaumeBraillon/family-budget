@@ -104,26 +104,26 @@ export const BalancesTable: React.FC<BalancesTableProps> = ({
                 <MobileTooltip
                   text={
                     <div className="space-y-1.5 text-[10px]">
-                      <p className="font-bold text-indigo-300 border-b border-white/10 pb-1 mb-1">Deux visions du solde :</p>
+                      <p className="font-bold text-indigo-700 border-b border-slate-200 pb-1 mb-1">Deux visions du solde :</p>
                       <div className="flex items-start gap-2">
-                        <span className="text-indigo-300 font-bold">Avec attente</span>
-                        <span className="text-slate-300">Solde réel incluant les opérations non encore validées</span>
+                        <span className="text-indigo-700 font-bold">Avec attente</span>
+                        <span className="text-slate-700">Solde réel incluant les opérations non encore validées</span>
                       </div>
                       <div className="flex items-start gap-2">
-                        <span className="text-slate-300 font-bold">Hors attente</span>
-                        <span className="text-slate-300">Solde en excluant les opérations à venir</span>
+                        <span className="text-slate-800 font-bold">Hors attente</span>
+                        <span className="text-slate-700">Solde en excluant les opérations à venir</span>
                       </div>
-                      <p className="text-slate-400 text-[9px] italic mt-1 pt-1 border-t border-white/10">Cliquez sur le solde pour le modifier.</p>
+                      <p className="text-slate-600 text-[9px] italic mt-1 pt-1 border-t border-slate-200">Cliquez sur le solde pour le modifier.</p>
                     </div>
                   }
-                  iconClassName="text-indigo-300 hover:text-indigo-100 transition-colors"
+                  iconClassName="text-indigo-500 hover:text-indigo-700 transition-colors"
                 />
               </th>
               <th className="px-4 py-2.5 text-right">
                 Solde prévu
                 <MobileTooltip
                   text="Solde projeté après virement (Solde Actuel + Virement). Correspond à l'objectif à atteindre une fois le transfert effectué."
-                  iconClassName="text-indigo-300 hover:text-indigo-100 transition-colors"
+                  iconClassName="text-indigo-500 hover:text-indigo-700 transition-colors"
                 />
               </th>
               <th className="px-4 py-2.5 text-right bg-indigo-50/50 text-indigo-900">
@@ -207,7 +207,7 @@ export const BalancesTable: React.FC<BalancesTableProps> = ({
                           <span className="font-medium">{editMode === "WITH_PENDING" ? "Édition: Avec attente" : "Édition: Hors attente"}</span>
                           {row.pendingAmount !== undefined && Math.abs(row.pendingAmount) > 0.01 && (
                             <>
-                              <span className="text-slate-300">→</span>
+                              <span className="text-slate-500">→</span>
                               <span className="font-medium">{editMode === "WITH_PENDING" ? "Hors attente:" : "Avec attente:"}</span>
                               <span className="font-mono font-bold text-slate-700">
                                 {editMode === "WITH_PENDING"
@@ -229,6 +229,54 @@ export const BalancesTable: React.FC<BalancesTableProps> = ({
                           <div className="p-0.5 bg-slate-200 rounded-full text-slate-400 hover:text-indigo-600 transition-colors">
                             <Pencil size={10} />
                           </div>
+                          <MobileTooltip
+                            text={
+                              <div className="space-y-1 text-[10px]">
+                                {" "}
+                                <ClickableAmount
+                                  date={currentDate}
+                                  filters={{ status: "REAL", nature: "EXCLUDE", accountIds: [row.id] }}
+                                  weekNumber={activeWeek}
+                                  onNavigate={onNavigateToPlanner}
+                                  className="flex items-center gap-1 hover:bg-blue-50 px-1 py-0.5 rounded cursor-pointer"
+                                  title="Cliquer pour voir les opérations standards réelles"
+                                >
+                                  <div className="flex justify-between gap-4">
+                                    <span className="text-slate-800 hover:text-slate-900">Dépenses standards</span>
+                                    <span className="font-mono font-bold text-blue-700 hover:text-blue-800">{row.paidStandard.toFixed(2)}€</span>
+                                  </div>
+                                </ClickableAmount>
+                                <ClickableAmount
+                                  date={currentDate}
+                                  filters={{ status: "REAL", nature: "ONLY", accountIds: [row.id] }}
+                                  weekNumber={activeWeek}
+                                  onNavigate={onNavigateToPlanner}
+                                  className="flex items-center gap-1 hover:bg-purple-50 px-1 py-0.5 rounded cursor-pointer"
+                                  title="Cliquer pour voir les opérations Extra réelles"
+                                >
+                                  <div className="flex justify-between gap-4">
+                                    <span className="text-slate-800 hover:text-slate-900">Dépenses Extra</span>
+                                    <span className="font-mono font-bold text-purple-700 hover:text-purple-800">{row.paidExtra.toFixed(2)}€</span>
+                                  </div>
+                                </ClickableAmount>
+                                <ClickableAmount
+                                  date={currentDate}
+                                  filters={{ status: "REAL", nature: "ALL", accountIds: [row.id] }}
+                                  weekNumber={activeWeek}
+                                  onNavigate={onNavigateToPlanner}
+                                  className="flex items-center gap-1 hover:bg-emerald-50 px-1 py-0.5 rounded cursor-pointer"
+                                  title="Cliquer pour voir toutes les opérations réelles"
+                                >
+                                  <div className="flex justify-between gap-4 border-t border-slate-200 pt-1">
+                                    <span className="text-slate-900 hover:text-slate-950 font-bold">Dépenses réelles</span>
+                                    <span className="font-mono font-bold text-emerald-700 hover:text-emerald-800">{row.paidAmount.toFixed(2)}€</span>
+                                  </div>
+                                </ClickableAmount>
+                              </div>
+                            }
+                            icon={<Calculator size={9} className="text-slate-400 hover:text-slate-600" />}
+                            widthClass="w-48"
+                          />
                         </div>
                         {/* Ligne "Hors attente" cliquable */}
                         {row.pendingAmount !== undefined && Math.abs(row.pendingAmount) > 0.01 && (
@@ -247,198 +295,41 @@ export const BalancesTable: React.FC<BalancesTableProps> = ({
                             <MobileTooltip
                               text={
                                 <div className="space-y-1 text-[10px]">
-                                  <p className="font-bold text-slate-300 border-b border-white/10 pb-1 mb-1">Calcul :</p>
-                                  <div className="flex justify-between gap-4">
-                                    <span className="text-slate-400">Solde actuel (avec attente)</span>
-                                    <span className="font-mono font-bold text-slate-200">{row.balance.toFixed(2)}€</span>
+                                  {" "}
+                                  <ClickableAmount
+                                    date={currentDate}
+                                    filters={{ status: "REAL", nature: "ALL", accountIds: [row.id] }}
+                                    weekNumber={activeWeek}
+                                    onNavigate={onNavigateToPlanner}
+                                    className="flex items-center gap-1 hover:bg-emerald-50 px-1 py-0.5 rounded cursor-pointer"
+                                    title="Cliquer pour voir les opérations réelles"
+                                  >
+                                    <div className="flex justify-between gap-4">
+                                      <span className="text-slate-800 hover:text-slate-900">Solde actuel</span>
+                                      <span className="font-mono font-bold text-emerald-700 hover:text-emerald-800">{row.balance.toFixed(2)}€</span>
+                                    </div>
+                                  </ClickableAmount>
+                                  <ClickableAmount
+                                    date={currentDate}
+                                    filters={{ status: "WAITING", nature: "ALL", accountIds: [row.id] }}
+                                    weekNumber={activeWeek}
+                                    onNavigate={onNavigateToPlanner}
+                                    className="flex items-center gap-1 hover:bg-amber-50 px-1 py-0.5 rounded cursor-pointer"
+                                    title="Cliquer pour voir les opérations en attente"
+                                  >
+                                    <div className="flex justify-between gap-4">
+                                      <span className="text-slate-800 hover:text-slate-900">En attente</span>
+                                      <span className="font-mono font-bold text-amber-700 hover:text-amber-800">{row.pendingAmount.toFixed(2)}€</span>
+                                    </div>
+                                  </ClickableAmount>
+                                  <div className="flex justify-between gap-4 border-t border-slate-200 pt-1">
+                                    <span className="text-slate-900 font-bold">Solde hors attente</span>
+                                    <span className="font-mono font-bold text-slate-950">{(row.balance + row.pendingAmount).toFixed(2)}€</span>
                                   </div>
-                                  <div className="flex justify-between gap-4">
-                                    <span className="text-slate-400">Retrait de l'impact</span>
-                                    <span className="font-mono font-bold text-emerald-300">+{row.pendingAmount.toFixed(2)}€</span>
-                                  </div>
-                                  <div className="flex justify-between gap-4 border-t border-white/10 pt-1">
-                                    <span className="text-slate-300 font-bold">Hors attente</span>
-                                    <span className="font-mono font-bold text-slate-100">{(row.balance + row.pendingAmount).toFixed(2)}€</span>
-                                  </div>
-                                  <p className="text-slate-400 text-[9px] italic mt-1 pt-1 border-t border-white/10">
-                                    Solde réel sans l'impact des opérations futures.
-                                  </p>
                                 </div>
                               }
                               icon={<Calculator size={9} className="text-slate-400 hover:text-slate-600" />}
                               widthClass="w-48"
-                            />
-                          </div>
-                        )}
-                        {/* Opérations réelles (pointées) */}
-                        {row.paidAmount !== undefined && row.paidStandard !== undefined && row.paidExtra !== undefined && (
-                          <div className="flex items-center gap-2 mt-0.5">
-                            <div className="flex items-center gap-2.5 text-[9px]">
-                              {onNavigateToPlanner && currentDate ? (
-                                <ClickableAmount
-                                  date={currentDate}
-                                  filters={{ status: "REAL", extra: "ALL", accountIds: [row.id] }}
-                                  weekNumber={activeWeek}
-                                  onNavigate={onNavigateToPlanner}
-                                  className="flex items-center gap-1 hover:bg-emerald-50 px-1 py-0.5 rounded"
-                                  title="Cliquer pour voir toutes les opérations réelles"
-                                >
-                                  <span className="text-emerald-600 font-bold">Réel:</span>
-                                  <span className="text-emerald-700 font-medium">{row.paidAmount.toFixed(2)}€</span>
-                                </ClickableAmount>
-                              ) : (
-                                <div className="flex items-center gap-1">
-                                  <span className="text-emerald-600 font-bold">Réel:</span>
-                                  <span className="text-emerald-700 font-medium">{row.paidAmount.toFixed(2)}€</span>
-                                </div>
-                              )}
-                              <span className="text-slate-300">|</span>
-                              {onNavigateToPlanner && currentDate ? (
-                                <ClickableAmount
-                                  date={currentDate}
-                                  filters={{ status: "REAL", extra: "EXCLUDE", accountIds: [row.id] }}
-                                  weekNumber={activeWeek}
-                                  onNavigate={onNavigateToPlanner}
-                                  className="flex items-center gap-1 hover:bg-blue-50 px-1 py-0.5 rounded"
-                                  title="Cliquer pour voir les opérations réelles Standard"
-                                >
-                                  <span className="text-blue-600 font-bold">Standard:</span>
-                                  <span className="text-blue-700 font-medium">{row.paidStandard.toFixed(2)}€</span>
-                                </ClickableAmount>
-                              ) : (
-                                <div className="flex items-center gap-1">
-                                  <span className="text-blue-600 font-bold">Standard:</span>
-                                  <span className="text-blue-700 font-medium">{row.paidStandard.toFixed(2)}€</span>
-                                </div>
-                              )}
-                              <span className="text-slate-300">|</span>
-                              {onNavigateToPlanner && currentDate ? (
-                                <ClickableAmount
-                                  date={currentDate}
-                                  filters={{ status: "REAL", extra: "ONLY", accountIds: [row.id] }}
-                                  weekNumber={activeWeek}
-                                  onNavigate={onNavigateToPlanner}
-                                  className="flex items-center gap-1 hover:bg-purple-50 px-1 py-0.5 rounded"
-                                  title="Cliquer pour voir les opérations réelles Extra (hors budget)"
-                                >
-                                  <span className="text-purple-600 font-bold">Extra:</span>
-                                  <span className="text-purple-700 font-medium">{row.paidExtra.toFixed(2)}€</span>
-                                </ClickableAmount>
-                              ) : (
-                                <div className="flex items-center gap-1">
-                                  <span className="text-purple-600 font-bold">Extra:</span>
-                                  <span className="text-purple-700 font-medium">{row.paidExtra.toFixed(2)}€</span>
-                                </div>
-                              )}
-                            </div>
-                            <MobileTooltip
-                              text={
-                                <div className="space-y-1.5 text-[10px]">
-                                  <p className="font-bold text-emerald-300 border-b border-white/10 pb-1 mb-1">Opérations réelles</p>
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-emerald-300 font-bold">Réel</span>
-                                    <span className="text-slate-300">Toutes les opérations validées</span>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-blue-300 font-bold">Standard</span>
-                                    <span className="text-slate-300">Part dans le budget</span>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-purple-300 font-bold">Extra</span>
-                                    <span className="text-slate-300">Part hors budget</span>
-                                  </div>
-                                  <p className="text-slate-400 text-[9px] italic mt-1 pt-1 border-t border-white/10">Ces montants ont déjà impacté le solde.</p>
-                                </div>
-                              }
-                              icon={<Calculator size={10} className="text-slate-400 hover:text-slate-600" />}
-                              widthClass="w-56"
-                            />
-                          </div>
-                        )}
-                        {/* Opérations en attente (vision rapide du futur) */}
-                        {row.pendingAmount !== undefined && row.pendingStandard !== undefined && row.pendingExtra !== undefined && (
-                          <div className="flex items-center gap-2 mt-1">
-                            <div className="flex items-center gap-2.5 text-[9px]">
-                              {onNavigateToPlanner && currentDate ? (
-                                <ClickableAmount
-                                  date={currentDate}
-                                  filters={{ status: "WAITING", extra: "ALL", accountIds: [row.id] }}
-                                  weekNumber={activeWeek}
-                                  onNavigate={onNavigateToPlanner}
-                                  className="flex items-center gap-1 hover:bg-amber-50 px-1 py-0.5 rounded"
-                                  title="Cliquer pour voir toutes les opérations en attente"
-                                >
-                                  <span className="text-amber-600 font-bold">En attente:</span>
-                                  <span className="text-amber-700 font-medium">{row.pendingAmount.toFixed(2)}€</span>
-                                </ClickableAmount>
-                              ) : (
-                                <div className="flex items-center gap-1">
-                                  <span className="text-amber-600 font-bold">En attente:</span>
-                                  <span className="text-amber-700 font-medium">{row.pendingAmount.toFixed(2)}€</span>
-                                </div>
-                              )}
-                              <span className="text-slate-300">|</span>
-                              {onNavigateToPlanner && currentDate ? (
-                                <ClickableAmount
-                                  date={currentDate}
-                                  filters={{ status: "WAITING", extra: "EXCLUDE", accountIds: [row.id] }}
-                                  weekNumber={activeWeek}
-                                  onNavigate={onNavigateToPlanner}
-                                  className="flex items-center gap-1 hover:bg-slate-50 px-1 py-0.5 rounded"
-                                  title="Cliquer pour voir les opérations Standard en attente"
-                                >
-                                  <span className="text-slate-500 font-bold">Standard:</span>
-                                  <span className="text-slate-700 font-medium">{row.pendingStandard.toFixed(2)}€</span>
-                                </ClickableAmount>
-                              ) : (
-                                <div className="flex items-center gap-1">
-                                  <span className="text-slate-500 font-bold">Standard:</span>
-                                  <span className="text-slate-700 font-medium">{row.pendingStandard.toFixed(2)}€</span>
-                                </div>
-                              )}
-                              <span className="text-slate-300">|</span>
-                              {onNavigateToPlanner && currentDate ? (
-                                <ClickableAmount
-                                  date={currentDate}
-                                  filters={{ status: "WAITING", extra: "ONLY", accountIds: [row.id] }}
-                                  weekNumber={activeWeek}
-                                  onNavigate={onNavigateToPlanner}
-                                  className="flex items-center gap-1 hover:bg-rose-50 px-1 py-0.5 rounded"
-                                  title="Cliquer pour voir les opérations Extra en attente"
-                                >
-                                  <span className="text-rose-500 font-bold">Extra:</span>
-                                  <span className="text-rose-700 font-medium">{row.pendingExtra.toFixed(2)}€</span>
-                                </ClickableAmount>
-                              ) : (
-                                <div className="flex items-center gap-1">
-                                  <span className="text-rose-500 font-bold">Extra:</span>
-                                  <span className="text-rose-700 font-medium">{row.pendingExtra.toFixed(2)}€</span>
-                                </div>
-                              )}
-                            </div>
-                            <MobileTooltip
-                              text={
-                                <div className="space-y-1.5 text-[10px]">
-                                  <p className="font-bold text-amber-300 border-b border-white/10 pb-1 mb-1">Opérations en attente</p>
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-amber-300 font-bold">Total</span>
-                                    <span className="text-slate-300">Toutes les opérations à venir</span>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-slate-300 font-bold">Standard</span>
-                                    <span className="text-slate-300">Part dans le budget</span>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-rose-300 font-bold">Extra</span>
-                                    <span className="text-slate-300">Part hors budget</span>
-                                  </div>
-                                  <p className="text-slate-400 text-[9px] italic mt-1 pt-1 border-t border-white/10">
-                                    Le solde actuel inclut déjà ces opérations.
-                                  </p>
-                                </div>
-                              }
-                              icon={<Calculator size={10} className="text-slate-400 hover:text-slate-600" />}
-                              widthClass="w-56"
                             />
                           </div>
                         )}
@@ -465,73 +356,73 @@ export const BalancesTable: React.FC<BalancesTableProps> = ({
                                 {row.isJoint ? (
                                   // Explication pour compte joint
                                   <>
-                                    <p className="font-bold text-indigo-200 border-b border-white/10 pb-1">Calcul du virement reçu :</p>
+                                    <p className="font-bold text-indigo-800 border-b border-slate-200 pb-1">Calcul du virement reçu :</p>
 
                                     <div className="space-y-1">
                                       <div className="flex justify-between gap-3">
-                                        <span className="text-slate-300">Dettes en attente :</span>
-                                        <span className="font-mono font-bold text-white">{row.calculation.jointDebts?.toFixed(2)}€</span>
+                                        <span className="text-slate-800">Dettes en attente :</span>
+                                        <span className="font-mono font-bold text-slate-950">{row.calculation.jointDebts?.toFixed(2)}€</span>
                                       </div>
                                       <div className="flex justify-between gap-3">
-                                        <span className="text-slate-300">Solde actuel :</span>
-                                        <span className="font-mono font-bold text-white">{row.balance.toFixed(2)}€</span>
+                                        <span className="text-slate-800">Solde actuel :</span>
+                                        <span className="font-mono font-bold text-slate-950">{row.balance.toFixed(2)}€</span>
                                       </div>
-                                      <div className="flex justify-between gap-3 border-t border-white/10 pt-1 font-bold">
-                                        <span className="text-indigo-200">Gap (besoin) :</span>
-                                        <span className="font-mono text-indigo-200">{row.calculation.jointGap?.toFixed(2)}€</span>
+                                      <div className="flex justify-between gap-3 border-t border-slate-200 pt-1 font-bold">
+                                        <span className="text-indigo-800">Gap (besoin) :</span>
+                                        <span className="font-mono text-indigo-800">{row.calculation.jointGap?.toFixed(2)}€</span>
                                       </div>
                                     </div>
 
-                                    <div className="border-t border-white/10 pt-2 space-y-1">
-                                      <p className="text-slate-300 text-[10px] uppercase tracking-wide">Couvert par :</p>
+                                    <div className="border-t border-slate-200 pt-2 space-y-1">
+                                      <p className="text-slate-800 text-[10px] uppercase tracking-wide font-semibold">Couvert par :</p>
                                       <div className="flex justify-between gap-3">
-                                        <span className="text-emerald-300">Excédents C. Persos :</span>
-                                        <span className="font-mono font-bold text-emerald-300">{row.calculation.fromPersonals?.toFixed(2)}€</span>
+                                        <span className="text-emerald-800">Excédents C. Persos :</span>
+                                        <span className="font-mono font-bold text-emerald-800">{row.calculation.fromPersonals?.toFixed(2)}€</span>
                                       </div>
                                       {row.calculation.fromLdds && row.calculation.fromLdds > 0 ? (
                                         <div className="flex justify-between gap-3">
-                                          <span className="text-amber-300">Complément LDDS :</span>
-                                          <span className="font-mono font-bold text-amber-300">{row.calculation.fromLdds.toFixed(2)}€</span>
+                                          <span className="text-amber-800">Complément LDDS :</span>
+                                          <span className="font-mono font-bold text-amber-800">{row.calculation.fromLdds.toFixed(2)}€</span>
                                         </div>
                                       ) : (
-                                        <p className="text-emerald-300 text-[10px] italic">✓ Pas besoin du LDDS</p>
+                                        <p className="text-emerald-800 text-[10px] italic font-semibold">✓ Pas besoin du LDDS</p>
                                       )}
                                     </div>
                                   </>
                                 ) : (
                                   // Explication pour comptes personnels
                                   <>
-                                    <p className="font-bold text-indigo-200 border-b border-white/10 pb-1">Calcul de la contribution :</p>
+                                    <p className="font-bold text-indigo-800 border-b border-slate-200 pb-1">Calcul de la contribution :</p>
 
                                     <div className="space-y-1">
                                       <div className="flex justify-between gap-3">
-                                        <span className="text-slate-300">Solde actuel :</span>
-                                        <span className="font-mono font-bold text-white">{row.balance.toFixed(2)}€</span>
+                                        <span className="text-slate-800">Solde actuel :</span>
+                                        <span className="font-mono font-bold text-slate-950">{row.balance.toFixed(2)}€</span>
                                       </div>
                                       {row.calculation.sharePercent !== undefined && (
                                         <div className="flex justify-between gap-3">
-                                          <span className="text-slate-300">Part du total :</span>
-                                          <span className="font-mono font-bold text-indigo-200">{row.calculation.sharePercent.toFixed(1)}%</span>
+                                          <span className="text-slate-800">Part du total :</span>
+                                          <span className="font-mono font-bold text-indigo-800">{row.calculation.sharePercent.toFixed(1)}%</span>
                                         </div>
                                       )}
                                       {row.calculation.theoreticalAmount !== undefined && (
                                         <div className="flex justify-between gap-3">
-                                          <span className="text-slate-300">Montant théorique :</span>
-                                          <span className="font-mono text-slate-300">{row.calculation.theoreticalAmount.toFixed(2)}€</span>
+                                          <span className="text-slate-800">Montant théorique :</span>
+                                          <span className="font-mono text-slate-800">{row.calculation.theoreticalAmount.toFixed(2)}€</span>
                                         </div>
                                       )}
                                     </div>
 
-                                    <div className="border-t border-white/10 pt-2">
+                                    <div className="border-t border-slate-200 pt-2">
                                       {row.calculation.isContributor ? (
-                                        <div className="bg-emerald-500/20 border border-emerald-400/30 rounded p-2">
-                                          <p className="text-emerald-200 text-[10px] font-bold mb-1">✓ CONTRIBUTEUR</p>
-                                          <p className="text-slate-300 text-[10px]">Montant ≥ 10€ : contribue au virement vers le compte joint.</p>
+                                        <div className="bg-emerald-50 border border-emerald-200 rounded p-2">
+                                          <p className="text-emerald-800 text-[10px] font-bold mb-1">✓ CONTRIBUTEUR</p>
+                                          <p className="text-slate-800 text-[10px]">Montant ≥ 10€ : contribue au virement vers le compte joint.</p>
                                         </div>
                                       ) : (
-                                        <div className="bg-amber-500/20 border border-amber-400/30 rounded p-2">
-                                          <p className="text-amber-200 text-[10px] font-bold mb-1">○ NON-CONTRIBUTEUR</p>
-                                          <p className="text-slate-300 text-[10px]">Montant {"<"} 10€ : redistribué aux autres comptes contributeurs.</p>
+                                        <div className="bg-amber-50 border border-amber-200 rounded p-2">
+                                          <p className="text-amber-800 text-[10px] font-bold mb-1">○ NON-CONTRIBUTEUR</p>
+                                          <p className="text-slate-800 text-[10px]">Montant {"<"} 10€ : redistribué aux autres comptes contributeurs.</p>
                                         </div>
                                       )}
                                     </div>

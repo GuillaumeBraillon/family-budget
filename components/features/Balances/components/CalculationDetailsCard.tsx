@@ -224,7 +224,7 @@ const DetailRow: React.FC<DetailRowProps> = ({ label, value, tooltip, color = "s
     <div className={`flex items-center justify-between p-2 rounded-lg ${bgColorClasses[color]}`}>
       <div className="flex items-center gap-2 flex-1">
         <span className={`text-xs ${isBold ? "font-bold" : "font-medium"} ${colorClasses[color]}`}>{label}</span>
-        <MobileTooltip text={tooltip} icon={<Info size={12} className="text-slate-400 hover:text-slate-600" />} widthClass="w-64" />
+        <MobileTooltip text={tooltip} icon={<Info size={12} className="text-slate-600 hover:text-slate-800" />} widthClass="w-64" />
       </div>
       <span className={`text-xs ${isBold ? "font-black" : "font-bold"} ${colorClasses[color]} font-mono`}>
         {isNegative && value > 0 ? "- " : ""}

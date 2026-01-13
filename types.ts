@@ -214,7 +214,7 @@ export interface OperationFilters {
   flux: "EXPENSE" | "INCOME" | "ALL";
   source: "RECURRING" | "VARIABLE" | "ALL";
   status: "WAITING" | "REAL" | "ALL";
-  extra: "ALL" | "ONLY" | "EXCLUDE";
+  nature: "ALL" | "ONLY" | "EXCLUDE";
   transfer: "ALL" | "ONLY" | "EXCLUDE";
   salary: "ALL" | "ONLY" | "EXCLUDE";
   accountIds: string[];

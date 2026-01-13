@@ -99,7 +99,7 @@ export const DataListRow: React.FC<DataListRowProps> = ({
           {badge}
           {comments && (
             <div onClick={(e) => e.stopPropagation()} className="inline-flex items-center">
-              <MobileTooltip text={comments} icon={<Info size={12} className="text-indigo-400 hover:text-indigo-600" />} widthClass="w-48" />
+              <MobileTooltip text={comments} icon={<Info size={12} className="text-indigo-600 hover:text-indigo-800" />} widthClass="w-48" />
             </div>
           )}
         </div>

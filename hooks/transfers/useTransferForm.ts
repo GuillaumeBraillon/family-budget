@@ -125,8 +125,12 @@ export const useTransferForm = ({ editingTransfer, accounts, savedLabels = [], d
   const [amount, setAmount] = useState<string>("");
   const [isInterest, setIsInterest] = useState<boolean>(false);
 
-  const [sourceAccountId, setSourceAccountId] = useState(accounts[0]?.id || "");
-  const [destinationAccountId, setDestinationAccountId] = useState(accounts[1]?.id || accounts[0]?.id || "");
+  // Initialisation intelligente : Privilégier le compte joint comme source par défaut
+  const defaultSourceId = accounts.find((a) => a.isJoint)?.id || accounts[0]?.id || "";
+  const defaultDestId = accounts.find((a) => !a.isJoint)?.id || accounts[1]?.id || accounts[0]?.id || "";
+
+  const [sourceAccountId, setSourceAccountId] = useState(defaultSourceId);
+  const [destinationAccountId, setDestinationAccountId] = useState(defaultDestId);
 
   // --- COMPUTED VALUES ---
 
@@ -189,8 +193,12 @@ export const useTransferForm = ({ editingTransfer, accounts, savedLabels = [], d
     setAmount("");
     setIsInterest(false);
     if (accounts.length > 0) {
-      setSourceAccountId(accounts[0].id);
-      setDestinationAccountId(accounts[1]?.id || accounts[0].id);
+      // Initialisation intelligente : Privilégier le compte joint comme source
+      const jointAccount = accounts.find((a) => a.isJoint);
+      const firstNonJoint = accounts.find((a) => !a.isJoint);
+
+      setSourceAccountId(jointAccount?.id || accounts[0].id);
+      setDestinationAccountId(firstNonJoint?.id || accounts[1]?.id || accounts[0].id);
     }
     setValidationErrors([]);
   }, [defaultDate, accounts]);
@@ -221,6 +229,22 @@ export const useTransferForm = ({ editingTransfer, accounts, savedLabels = [], d
     }
   }, [isOpen, editingTransfer, resetForm]);
 
+  /**
+   * Ajustement automatique de la destination si on sélectionne un compte ÉPARGNE comme source.
+   * Force la destination vers le compte joint (pivot) pour respecter la règle métier.
+   */
+  useEffect(() => {
+    const srcAccount = accounts.find((a) => a.id === sourceAccountId);
+    const destAccount = accounts.find((a) => a.id === destinationAccountId);
+    const jointAccount = accounts.find((a) => a.isJoint);
+
+    // Si source = ÉPARGNE et destination actuelle n'est pas le compte joint
+    if (srcAccount && srcAccount.type === AccountType.SAVINGS && destAccount && !destAccount.isJoint && jointAccount) {
+      // Forcer la destination vers le compte joint
+      setDestinationAccountId(jointAccount.id);
+    }
+  }, [sourceAccountId, destinationAccountId, accounts]);
+
   // --- VALIDATION & SOUMISSION ---
 
   /**
@@ -228,14 +252,17 @@ export const useTransferForm = ({ editingTransfer, accounts, savedLabels = [], d
    *
    * @description
    * 1. Valide tous les champs obligatoires
-   * 2. Construit l'objet Transfer
-   * 3. Appelle onSuccess si validation OK
+   * 2. Valide les règles métier (pivot obligatoire pour épargne)
+   * 3. Construit l'objet Transfer
+   * 4. Appelle onSuccess si validation OK
    *
    * **Règles de validation :**
    * - Libellé non vide
    * - Montant > 0
    * - Compte source renseigné
    * - Compte destination renseigné et différent de source
+   * - **RÈGLE PIVOT** : Si source = ÉPARGNE → destination DOIT être compte joint (pivot)
+   * - **RÈGLE PIVOT** : Si destination = ÉPARGNE → source DOIT être compte joint (pivot)
    *
    * @param {() => void} onSuccess - Callback appelé après validation réussie
    * @returns {Transfer | null} Transfer construit ou null si erreur
@@ -260,6 +287,33 @@ export const useTransferForm = ({ editingTransfer, accounts, savedLabels = [], d
     if (!sourceAccountId) errors.push("Le compte source est obligatoire");
     if (!destinationAccountId) errors.push("Le compte de destination est obligatoire");
     if (sourceAccountId === destinationAccountId) errors.push("Le compte source et destination ne peuvent pas être identiques");
+
+    // VALIDATION RÈGLE PIVOT : Virements depuis/vers ÉPARGNE
+    const srcAccount = accounts.find((a) => a.id === sourceAccountId);
+    const destAccount = accounts.find((a) => a.id === destinationAccountId);
+    const jointAccount = accounts.find((a) => a.isJoint);
+
+    if (srcAccount && srcAccount.type === AccountType.SAVINGS) {
+      // Si source = ÉPARGNE → destination DOIT être le compte joint
+      if (!destAccount?.isJoint) {
+        errors.push(
+          `Les virements depuis un compte d'épargne (${srcAccount.name}) doivent OBLIGATOIREMENT aller vers le compte joint${
+            jointAccount ? ` (${jointAccount.name})` : ""
+          }.`
+        );
+      }
+    }
+
+    if (destAccount && destAccount.type === AccountType.SAVINGS) {
+      // Si destination = ÉPARGNE → source DOIT être le compte joint
+      if (!srcAccount?.isJoint) {
+        errors.push(
+          `Les virements vers un compte d'épargne (${destAccount.name}) doivent OBLIGATOIREMENT provenir du compte joint${
+            jointAccount ? ` (${jointAccount.name})` : ""
+          }.`
+        );
+      }
+    }
 
     // Si erreurs, arrêt de la soumission
     if (errors.length > 0) {
