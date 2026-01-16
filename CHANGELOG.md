@@ -7,6 +7,121 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.6.8] - 2026-01-16
+
+### 🎯 Nouvelles Fonctionnalités
+
+#### **Montants Cliquables avec Filtres Centralisés dans Dashboard**
+
+Ajout de la navigation contextuelle depuis les deux tableaux du Dashboard vers la vue Opérations avec filtres automatiques.
+
+**Tableaux Concernés** :
+
+1. **"Analyse Complète (Réel)"** (AnnualIncomeAnalysis)
+   - Revenus récurrents/variables
+   - Dépenses récurrentes/variables
+   - Totaux par période
+   - Filtres : status=REAL, salary=EXCLUDE, transfer=ALL
+
+2. **"Trésorerie Globale & Épargne"** (GlobalMonthlyAnalysis)
+   - Salaires (Réel)
+   - Autres Revenus
+   - Total Entrées
+   - Dépenses (Réel)
+   - Filtres : status=REAL, column-specific salary rules
+
+**Architecture** :
+
+- **Fonction centralisée** : `getDetailedAnalysisFilters(flux, source)` dans `useDashboardData.ts`
+- **Fonction globale** : `getGlobalAnalysisFilters(column)` avec type `GlobalAnalysisColumn`
+- **Composant UI** : `ClickableAmount` pour affordance visuelle (soulignement au hover)
+- **Gestion des salaires** :
+  - Analyse Complète : salary=EXCLUDE (salaires dans tableau séparé)
+  - Trésorerie Globale : salary=ONLY | EXCLUDE | ALL (selon colonne)
+
+**Bénéfices** :
+
+- ✅ **Source de vérité unique** : Calculs et filtres de navigation colocalisés
+- ✅ **DRY** : Pas de duplication des définitions de filtres
+- ✅ **Type-safe** : Enums empêchent les erreurs
+- ✅ **Auto-documenté** : JSDoc explique les règles métier
+
+### 🔧 Améliorations
+
+#### **Sélecteur d'Année Centralisé dans DashboardHeader**
+
+Déplacement du sélecteur d'année du tableau "Analyse Complète" vers le header global du Dashboard.
+
+**Avant** :
+
+- Sélecteur dans chaque tableau (duplication)
+- Bouton "Gérer l'échéancier" dans DashboardHeader
+
+**Après** :
+
+- Sélecteur d'année unique en haut du Dashboard
+- Contrôle toutes les vues annuelles (GlobalMonthlyAnalysis + AnnualIncomeAnalysis)
+- Navigation cohérente entre les sections
+
+#### **Scope Intelligent dans OperationsView**
+
+Amélioration de l'initialisation du scope (Mois/Période) selon le contexte de navigation.
+
+**Logique** :
+
+- Si `initialWeek` fourni (navigation depuis AnnualIncomeAnalysis) → scope = "PERIOD"
+- Si `initialWeek` absent (navigation depuis GlobalMonthlyAnalysis) → scope = "MONTH"
+
+**Impact** :
+
+- Navigation depuis GlobalMonthlyAnalysis affiche maintenant le mois complet par défaut
+- Plus besoin de changer manuellement le scope après navigation
+
+### 🐛 Corrections de Bugs
+
+#### **Correction Import ClickableAmount dans GlobalMonthlyAnalysis**
+
+Correction du chemin d'import relatif pour le composant `ClickableAmount`.
+
+**Erreur Vite** :
+
+```
+Failed to resolve import "../ClickableAmount" from "components/features/Dashboard/components/charts/GlobalMonthlyAnalysis.tsx"
+```
+
+**Correction** :
+
+- Chemin erroné : `../ClickableAmount`
+- Chemin correct : `../../../../ui/atoms/ClickableAmount`
+
+### 📦 Exports & Architecture
+
+#### **Nouveaux Exports dans hooks/dashboard/index.ts**
+
+Ajout des fonctions de filtrage centralisées pour utilisation dans les composants.
+
+**Exports ajoutés** :
+
+- `getDetailedAnalysisFilters` : Filtres pour Analyse Complète
+- `getGlobalAnalysisFilters` : Filtres pour Trésorerie Globale
+- Type `GlobalAnalysisColumn` : Enum des colonnes ("salaries" | "otherIncome" | "totalIncome" | "expenses")
+
+### 📝 Documentation Technique
+
+#### **JSDoc Complet pour Fonctions de Filtrage**
+
+Documentation détaillée des règles métier et exemples d'usage pour les fonctions de filtrage.
+
+**Documentation inclut** :
+
+- Description de la logique de filtrage
+- Paramètres avec explications
+- Exemples d'utilisation
+- Règles métier (pourquoi salary=EXCLUDE vs ALL)
+- Type de retour avec structure complète
+
+---
+
 ## [2.6.7] - 2026-01-13
 
 ### 🚀 Changements Majeurs

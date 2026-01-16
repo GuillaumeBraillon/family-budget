@@ -3,6 +3,7 @@ import { Card } from "../../../../ui/Card";
 import { ChevronLeft, ChevronRight, CalendarClock, ShoppingBag, ArrowUpRight, ArrowDownLeft, Scale } from "lucide-react";
 import { ClickableAmount } from "../../../../ui/atoms/ClickableAmount";
 import { OperationFilters } from "../../../../../types";
+import { getDetailedAnalysisFilters } from "../../../../../hooks/dashboard/useDashboardData";
 
 interface PeriodData {
   period: { id: number; label: string; start: number; end: number };
@@ -39,16 +40,6 @@ export const AnnualIncomeAnalysis: React.FC<AnnualIncomeAnalysisProps> = ({ data
         <h3 className="text-sm font-bold text-slate-700 uppercase tracking-widest flex items-center gap-2">
           <Scale size={16} className="text-indigo-600" /> Analyse Complète (Réel)
         </h3>
-
-        <div className="flex items-center gap-2 bg-white rounded-lg p-1 border border-slate-200 shadow-sm">
-          <button onClick={() => onYearChange(year - 1)} className="p-1 hover:bg-slate-100 rounded-md transition-colors text-slate-600">
-            <ChevronLeft size={16} />
-          </button>
-          <span className="text-xs font-bold text-slate-900 px-2 min-w-[40px] text-center">{year}</span>
-          <button onClick={() => onYearChange(year + 1)} className="p-1 hover:bg-slate-100 rounded-md transition-colors text-slate-600">
-            <ChevronRight size={16} />
-          </button>
-        </div>
       </div>
 
       <div className="overflow-x-auto">
@@ -162,11 +153,11 @@ export const AnnualIncomeAnalysis: React.FC<AnnualIncomeAnalysisProps> = ({ data
                     <td className="px-4 py-2 text-right bg-emerald-100/30 font-black text-emerald-700 border-l border-slate-200">+{totInc.toFixed(2)} €</td>
                   </tr>
 
-                  {/* LIGNE 4 : DÉPENSES FIXES */}
+                  {/* LIGNE 4 : DÉPENSES RÉCURRENTES */}
                   <tr className="group hover:bg-rose-50/10 transition-colors">
                     <td className="px-3 py-1.5 border-r border-slate-50">
                       <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-slate-500 font-medium text-[10px] w-full">
-                        <CalendarClock size={10} /> Dép. Fixes
+                        <CalendarClock size={10} /> Dép. Récurrentes
                       </span>
                     </td>
                     {periodsHeader.map((p, idx) => (
@@ -277,10 +268,7 @@ const renderCell = (
   return (
     <ClickableAmount
       date={date}
-      filters={{
-        status: "REAL",
-        nature: "ALL",
-      }}
+      filters={getDetailedAnalysisFilters(flux, source)}
       weekNumber={periodId}
       onNavigate={onNavigate}
       className={`hover:underline ${colorClass || ""}`}

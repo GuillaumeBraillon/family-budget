@@ -78,10 +78,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     <div className="space-y-6 animate-in fade-in duration-500">
       <SavingsSummaryCard accounts={accounts} transfers={transfers} paidItems={paidItems} />
 
-      <DashboardHeader currentDate={new Date()} onNavigateToPlanner={() => onNavigateToPlanner(new Date())} />
+      <DashboardHeader currentDate={new Date()} year={selectedYear} onYearChange={setSelectedYear} />
 
       {/* SECTION MACRO : CASHFLOW GLOBAL (Salaires inclus) */}
-      <GlobalMonthlyAnalysis data={globalMonthlyData} year={selectedYear} />
+      <GlobalMonthlyAnalysis data={globalMonthlyData} year={selectedYear} onNavigateToPlanner={onNavigateToPlanner} />
 
       {/* SECTION MICRO : ANALYSE PAR PÉRIODE (Salaires exclus) */}
       <AnnualIncomeAnalysis data={annualData} year={selectedYear} onYearChange={setSelectedYear} onNavigateToPlanner={onNavigateToPlanner} />

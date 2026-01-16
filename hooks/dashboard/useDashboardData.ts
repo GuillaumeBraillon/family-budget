@@ -32,7 +32,140 @@
  */
 import { useMemo, useCallback } from "react";
 import { getDaysInMonth } from "date-fns";
-import { Account, ExpenseConfig, IncomeConfig, PaidItemDetails, AppSettings, VariableTransaction, CategoryDef, AccountType } from "../../types";
+import {
+  Account,
+  ExpenseConfig,
+  IncomeConfig,
+  PaidItemDetails,
+  AppSettings,
+  VariableTransaction,
+  CategoryDef,
+  AccountType,
+  OperationFilters,
+} from "../../types";
+
+/**
+ * Retourne les filtres standards pour le tableau "Analyse Complète (Réel)".
+ *
+ * @description
+ * Fonction helper qui garantit la cohérence entre :
+ * - Les calculs dans useDashboardData (données affichées)
+ * - Les filtres de navigation dans AnnualIncomeAnalysis (ClickableAmount)
+ *
+ * **Règles de filtrage :**
+ * - Statut : REAL uniquement (opérations pointées)
+ * - Salaires : EXCLUS (tableau séparé "Trésorerie Globale")
+ * - Virements internes : INCLUS (flux complet)
+ * - Nature : TOUT (Standard + Extra)
+ *
+ * @param {("EXPENSE" | "INCOME")} flux - Type de flux (dépenses/revenus)
+ * @param {("RECURRING" | "VARIABLE" | "ALL")} source - Source des opérations
+ * @returns {OperationFilters} Filtres complets pour navigation
+ *
+ * @example
+ * ```tsx
+ * // Dans AnnualIncomeAnalysis
+ * const filters = getDetailedAnalysisFilters("INCOME", "RECURRING");
+ * <ClickableAmount filters={filters} />
+ * ```
+ */
+export const getDetailedAnalysisFilters = (flux: "EXPENSE" | "INCOME", source: "RECURRING" | "VARIABLE" | "ALL"): OperationFilters => ({
+  flux,
+  source,
+  status: "REAL", // Uniquement opérations pointées (cohérent avec titre "Réel")
+  nature: "ALL", // Inclut Standard + Extra
+  transfer: "ALL", // Inclut virements internes (flux complet)
+  salary: "EXCLUDE", // Salaires dans tableau séparé "Trésorerie Globale"
+  accountIds: [],
+  beneficiaryIds: [],
+  includedTagIds: [],
+  excludedTagIds: [],
+  tagPresence: "ALL",
+});
+
+/**
+ * Type de colonne pour le tableau "Trésorerie Globale & Épargne".
+ * Chaque colonne a ses propres règles de filtrage spécifiques.
+ */
+export type GlobalAnalysisColumn = "salaries" | "otherIncome" | "totalIncome" | "expenses";
+
+/**
+ * Retourne les filtres standards pour le tableau "Trésorerie Globale & Épargne".
+ *
+ * @description
+ * Fonction helper qui garantit la cohérence entre :
+ * - Les calculs dans globalMonthlyData (données affichées)
+ * - Les filtres de navigation dans GlobalMonthlyAnalysis (ClickableAmount)
+ *
+ * **Règles par colonne :**
+ * - **Salaries** : Revenus récurrents pointés avec isSalary=true
+ * - **OtherIncome** : Revenus (récurrents + variables) HORS salaires
+ * - **TotalIncome** : Tous les revenus (avec salaires)
+ * - **Expenses** : Toutes les dépenses (récurrentes + variables)
+ *
+ * @param {GlobalAnalysisColumn} column - Colonne du tableau
+ * @returns {OperationFilters} Filtres complets pour navigation
+ *
+ * @example
+ * ```tsx
+ * // Dans GlobalMonthlyAnalysis
+ * const filters = getGlobalAnalysisFilters("salaries");
+ * <ClickableAmount filters={filters} />
+ * ```
+ */
+export const getGlobalAnalysisFilters = (column: GlobalAnalysisColumn): OperationFilters => {
+  // Base commune pour toutes les colonnes
+  const baseFilters: OperationFilters = {
+    flux: "INCOME",
+    source: "ALL",
+    status: "REAL", // Uniquement opérations pointées (titre "Réel")
+    nature: "ALL",
+    transfer: "ALL", // Inclut virements internes
+    salary: "ALL",
+    accountIds: [],
+    beneficiaryIds: [],
+    includedTagIds: [],
+    excludedTagIds: [],
+    tagPresence: "ALL",
+  };
+
+  switch (column) {
+    case "salaries":
+      return {
+        ...baseFilters,
+        flux: "INCOME",
+        source: "RECURRING", // Salaires sont toujours récurrents
+        salary: "ONLY", // Uniquement les salaires
+      };
+
+    case "otherIncome":
+      return {
+        ...baseFilters,
+        flux: "INCOME",
+        source: "ALL", // Récurrents + Variables
+        salary: "EXCLUDE", // SANS les salaires
+      };
+
+    case "totalIncome":
+      return {
+        ...baseFilters,
+        flux: "INCOME",
+        source: "ALL",
+        salary: "ALL", // TOUS les revenus
+      };
+
+    case "expenses":
+      return {
+        ...baseFilters,
+        flux: "EXPENSE",
+        source: "ALL", // Récurrentes + Variables
+        salary: "EXCLUDE", // Les salaires ne sont pas des dépenses
+      };
+
+    default:
+      return baseFilters;
+  }
+};
 
 /**
  * Interface des données mensuelles globales (macro).

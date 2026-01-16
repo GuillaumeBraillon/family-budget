@@ -126,6 +126,13 @@ const AppContent: React.FC = () => {
     setCurrentView("planner");
   };
 
+  // Effacer le contexte de navigation quand on quitte Operations
+  useEffect(() => {
+    if (currentView !== "planner" && plannerContext !== null) {
+      setPlannerContext(null);
+    }
+  }, [currentView, plannerContext]);
+
   const handleResetConnection = () => {
     localStorage.removeItem("SUPABASE_PROJECT_ID");
     localStorage.removeItem("SUPABASE_ANON_KEY");

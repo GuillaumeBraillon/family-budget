@@ -1,6 +1,9 @@
 import React from "react";
 import { Card } from "../../../../ui/Card";
 import { Landmark } from "lucide-react";
+import { ClickableAmount } from "../../../../ui/atoms/ClickableAmount";
+import { getGlobalAnalysisFilters } from "../../../../../hooks/dashboard";
+import { OperationFilters } from "../../../../../types";
 
 interface MonthlyGlobalData {
   monthName: string;
@@ -15,9 +18,10 @@ interface MonthlyGlobalData {
 interface GlobalMonthlyAnalysisProps {
   data: MonthlyGlobalData[];
   year: number;
+  onNavigateToPlanner: (date: Date, filters?: Partial<OperationFilters>, weekNumber?: number) => void;
 }
 
-export const GlobalMonthlyAnalysis: React.FC<GlobalMonthlyAnalysisProps> = ({ data, year }) => {
+export const GlobalMonthlyAnalysis: React.FC<GlobalMonthlyAnalysisProps> = ({ data, year, onNavigateToPlanner }) => {
   // Filtrer les mois vides (futur ou pas de données)
   const activeMonths = data.filter((m) => m.totalIncome > 0 || m.expenses > 0);
 
@@ -34,10 +38,10 @@ export const GlobalMonthlyAnalysis: React.FC<GlobalMonthlyAnalysisProps> = ({ da
           <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200 uppercase tracking-wider">
             <tr>
               <th className="px-4 py-3">Mois</th>
-              <th className="px-3 py-3 text-right text-emerald-600 bg-emerald-50/30">Salaires (Réel)</th>
+              <th className="px-3 py-3 text-right text-emerald-600 bg-emerald-50/30">Salaires</th>
               <th className="px-3 py-3 text-right text-emerald-600/70">Autres Rev.</th>
               <th className="px-3 py-3 text-right font-bold text-emerald-700 border-r border-slate-100">Total Entrées</th>
-              <th className="px-3 py-3 text-right text-rose-600">Dépenses (Réel)</th>
+              <th className="px-3 py-3 text-right text-rose-600">Dépenses </th>
               <th className="px-3 py-3 text-right font-black text-slate-800 bg-slate-50/50">Cashflow Net</th>
               <th className="px-3 py-3 text-right text-indigo-600">Capacité Épargne</th>
             </tr>
@@ -52,15 +56,40 @@ export const GlobalMonthlyAnalysis: React.FC<GlobalMonthlyAnalysisProps> = ({ da
             )}
             {activeMonths.map((m, idx) => {
               const isPos = m.balance >= 0;
+              // Calculer la date du mois pour la navigation
+              const monthDate = new Date(year, idx, 1);
+
               return (
                 <tr key={idx} className="hover:bg-slate-50 transition-colors group">
                   <td className="px-4 py-3 font-bold text-slate-700 capitalize">{m.monthName}</td>
                   <td className="px-3 py-3 text-right bg-emerald-50/10 group-hover:bg-emerald-50/30 font-medium text-emerald-700">
-                    {m.salaries > 0 ? m.salaries.toFixed(2) + " €" : "-"}
+                    {m.salaries > 0 ? (
+                      <ClickableAmount date={monthDate} filters={getGlobalAnalysisFilters("salaries")} onNavigate={onNavigateToPlanner}>
+                        {m.salaries.toFixed(2)} €
+                      </ClickableAmount>
+                    ) : (
+                      "-"
+                    )}
                   </td>
-                  <td className="px-3 py-3 text-right text-slate-500">{m.otherIncome > 0 ? m.otherIncome.toFixed(2) + " €" : "-"}</td>
-                  <td className="px-3 py-3 text-right font-bold text-emerald-600 border-r border-slate-100">{m.totalIncome.toFixed(2)} €</td>
-                  <td className="px-3 py-3 text-right text-rose-600 font-medium">{m.expenses.toFixed(2)} €</td>
+                  <td className="px-3 py-3 text-right text-slate-500">
+                    {m.otherIncome > 0 ? (
+                      <ClickableAmount date={monthDate} filters={getGlobalAnalysisFilters("otherIncome")} onNavigate={onNavigateToPlanner}>
+                        {m.otherIncome.toFixed(2)} €
+                      </ClickableAmount>
+                    ) : (
+                      "-"
+                    )}
+                  </td>
+                  <td className="px-3 py-3 text-right font-bold text-emerald-600 border-r border-slate-100">
+                    <ClickableAmount date={monthDate} filters={getGlobalAnalysisFilters("totalIncome")} onNavigate={onNavigateToPlanner}>
+                      {m.totalIncome.toFixed(2)} €
+                    </ClickableAmount>
+                  </td>
+                  <td className="px-3 py-3 text-right text-rose-600 font-medium">
+                    <ClickableAmount date={monthDate} filters={getGlobalAnalysisFilters("expenses")} onNavigate={onNavigateToPlanner}>
+                      {m.expenses.toFixed(2)} €
+                    </ClickableAmount>
+                  </td>
                   <td
                     className={`px-3 py-3 text-right font-black bg-slate-50/50 group-hover:bg-slate-100 transition-colors ${
                       isPos ? "text-emerald-600" : "text-rose-600"

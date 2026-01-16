@@ -1,12 +1,13 @@
 import React from "react";
-import { LayoutDashboard, ArrowRight } from "lucide-react";
+import { LayoutDashboard, ChevronLeft, ChevronRight } from "lucide-react";
 
 interface DashboardHeaderProps {
   currentDate: Date;
-  onNavigateToPlanner: () => void;
+  year: number;
+  onYearChange: (year: number) => void;
 }
 
-export const DashboardHeader: React.FC<DashboardHeaderProps> = ({ currentDate, onNavigateToPlanner }) => {
+export const DashboardHeader: React.FC<DashboardHeaderProps> = ({ currentDate, year, onYearChange }) => {
   const monthLabel = new Intl.DateTimeFormat("fr-FR", { month: "long", year: "numeric" }).format(currentDate);
 
   return (
@@ -18,12 +19,13 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({ currentDate, o
         </h2>
         <p className="text-sm text-slate-500 mt-1">Vue consolidée de l'ensemble du mois en cours.</p>
       </div>
-      <div>
-        <button
-          onClick={onNavigateToPlanner}
-          className="text-xs font-bold px-4 py-2.5 bg-slate-900 text-white rounded-lg hover:bg-slate-800 flex items-center gap-2 transition-colors shadow-sm"
-        >
-          Gérer l'échéancier <ArrowRight size={14} />
+      <div className="flex items-center gap-2 bg-white rounded-lg p-1 border border-slate-200 shadow-sm">
+        <button onClick={() => onYearChange(year - 1)} className="p-1 hover:bg-slate-100 rounded-md transition-colors text-slate-600">
+          <ChevronLeft size={16} />
+        </button>
+        <span className="text-xs font-bold text-slate-900 px-2 min-w-[40px] text-center">{year}</span>
+        <button onClick={() => onYearChange(year + 1)} className="p-1 hover:bg-slate-100 rounded-md transition-colors text-slate-600">
+          <ChevronRight size={16} />
         </button>
       </div>
     </div>

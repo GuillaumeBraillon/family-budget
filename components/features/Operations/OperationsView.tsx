@@ -80,7 +80,7 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
   const ui = usePlannerUI(initialDate, initialWeek);
   const { filters, setFilters, resetFilters } = useOperationsFilters(initialFilters);
   const { sortKey, sortOrder, setSorting, sortItems, isManualSort, sortOptions, getEffectivePosition: _getEffectivePosition } = useOperationsSorting();
-  const [scope, setScope] = useState<"MONTH" | "PERIOD">("PERIOD");
+  const [scope, setScope] = useState<"MONTH" | "PERIOD">(initialWeek !== undefined ? "PERIOD" : "MONTH");
 
   // Récupération des périodes pour le WeekSelector
   const _checkingAccounts = accounts.filter((a) => a.type === "COURANT");
