@@ -4,7 +4,6 @@ import { Wallet, Pencil, Check, X, Users, Percent, Ban, Calculator } from "lucid
 import { MobileTooltip } from "../../../ui/MobileTooltip";
 import { ClickableAmount } from "../../../ui/atoms/ClickableAmount";
 import { BalanceRow } from "../../../../hooks/balances";
-import { OperationFilters } from "../../../../types";
 
 interface BalancesTableProps {
   rows: BalanceRow[];
@@ -19,7 +18,7 @@ export const BalancesTable: React.FC<BalancesTableProps> = ({
   onUpdateBalance,
   title,
   totalRow,
-  hasCurrentAccountsSurplus = false,
+  hasCurrentAccountsSurplus: _hasCurrentAccountsSurplus = false,
   onNavigateToPlanner,
   currentDate,
   activeWeek,

@@ -1,9 +1,10 @@
 import React from "react";
-import { Plus, Trash2, Pencil, X, ChevronDown, ChevronRight, Save } from "lucide-react";
+import { Plus, Trash2, Pencil, X, ChevronDown, ChevronRight, Save, Tag } from "lucide-react";
 import { CategoryDef } from "../../../../../types";
 import { ConfirmModal } from "../../../../ui/atoms/ConfirmModal";
 import { useCategoryManager } from "../../../../../hooks/useCategoryManager";
 import { CategoryTypeSelector } from "../molecules/CategoryTypeSelector";
+import { InfoBox } from "@/components/ui/InfoBox";
 
 interface CategoryManagerProps {
   categories: CategoryDef[];
@@ -53,19 +54,24 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({ categories, on
         onCancel={() => setDeleteConfirm(null)}
       />
 
-      <CategoryTypeSelector mode={mode} onChange={setMode} />
-
-      <div className="flex justify-end">
-        <button
-          onClick={addCategory}
-          className={`${
-            isIncome ? "bg-emerald-600 hover:bg-emerald-700" : "bg-indigo-600 hover:bg-indigo-700"
-          } text-white px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 transition-all shadow-sm active:scale-95`}
-        >
-          <Plus size={18} /> Nouveau
-        </button>
+      <div className="bg-white p-2 rounded-xl border border-slate-200 shadow-sm">
+        <div className="flex flex-wrap items-center gap-2 justify-between">
+          <CategoryTypeSelector mode={mode} onChange={setMode} />
+          <button
+            onClick={addCategory}
+            className={`${
+              isIncome ? "bg-emerald-600 hover:bg-emerald-700" : "bg-indigo-600 hover:bg-indigo-700"
+            } text-white px-4 py-1 rounded-lg text-sm font-semibold flex items-center transition-all shadow-sm active:scale-95`}
+          >
+            <Plus size={18} /> Nouveau
+          </button>
+        </div>
       </div>
-
+      <InfoBox
+        title="Catégories & Sous-Catégories"
+        description="Organisez vos flux financiers en catégories et sous-catégories. Utilisé pour classer et analyser vos opérations."
+        icon={<Tag size={18} />}
+      />
       <div className="grid gap-2">
         {currentList.map((cat) => (
           <div

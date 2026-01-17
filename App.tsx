@@ -215,7 +215,7 @@ const AppContent: React.FC = () => {
     return (
       <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
         <Header currentView={currentView} onViewChange={setCurrentView} onLogout={signOut} userEmail={session.user.email} session={session} />
-        <main className="max-w-7xl mx-auto px-4 py-8 pb-24 md:pb-8">
+        <main className="max-w-9xl mx-auto px-2 py-2 pb-24 md:pb-8">
           <WelcomeEmptyState onStartConfig={() => navigateToConfig("family")} />
         </main>
       </div>
@@ -226,7 +226,7 @@ const AppContent: React.FC = () => {
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900" onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
       <Header currentView={currentView} onViewChange={setCurrentView} onLogout={signOut} userEmail={session.user.email} session={session} />
 
-      <main className="max-w-7xl mx-auto px-4 py-8 pb-24 md:pb-8">
+      <main className="max-w-9xl mx-auto px-2 py-2 pb-24 md:pb-8">
         {currentView === "dashboard" && (
           <DashboardView
             accounts={accounts}
@@ -239,7 +239,7 @@ const AppContent: React.FC = () => {
             variableTransactions={variableTransactions}
             categories={categories}
             onNavigateToPlanner={navigateToPlannerWithContext}
-            onNavigateToConfig={() => navigateToConfig("general")}
+            onNavigateToConfig={() => navigateToConfig("budget")}
           />
         )}
 
@@ -293,6 +293,7 @@ const AppContent: React.FC = () => {
             onUpsertTransaction={actions.upsertVariableTransaction}
             onDeleteTransfer={actions.deleteTransfer}
             onMoveTransfer={actions.moveTransfer}
+            onMoveTransaction={(tx, position) => actions.upsertVariableTransaction({ ...tx, position })}
           />
         )}
 

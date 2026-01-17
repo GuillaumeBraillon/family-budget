@@ -233,8 +233,8 @@ export const useFilterBarLogic = (
    * - "ONLY" : Affiche uniquement les opérations extra (hors budget)
    */
   const cycleExtra = () => {
-    const next = filters.extra === "ALL" ? "EXCLUDE" : filters.extra === "EXCLUDE" ? "ONLY" : "ALL";
-    update("extra", next);
+    const next = filters.nature === "ALL" ? "EXCLUDE" : filters.nature === "EXCLUDE" ? "ONLY" : "ALL";
+    update("nature", next);
   };
 
   /**
@@ -243,7 +243,7 @@ export const useFilterBarLogic = (
    * @returns {CyclicButtonConfig} Configuration { label, icon, color }
    */
   const getExtraConfig = (): CyclicButtonConfig => {
-    switch (filters.extra) {
+    switch (filters.nature) {
       case "EXCLUDE":
         return { label: "Standard", icon: <Circle size={14} />, color: "bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200" };
       case "ONLY":

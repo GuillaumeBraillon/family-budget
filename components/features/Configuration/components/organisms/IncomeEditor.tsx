@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { Trash2, Save, Briefcase } from "lucide-react";
 import { IncomeConfig, CategoryDef, Person, Account, AccountType } from "../../../../../types";
 import { CategorySelector } from "../../../../ui/molecules/CategorySelector";
@@ -8,7 +8,7 @@ import { DataList } from "../../../../ui/molecules/DataList";
 import { DataListRow } from "../../../../ui/molecules/DataListRow";
 import { ConfirmModal } from "../../../../ui/atoms/ConfirmModal";
 import { Modal } from "../../../../ui/Modal";
-import { ListSorter, SortOrder } from "../../../../ui/molecules/ListSorter";
+import { SortOrder } from "../../../../ui/molecules/ListSorter";
 import { ValidationErrorBlock } from "../../../../ui/atoms/ValidationErrorBlock";
 import { useValidationScroll } from "../../../../../hooks/useValidationScroll";
 import { AdvancedOptionsAccordion } from "../../../../ui/molecules/AdvancedOptionsAccordion";
@@ -21,6 +21,8 @@ interface IncomeEditorProps {
   onAddIncome: (i: IncomeConfig) => void;
   onUpdateIncome: (i: IncomeConfig) => void;
   onDeleteIncome: (id: string) => void;
+  sortKey: string;
+  sortOrder: SortOrder;
 }
 
 export const IncomeEditor: React.FC<IncomeEditorProps> = ({ incomeConfigs, people, categories, accounts, onAddIncome, onUpdateIncome, onDeleteIncome }) => {
@@ -33,9 +35,6 @@ export const IncomeEditor: React.FC<IncomeEditorProps> = ({ incomeConfigs, peopl
 
   // Scroll automatique vers les erreurs de validation
   useValidationScroll(validationErrors, errorBlockRef);
-
-  const [sortKey, setSortKey] = useState<string>("dayOfMonth");
-  const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
 
   const defaultAccount = accounts[0]?.id || "";
 
@@ -151,13 +150,13 @@ export const IncomeEditor: React.FC<IncomeEditorProps> = ({ incomeConfigs, peopl
       endMonth: formData.endMonth,
     };
     editingId ? onUpdateIncome(final) : onAddIncome(final);
-    resetForm();
+    clearForm();
   };
 
   const handleDelete = () => {
     if (editingId) {
       onDeleteIncome(editingId);
-      resetForm();
+      clearForm();
     }
   };
 
@@ -167,12 +166,11 @@ export const IncomeEditor: React.FC<IncomeEditorProps> = ({ incomeConfigs, peopl
       if (sortKey === "label") {
         res = a.label.localeCompare(b.label);
       } else {
-        // @ts-expect-error - Dynamic key access for sorting
         res = (a[sortKey] as number) - (b[sortKey] as number);
       }
       return sortOrder === "asc" ? res : -res;
     });
-  }, [incomeConfigs, sortKey, sortOrder]);
+  }, [incomeConfigs]);
 
   if (showDeleteConfirm) {
     return (
@@ -186,26 +184,8 @@ export const IncomeEditor: React.FC<IncomeEditorProps> = ({ incomeConfigs, peopl
     );
   }
 
-  const sortOptions = [
-    { key: "dayOfMonth", label: "Date" },
-    { key: "label", label: "Libellé" },
-    { key: "amount", label: "Montant" },
-  ];
-
   return (
     <div className="space-y-2 animate-in fade-in duration-300">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2">
-        <ListSorter
-          options={sortOptions}
-          currentSort={sortKey}
-          currentOrder={sortOrder}
-          onSortChange={(k, o) => {
-            setSortKey(k);
-            setSortOrder(o);
-          }}
-        />
-      </div>
-
       <Modal isOpen={isFormOpen} onClose={clearForm} title={editingId ? "Modifier le revenu" : "Nouveau Revenu Récurrent"}>
         <div className="space-y-2.5">
           <ValidationErrorBlock errors={validationErrors} ref={errorBlockRef} />

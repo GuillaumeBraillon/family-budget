@@ -41,7 +41,6 @@ import { Tag } from "lucide-react";
 import { OperationFilters, Account, Person, Tag as TagType } from "../../../types";
 import { FilterDropdown } from "./FilterDropdown";
 import { CyclicFilterButton } from "../atoms/CyclicFilterButton";
-import { FilterBarHeader } from "./FilterBarHeader";
 import { ListSorter } from "./ListSorter";
 import { useFilterBarLogic } from "../../../hooks/filterBar";
 
@@ -146,84 +145,87 @@ export const FilterBar: React.FC<FilterBarProps> = ({
     isTransferActive,
     isAccountActive,
     hasActiveSecondary,
-    activeFiltersCount,
     isDefaultFilters,
     clear,
     update,
   } = useFilterBarLogic(filters, onFilterChange, accounts, people, tags, onReset);
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-1">
       {/* HEADER + FILTRES PRIMAIRES */}
-      <div className="flex flex-wrap items-center gap-2">
-        {/* LABEL FILTRES avec badge */}
-        <FilterBarHeader activeFiltersCount={activeFiltersCount} />
+      <div className="flex flex-wrap items-center gap-2 justify-between">
+        <div className="flex flex-wrap items-center gap-2">
+          {/* FILTRES PRIMAIRES (Boutons Cycliques) */}
+          {!hiddenFilters.includes("flux") && <CyclicFilterButton {...fluxConfig} onClick={cycleFlux} />}
 
-        {/* FILTRES PRIMAIRES (Boutons Cycliques) */}
-        {!hiddenFilters.includes("flux") && <CyclicFilterButton {...fluxConfig} onClick={cycleFlux} />}
+          {!hiddenFilters.includes("source") && <CyclicFilterButton {...sourceConfig} onClick={cycleSource} />}
 
-        {!hiddenFilters.includes("source") && <CyclicFilterButton {...sourceConfig} onClick={cycleSource} />}
+          {!hiddenFilters.includes("status") && <CyclicFilterButton {...statusConfig} onClick={cycleStatus} />}
 
-        {!hiddenFilters.includes("status") && <CyclicFilterButton {...statusConfig} onClick={cycleStatus} />}
+          {!hiddenFilters.includes("extra") && <CyclicFilterButton {...extraConfig} onClick={cycleExtra} />}
 
-        {!hiddenFilters.includes("extra") && <CyclicFilterButton {...extraConfig} onClick={cycleExtra} />}
+          {/* BOUTON TOGGLE "PLUS DE FILTRES" */}
+          <button
+            onClick={() => setShowAllFilters(!showAllFilters)}
+            className={`h-[30px] px-3 rounded-lg border text-xs font-bold transition-all flex items-center gap-1.5 ${
+              showAllFilters
+                ? "bg-slate-800 text-white border-slate-800"
+                : hasActiveSecondary
+                  ? "bg-indigo-50 text-indigo-600 border-indigo-200"
+                  : "bg-white text-slate-500 border-slate-200 hover:border-slate-300"
+            }`}
+          >
+            {showAllFilters ? (
+              <>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+                <span className="hidden sm:inline">Fermer</span>
+              </>
+            ) : (
+              <>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="4" y1="9" x2="20" y2="9"></line>
+                  <line x1="4" y1="15" x2="20" y2="15"></line>
+                  <line x1="10" y1="3" x2="8" y2="21"></line>
+                  <line x1="16" y1="3" x2="14" y2="21"></line>
+                </svg>
+                <span className="hidden sm:inline">Plus de filtres</span>
+                {hasActiveSecondary && <span className="w-2 h-2 rounded-full bg-indigo-500 ml-0.5"></span>}
+              </>
+            )}
+          </button>
 
-        {/* BOUTON TOGGLE "PLUS DE FILTRES" */}
-        <button
-          onClick={() => setShowAllFilters(!showAllFilters)}
-          className={`h-[30px] px-3 rounded-lg border text-xs font-bold transition-all flex items-center gap-1.5 ${
-            showAllFilters
-              ? "bg-slate-800 text-white border-slate-800"
-              : hasActiveSecondary
-                ? "bg-indigo-50 text-indigo-600 border-indigo-200"
-                : "bg-white text-slate-500 border-slate-200 hover:border-slate-300"
-          }`}
-        >
-          {showAllFilters ? (
-            <>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="18" y1="6" x2="6" y2="18"></line>
-                <line x1="6" y1="6" x2="18" y2="18"></line>
-              </svg>
-              <span className="hidden sm:inline">Fermer</span>
-            </>
-          ) : (
-            <>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="4" y1="9" x2="20" y2="9"></line>
-                <line x1="4" y1="15" x2="20" y2="15"></line>
-                <line x1="10" y1="3" x2="8" y2="21"></line>
-                <line x1="16" y1="3" x2="14" y2="21"></line>
-              </svg>
-              <span className="hidden sm:inline">Plus de filtres</span>
-              {hasActiveSecondary && <span className="w-2 h-2 rounded-full bg-indigo-500 ml-0.5"></span>}
-            </>
-          )}
-        </button>
+          {/* BOUTON RESET (Toujours visible, grisé et désactivé si filtres par défaut) */}
+          <button
+            onClick={clear}
+            disabled={isDefaultFilters}
+            className={`h-[30px] px-3 rounded-lg border text-[10px] font-black uppercase transition-colors flex items-center gap-1 ${
+              isDefaultFilters
+                ? "border-slate-200 bg-slate-50 text-slate-300 cursor-not-allowed"
+                : "border-rose-100 bg-rose-50 text-rose-500 hover:text-rose-700 hover:border-rose-200 cursor-pointer"
+            }`}
+            title={isDefaultFilters ? "Filtres déjà par défaut" : "Réinitialiser aux filtres par défaut"}
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="23 4 23 10 17 10"></polyline>
+              <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+            </svg>
+            <span className="hidden sm:inline">Reset</span>
+          </button>
+        </div>
 
-        {/* BOUTON RESET (Toujours visible, grisé et désactivé si filtres par défaut) */}
-        <button
-          onClick={clear}
-          disabled={isDefaultFilters}
-          className={`h-[30px] px-3 rounded-lg border text-[10px] font-black uppercase transition-colors flex items-center gap-1 ${
-            isDefaultFilters
-              ? "border-slate-200 bg-slate-50 text-slate-300 cursor-not-allowed"
-              : "border-rose-100 bg-rose-50 text-rose-500 hover:text-rose-700 hover:border-rose-200 cursor-pointer"
-          }`}
-          title={isDefaultFilters ? "Filtres déjà par défaut" : "Réinitialiser aux filtres par défaut"}
-        >
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="23 4 23 10 17 10"></polyline>
-            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
-          </svg>
-          <span className="hidden sm:inline">Reset</span>
-        </button>
+        {/* SECTION TRI (à droite) */}
+        {sortOptions && sortKey && sortOrder && onSortChange && (
+          <ListSorter options={sortOptions} currentSort={sortKey} currentOrder={sortOrder} onSortChange={onSortChange} />
+        )}
       </div>
 
       {/* FILTRES SECONDAIRES (Repliables) */}
       {(showAllFilters || hasActiveSecondary) && (
         <div
-          className={`flex flex-wrap items-center gap-2 p-3 bg-slate-50 rounded-xl border border-slate-100 animate-in slide-in-from-top-1 duration-200 ${
+          className={`flex flex-wrap items-center gap-2 bg-slate-50 rounded-xl border border-slate-100 animate-in slide-in-from-top-1 duration-200 ${
             !showAllFilters ? "hidden sm:flex" : ""
           }`}
         >
@@ -322,13 +324,6 @@ export const FilterBar: React.FC<FilterBarProps> = ({
               color="slate"
             />
           )}
-        </div>
-      )}
-
-      {/* SECTION TRI */}
-      {sortOptions && sortKey && sortOrder && onSortChange && (
-        <div className="pt-2 border-t border-slate-100 flex justify-end">
-          <ListSorter options={sortOptions} currentSort={sortKey} currentOrder={sortOrder} onSortChange={onSortChange} />
         </div>
       )}
     </div>

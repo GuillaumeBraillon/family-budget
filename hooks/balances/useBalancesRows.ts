@@ -103,7 +103,7 @@ interface UseBalancesRowsParams {
 export const useBalancesRows = ({
   _accounts,
   people,
-  budgetPeriodeGlobal,
+  budgetPeriodeGlobal: _budgetPeriodeGlobal,
   totalPersonalBalance,
   distributableBalance,
   jointAccount,
@@ -177,9 +177,9 @@ export const useBalancesRows = ({
 
         const targetBalance = acc.currentBalance + transferAmount;
         const pending = stats.byAccount[acc.id]?.remaining || 0;
-        const pendingStandard = (stats.byAccount[acc.id] as any)?.remainingStandard || 0;
-        const paid = (stats.byAccount[acc.id] as any)?.paid || 0;
-        const paidStandard = (stats.byAccount[acc.id] as any)?.paidStandard || 0;
+        const pendingStandard = stats.byAccount[acc.id]?.remainingStandard || 0;
+        const paid = stats.byAccount[acc.id]?.paid || 0;
+        const paidStandard = stats.byAccount[acc.id]?.paidStandard || 0;
 
         pRows.push({
           id: acc.id,
@@ -211,9 +211,9 @@ export const useBalancesRows = ({
       for (const acc of personalAccounts) {
         const owner = people.find((p) => p.id === acc.ownerId);
         const pending = stats.byAccount[acc.id]?.remaining || 0;
-        const pendingStandard = (stats.byAccount[acc.id] as any)?.remainingStandard || 0;
-        const paid = (stats.byAccount[acc.id] as any)?.paid || 0;
-        const paidStandard = (stats.byAccount[acc.id] as any)?.paidStandard || 0;
+        const pendingStandard = stats.byAccount[acc.id]?.remainingStandard || 0;
+        const paid = stats.byAccount[acc.id]?.paid || 0;
+        const paidStandard = stats.byAccount[acc.id]?.paidStandard || 0;
 
         pRows.push({
           id: acc.id,
@@ -278,9 +278,9 @@ export const useBalancesRows = ({
 
         const targetBalance = acc.currentBalance + transferAmount;
         const pending = stats.byAccount[acc.id]?.remaining || 0;
-        const pendingStandard = (stats.byAccount[acc.id] as any)?.remainingStandard || 0;
-        const paid = (stats.byAccount[acc.id] as any)?.paid || 0;
-        const paidStandard = (stats.byAccount[acc.id] as any)?.paidStandard || 0;
+        const pendingStandard = stats.byAccount[acc.id]?.remainingStandard || 0;
+        const paid = stats.byAccount[acc.id]?.paid || 0;
+        const paidStandard = stats.byAccount[acc.id]?.paidStandard || 0;
 
         pRows.push({
           id: acc.id,
@@ -341,9 +341,9 @@ export const useBalancesRows = ({
       });
 
       const jointPending = stats.byAccount[jointAccount.id]?.remaining || 0;
-      const jointPendingStandard = (stats.byAccount[jointAccount.id] as any)?.remainingStandard || 0;
-      const jointPaid = (stats.byAccount[jointAccount.id] as any)?.paid || 0;
-      const jointPaidStandard = (stats.byAccount[jointAccount.id] as any)?.paidStandard || 0;
+      const jointPendingStandard = stats.byAccount[jointAccount.id]?.remainingStandard || 0;
+      const jointPaid = stats.byAccount[jointAccount.id]?.paid || 0;
+      const jointPaidStandard = stats.byAccount[jointAccount.id]?.paidStandard || 0;
 
       jRows.push({
         id: jointAccount.id,

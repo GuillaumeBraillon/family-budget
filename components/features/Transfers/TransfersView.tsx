@@ -34,14 +34,13 @@ import { useError } from "../../../contexts/ErrorContext";
 import { useTransfersFilters } from "../../../hooks/transfers/useTransfersFilters";
 import { useTransfersData, isTransfer } from "../../../hooks/transfers/useTransfersData";
 import { Account, Person, Transfer, AppSettings, SavedLabel, AccountType, VariableTransaction, CategoryDef } from "../../../types";
-import { ArrowRightLeft, Filter, X, ArrowRight, GripVertical, Wallet, PiggyBank, TrendingUp } from "lucide-react";
+import { ArrowRight, TrendingUp } from "lucide-react";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from "@dnd-kit/sortable";
 
 // Imports UI Atomic
 import { MonthNavigator } from "../../ui/molecules/MonthNavigator";
 import { SearchBar } from "../../ui/atoms/SearchBar";
-import { InfoBox } from "../../ui/InfoBox";
 import { DataList } from "../../ui/molecules/DataList";
 import { ListSorter } from "../../ui/molecules/ListSorter";
 import { SortableRow } from "../../ui/molecules/SortableRow";
@@ -62,6 +61,7 @@ interface TransfersViewProps {
   onUpsertTransaction: (t: VariableTransaction) => void;
   onDeleteTransfer: (id: string) => void;
   onMoveTransfer?: (transfer: Transfer, newPosition: number) => void;
+  onMoveTransaction?: (transaction: VariableTransaction, newPosition: number) => void;
 }
 
 export const TransfersView: React.FC<TransfersViewProps> = ({
@@ -76,6 +76,7 @@ export const TransfersView: React.FC<TransfersViewProps> = ({
   _onUpsertTransaction,
   onDeleteTransfer,
   onMoveTransfer,
+  onMoveTransaction,
 }) => {
   const { showError } = useError();
   // --- HOOKS SPÉCIALISÉS (LOGIQUE DÉLÉGUÉE) ---
@@ -98,7 +99,7 @@ export const TransfersView: React.FC<TransfersViewProps> = ({
     sortOrder: filters.sortOrder,
     accountTypeFilter: filters.accountTypeFilter,
     specificAccountId: filters.specificAccountId,
-    includeDirectOps: filters.includeDirectOps,
+    interestFilter: filters.interestFilter,
   });
 
   // --- ÉTAT LOCAL UI (MODALES, ÉDITION) ---
@@ -142,36 +143,43 @@ export const TransfersView: React.FC<TransfersViewProps> = ({
    */
   const handleDragEnd = (event: DragEndEvent) => {
     try {
-      if (!onMoveTransfer) return;
-
       const { active, over } = event;
       if (!over || active.id === over.id) return;
 
-      const transfersList = currentItems.filter((i) => i.source === "TRANSFER").map((i) => i.transferData!);
-      const oldIndex = transfersList.findIndex((t) => t.id === active.id);
-      const newIndex = transfersList.findIndex((t) => t.id === over.id);
+      const oldIndex = currentItems.findIndex((item) => item.id === active.id);
+      const newIndex = currentItems.findIndex((item) => item.id === over.id);
 
       if (oldIndex === -1 || newIndex === -1) return;
 
-      const movedTransfer = transfersList[oldIndex];
-      const reordered = arrayMove(transfersList, oldIndex, newIndex);
+      const movedItem = currentItems[oldIndex];
+      const reordered = arrayMove(currentItems, oldIndex, newIndex);
 
       let newPosition: number;
       if (newIndex === 0) {
-        const nextPos = getEffectivePosition(reordered[1] as Transfer);
+        const nextPos = getEffectivePosition(reordered[1].source === "TRANSFER" ? reordered[1].transferData! : reordered[1].transactionData!);
         newPosition = nextPos - 50_000_000;
       } else if (newIndex === reordered.length - 1) {
-        const prevPos = getEffectivePosition(reordered[newIndex - 1] as Transfer);
+        const prevPos = getEffectivePosition(
+          reordered[newIndex - 1].source === "TRANSFER" ? reordered[newIndex - 1].transferData! : reordered[newIndex - 1].transactionData!
+        );
         newPosition = prevPos + 50_000_000;
       } else {
-        const prevPos = getEffectivePosition(reordered[newIndex - 1] as Transfer);
-        const nextPos = getEffectivePosition(reordered[newIndex + 1] as Transfer);
+        const prevPos = getEffectivePosition(
+          reordered[newIndex - 1].source === "TRANSFER" ? reordered[newIndex - 1].transferData! : reordered[newIndex - 1].transactionData!
+        );
+        const nextPos = getEffectivePosition(
+          reordered[newIndex + 1].source === "TRANSFER" ? reordered[newIndex + 1].transferData! : reordered[newIndex + 1].transactionData!
+        );
         newPosition = Math.floor((prevPos + nextPos) / 2);
       }
 
-      onMoveTransfer(movedTransfer, newPosition);
+      if (movedItem.source === "TRANSFER" && onMoveTransfer && movedItem.transferData) {
+        onMoveTransfer(movedItem.transferData, newPosition);
+      } else if (movedItem.source === "DIRECT" && onMoveTransaction && movedItem.transactionData) {
+        onMoveTransaction({ ...movedItem.transactionData, position: newPosition }, newPosition);
+      }
     } catch (err) {
-      showError(err as Error, "Drag & drop de virement");
+      showError(err as Error, "Drag & drop d'opération");
     }
   };
 
@@ -185,164 +193,92 @@ export const TransfersView: React.FC<TransfersViewProps> = ({
   // --- RENDER ---
 
   return (
-    <div className="space-y-6">
-      <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-        {/* KPIs DÉPLACÉS EN HAUT */}
-        <TransfersKPIs stats={stats} />
-
-        <InfoBox
-          title="Virements & Comptes"
-          description="Suivez les mouvements entre vos comptes : virements internes, intérêts d'épargne et frais bancaires."
-          icon={<ArrowRightLeft size={18} />}
-        />
-
-        <div className="flex flex-col md:flex-row justify-between gap-4">
-          <MonthNavigator date={ui.currentDate} onPrev={ui.handlePrevMonth} onNext={ui.handleNextMonth} />
+    <div className="space-y-1 animate-in fade-in duration-500">
+      {/* Navigation de période */}
+      <div className="flex flex-row gap-1.5 md:gap-2 items-center flex-wrap">
+        <MonthNavigator date={ui.currentDate} onPrev={ui.handlePrevMonth} onNext={ui.handleNextMonth} />
+        <div className="ml-auto">
           <SearchBar value={ui.searchQuery} onChange={ui.setSearchQuery} />
         </div>
+      </div>
 
-        {/* FILTRES AVANC\u00c9S */}
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-4">
-          {/* Filtres par type de compte */}
-          <div className="flex flex-col gap-2">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
-              <Wallet size={14} /> Type de Compte
-            </span>
-            <div className="flex flex-wrap gap-2">
-              <button
-                onClick={() => {
-                  filters.setAccountTypeFilter("ALL");
-                  filters.setSpecificAccountId(null);
-                }}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${
-                  filters.accountTypeFilter === "ALL"
-                    ? "bg-indigo-600 text-white border-indigo-600 shadow-sm"
-                    : "bg-slate-50 text-slate-600 border-slate-200 hover:border-indigo-300 hover:text-indigo-600"
-                }`}
-              >
-                Tous
-              </button>
-              <button
-                onClick={() => {
-                  filters.setAccountTypeFilter("CHECKING");
-                  filters.setSpecificAccountId(null);
-                }}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border flex items-center gap-1 ${
-                  filters.accountTypeFilter === "CHECKING"
-                    ? "bg-indigo-600 text-white border-indigo-600 shadow-sm"
-                    : "bg-slate-50 text-slate-600 border-slate-200 hover:border-indigo-300 hover:text-indigo-600"
-                }`}
-              >
-                <Wallet size={12} /> Courants
-              </button>
-              <button
-                onClick={() => {
-                  filters.setAccountTypeFilter("SAVINGS");
-                  filters.setSpecificAccountId(null);
-                }}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border flex items-center gap-1 ${
-                  filters.accountTypeFilter === "SAVINGS"
-                    ? "bg-indigo-600 text-white border-indigo-600 shadow-sm"
-                    : "bg-slate-50 text-slate-600 border-slate-200 hover:border-indigo-300 hover:text-indigo-600"
-                }`}
-              >
-                <PiggyBank size={12} /> Épargne
-              </button>
-            </div>
-          </div>
+      {/* FILTRES COMPACTS */}
+      <div className="bg-white p-2 rounded-xl border border-slate-200 shadow-sm">
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Type de compte */}
+          <select
+            value={filters.accountTypeFilter}
+            onChange={(e) => {
+              filters.setAccountTypeFilter(e.target.value as "ALL" | "CHECKING" | "SAVINGS");
+              filters.setSpecificAccountId(null);
+            }}
+            className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+          >
+            <option value="ALL">Tous les comptes</option>
+            <option value="CHECKING">Comptes Courants</option>
+            <option value="SAVINGS">Comptes Épargne</option>
+          </select>
 
           {/* Compte spécifique */}
           {filters.accountTypeFilter !== "ALL" && (
-            <div className="flex flex-col gap-2 pt-2 border-t border-slate-100">
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Compte Spécifique</span>
-              <select
-                value={filters.specificAccountId || ""}
-                onChange={(e) => filters.setSpecificAccountId(e.target.value || null)}
-                className="px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              >
-                <option value="">Tous les {filters.accountTypeFilter === "CHECKING" ? "courants" : "d'épargne"}</option>
-                {accounts
-                  .filter((a) => a.type === (filters.accountTypeFilter === "CHECKING" ? AccountType.CHECKING : AccountType.SAVINGS))
-                  .map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {a.name}
-                    </option>
-                  ))}
-              </select>
-            </div>
-          )}
-
-          {/* Inclure opérations directes */}
-          {filters.accountTypeFilter === "SAVINGS" && (
-            <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
-              <input
-                type="checkbox"
-                id="includeDirectOps"
-                checked={filters.includeDirectOps}
-                onChange={(e) => filters.setIncludeDirectOps(e.target.checked)}
-                className="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500"
-              />
-              <label htmlFor="includeDirectOps" className="text-xs font-medium text-slate-700 cursor-pointer flex items-center gap-1">
-                <TrendingUp size={12} className="text-emerald-600" />
-                Inclure intérêts & frais bancaires
-              </label>
-            </div>
-          )}
-
-          {/* Solde évolutif (si compte spécifique) */}
-          {filters.specificAccountId && historyWithBalances.length > 0 && (
-            <div className="pt-2 border-t border-slate-100">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-700">Solde actuel</span>
-                <span
-                  className={`text-lg font-black ${historyWithBalances[historyWithBalances.length - 1].balanceAfter >= 0 ? "text-emerald-600" : "text-rose-600"}`}
-                >
-                  {historyWithBalances[historyWithBalances.length - 1].balanceAfter.toFixed(2)} €
-                </span>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* BARRE DE FILTRES MOTIFS */}
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-4">
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                <Filter size={14} /> Filtrer par Motif
-              </span>
-              {filters.selectedMotif && (
-                <button
-                  onClick={() => filters.setSelectedMotif(null)}
-                  className="text-[10px] font-bold text-rose-500 hover:text-rose-700 flex items-center gap-1 uppercase transition-colors"
-                >
-                  <X size={12} /> Effacer filtre
-                </button>
-              )}
-            </div>
-
-            {motifs.length > 0 ? (
-              <div className="flex flex-wrap gap-2">
-                {motifs.map((motif) => (
-                  <button
-                    key={motif}
-                    onClick={() => filters.setSelectedMotif(filters.selectedMotif === motif ? null : motif)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${
-                      filters.selectedMotif === motif
-                        ? "bg-indigo-600 text-white border-indigo-600 shadow-sm"
-                        : "bg-slate-50 text-slate-600 border-slate-200 hover:border-indigo-300 hover:text-indigo-600"
-                    }`}
-                  >
-                    {motif}
-                  </button>
+            <select
+              value={filters.specificAccountId || ""}
+              onChange={(e) => filters.setSpecificAccountId(e.target.value || null)}
+              className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+            >
+              <option value="">Tous les {filters.accountTypeFilter === "CHECKING" ? "courants" : "d'épargne"}</option>
+              {accounts
+                .filter((a) => a.type === (filters.accountTypeFilter === "CHECKING" ? AccountType.CHECKING : AccountType.SAVINGS))
+                .map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.name}
+                  </option>
                 ))}
-              </div>
-            ) : (
-              <p className="text-xs text-slate-400 italic">Aucun mouvement ce mois-ci.</p>
-            )}
-          </div>
+            </select>
+          )}
 
-          <div className="pt-2 border-t border-slate-100 flex justify-end">
+          {/* Filtrer par motif */}
+          {motifs.length > 0 && (
+            <select
+              value={filters.selectedMotif || ""}
+              onChange={(e) => filters.setSelectedMotif(e.target.value || null)}
+              className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+            >
+              <option value="">Tous les motifs</option>
+              {motifs.map((motif) => (
+                <option key={motif} value={motif}>
+                  {motif}
+                </option>
+              ))}
+            </select>
+          )}
+
+          {/* Filtre opérations directes (intérêts) */}
+          {filters.accountTypeFilter === "SAVINGS" && (
+            <button
+              onClick={() => {
+                const cycle: Record<string, "ALL" | "EXCLUDE" | "ONLY"> = {
+                  ALL: "EXCLUDE",
+                  EXCLUDE: "ONLY",
+                  ONLY: "ALL",
+                };
+                filters.setInterestFilter(cycle[filters.interestFilter]);
+              }}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all cursor-pointer ${
+                filters.interestFilter === "ALL"
+                  ? "bg-blue-50 border-blue-200 text-blue-700"
+                  : filters.interestFilter === "ONLY"
+                    ? "bg-emerald-50 border-emerald-200 text-emerald-700"
+                    : "bg-slate-50 border-slate-200 text-slate-600 hover:border-slate-300"
+              }`}
+            >
+              <TrendingUp size={12} />
+              <span>{filters.interestFilter === "ALL" ? "Tous" : filters.interestFilter === "ONLY" ? "Intérêts" : "Sans intérêts"}</span>
+            </button>
+          )}
+
+          {/* Tri */}
+          <div className="ml-auto">
             <ListSorter
               options={sortOptions}
               currentSort={filters.sortKey}
@@ -355,70 +291,86 @@ export const TransfersView: React.FC<TransfersViewProps> = ({
             />
           </div>
         </div>
+      </div>
 
-        <DataList
-          title={filters.specificAccountId ? `Historique ${accounts.find((a) => a.id === filters.specificAccountId)?.name || ""}` : "Tous les Mouvements"}
-          count={currentItems.length}
-          onAdd={() => {
-            setEditingTransfer(null);
-            setIsFormOpen(true);
-          }}
-          addButtonLabel="Nouveau mouvement"
-          emptyMessage="Aucun mouvement trouvé pour cette période."
-        >
-          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-            <SortableContext items={currentItems.map((item) => item.id)} strategy={verticalListSortingStrategy}>
-              {currentItems.map((item) => (
-                <SortableRow key={item.id} id={item.id} disabled={!isManualSort || item.source !== "TRANSFER"}>
-                  <div onClick={() => handleEdit(item)} className="p-4 flex items-center gap-4 group transition-all cursor-pointer hover:bg-slate-50">
-                    <div className="flex-shrink-0 w-12 text-center flex flex-col items-center justify-center rounded-lg py-1 border bg-slate-50 border-slate-100">
-                      <span className="text-sm font-bold block text-slate-700 leading-none">{new Date(item.date).getDate()}</span>
-                      <span className="text-[9px] text-slate-400 uppercase font-black tracking-wider leading-none mt-0.5">
-                        {new Date(item.date).toLocaleDateString("fr-FR", { month: "short" })}
-                      </span>
-                    </div>
+      {/* Solde évolutif (si compte spécifique) */}
+      {filters.specificAccountId && historyWithBalances.length > 0 && (
+        <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-700">Solde actuel</span>
+            <span
+              className={`text-lg font-black ${historyWithBalances[historyWithBalances.length - 1].balanceAfter >= 0 ? "text-emerald-600" : "text-rose-600"}`}
+            >
+              {historyWithBalances[historyWithBalances.length - 1].balanceAfter.toFixed(2)} €
+            </span>
+          </div>
+        </div>
+      )}
 
-                    <div className="flex-1 min-w-0">
-                      <div className="font-bold text-slate-900 truncate mb-1">{item.label}</div>
-                      <div className="flex items-center gap-2 text-xs">
-                        {item.source === "TRANSFER" ? (
-                          <>
-                            <span className="px-2 py-0.5 rounded bg-red-50 text-red-600 border border-red-100 font-medium">
-                              {getAccountName(item.sourceAccountId!)}
-                            </span>
-                            <ArrowRight size={12} className="text-slate-400" />
-                            <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-600 border border-emerald-100 font-medium">
-                              {getAccountName(item.destinationAccountId!)}
-                            </span>
-                          </>
-                        ) : (
-                          <span
-                            className={`px-2 py-0.5 rounded font-medium ${
-                              item.amount > 0 ? "bg-emerald-50 text-emerald-600 border border-emerald-100" : "bg-red-50 text-red-600 border border-red-100"
-                            }`}
-                          >
-                            {item.amount > 0 ? "Crédit" : "Débit"} · {getAccountName(item.accountId!)}
+      {/* KPIs */}
+      <TransfersKPIs stats={stats} />
+      <DataList
+        title={filters.specificAccountId ? `Historique ${accounts.find((a) => a.id === filters.specificAccountId)?.name || ""}` : "Tous les Mouvements"}
+        count={currentItems.length}
+        onAdd={() => {
+          setEditingTransfer(null);
+          setIsFormOpen(true);
+        }}
+        addButtonLabel="Nouveau mouvement"
+        emptyMessage="Aucun mouvement trouvé pour cette période."
+      >
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={currentItems.map((item) => item.id)} strategy={verticalListSortingStrategy}>
+            {currentItems.map((item) => (
+              <SortableRow key={item.id} id={item.id} disabled={!isManualSort}>
+                <div onClick={() => handleEdit(item)} className="p-4 flex items-center gap-4 group transition-all cursor-pointer hover:bg-slate-50">
+                  <div className="flex-shrink-0 w-12 text-center flex flex-col items-center justify-center rounded-lg py-1 border bg-slate-50 border-slate-100">
+                    <span className="text-sm font-bold block text-slate-700 leading-none">{new Date(item.date).getDate()}</span>
+                    <span className="text-[9px] text-slate-400 uppercase font-black tracking-wider leading-none mt-0.5">
+                      {new Date(item.date).toLocaleDateString("fr-FR", { month: "short" })}
+                    </span>
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <div className="font-bold text-slate-900 truncate mb-1">{item.label}</div>
+                    <div className="flex items-center gap-2 text-xs">
+                      {item.source === "TRANSFER" ? (
+                        <>
+                          <span className="px-2 py-0.5 rounded bg-red-50 text-red-600 border border-red-100 font-medium">
+                            {getAccountName(item.sourceAccountId!)}
                           </span>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="flex flex-col items-end gap-1">
-                      <div className={`text-right font-black text-base ${item.amount >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
-                        {item.amount >= 0 ? "+" : ""}
-                        {Math.abs(item.amount).toFixed(2)} €
-                      </div>
-                      {filters.specificAccountId && "balanceAfter" in item && (
-                        <div className="text-xs text-slate-400 font-medium">Solde: {item.balanceAfter.toFixed(2)} €</div>
+                          <ArrowRight size={12} className="text-slate-400" />
+                          <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-600 border border-emerald-100 font-medium">
+                            {getAccountName(item.destinationAccountId!)}
+                          </span>
+                        </>
+                      ) : (
+                        <span
+                          className={`px-2 py-0.5 rounded font-medium ${
+                            item.amount > 0 ? "bg-emerald-50 text-emerald-600 border border-emerald-100" : "bg-red-50 text-red-600 border border-red-100"
+                          }`}
+                        >
+                          {item.amount > 0 ? "Crédit" : "Débit"} · {getAccountName(item.accountId!)}
+                        </span>
                       )}
                     </div>
                   </div>
-                </SortableRow>
-              ))}
-            </SortableContext>
-          </DndContext>
-        </DataList>
-      </div>
+
+                  <div className="flex flex-col items-end gap-1">
+                    <div className={`text-right font-black text-base ${item.amount >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                      {item.amount >= 0 ? "+" : ""}
+                      {Math.abs(item.amount).toFixed(2)} €
+                    </div>
+                    {filters.specificAccountId && "balanceAfter" in item && (
+                      <div className="text-xs text-slate-400 font-medium">Solde: {item.balanceAfter.toFixed(2)} €</div>
+                    )}
+                  </div>
+                </div>
+              </SortableRow>
+            ))}
+          </SortableContext>
+        </DndContext>
+      </DataList>
 
       <TransferForm
         isOpen={isFormOpen}

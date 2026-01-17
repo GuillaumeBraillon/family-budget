@@ -1,6 +1,6 @@
 import React from "react";
 import { Card } from "../../../../ui/Card";
-import { ChevronLeft, ChevronRight, CalendarClock, ShoppingBag, ArrowUpRight, ArrowDownLeft, Scale } from "lucide-react";
+import { CalendarClock, ShoppingBag, ArrowUpRight, ArrowDownLeft, Scale } from "lucide-react";
 import { ClickableAmount } from "../../../../ui/atoms/ClickableAmount";
 import { OperationFilters } from "../../../../../types";
 import { getDetailedAnalysisFilters } from "../../../../../hooks/dashboard/useDashboardData";
@@ -27,7 +27,7 @@ interface AnnualIncomeAnalysisProps {
   onNavigateToPlanner: (date: Date, filters?: Partial<OperationFilters>, weekNumber?: number) => void;
 }
 
-export const AnnualIncomeAnalysis: React.FC<AnnualIncomeAnalysisProps> = ({ data, year, onYearChange, onNavigateToPlanner }) => {
+export const AnnualIncomeAnalysis: React.FC<AnnualIncomeAnalysisProps> = ({ data, year, onYearChange: _onYearChange, onNavigateToPlanner }) => {
   const maxPeriods = data.reduce((max, m) => Math.max(max, m.periods.length), 0) || 4;
   const periodsHeader = Array.from({ length: maxPeriods }, (_, i) => i + 1);
 

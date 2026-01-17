@@ -20,7 +20,7 @@ export const WeekSelector: React.FC<WeekSelectorProps> = ({ weeks, activeWeek, o
   const isSearching = !!searchQuery && searchQuery.trim().length > 0;
 
   return (
-    <div className="grid grid-cols-4 gap-2 bg-slate-200/60 p-1.5 rounded-2xl">
+    <div className="grid bg-white border border-slate-200 p-1 rounded-xl shadow-sm" style={{ gridTemplateColumns: `repeat(${weeks.length}, minmax(0, 1fr))` }}>
       {weeks.map((week) => {
         // En mode recherche, on compte les éléments trouvés (déjà filtrés dans 'weeks')
         // En mode normal, on compte les éléments non payés
@@ -31,22 +31,22 @@ export const WeekSelector: React.FC<WeekSelectorProps> = ({ weeks, activeWeek, o
           <button
             key={week.weekNumber}
             onClick={() => onSelect(week.weekNumber)}
-            className={`relative py-3 rounded-xl text-xs font-bold transition-all flex flex-col items-center justify-center gap-1 ${
-              isActive ? "bg-white text-indigo-600 shadow-md ring-1 ring-slate-200" : "text-slate-500 hover:text-slate-700 hover:bg-white/50"
+            className={`relative py-2 px-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center ${
+              isActive ? "bg-indigo-600 text-white shadow-md" : "text-slate-500 hover:bg-slate-50"
             }`}
           >
-            <span className="truncate max-w-full px-1">
-              {week.startDate} au {week.endDate}
+            <span className="truncate max-w-full whitespace-nowrap">
+              {week.startDate}-{week.endDate}
             </span>
 
             {/* Badge Contextuel */}
             {showBadge && count > 0 && (
               <div
-                className={`absolute -top-1.5 -right-1.5 h-5 min-w-[20px] px-1.5 rounded-full flex items-center justify-center text-[10px] font-black shadow-sm animate-in zoom-in duration-300 gap-0.5 ${
+                className={`absolute -top-1 -right-1 h-4 min-w-[16px] px-1 rounded-full flex items-center justify-center text-[9px] font-black shadow-sm animate-in zoom-in duration-300 gap-0.5 ${
                   isSearching ? "bg-indigo-500 text-white" : isActive ? "bg-rose-500 text-white" : "bg-rose-400 text-white"
                 }`}
               >
-                {isSearching && <Search size={8} strokeWidth={3} />}
+                {isSearching && <Search size={7} strokeWidth={3} />}
                 {count}
               </div>
             )}

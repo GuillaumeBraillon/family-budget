@@ -75,7 +75,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   });
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
+    <div className="space-y-1 animate-in fade-in duration-500">
       <SavingsSummaryCard accounts={accounts} transfers={transfers} paidItems={paidItems} />
 
       <DashboardHeader currentDate={new Date()} year={selectedYear} onYearChange={setSelectedYear} />

@@ -101,7 +101,7 @@ export interface TransfersStats {
  * @param {string} params.sortOrder - Ordre de tri ("asc" | "desc")
  * @param {string} params.accountTypeFilter - Filtre type compte ("ALL" | "CHECKING" | "SAVINGS")
  * @param {string | null} params.specificAccountId - ID du compte spécifique filtré
- * @param {boolean} params.includeDirectOps - Inclure les opérations directes (intérêts, frais)
+ * @param {string} params.interestFilter - Filtre des opérations directes ("ALL" | "EXCLUDE" | "ONLY")
  *
  * @returns {Object} Données calculées
  * @returns {Account[]} accountsWithBalances - Comptes avec soldes calculés
@@ -130,7 +130,7 @@ export interface TransfersStats {
  *   sortOrder: "asc",
  *   accountTypeFilter: "ALL",
  *   specificAccountId: null,
- *   includeDirectOps: true
+ *   interestFilter: "EXCLUDE"
  * });
  * ```
  */
@@ -145,7 +145,7 @@ export const useTransfersData = ({
   sortOrder,
   accountTypeFilter,
   specificAccountId,
-  includeDirectOps,
+  interestFilter,
 }: {
   transfers: Transfer[];
   variableTransactions: VariableTransaction[];
@@ -157,7 +157,7 @@ export const useTransfersData = ({
   sortOrder: "asc" | "desc";
   accountTypeFilter: "ALL" | "CHECKING" | "SAVINGS";
   specificAccountId: string | null;
-  includeDirectOps: boolean;
+  interestFilter: "ALL" | "EXCLUDE" | "ONLY";
 }) => {
   /**
    * Calcule la position effective d'un virement pour le tri manuel.
@@ -251,9 +251,9 @@ export const useTransfersData = ({
       return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
     });
 
-    // 2. Filtrage temporel des opérations directes (si incluses)
+    // 2. Filtrage temporel des opérations directes selon interestFilter
     let filteredDirectOps: VariableTransaction[] = [];
-    if (includeDirectOps) {
+    if (interestFilter !== "EXCLUDE") {
       filteredDirectOps = variableTransactions.filter((tx) => {
         const d = new Date(tx.date);
         if (d.getMonth() !== currentMonth || d.getFullYear() !== currentYear) return false;
@@ -331,8 +331,11 @@ export const useTransfersData = ({
       ),
     ];
 
+    // 7b. Si interestFilter === "ONLY", ne garder que les opérations directes
+    const finalOps = interestFilter === "ONLY" ? combinedOps.filter((op) => op.source === "DIRECT") : combinedOps;
+
     // 8. Tri selon la clé choisie
-    const sorted = combinedOps.sort((a, b) => {
+    const sorted = finalOps.sort((a, b) => {
       let res = 0;
 
       if (sortKey === "manual") {
@@ -404,7 +407,7 @@ export const useTransfersData = ({
     sortOrder,
     accountTypeFilter,
     specificAccountId,
-    includeDirectOps,
+    interestFilter,
     accounts,
   ]);
 

@@ -7,6 +7,292 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.6.9] - 2026-01-17
+
+### 🎨 Harmonisation UI
+
+#### **Configuration View : Standardisation à 48px**
+
+Harmonisation complète de tous les gestionnaires de configuration avec un pattern unifié.
+
+**Composants Refactorisés** :
+
+1. **CategoryManager** :
+   - Ajout wrapper navigation (48px) : `CategoryTypeSelector` + bouton "Nouveau"
+   - Intégration `InfoBox` dans le composant
+   - Boutons actions compacts : `py-2` → `py-1`
+   - Pattern : Sélecteur + Action → InfoBox → Liste
+
+2. **OperationsManager** :
+   - Navigation : `CategoryTypeSelector` + `ListSorter` dans wrapper 48px
+   - InfoBox intégrée (gestion revenus/dépenses récurrents)
+   - Tri délégué au parent : ExpenseRulesEditor et IncomeEditor reçoivent props
+   - Pattern : Sélecteur + Sorter → InfoBox → Éditeurs
+
+3. **AccountLabelManager** (Refactor complet) :
+   - Navigation : 3 onglets (Courant/Virements/Épargne) + bouton "Nouveau" dans wrapper 48px
+   - InfoBox "Libellés & Autocomplétion" intégrée
+   - Sous-menu conditionnel (mode Courant) : Dépenses/Revenus + Boutons Import
+   - Tous les boutons : hauteur fixe `h-[30px]` (pas `py-*`)
+   - Boutons Import compacts : `py-1`
+   - Pattern : Onglets + Action → InfoBox → [Sous-menu conditionnel] → Recherche → Liste
+
+**Pattern Universel Établi** :
+
+```tsx
+<div className="space-y-4">
+  <div className="bg-white p-2 rounded-xl border border-slate-200 shadow-sm">
+    <div className="flex flex-wrap items-center gap-2 justify-between">
+      <SelectorOrTabs /> {/* h-[30px] buttons */}
+      <button className="px-4 py-1 ...">Action</button>
+    </div>
+  </div>
+
+  <InfoBox title="..." description="..." icon={...} />
+
+  {/* Contenu principal */}
+</div>
+```
+
+**Formule de Hauteur (48px)** :
+
+- Container `p-2` : 8px top + 8px bottom = 16px
+- Button `h-[30px]` : 30px fixe
+- Border : 2px
+- **Total : 48px** ✓
+
+**ConfigurationView Simplifié** :
+
+- Suppression des `InfoBox` externes (intégrées dans chaque manager)
+- Suppression des fragments `<> </>` inutiles
+- Rendu direct des composants : `{activeTab === "operations" && <OperationsManager />}`
+
+### 🐛 Corrections
+
+#### **WeekSelector : Colonnes Dynamiques**
+
+- **Problème** : Grille fixée à 4 colonnes (`grid-cols-4`) même avec 5+ périodes
+- **Solution** : Style inline dynamique `gridTemplateColumns: repeat(${weeks.length}, minmax(0, 1fr))`
+- **Impact** : Adaptation automatique à tout nombre de périodes (4, 5, 6...)
+
+#### **ESLint : Nettoyage Imports**
+
+- Suppression imports non utilisés suite aux refactors :
+  - `ConfigurationView` : Retrait `List` (InfoBox déplacée)
+  - `ExpenseRulesEditor` : Retrait `ListSorter` (tri délégué au parent)
+  - `IncomeEditor` : Retrait `ListSorter`, état local tri supprimé
+  - `TransfersView` : Retrait `ArrowRightLeft`, `Filter`, `X`, `GripVertical`, `Wallet`, `PiggyBank`, `InfoBox`
+  - `FilterBar` : Retrait `FilterBarHeader` (composant supprimé)
+- Correction dépendances `useMemo` : Retrait `sortKey`/`sortOrder` (valeurs outer scope)
+- **Résultat** : 0 erreurs, 0 warnings ESLint
+
+#### **Corrections Structurelles JSX**
+
+1. **ConfigurationView** :
+   - Retrait fragment `<> </>` autour de `OperationsManager` (redondant)
+   - Pattern : Rendu conditionnel direct sans wrapper
+
+2. **AccountLabelManager** (Corrections critiques) :
+   - **Bouton "Nouveau"** : Fermeture corrompue (texte après `>`) → Structure JSX valide
+   - **InfoBox manquante** : Ajout après la navigation
+   - **Sous-menu** : Extra `}>` supprimé, fermeture conditionnelle corrigée
+   - **Code dupliqué** : 18 lignes de boutons Import répétés → Supprimé
+   - **DataList** : Prop `onAdd` retirée (bouton dans navigation), `emptyMessage` ajouté
+
+### 🎯 Nouvelles Fonctionnalités
+
+#### **ScopeSelector : Nouveau Composant de Navigation**
+
+Création d'un composant réutilisable pour basculer entre vue mensuelle et par période.
+
+**Caractéristiques** :
+
+- Toggle élégant avec icons `Calendar` (mois) / `CalendarRange` (période)
+- Design cohérent avec le pattern 48px établi
+- Transitions smooth entre états
+- Actif : bg-indigo-600 avec shadow / Inactif : hover:bg-slate-50
+
+**Utilisation** :
+
+- `OperationsView` : Basculer entre échéancier mensuel et périodique
+- `BalancesView` : Basculer entre soldes mensuels et périodiques
+
+**Architecture** :
+
+```tsx
+<ScopeSelector scope={scope} onScopeChange={setScope} />
+```
+
+#### **SearchBar Rétractable avec Animation**
+
+Refonte complète de la SearchBar avec UX améliorée.
+
+**Avant** :
+
+- Input toujours visible (occupe espace même non utilisé)
+- Pas d'affordance visuelle
+
+**Après** :
+
+- **État fermé** : Bouton compact avec icon Search uniquement
+- **État ouvert** : Input complet avec animation slide-in
+- **Auto-focus** : Input focus automatique à l'ouverture
+- **Fermeture auto** : Clic extérieur ferme si vide
+- **Clear button** : Bouton X animé quand texte présent
+- **Responsive** : `w-full` mobile, `md:flex-1 md:max-w-xs` desktop
+
+**Bénéfices** :
+
+- ✅ Économie d'espace sur mobile
+- ✅ Animation fluide (fade-in + slide-in 200ms)
+- ✅ UX intuitive (auto-focus, fermeture intelligente)
+- ✅ Design moderne (transitions Tailwind)
+
+#### **FilterBar Modernisée : Header Intégré**
+
+Refonte de FilterBar avec suppression de FilterBarHeader en faveur d'une intégration directe.
+
+**Avant** :
+
+- Composant `FilterBarHeader` séparé avec badge d'état
+- Layout vertical avec gap-3
+- "FILTRES" label statique
+
+**Après** :
+
+- Header intégré dans FilterBar directement
+- Layout horizontal avec `justify-between`
+- Bouton "Plus de filtres" avec indicateur visuel :
+  - Actif (ouvert) : bg-slate-800 text-white
+  - Filtres secondaires actifs : bg-indigo-50 avec badge dot
+  - Inactif : bg-white hover:border-slate-300
+- Icons SVG inline pour meilleure performance
+- Texte masqué sur mobile (`hidden sm:inline`)
+
+**Architecture simplifiée** :
+
+```tsx
+<FilterBar>
+  {/* Filtres primaires + Toggle "Plus de filtres" */}
+  <div className="flex justify-between">
+    <div className="flex gap-2">
+      <CyclicFilterButton ... />
+      {/* Autres filtres primaires */}
+    </div>
+    <button>Plus de filtres {hasActiveSecondary && <dot />}</button>
+  </div>
+
+  {/* Filtres secondaires (collapsible) */}
+  {showAllFilters && <div>...</div>}
+</FilterBar>
+```
+
+**Fichier supprimé** :
+
+- `components/ui/molecules/FilterBarHeader.tsx` (46 lignes) → Fonctionnalité intégrée
+
+**Bénéfices** :
+
+- ✅ -1 composant à maintenir
+- ✅ Code plus DRY (pas de duplication du state hasActiveSecondary)
+- ✅ Layout plus compact (gap-3 → gap-1)
+- ✅ Indicateur visuel amélioré (badge dot + couleur)
+
+### 🔧 Améliorations
+
+#### **TransfersView : Drag & Drop Unifié**
+
+Support complet du drag & drop pour virements ET transactions directes.
+
+**Avant** :
+
+- Drag & drop uniquement pour les virements (`Transfer`)
+- Transactions directes (`VariableTransaction`) non réordonnables
+
+**Après** :
+
+- **Drag & drop universel** : Support virements + transactions dans la même liste
+- **Gestion intelligente** : Détecte automatiquement le type (`source === "TRANSFER"` vs `"DIRECT"`)
+- **Position calculation** : Adapte le calcul selon le type de l'item voisin
+- **Props ajoutée** : `onMoveTransaction` pour gérer le réordonnancement des transactions
+
+**Architecture** :
+
+```tsx
+const handleDragEnd = (event: DragEndEvent) => {
+  const movedItem = currentItems[oldIndex];
+
+  if (movedItem.source === "TRANSFER" && onMoveTransfer) {
+    onMoveTransfer(movedItem.transferData, newPosition);
+  } else if (movedItem.source === "DIRECT" && onMoveTransaction) {
+    onMoveTransaction(movedItem.transactionData, newPosition);
+  }
+};
+```
+
+**Calcul de position** :
+
+- Récupère `getEffectivePosition()` des items voisins (virements OU transactions)
+- Moyenne entre prev/next pour insertion entre deux items
+- Décalage de 50M pour insertion en début/fin de liste
+
+**Bénéfices** :
+
+- ✅ Ordre personnalisé pour tous les types d'opérations
+- ✅ Persistance automatique via callbacks
+- ✅ UX cohérente (même comportement virements/transactions)
+
+#### **TransfersView : Filtre "Intérêts" au lieu de "Opérations Directes"**
+
+Refonte du système de filtrage pour mieux gérer les ajustements d'épargne.
+
+**Avant** :
+
+- Filtre `includeDirectOps` (booléen) : Masquer/Afficher opérations directes
+- Problème : Les intérêts d'épargne sont des transactions directes mais nécessitent un traitement différent
+
+**Après** :
+
+- Nouveau filtre `interestFilter` avec 3 états :
+  - `"ALL"` : Tout afficher (virements + transactions + intérêts)
+  - `"ONLY"` : Uniquement les intérêts/ajustements exceptionnels
+  - `"EXCLUDE"` : Masquer les intérêts (afficher virements + transactions standards)
+
+**Impact sur les composants** :
+
+- `useTransfersFilters` : Ajout du nouveau filtre dans l'état
+- `useTransfersData` : Logique de filtrage mise à jour
+- `TransfersView` : Passage du filtre au hook de données
+
+**Bénéfices** :
+
+- ✅ Séparation claire intérêts/transactions courantes
+- ✅ Filtrage plus granulaire pour analyse
+- ✅ Support migration 002 (flag `is_interest` sur transfers)
+
+### 📦 Refactoring
+
+#### **Architecture Composants**
+
+- **Principe appliqué** : SRP (Single Responsibility Principle)
+- **Délégation des responsabilités** :
+  - `OperationsManager` : Gestion tri + navigation
+  - `ExpenseRulesEditor` / `IncomeEditor` : Affichage + props tri reçues
+- **Élimination duplication** : Pattern 48px copié 3× → Réutilisé systématiquement
+- **InfoBox intégrées** : Chaque manager auto-contenu (pas de dépendances externes)
+
+### 🎯 Bénéfices
+
+- ✅ **Cohérence visuelle** : Tous les managers suivent le même pattern
+- ✅ **Hauteur uniforme** : Navigation toujours 48px (calcul validé)
+- ✅ **Maintenabilité** : Pattern clair et documenté pour futurs composants
+- ✅ **Responsive** : `flex-wrap` adapte automatiquement sur mobile
+- ✅ **Accessibilité** : Hauteurs fixes facilitent la navigation au clavier
+- ✅ **Code propre** : 0 warnings ESLint, JSX valide partout
+- ✅ **Architecture solide** : SRP appliqué, responsabilités claires
+
+---
+
 ## [2.6.8] - 2026-01-16
 
 ### 🎯 Nouvelles Fonctionnalités

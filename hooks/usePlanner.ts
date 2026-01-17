@@ -473,41 +473,16 @@ export const usePlanner = (
           // Afficher les opérations qui ont des montants Standard (même partiellement)
           // Une opération mixte (70€ Extra + 45€ Standard) doit apparaître ici
           items = items.filter((i) => {
-            // Utiliser isExtraGlobal (toggle brut) au lieu de isExtra (calculé)
-            const hasGlobalExtra = i.isExtraGlobal;
-
-            logger.debug("planner-filter", `EXCLUDE Extra: ${i.label}`, {
-              amount: i.amount,
-              isExtraGlobal: i.isExtraGlobal,
-              isExtra: i.isExtra,
-              hasTagAmounts: !!i.tagAmounts,
-              tagAmountsLength: i.tagAmounts?.length || 0,
-              tagAmounts: i.tagAmounts,
-            });
-
             // RÈGLE 1 : Si toggle global Extra activé → Tout est Extra, rien de Standard
-            // Le toggle global a TOUJOURS la priorité absolue sur les flags individuels des tags
-            // Cas d'usage : Dépense exceptionnelle complète (ex: vacances, réparation)
-            if (hasGlobalExtra) {
-              logger.debug("planner-filter", `  → EXCLURE (toggle Extra global): ${i.label}`);
-              return false; // Toggle Extra → Tout est Extra → EXCLURE du filtre Standard
-            }
+            if (i.isExtraGlobal) return false;
 
             // RÈGLE 2 : Pas de toggle global → Analyser les tags individuels
             const tagAmounts = i.tagAmounts;
-            if (!tagAmounts || tagAmounts.length === 0) {
-              // Pas de tags : toute l'opération est Standard par défaut
-              logger.debug("planner-filter", `  → GARDER (pas de toggle Extra, pas de tags): ${i.label}`);
-              return true; // Tout Standard
-            }
+            if (!tagAmounts || tagAmounts.length === 0) return true; // Tout Standard
 
             // RÈGLE 3 : Avec tags → Vérifier s'il reste du montant Standard
-            // Calculer la somme des tags marqués Extra individuellement
             const extraSum = tagAmounts.filter((ta) => ta.isExtra === true).reduce((sum, ta) => sum + ta.amount, 0);
-            // S'il reste au moins 0.01€ après soustraction des montants Extra → Il y a du Standard
-            const hasStandard = i.amount - extraSum > 0.01;
-            logger.debug("planner-filter", `  → extraSum: ${extraSum}, hasStandard: ${hasStandard} pour ${i.label}`);
-            return hasStandard; // Garder si au moins une partie est Standard
+            return i.amount - extraSum > 0.01; // Garder si au moins une partie est Standard
           });
         }
 

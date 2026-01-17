@@ -23,7 +23,7 @@
  * />
  * ```
  */
-import React, { forwardRef } from "react";
+import { forwardRef } from "react";
 
 interface ValidationErrorBlockProps {
   errors: string[];

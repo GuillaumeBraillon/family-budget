@@ -4,21 +4,28 @@ import { AppSettings, PeriodType, CarryoverStrategy } from "../../../../../types
 import { MonthlyEnvelopeCard } from "../molecules/WeeklyEnvelopeCard";
 import { PeriodSettingsCard } from "../molecules/PeriodSettingsCard";
 import { CarryoverStrategyCard } from "../molecules/CarryoverStrategyCard";
-import { DatabaseConnectionCard } from "../molecules/DatabaseConnectionCard";
-import { LocalStorageManager } from "../molecules/LocalStorageManager";
-import { VersionInfoCard } from "../molecules/VersionInfoCard";
 
 interface GlobalSettingsProps {
   settings: AppSettings;
   onUpdate: (s: AppSettings) => void;
-  onResetConnection: () => void;
   session?: Session | null;
 }
 
 /**
- * Organisme orchestrant les réglages globaux.
+ * Composant de configuration budgétaire et des périodes.
+ *
+ * @description
+ * Regroupe les paramètres liés à la gestion budgétaire :
+ * - Enveloppe mensuelle (budget total alloué)
+ * - Découpage des périodes (semaines, jours fixes, parts égales)
+ * - Stratégie de gestion des dépassements (déduction simple vs étalement)
+ *
+ * @param {Object} props - Props du composant
+ * @param {AppSettings} props.settings - Paramètres globaux de l'application
+ * @param {Function} props.onUpdate - Callback pour mettre à jour les paramètres
+ * @param {Session | null} [props.session] - Session utilisateur Supabase (non utilisée actuellement)
  */
-export const GlobalSettings: React.FC<GlobalSettingsProps> = ({ settings, onUpdate, onResetConnection, session: _session }) => {
+export const GlobalSettings: React.FC<GlobalSettingsProps> = ({ settings, onUpdate, session: _session }) => {
   const updateEnvelope = (newEnv: number) => {
     onUpdate({ ...settings, monthly_envelope: newEnv });
   };
@@ -34,21 +41,11 @@ export const GlobalSettings: React.FC<GlobalSettingsProps> = ({ settings, onUpda
   return (
     <div className="max-w-5xl mx-auto space-y-6 pb-12 animate-in fade-in duration-500">
       {/* Configuration budgétaire */}
-      <MonthlyEnvelopeCard settings={settings} onUpdate={updateEnvelope} />
-      <PeriodSettingsCard settings={settings} onUpdate={updatePeriod} />
-      <CarryoverStrategyCard settings={settings} onUpdate={updateCarryoverStrategy} />
-
-      {/* Actions système */}
-      <div className="border-t border-slate-200 pt-6">
-        <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide mb-4 flex items-center gap-2">
-          <span className="text-slate-400">⚙️</span> Actions Système
-        </h3>
-        <div className="space-y-4">
-          <VersionInfoCard />
-          <LocalStorageManager />
-          <DatabaseConnectionCard onReset={onResetConnection} />
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <MonthlyEnvelopeCard settings={settings} onUpdate={updateEnvelope} />
+        <CarryoverStrategyCard settings={settings} onUpdate={updateCarryoverStrategy} />
       </div>
+      <PeriodSettingsCard settings={settings} onUpdate={updatePeriod} />
     </div>
   );
 };

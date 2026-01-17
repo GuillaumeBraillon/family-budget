@@ -1,6 +1,7 @@
 import React from "react";
 import { CalendarClock, ShoppingBag, Wallet, Info } from "lucide-react";
 import { MobileTooltip } from "../../../ui/MobileTooltip";
+import { OperationFilters } from "../../../../types";
 
 interface BalancesHeaderProps {
   resteAPayer: number;
@@ -10,7 +11,7 @@ interface BalancesHeaderProps {
   totalDetails?: { name: string; amount: number }[];
   currentDate?: Date;
   activeWeek?: number;
-  onNavigateToOperations?: (date: Date, filters: any) => void;
+  onNavigateToOperations?: (date: Date, filters: Partial<OperationFilters>) => void;
 }
 
 export const BalancesHeader: React.FC<BalancesHeaderProps> = ({
@@ -20,7 +21,7 @@ export const BalancesHeader: React.FC<BalancesHeaderProps> = ({
   pendingRecurringDetails = [],
   totalDetails = [],
   currentDate,
-  activeWeek,
+  activeWeek: _activeWeek,
   onNavigateToOperations,
 }) => {
   const totalPendingVariable = pendingVariablesDetails.reduce((sum, d) => sum + d.amount, 0);

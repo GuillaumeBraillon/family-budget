@@ -62,14 +62,27 @@ export const CarryoverStrategyCard: React.FC<CarryoverStrategyCardProps> = ({ se
           <TrendingDown size={20} className="text-purple-600" />
         </div>
         <div className="flex-1">
-          <h3 className="text-sm font-bold text-slate-900">Gestion des Dépassements</h3>
+          <div className="flex items-center gap-2">
+            <h3 className="text-sm font-bold text-slate-900">Gestion des Dépassements</h3>
+            <MobileTooltip
+              text={
+                <>
+                  <strong>Déduction simple :</strong> le solde est reporté uniquement sur la période suivante.
+                  <br />
+                  <span className="text-slate-500">Ex: P1 dépasse de 300€ → P2 = 500€ - 300€ = 200€</span>
+                  <br />
+                  <br />
+                  <strong>Étalement distribué :</strong> le solde est réparti équitablement sur toutes les périodes restantes.
+                  <br />
+                  <span className="text-slate-500">Ex: P1 dépasse de 300€ → P2, P3, P4 = 500€ - 100€ = 400€ chacune</span>
+                </>
+              }
+              icon={<Info size={14} className="text-slate-600 hover:text-slate-800" />}
+              widthClass="w-80"
+            />
+          </div>
           <p className="text-xs text-slate-500">Stratégie de report en cas de dépassement budgétaire</p>
         </div>
-        <MobileTooltip
-          text="Définit comment les dépassements d'une période sont gérés : déduction sur la période suivante uniquement, ou étalement sur toutes les périodes restantes."
-          icon={<Info size={16} className="text-slate-600 hover:text-slate-800" />}
-          widthClass="w-64"
-        />
       </div>
 
       <div className="space-y-3">
@@ -94,11 +107,6 @@ export const CarryoverStrategyCard: React.FC<CarryoverStrategyCardProps> = ({ se
               <p className="text-xs text-slate-600 mt-1 leading-relaxed">
                 Le dépassement est déduit <strong>uniquement de la période suivante</strong>.
               </p>
-              <div className="mt-2 p-2 bg-slate-50 rounded-lg">
-                <p className="text-[10px] text-slate-500 leading-tight">
-                  <strong>Exemple :</strong> Période 1 dépasse de 278€ → Période 2 = 500€ - 278€ = 222€
-                </p>
-              </div>
             </div>
           </div>
         </button>
@@ -126,11 +134,6 @@ export const CarryoverStrategyCard: React.FC<CarryoverStrategyCardProps> = ({ se
               <p className="text-xs text-slate-600 mt-1 leading-relaxed">
                 Le dépassement est <strong>réparti équitablement sur toutes les périodes restantes</strong>.
               </p>
-              <div className="mt-2 p-2 bg-slate-50 rounded-lg">
-                <p className="text-[10px] text-slate-500 leading-tight">
-                  <strong>Exemple :</strong> Période 1 dépasse de 300€ → Périodes 2, 3, 4 = 500€ - (300÷3) = 400€ chacune
-                </p>
-              </div>
             </div>
           </div>
         </button>

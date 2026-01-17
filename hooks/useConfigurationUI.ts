@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-export type ConfigTab = "general" | "family" | "accounts" | "operations" | "categories" | "labels" | "tags" | "users";
+export type ConfigTab = "budget" | "family" | "accounts" | "operations" | "categories" | "labels" | "tags" | "users" | "system";
 
 /**
  * Hook de gestion de l'état UI de la vue Configuration.
@@ -19,14 +19,14 @@ export type ConfigTab = "general" | "family" | "accounts" | "operations" | "cate
  *
  * return (
  *   <Tabs activeTab={activeTab} onChange={setActiveTab}>
- *     <Tab name="general">Paramètres généraux</Tab>
+ *     <Tab name="budget">Paramètres budgétaires</Tab>
  *     <Tab name="family">Famille</Tab>
  *   </Tabs>
  * );
  * ```
  */
 export const useConfigurationUI = () => {
-  const [activeTab, setActiveTab] = useState<ConfigTab>("general");
+  const [activeTab, setActiveTab] = useState<ConfigTab>("budget");
 
   return {
     activeTab,

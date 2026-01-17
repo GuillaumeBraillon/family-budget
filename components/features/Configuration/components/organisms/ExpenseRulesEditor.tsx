@@ -8,7 +8,7 @@ import { DataList } from "../../../../ui/molecules/DataList";
 import { DataListRow } from "../../../../ui/molecules/DataListRow";
 import { ConfirmModal } from "../../../../ui/atoms/ConfirmModal";
 import { Modal } from "../../../../ui/Modal";
-import { ListSorter, SortOrder } from "../../../../ui/molecules/ListSorter";
+import { SortOrder } from "../../../../ui/molecules/ListSorter";
 import { ValidationErrorBlock } from "../../../../ui/atoms/ValidationErrorBlock";
 import { useValidationScroll } from "../../../../../hooks/useValidationScroll";
 import { AdvancedOptionsAccordion } from "../../../../ui/molecules/AdvancedOptionsAccordion";
@@ -21,6 +21,8 @@ interface ExpenseRulesEditorProps {
   onAddConfig: (c: ExpenseConfig) => void;
   onUpdateConfig: (c: ExpenseConfig) => void;
   onDeleteConfig: (id: string) => void;
+  sortKey: string;
+  sortOrder: SortOrder;
 }
 
 export const ExpenseRulesEditor: React.FC<ExpenseRulesEditorProps> = ({
@@ -31,6 +33,8 @@ export const ExpenseRulesEditor: React.FC<ExpenseRulesEditorProps> = ({
   onAddConfig,
   onUpdateConfig,
   onDeleteConfig,
+  sortKey,
+  sortOrder,
 }) => {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -41,9 +45,6 @@ export const ExpenseRulesEditor: React.FC<ExpenseRulesEditorProps> = ({
 
   // Scroll automatique vers les erreurs de validation
   useValidationScroll(validationErrors, errorBlockRef);
-
-  const [sortKey, setSortKey] = useState<string>("dayOfMonth");
-  const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
 
   const defaultAccount = accounts[0]?.id || "";
 
@@ -189,26 +190,8 @@ export const ExpenseRulesEditor: React.FC<ExpenseRulesEditorProps> = ({
     );
   }
 
-  const sortOptions = [
-    { key: "dayOfMonth", label: "Date" },
-    { key: "label", label: "Libellé" },
-    { key: "amount", label: "Montant" },
-  ];
-
   return (
     <div className="space-y-2 animate-in fade-in duration-300">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2">
-        <ListSorter
-          options={sortOptions}
-          currentSort={sortKey}
-          currentOrder={sortOrder}
-          onSortChange={(k, o) => {
-            setSortKey(k);
-            setSortOrder(o);
-          }}
-        />
-      </div>
-
       <Modal isOpen={isFormOpen} onClose={clearForm} title={editingId ? "Modifier la dépense" : "Nouvelle Dépense Récurrente"}>
         <div className="space-y-2.5">
           <ValidationErrorBlock errors={validationErrors} ref={errorBlockRef} />

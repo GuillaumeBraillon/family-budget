@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Trash2, Save, Tag, DownloadCloud, Search, Check, Info, TrendingDown, TrendingUp, ArrowRightLeft, PiggyBank, CreditCard } from "lucide-react";
+import { Trash2, Save, Tag, DownloadCloud, Search, Check, Info, TrendingDown, TrendingUp, ArrowRightLeft, PiggyBank, CreditCard, List } from "lucide-react";
 import { SavedLabel, AccountType, CategoryDef, Account, Person } from "../../../../../types";
 import { ConfirmModal } from "../../../../ui/atoms/ConfirmModal";
 import { DataList } from "../../../../ui/molecules/DataList";
@@ -9,6 +9,7 @@ import { TextInput } from "../../../../ui/molecules/FormInputs";
 import { CategorySelector } from "../../../../ui/molecules/CategorySelector";
 import { AccountSelector, BeneficiarySelector } from "../../../../ui/molecules/SmartSelectors";
 import { AdvancedOptionsAccordion } from "../../../../ui/molecules/AdvancedOptionsAccordion";
+import { InfoBox } from "../../../../ui/InfoBox";
 
 interface AccountLabelManagerProps {
   labels: SavedLabel[];
@@ -286,44 +287,58 @@ export const AccountLabelManager: React.FC<AccountLabelManagerProps> = ({
         onCancel={() => setDeleteConfirm(null)}
       />
 
-      {/* NAVIGATION DES ONGLETS */}
-      <div className="flex justify-center mb-6">
-        <div className="flex bg-slate-100 p-1 rounded-lg overflow-x-auto">
+      {/* BARRE DE NAVIGATION HARMONISÉE */}
+      <div className="bg-white p-2 rounded-xl border border-slate-200 shadow-sm">
+        <div className="flex flex-wrap items-center gap-2 justify-between">
+          <div className="flex bg-slate-100 rounded-lg overflow-x-auto">
+            <button
+              onClick={() => setCurrentTab(AccountType.CHECKING)}
+              className={`h-[30px] flex items-center justify-center gap-2 px-4 text-sm font-medium rounded-md transition-all whitespace-nowrap ${
+                currentTab === AccountType.CHECKING ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
+              }`}
+            >
+              <CreditCard size={14} /> Courant
+            </button>
+            <button
+              onClick={() => setCurrentTab(AccountType.TRANSFER)}
+              className={`h-[30px] flex items-center justify-center gap-2 px-4 text-sm font-medium rounded-md transition-all whitespace-nowrap ${
+                currentTab === AccountType.TRANSFER ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
+              }`}
+            >
+              <ArrowRightLeft size={14} /> Virements
+            </button>
+            <button
+              onClick={() => setCurrentTab(AccountType.SAVINGS)}
+              className={`h-[30px] flex items-center justify-center gap-2 px-4 text-sm font-medium rounded-md transition-all whitespace-nowrap ${
+                currentTab === AccountType.SAVINGS ? "bg-white text-emerald-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
+              }`}
+            >
+              <PiggyBank size={14} /> Épargne
+            </button>
+          </div>
           <button
-            onClick={() => setCurrentTab(AccountType.CHECKING)}
-            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-all whitespace-nowrap ${
-              currentTab === AccountType.CHECKING ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
-            }`}
+            onClick={handleAddClick}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-1 rounded-lg text-sm font-semibold flex items-center transition-all shadow-sm active:scale-95"
           >
-            <CreditCard size={14} /> Courant
-          </button>
-          <button
-            onClick={() => setCurrentTab(AccountType.TRANSFER)}
-            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-all whitespace-nowrap ${
-              currentTab === AccountType.TRANSFER ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
-            }`}
-          >
-            <ArrowRightLeft size={14} /> Virements
-          </button>
-          <button
-            onClick={() => setCurrentTab(AccountType.SAVINGS)}
-            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-all whitespace-nowrap ${
-              currentTab === AccountType.SAVINGS ? "bg-white text-emerald-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
-            }`}
-          >
-            <PiggyBank size={14} /> Épargne
+            <Tag size={18} /> Nouveau
           </button>
         </div>
       </div>
 
+      <InfoBox
+        title="Libellés & Autocomplétion"
+        description="Gérez vos libellés pré-enregistrés pour accélérer la saisie des opérations variables (courses, essence, restaurants, etc.)."
+        icon={<List size={18} />}
+      />
+
       {/* SOUS-MENU POUR LES COMPTES COURANTS UNIQUEMENT */}
       {currentTab === AccountType.CHECKING && (
-        <div className="flex flex-col gap-4 animate-in slide-in-from-top-2 duration-300">
-          <div className="flex justify-center">
-            <div className="flex bg-slate-50 p-1 rounded-lg border border-slate-200">
+        <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm space-y-3 animate-in slide-in-from-top-2 duration-300">
+          <div className="flex flex-wrap items-center gap-2 justify-between">
+            <div className="flex bg-slate-50 rounded-lg border border-slate-200">
               <button
                 onClick={() => setIsExpenseMode(true)}
-                className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all flex items-center gap-2 ${
+                className={`h-[30px] px-4 text-xs font-bold rounded-md transition-all flex items-center justify-center gap-2 ${
                   isExpenseMode ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
                 }`}
               >
@@ -331,36 +346,19 @@ export const AccountLabelManager: React.FC<AccountLabelManagerProps> = ({
               </button>
               <button
                 onClick={() => setIsExpenseMode(false)}
-                className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all flex items-center gap-2 ${
+                className={`h-[30px] px-4 text-xs font-bold rounded-md transition-all flex items-center justify-center gap-2 ${
                   !isExpenseMode ? "bg-white text-emerald-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
                 }`}
               >
                 <TrendingUp size={14} /> Revenus (Crédits)
               </button>
             </div>
-          </div>
 
-          <div className="flex flex-col sm:flex-row justify-end items-end sm:items-center gap-2">
-            {importStatus && (
-              <div
-                className={`px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-2 ${
-                  importStatus.type === "success"
-                    ? "bg-emerald-100 text-emerald-700"
-                    : importStatus.type === "info"
-                      ? "bg-slate-100 text-slate-600"
-                      : "bg-red-100 text-red-700"
-                }`}
-              >
-                {importStatus.type === "success" && <Check size={14} />}
-                {importStatus.type === "info" && <Info size={14} />}
-                {importStatus.message}
-              </div>
-            )}
             <div className="flex gap-2">
               {isExpenseMode && onImportLabels && (
                 <button
                   onClick={() => runImport(onImportLabels!, "CB")}
-                  className="text-xs font-medium text-slate-500 hover:text-indigo-600 flex items-center gap-1.5 transition-colors bg-white px-3 py-2 rounded-lg border border-slate-200 shadow-sm hover:border-indigo-200 active:scale-95"
+                  className="text-xs font-medium text-slate-500 hover:text-indigo-600 flex items-center gap-1.5 transition-colors bg-white px-3 py-1 rounded-lg border border-slate-200 shadow-sm hover:border-indigo-200 active:scale-95"
                   title="Importer les libellés 'CB %' depuis l'historique"
                 >
                   <DownloadCloud size={14} /> Import (CB)
@@ -369,7 +367,7 @@ export const AccountLabelManager: React.FC<AccountLabelManagerProps> = ({
               {!isExpenseMode && onImportVirLabels && (
                 <button
                   onClick={() => runImport(onImportVirLabels!, "VIR")}
-                  className="text-xs font-medium text-slate-500 hover:text-indigo-600 flex items-center gap-1.5 transition-colors bg-white px-3 py-2 rounded-lg border border-slate-200 shadow-sm hover:border-indigo-200 active:scale-95"
+                  className="text-xs font-medium text-slate-500 hover:text-indigo-600 flex items-center gap-1.5 transition-colors bg-white px-3 py-1 rounded-lg border border-slate-200 shadow-sm hover:border-indigo-200 active:scale-95"
                   title="Importer les libellés 'VIR %' depuis l'historique"
                 >
                   <DownloadCloud size={14} /> Import (VIR)
@@ -377,6 +375,22 @@ export const AccountLabelManager: React.FC<AccountLabelManagerProps> = ({
               )}
             </div>
           </div>
+
+          {importStatus && (
+            <div
+              className={`px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-2 ${
+                importStatus.type === "success"
+                  ? "bg-emerald-100 text-emerald-700"
+                  : importStatus.type === "info"
+                    ? "bg-slate-100 text-slate-600"
+                    : "bg-red-100 text-red-700"
+              }`}
+            >
+              {importStatus.type === "success" && <Check size={14} />}
+              {importStatus.type === "info" && <Info size={14} />}
+              {importStatus.message}
+            </div>
+          )}
         </div>
       )}
 
@@ -395,8 +409,6 @@ export const AccountLabelManager: React.FC<AccountLabelManagerProps> = ({
       <DataList
         title={getListTitle()}
         count={filteredList.length}
-        onAdd={handleAddClick}
-        addButtonLabel="Ajouter un libellé"
         emptyMessage={searchQuery ? "Aucun libellé ne correspond à votre recherche." : "Aucun libellé défini pour cette section."}
       >
         {filteredList.map((label) => {

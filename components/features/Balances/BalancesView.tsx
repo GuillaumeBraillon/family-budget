@@ -17,8 +17,8 @@
 import React, { useState } from "react";
 import { Account, Person, ExpenseConfig, IncomeConfig, PaidItemDetails, AppSettings, VariableTransaction, CategoryDef, OperationFilters } from "../../../types";
 import { useBalancesData, useBalancesRows } from "../../../hooks/balances";
-import { Calendar, CalendarRange } from "lucide-react";
 import { MonthNavigator } from "../../ui/molecules/MonthNavigator";
+import { ScopeSelector } from "../../ui/molecules/ScopeSelector";
 import { WeekSelector } from "../../ui/molecules/WeekSelector";
 import { BalancesHeader } from "./components/BalancesHeader";
 import { BalancesTable } from "./components/BalancesTable";
@@ -80,7 +80,7 @@ export const BalancesView: React.FC<BalancesViewProps> = ({
   const {
     periodCarryovers,
     budgetPeriodeGlobal,
-    pendingRecurring,
+    pendingRecurring: _pendingRecurring,
     realConsumption,
     distributableBalance,
     checkingAccounts,
@@ -108,7 +108,7 @@ export const BalancesView: React.FC<BalancesViewProps> = ({
 
   // Hook 2 : Génération des lignes avec redistribution 2-pass
   const { jointRows, personalRows, totalPersonalRow, virLddsTotal, lddsToJoint, lddsToPersonals } = useBalancesRows({
-    accounts,
+    _accounts: accounts,
     people,
     budgetPeriodeGlobal,
     totalPersonalBalance,
@@ -128,7 +128,7 @@ export const BalancesView: React.FC<BalancesViewProps> = ({
   };
 
   // Récupération de la dette totale pour l'affichage header
-  const totalPendingHeader = checkingAccounts.reduce((sum, acc) => {
+  const _totalPendingHeader = checkingAccounts.reduce((sum, acc) => {
     return sum + (stats.byAccount[acc.id]?.remaining || 0);
   }, 0);
 
@@ -156,35 +156,13 @@ export const BalancesView: React.FC<BalancesViewProps> = ({
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
+    <div className="space-y-1 animate-in fade-in duration-500">
       {/* Navigation de période */}
-      <div className="flex flex-col md:flex-row justify-between gap-4">
-        <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
-          <MonthNavigator date={currentDate} onPrev={handlePrevMonth} onNext={handleNextMonth} />
-
-          <div className="bg-white border border-slate-200 p-1 rounded-xl flex items-center justify-center shadow-sm">
-            <button
-              onClick={() => setScope("MONTH")}
-              className={`px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition-all ${
-                scope === "MONTH" ? "bg-indigo-600 text-white shadow-md" : "text-slate-500 hover:bg-slate-50"
-              }`}
-            >
-              <Calendar size={14} /> Mois
-            </button>
-            <button
-              onClick={() => setScope("PERIOD")}
-              className={`px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition-all ${
-                scope === "PERIOD" ? "bg-indigo-600 text-white shadow-md" : "text-slate-500 hover:bg-slate-50"
-              }`}
-            >
-              <CalendarRange size={14} /> Période
-            </button>
-          </div>
-        </div>
+      <div className="flex flex-row gap-1.5 md:gap-2 items-center flex-wrap">
+        <MonthNavigator date={currentDate} onPrev={handlePrevMonth} onNext={handleNextMonth} />
+        <ScopeSelector scope={scope} onScopeChange={setScope} />
+        {scope === "PERIOD" && <WeekSelector weeks={filteredPeriodBudgets} activeWeek={activeWeek} onSelect={setActiveWeek} searchQuery="" showBadge={false} />}
       </div>
-
-      {/* Sélecteur de période si en mode PERIOD */}
-      {scope === "PERIOD" && <WeekSelector weeks={filteredPeriodBudgets} activeWeek={activeWeek} onSelect={setActiveWeek} searchQuery="" showBadge={false} />}
 
       <BalancesHeader
         resteAPayer={jointAccount ? stats.byAccount[jointAccount.id]?.remaining || 0 : 0}

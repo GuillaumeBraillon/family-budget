@@ -17,18 +17,17 @@ import {
   CategoryDef,
   OperationFilters,
 } from "../../../types";
-import { Calendar, CalendarRange, GripVertical } from "lucide-react";
 import { arrayMove } from "@dnd-kit/sortable";
 import { logger } from "../../../services/logger";
 
 // Imports UI Atomic (Generic)
 import { Toast } from "../../ui/Toast";
 import { MonthNavigator } from "../../ui/molecules/MonthNavigator";
+import { ScopeSelector } from "../../ui/molecules/ScopeSelector";
 import { FilterBar } from "../../ui/molecules/FilterBar";
 import { WeekSelector } from "../../ui/molecules/WeekSelector";
 import { QuickPeriodSummary } from "../../ui/molecules/QuickPeriodSummary";
 import { SearchBar } from "../../ui/atoms/SearchBar";
-import { ListSorter } from "../../ui/molecules/ListSorter";
 
 // Imports Feature-Specific Components
 import { OperationsList } from "./components/OperationsList";
@@ -80,7 +79,15 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
   const ui = usePlannerUI(initialDate, initialWeek);
   const { filters, setFilters, resetFilters } = useOperationsFilters(initialFilters);
   const { sortKey, sortOrder, setSorting, sortItems, isManualSort, sortOptions, getEffectivePosition: _getEffectivePosition } = useOperationsSorting();
-  const [scope, setScope] = useState<"MONTH" | "PERIOD">(initialWeek !== undefined ? "PERIOD" : "MONTH");
+  // Scope intelligent : PERIOD par défaut (ou si initialWeek fourni), MONTH si navigation sans période spécifique
+  const [scope, setScope] = useState<"MONTH" | "PERIOD">(() => {
+    // Si initialWeek === undefined ET initialDate === undefined, on arrive directement → PERIOD
+    // Si initialWeek fourni (navigation depuis AnnualIncomeAnalysis) → PERIOD
+    // Si initialDate fourni SANS initialWeek (GlobalMonthlyAnalysis) → MONTH
+    if (initialWeek !== undefined) return "PERIOD";
+    if (initialDate !== undefined) return "MONTH";
+    return "PERIOD";
+  });
 
   // Récupération des périodes pour le WeekSelector
   const _checkingAccounts = accounts.filter((a) => a.type === "COURANT");
@@ -210,7 +217,7 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
         });
 
         // 1. Simuler le nouveau tableau après déplacement
-        const reorderedList = arrayMove(currentItems, oldIndex, newIndex);
+        const reorderedList: PlannedItem[] = arrayMove(currentItems, oldIndex, newIndex);
 
         // IMPORTANT : En mode DESC, l'ordre visuel est inversé
         // prev devient next et vice-versa pour le calcul des positions
@@ -309,74 +316,54 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-1 animate-in fade-in duration-500">
       {feedback && <Toast type={feedback.type} message={feedback.message} onClose={() => setFeedback(null)} />}
 
-      <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-        <QuickPeriodSummary expenses={quickStats.expenses} income={quickStats.income} />
-
-        <div className="flex flex-col md:flex-row justify-between gap-4">
-          <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
-            <MonthNavigator date={ui.currentDate} onPrev={ui.handlePrevMonth} onNext={ui.handleNextMonth} />
-
-            <div className="bg-white border border-slate-200 p-1 rounded-xl flex items-center justify-center shadow-sm">
-              <button
-                onClick={() => setScope("MONTH")}
-                className={`px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition-all ${
-                  scope === "MONTH" ? "bg-indigo-600 text-white shadow-md" : "text-slate-500 hover:bg-slate-50"
-                }`}
-              >
-                <Calendar size={14} /> Mois
-              </button>
-              <button
-                onClick={() => setScope("PERIOD")}
-                className={`px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition-all ${
-                  scope === "PERIOD" ? "bg-indigo-600 text-white shadow-md" : "text-slate-500 hover:bg-slate-50"
-                }`}
-              >
-                <CalendarRange size={14} /> Période
-              </button>
-            </div>
-          </div>
-          <SearchBar value={ui.searchQuery} onChange={ui.setSearchQuery} />
-        </div>
-
+      {/* Navigation de période */}
+      <div className="flex flex-row gap-1.5 md:gap-2 items-center flex-wrap">
+        <MonthNavigator date={ui.currentDate} onPrev={ui.handlePrevMonth} onNext={ui.handleNextMonth} />
+        <ScopeSelector scope={scope} onScopeChange={setScope} />
         {scope === "PERIOD" && (
           <WeekSelector weeks={filteredPeriodBudgets} activeWeek={ui.activeWeek} onSelect={ui.setActiveWeek} searchQuery={ui.searchQuery} />
         )}
-
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-          <FilterBar
-            filters={filters}
-            onFilterChange={setFilters}
-            accounts={accounts}
-            people={people}
-            hiddenFilters={["transfer"]}
-            tags={tags}
-            onReset={resetFilters}
-            sortOptions={sortOptions}
-            sortKey={sortKey}
-            sortOrder={sortOrder}
-            onSortChange={setSorting}
-          />
+        <div className="ml-auto">
+          <SearchBar value={ui.searchQuery} onChange={ui.setSearchQuery} />
         </div>
+      </div>
 
-        <OperationsList
-          items={currentItems}
-          monthShort={monthShort}
-          people={people}
+      <div className="bg-white p-2 rounded-xl border border-slate-200 shadow-sm">
+        <FilterBar
+          filters={filters}
+          onFilterChange={setFilters}
           accounts={accounts}
+          people={people}
+          hiddenFilters={["transfer"]}
           tags={tags}
-          currentDate={ui.currentDate}
-          onItemClick={handleItemClick}
-          onAddClick={() => {
-            setEditingVar(null);
-            setIsVarFormOpen(true);
-          }}
-          onExport={handleExport}
-          onReorder={isManualSort ? handleReorder : undefined}
+          onReset={resetFilters}
+          sortOptions={sortOptions}
+          sortKey={sortKey}
+          sortOrder={sortOrder}
+          onSortChange={setSorting}
         />
       </div>
+
+      <QuickPeriodSummary expenses={quickStats.expenses} income={quickStats.income} />
+
+      <OperationsList
+        items={currentItems}
+        monthShort={monthShort}
+        people={people}
+        accounts={accounts}
+        tags={tags}
+        currentDate={ui.currentDate}
+        onItemClick={handleItemClick}
+        onAddClick={() => {
+          setEditingVar(null);
+          setIsVarFormOpen(true);
+        }}
+        onExport={handleExport}
+        onReorder={isManualSort ? handleReorder : undefined}
+      />
 
       <PlannerModals
         confirmModal={ui.confirmModal}

@@ -45,8 +45,21 @@ const getWeekFromDate = (date: Date): number => {
 
 export const usePlannerUI = (initialDate: Date = new Date(), initialWeek?: number) => {
   const [currentDate, setCurrentDate] = useState(initialDate);
-  // On initialise la semaine active : soit forcée par props (navigation dashboard), soit calculée via la date
-  const [activeWeek, setActiveWeek] = useState(() => initialWeek ?? getWeekFromDate(initialDate));
+
+  // Initialisation intelligente de la période active
+  const [activeWeek, setActiveWeek] = useState(() => {
+    // Si une période est explicitement fournie (navigation dashboard), l'utiliser
+    if (initialWeek !== undefined) return initialWeek;
+
+    const today = new Date();
+    // Si on affiche le mois en cours, calculer la période actuelle basée sur AUJOURD'HUI
+    if (today.getMonth() === initialDate.getMonth() && today.getFullYear() === initialDate.getFullYear()) {
+      return getWeekFromDate(today);
+    }
+
+    // Sinon, première période du mois affiché
+    return 1;
+  });
 
   // Recherche AVEC PERSISTANCE
   const [searchQuery, setSearchQuery] = useState(() => {

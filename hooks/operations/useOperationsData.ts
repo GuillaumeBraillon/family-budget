@@ -27,7 +27,6 @@
  */
 import { useMemo } from "react";
 import { usePlanner } from "../usePlanner";
-import { logger } from "../../services/logger";
 import {
   Account,
   ExpenseConfig,

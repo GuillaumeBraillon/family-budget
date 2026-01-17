@@ -1,6 +1,6 @@
 import React from "react";
 import { ConfigTab } from "../../../../../hooks/useConfigurationUI";
-import { Settings2, Users, CreditCard, Tag, List, CalendarRange, Bookmark, Shield } from "lucide-react";
+import { Settings2, Users, CreditCard, Tag, List, CalendarRange, Bookmark, Shield, Wallet } from "lucide-react";
 
 interface ConfigurationTabsProps {
   activeTab: ConfigTab;
@@ -17,7 +17,7 @@ export const ConfigurationTabs: React.FC<ConfigurationTabsProps> = ({ activeTab,
     {
       label: "Configuration",
       tabs: [
-        { id: "general", label: "Général", icon: <Settings2 size={14} /> },
+        { id: "budget", label: "Budget", icon: <Wallet size={14} /> },
         { id: "operations", label: "Opérations", icon: <CalendarRange size={14} /> },
         { id: "categories", label: "Catégories", icon: <Tag size={14} /> },
         { id: "labels", label: "Libellés", icon: <List size={14} /> },
@@ -25,16 +25,16 @@ export const ConfigurationTabs: React.FC<ConfigurationTabsProps> = ({ activeTab,
         { id: "accounts", label: "Comptes", icon: <CreditCard size={14} /> },
         { id: "family", label: "Bénéficiaires", icon: <Users size={14} /> },
         { id: "users", label: "Utilisateurs", icon: <Shield size={14} /> },
+        { id: "system", label: "Système", icon: <Settings2 size={14} /> },
       ],
     },
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-row gap-1.5 md:gap-2 items-center flex-wrap">
       <div className="grid grid-cols-1 gap-6">
         {groups.map((group, gIdx) => (
           <div key={gIdx} className="space-y-3">
-            <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">{group.label}</h4>
             <div className="flex flex-wrap gap-2">
               {group.tabs.map((tab) => (
                 <button
@@ -54,7 +54,6 @@ export const ConfigurationTabs: React.FC<ConfigurationTabsProps> = ({ activeTab,
           </div>
         ))}
       </div>
-      <div className="border-b border-slate-200 opacity-60"></div>
     </div>
   );
 };

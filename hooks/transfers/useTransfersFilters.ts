@@ -28,7 +28,7 @@ import { SortOrder } from "../../components/ui/molecules/ListSorter";
 const STORAGE_KEYS = {
   ACCOUNT_TYPE: "transfersView_accountType",
   SPECIFIC_ACCOUNT: "transfersView_specificAccount",
-  INCLUDE_DIRECT_OPS: "transfersView_includeDirectOps",
+  INTEREST_FILTER: "transfersView_interestFilter",
   SORT_KEY: "transfersView_sortKey",
   SORT_ORDER: "transfersView_sortOrder",
 } as const;
@@ -110,12 +110,15 @@ export const useTransfersFilters = () => {
   });
 
   /**
-   * Inclure les opérations directes sur épargne (intérêts, frais bancaires, etc.).
-   * Valeur par défaut : true
+   * Filtre des opérations directes sur épargne (intérêts, frais bancaires, etc.).
+   * Valeur par défaut : "EXCLUDE"
    */
-  const [includeDirectOps, setIncludeDirectOps] = useState(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.INCLUDE_DIRECT_OPS);
-    return saved ? saved === "true" : true;
+  const [interestFilter, setInterestFilter] = useState<"ALL" | "EXCLUDE" | "ONLY">(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.INTEREST_FILTER);
+    if (saved === "ALL" || saved === "EXCLUDE" || saved === "ONLY") {
+      return saved;
+    }
+    return "EXCLUDE";
   });
 
   /**
@@ -162,11 +165,11 @@ export const useTransfersFilters = () => {
   }, [specificAccountId]);
 
   /**
-   * Sauvegarde automatique de l'inclusion des opérations directes.
+   * Sauvegarde automatique du filtre d'intérêts.
    */
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.INCLUDE_DIRECT_OPS, String(includeDirectOps));
-  }, [includeDirectOps]);
+    localStorage.setItem(STORAGE_KEYS.INTEREST_FILTER, interestFilter);
+  }, [interestFilter]);
 
   /**
    * Sauvegarde automatique de la clé de tri.
@@ -190,8 +193,8 @@ export const useTransfersFilters = () => {
     setAccountTypeFilter,
     specificAccountId,
     setSpecificAccountId,
-    includeDirectOps,
-    setIncludeDirectOps,
+    interestFilter,
+    setInterestFilter,
     selectedMotif,
     setSelectedMotif,
 

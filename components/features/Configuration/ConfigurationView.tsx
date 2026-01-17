@@ -1,6 +1,6 @@
 import React from "react";
 import { Session } from "@supabase/supabase-js";
-import { Settings, UserCircle, CreditCard, Tag, Sliders, List, CalendarRange, Bookmark, Shield } from "lucide-react";
+import { Settings, UserCircle, CreditCard, Sliders, Bookmark, Shield } from "lucide-react";
 import { ConfigTab } from "../../../hooks/useConfigurationUI";
 import { ExpenseConfig, IncomeConfig, CategoryDef, Person, Account, AppSettings, SavedLabel, Tag as TagType, AuthorizedUser } from "../../../types";
 import { InfoBox } from "../../ui/InfoBox";
@@ -14,6 +14,7 @@ import { AccountLabelManager } from "./components/organisms/AccountLabelManager"
 import { OperationsManager } from "./components/organisms/OperationsManager";
 import { TagManager } from "./components/organisms/TagManager";
 import { UsersManager } from "./components/organisms/UsersManager";
+import { SystemSettings } from "./components/organisms/SystemSettings";
 
 interface ConfigurationViewProps {
   configs: ExpenseConfig[];
@@ -89,139 +90,120 @@ export const ConfigurationView: React.FC<ConfigurationViewProps> = ({
   onDeleteUser,
 }) => {
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-          <Settings className="text-indigo-600" />
-          Paramètres
-        </h2>
-      </div>
-
+    <div className="space-y-1 animate-in fade-in duration-500">
       <ConfigurationTabs activeTab={activeTab} onTabChange={setActiveTab} />
 
-      <div className="pt-2 space-y-6">
-        {/* ========== 1. CONFIGURATION DE BASE ========== */}
+      {activeTab === "family" && (
+        <>
+          <InfoBox
+            title="Gestion des Bénéficiaires"
+            description="Gérez les membres du foyer. Les enfants sont exclus automatiquement des calculs de contribution et d'équité financière."
+            icon={<UserCircle size={18} />}
+          />
+          <PeopleManager people={people} onUpsertPerson={onUpsertPerson} onDeletePerson={onDeletePerson} />
+        </>
+      )}
 
-        {activeTab === "family" && (
-          <>
-            <InfoBox
-              title="Gestion des Bénéficiaires"
-              description="Gérez les membres du foyer. Les enfants sont exclus automatiquement des calculs de contribution et d'équité financière."
-              icon={<UserCircle size={18} />}
-            />
-            <PeopleManager people={people} onUpsertPerson={onUpsertPerson} onDeletePerson={onDeletePerson} />
-          </>
-        )}
+      {activeTab === "accounts" && (
+        <>
+          <InfoBox
+            title="Comptes Bancaires"
+            description="Gérez vos comptes courants et d'épargne. Assignez un propriétaire pour le suivi des soldes et des ratios de répartition."
+            icon={<CreditCard size={18} />}
+          />
+          <AccountManager accounts={accounts} people={people} onUpsertAccount={onUpsertAccount} onDeleteAccount={onDeleteAccount} />
+        </>
+      )}
 
-        {activeTab === "accounts" && (
-          <>
-            <InfoBox
-              title="Comptes Bancaires"
-              description="Gérez vos comptes courants et d'épargne. Assignez un propriétaire pour le suivi des soldes et des ratios de répartition."
-              icon={<CreditCard size={18} />}
-            />
-            <AccountManager accounts={accounts} people={people} onUpsertAccount={onUpsertAccount} onDeleteAccount={onDeleteAccount} />
-          </>
-        )}
+      {/* ========== 2. ORGANISATION & CLASSIFICATION ========== */}
 
-        {/* ========== 2. ORGANISATION & CLASSIFICATION ========== */}
+      {activeTab === "categories" && (
+        <>
+          <CategoryManager categories={categories} onUpdateCategories={onUpdateCategories} />
+        </>
+      )}
 
-        {activeTab === "categories" && (
-          <>
-            <InfoBox
-              title="Catégories & Sous-Catégories"
-              description="Organisez vos flux financiers en catégories et sous-catégories. Utilisé pour classer et analyser vos opérations."
-              icon={<Tag size={18} />}
-            />
-            <CategoryManager categories={categories} onUpdateCategories={onUpdateCategories} />
-          </>
-        )}
+      {activeTab === "tags" && onUpsertTag && onDeleteTag && (
+        <>
+          <InfoBox
+            title="Tags Thématiques"
+            description="Étiquettes colorées pour regrouper vos opérations par projets ou événements transversaux (#Vacances, #Noël, #Travaux)."
+            icon={<Bookmark size={18} />}
+          />
+          <TagManager tags={tags} onUpsertTag={onUpsertTag} onDeleteTag={onDeleteTag} />
+        </>
+      )}
 
-        {activeTab === "tags" && onUpsertTag && onDeleteTag && (
-          <>
-            <InfoBox
-              title="Tags Thématiques"
-              description="Étiquettes colorées pour regrouper vos opérations par projets ou événements transversaux (#Vacances, #Noël, #Travaux)."
-              icon={<Bookmark size={18} />}
-            />
-            <TagManager tags={tags} onUpsertTag={onUpsertTag} onDeleteTag={onDeleteTag} />
-          </>
-        )}
+      {/* ========== 3. OPÉRATIONS RÉCURRENTES ========== */}
 
-        {/* ========== 3. OPÉRATIONS RÉCURRENTES ========== */}
+      {activeTab === "operations" && (
+        <OperationsManager
+          configs={configs}
+          incomeConfigs={incomeConfigs}
+          categories={categories}
+          people={people}
+          accounts={accounts}
+          onAddConfig={onAddConfig}
+          onUpdateConfig={onUpdateConfig}
+          onDeleteConfig={onDeleteConfig}
+          onAddIncome={onAddIncome}
+          onUpdateIncome={onUpdateIncome}
+          onDeleteIncome={onDeleteIncome}
+        />
+      )}
 
-        {activeTab === "operations" && (
-          <>
-            <InfoBox
-              title="Opérations Récurrentes"
-              description="Définissez vos revenus mensuels (salaires, aides) et dépenses fixes (loyer, abonnements). Génère automatiquement l'échéancier mensuel."
-              icon={<CalendarRange size={18} />}
-            />
-            <OperationsManager
-              configs={configs}
-              incomeConfigs={incomeConfigs}
-              categories={categories}
-              people={people}
-              accounts={accounts}
-              onAddConfig={onAddConfig}
-              onUpdateConfig={onUpdateConfig}
-              onDeleteConfig={onDeleteConfig}
-              onAddIncome={onAddIncome}
-              onUpdateIncome={onUpdateIncome}
-              onDeleteIncome={onDeleteIncome}
-            />
-          </>
-        )}
+      {activeTab === "labels" && (
+        <AccountLabelManager
+          labels={savedLabels}
+          categories={categories}
+          accounts={accounts}
+          people={people}
+          onUpsertLabel={onUpsertLabel}
+          onDeleteLabel={onDeleteLabel}
+          onImportLabels={onImportLabels}
+          onImportVirLabels={onImportVirLabels}
+        />
+      )}
 
-        {activeTab === "labels" && (
-          <>
-            <InfoBox
-              title="Libellés & Autocomplétion"
-              description="Gérez vos libellés pré-enregistrés pour accélérer la saisie des opérations variables (courses, essence, restaurants, etc.)."
-              icon={<List size={18} />}
-            />
-            <AccountLabelManager
-              labels={savedLabels}
-              categories={categories}
-              accounts={accounts}
-              people={people}
-              onUpsertLabel={onUpsertLabel}
-              onDeleteLabel={onDeleteLabel}
-              onImportLabels={onImportLabels}
-              onImportVirLabels={onImportVirLabels}
-            />
-          </>
-        )}
+      {/* ========== 4. PARAMÈTRES SYSTÈME ========== */}
 
-        {/* ========== 4. PARAMÈTRES SYSTÈME ========== */}
+      {activeTab === "budget" && (
+        <>
+          <InfoBox
+            title="Budget & Périodes"
+            description="Configurez votre enveloppe mensuelle, le découpage des périodes (semaines/jours fixes/parts égales), et la stratégie de gestion des dépassements budgétaires."
+            icon={<Sliders size={18} />}
+          />
+          <GlobalSettings settings={settings} onUpdate={onUpdateSettings} session={session} />
+        </>
+      )}
 
-        {activeTab === "general" && (
-          <>
-            <InfoBox
-              title="Réglages Globaux"
-              description="Budget mensuel, découpage des périodes (semaines/jours fixes/parts égales), stratégie de gestion des dépassements, et connexion base de données."
-              icon={<Sliders size={18} />}
-            />
-            <GlobalSettings settings={settings} onUpdate={onUpdateSettings} onResetConnection={onResetConnection} session={session} />
-          </>
-        )}
+      {activeTab === "users" && onToggleUserAuthorization && onUpdateUserNotes && onDeleteUser && (
+        <>
+          <InfoBox
+            title="Utilisateurs Autorisés"
+            description="Contrôlez les accès à l'application. Whitelist des utilisateurs autorisés à se connecter via Google OAuth."
+            icon={<Shield size={18} />}
+          />
+          <UsersManager
+            users={authorizedUsers}
+            onToggleAuthorization={onToggleUserAuthorization}
+            onUpdateNotes={onUpdateUserNotes}
+            onDeleteUser={onDeleteUser}
+          />
+        </>
+      )}
 
-        {activeTab === "users" && onToggleUserAuthorization && onUpdateUserNotes && onDeleteUser && (
-          <>
-            <InfoBox
-              title="Utilisateurs Autorisés"
-              description="Contrôlez les accès à l'application. Whitelist des utilisateurs autorisés à se connecter via Google OAuth."
-              icon={<Shield size={18} />}
-            />
-            <UsersManager
-              users={authorizedUsers}
-              onToggleAuthorization={onToggleUserAuthorization}
-              onUpdateNotes={onUpdateUserNotes}
-              onDeleteUser={onDeleteUser}
-            />
-          </>
-        )}
-      </div>
+      {activeTab === "system" && (
+        <>
+          <InfoBox
+            title="Paramètres Système"
+            description="Actions système et informations techniques : version de l'application, gestion du localStorage, connexion à la base de données."
+            icon={<Settings size={18} />}
+          />
+          <SystemSettings onResetConnection={onResetConnection} />
+        </>
+      )}
     </div>
   );
 };
