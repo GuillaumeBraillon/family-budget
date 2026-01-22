@@ -7,6 +7,65 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.6.10] - 2026-01-22
+
+### 🐛 Corrections Critiques
+
+#### **Balance Calculation : Correction du Double-Comptage**
+
+**Problème identifié** :
+
+- Gap du compte joint calculé avec double-comptage des opérations en attente
+- Formule incorrecte : `gap = pendingOnJoint - currentBalance`
+- Exemple : 384.96€ - 9.85€ = 375.11€ ❌ (besoin fictif créé par double-comptage)
+- Cause : `currentBalance` inclut déjà les opérations en attente dans son calcul
+
+**Solution appliquée** (hooks/balances/useBalancesRows.ts) :
+
+```typescript
+// AVANT (INCORRECT)
+jointGap = pendingOnJoint - jointAccount.currentBalance;
+
+// APRÈS (CORRECT)
+const balanceExcludingPending = jointAccount.currentBalance + pendingOnJoint;
+jointGap = pendingOnJoint - balanceExcludingPending;
+```
+
+- Exemple corrigé : 384.96€ - (9.85€ + 384.96€) = -9.85€ ✅ (surplus correct)
+
+**Améliorations Logique Métier** :
+
+1. **Seuil de Tolérance (20€) - Compte Joint** :
+   - Surplus ≤ 20€ : Pas de virement (tolérance pour petites variations)
+   - Surplus > 20€ : Virement automatique vers LDDS
+   - Évite les micro-virements inutiles
+
+2. **Système de Priorités** :
+   - **Priorité 1** : Besoins du compte joint → Virement depuis LDDS
+   - **Priorité 2** : Besoins comptes courants persos → Utilisation surplus joint d'abord
+   - **Priorité 3** : Tous les comptes OK → Surplus joint vers LDDS (si > 20€)
+   - Garantit que les comptes courants ne manquent jamais de fonds
+
+3. **Calcul Solde Prévu** :
+   - Formule corrigée : `targetBalance = currentBalance + effectiveTransfer`
+   - Affiche le solde projeté APRÈS virement exécuté
+   - Exemple : -59.85€ + 59.85€ = 0€ ✅
+
+**Améliorations UI** (BalancesTable.tsx) :
+
+- Colonne Solde Prévu : Ajout ligne "Hors attente" pour compte joint
+- Affiche solde avec ET sans opérations en attente
+- Tooltip enrichi avec 4 lignes d'information
+
+**Impact** :
+
+- ✅ Gap du compte joint : Calcul correct sans double-comptage
+- ✅ Virements : Pertinents et évitent micro-ajustements
+- ✅ Surplus : Utilisés intelligemment selon priorités
+- ✅ Projections : Solde prévu précis et compréhensible
+
+---
+
 ## [2.6.9] - 2026-01-17
 
 ### 🎨 Harmonisation UI

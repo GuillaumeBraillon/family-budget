@@ -336,8 +336,17 @@ export const BalancesTable: React.FC<BalancesTableProps> = ({
                     )}
                   </td>
                   <td className="px-4 py-2.5 text-right">
-                    <div className="inline-block px-1.5 py-0.5 bg-slate-100 rounded text-slate-700 font-mono font-bold text-xs">{row.target.toFixed(2)} €</div>
-                    {row.isJoint && <p className="text-[9px] text-slate-400 mt-0.5">Inclus factures</p>}
+                    <div className="flex flex-col items-end">
+                      <div className="inline-block px-1.5 py-0.5 bg-slate-100 rounded text-slate-700 font-mono font-bold text-xs">
+                        {row.target.toFixed(2)} €
+                      </div>
+                      {row.isJoint && row.pendingAmount !== undefined && Math.abs(row.pendingAmount) > 0.01 && (
+                        <div className="text-[9px] text-slate-500 flex items-center gap-1 mt-0.5">
+                          <span className="font-medium">Hors attente:</span>
+                          <span className="font-mono font-bold text-slate-700">{(row.target + row.pendingAmount).toFixed(2)} €</span>
+                        </div>
+                      )}
+                    </div>
                   </td>
                   <td className="px-4 py-2.5 text-right bg-indigo-50/30 font-bold font-mono">
                     <div className="flex flex-col items-end gap-1">
@@ -359,8 +368,12 @@ export const BalancesTable: React.FC<BalancesTableProps> = ({
 
                                     <div className="space-y-1">
                                       <div className="flex justify-between gap-3">
-                                        <span className="text-slate-800">Dettes en attente :</span>
+                                        <span className="text-slate-800">Opérations en attente :</span>
                                         <span className="font-mono font-bold text-slate-950">{row.calculation.jointDebts?.toFixed(2)}€</span>
+                                      </div>
+                                      <div className="flex justify-between gap-3">
+                                        <span className="text-slate-800">Solde hors attente :</span>
+                                        <span className="font-mono font-bold text-slate-950">{(row.balance + row.pendingAmount).toFixed(2)}€</span>
                                       </div>
                                       <div className="flex justify-between gap-3">
                                         <span className="text-slate-800">Solde actuel :</span>
