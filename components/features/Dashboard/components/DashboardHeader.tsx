@@ -17,7 +17,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({ currentDate, y
           <LayoutDashboard className="text-indigo-600" />
           Situation : {monthLabel}
         </h2>
-        <p className="text-sm text-slate-500 mt-1">Vue consolidée de l'ensemble du mois en cours.</p>
+        <p className="text-sm text-slate-500 mt-1">Analyses financières annuelles avec détails mensuels et périodiques.</p>
       </div>
       <div className="flex items-center gap-2 bg-white rounded-lg p-1 border border-slate-200 shadow-sm">
         <button onClick={() => onYearChange(year - 1)} className="p-1 hover:bg-slate-100 rounded-md transition-colors text-slate-600">

@@ -501,7 +501,7 @@ export const useDashboardData = ({
 
       const periodData: PeriodData[] = periods.map((p) => ({
         period: p,
-        income: { recurring: 0, variable: 0, total: 0 },
+        income: { salaries: 0, recurring: 0, variable: 0, total: 0 },
         expenses: { recurring: 0, variable: 0, variableStandard: 0, variableExtra: 0, total: 0 },
         balance: 0,
       }));
@@ -517,12 +517,16 @@ export const useDashboardData = ({
       const addToPeriod = (
         day: number,
         amount: number,
-        type: "income_recurring" | "income_variable" | "expense_recurring" | "expense_variable",
+        type: "income_salary" | "income_recurring" | "income_variable" | "expense_recurring" | "expense_variable",
         isExtra = false
       ) => {
         const pIndex = periods.findIndex((p) => day >= p.start && day <= p.end);
         if (pIndex !== -1) {
-          if (type === "income_recurring") {
+          if (type === "income_salary") {
+            periodData[pIndex].income.salaries += amount;
+            periodData[pIndex].income.total += amount;
+            periodData[pIndex].balance += amount;
+          } else if (type === "income_recurring") {
             periodData[pIndex].income.recurring += amount;
             periodData[pIndex].income.total += amount;
             periodData[pIndex].balance += amount;
@@ -548,7 +552,27 @@ export const useDashboardData = ({
         }
       };
 
-      // --- ÉTAPE 3 : AGRÉGATION REVENUS RÉCURRENTS (Réel uniquement, HORS SALAIRES) ---
+      // --- ÉTAPE 3A : AGRÉGATION SALAIRES (Réel uniquement) ---
+
+      incomeConfigs.forEach((inc) => {
+        if (!inc.isSalary) return; // UNIQUEMENT les salaires
+        if (inc.startMonth && monthKey < inc.startMonth) return;
+        if (inc.endMonth && monthKey > inc.endMonth) return;
+
+        const instanceId = `${inc.id}-${monthKey}`;
+        const paid = paidItems[instanceId];
+
+        if (paid && !paid.isWaiting) {
+          let day = inc.dayOfMonth;
+          if (paid.paymentDate) {
+            const parts = paid.paymentDate.split("-").map(Number);
+            if (parts.length === 3) day = parts[2];
+          }
+          addToPeriod(day, paid.amount, "income_salary");
+        }
+      });
+
+      // --- ÉTAPE 3B : AGRÉGATION REVENUS RÉCURRENTS (Réel uniquement, HORS SALAIRES) ---
 
       incomeConfigs.forEach((inc) => {
         if (inc.isSalary) return; // EXCLUSION des salaires

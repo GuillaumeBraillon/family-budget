@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { usePlannerUI } from "../../../hooks/usePlannerUI";
 import { usePlanner } from "../../../hooks/usePlanner";
 import { useError } from "../../../contexts/ErrorContext";
+import { useCsvExport } from "../../../hooks/useCsvExport";
 import { useOperationsFilters, useOperationsSorting, useOperationsData } from "../../../hooks/operations";
 import {
   ExpenseConfig,
@@ -74,6 +75,7 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
   onMoveItem,
 }) => {
   const { showError } = useError();
+  const { exportToCsv, escapeCsv, formatNumberFr } = useCsvExport();
 
   // Hooks spécialisés (responsabilités déléguées)
   const ui = usePlannerUI(initialDate, initialWeek);
@@ -151,51 +153,41 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
 
   const handleExport = () => {
     if (currentItems.length === 0) return;
+
     const headers = ["Date", "Libellé", "Montant", "Type", "Catégorie", "Sous-Catégorie", "Bénéficiaire", "Compte", "Statut", "Note", "Tags"];
-    const csvContent = [
-      headers.join(";"),
-      ...currentItems.map((item) => {
-        const dateStr =
-          item.paidDetails?.paymentDate ||
-          `${ui.currentDate.getFullYear()}-${String(ui.currentDate.getMonth() + 1).padStart(2, "0")}-${String(item.day).padStart(2, "0")}`;
-        const personName = people.find((p) => p.id === item.beneficiaryId)?.name || "";
-        const accountName = accounts.find((a) => a.id === item.accountId)?.name || "";
-        const status = item.isPaid ? "Réel" : "En attente";
-        const type = item.type === "INCOME" ? "Revenu" : "Dépense";
-        const amount = item.amount.toFixed(2).replace(".", ",");
-        const itemTags = item.tagAmounts
-          ? tags
-              .filter((t) => item.tagAmounts?.some((ta) => ta.tagId === t.id))
-              .map((t) => t.name)
-              .join(", ")
-          : "";
-        const escapeCsv = (str: string) => `"${(str || "").replace(/"/g, '""')}"`;
-        return [
-          dateStr,
-          escapeCsv(item.label),
-          amount,
-          type,
-          escapeCsv(item.category),
-          escapeCsv(item.subCategory || ""),
-          escapeCsv(personName),
-          escapeCsv(accountName),
-          status,
-          escapeCsv(item.comments || ""),
-          escapeCsv(itemTags),
-        ].join(";");
-      }),
-    ].join("\n");
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    if (link.download !== undefined) {
-      const url = URL.createObjectURL(blob);
-      link.setAttribute("href", url);
-      link.setAttribute("download", `budget_export_${scope.toLowerCase()}_${new Date().toISOString().split("T")[0]}.csv`);
-      link.style.visibility = "hidden";
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    }
+
+    const rows = currentItems.map((item) => {
+      const dateStr =
+        item.paidDetails?.paymentDate ||
+        `${ui.currentDate.getFullYear()}-${String(ui.currentDate.getMonth() + 1).padStart(2, "0")}-${String(item.day).padStart(2, "0")}`;
+      const personName = people.find((p) => p.id === item.beneficiaryId)?.name || "";
+      const accountName = accounts.find((a) => a.id === item.accountId)?.name || "";
+      const status = item.isPaid ? "Réel" : "En attente";
+      const type = item.type === "INCOME" ? "Revenu" : "Dépense";
+      const amount = formatNumberFr(item.amount);
+      const itemTags = item.tagAmounts
+        ? tags
+            .filter((t) => item.tagAmounts?.some((ta) => ta.tagId === t.id))
+            .map((t) => t.name)
+            .join(", ")
+        : "";
+
+      return [
+        escapeCsv(dateStr),
+        escapeCsv(item.label),
+        amount,
+        escapeCsv(type),
+        escapeCsv(item.category),
+        escapeCsv(item.subCategory || ""),
+        escapeCsv(personName),
+        escapeCsv(accountName),
+        escapeCsv(status),
+        escapeCsv(item.comments || ""),
+        escapeCsv(itemTags),
+      ];
+    });
+
+    exportToCsv(headers, rows, `budget_operations_${scope.toLowerCase()}`);
   };
 
   const defaultVarDate = (() => {

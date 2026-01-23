@@ -1,13 +1,15 @@
 import React from "react";
 import { Card } from "../../../../ui/Card";
-import { CalendarClock, ShoppingBag, ArrowUpRight, ArrowDownLeft, Scale } from "lucide-react";
+import { CalendarClock, ShoppingBag, ArrowUpRight, ArrowDownLeft, Scale, Briefcase } from "lucide-react";
 import { ClickableAmount } from "../../../../ui/atoms/ClickableAmount";
+import { ExportCsvButton } from "../../../../ui/atoms/ExportCsvButton";
 import { OperationFilters } from "../../../../../types";
 import { getDetailedAnalysisFilters } from "../../../../../hooks/dashboard/useDashboardData";
+import { useCsvExport } from "../../../../../hooks/useCsvExport";
 
 interface PeriodData {
   period: { id: number; label: string; start: number; end: number };
-  income: { recurring: number; variable: number; total: number };
+  income: { salaries: number; recurring: number; variable: number; total: number };
   expenses: { recurring: number; variable: number; total: number };
   balance: number;
 }
@@ -28,11 +30,149 @@ interface AnnualIncomeAnalysisProps {
 }
 
 export const AnnualIncomeAnalysis: React.FC<AnnualIncomeAnalysisProps> = ({ data, year, onYearChange: _onYearChange, onNavigateToPlanner }) => {
+  const { exportToCsv, escapeCsv, formatNumberFr } = useCsvExport();
   const maxPeriods = data.reduce((max, m) => Math.max(max, m.periods.length), 0) || 4;
   const periodsHeader = Array.from({ length: maxPeriods }, (_, i) => i + 1);
 
   // Vérification s'il y a des données à afficher cette année
   const hasData = data.some((m) => Math.abs(m.totals.income) > 0.01 || Math.abs(m.totals.expenses) > 0.01);
+
+  const handleExport = () => {
+    if (!hasData) return;
+
+    // Construire les headers dynamiquement selon le nombre de périodes
+    const headers = ["Mois", "Flux", ...periodsHeader.map((p) => `Période ${p}`), "Cumul"];
+
+    const rows: string[][] = [];
+
+    data.forEach((month) => {
+      const totSalaries = month.periods.reduce((acc, p) => acc + (p.income.salaries || 0), 0);
+      const totIncRec = month.periods.reduce((acc, p) => acc + p.income.recurring, 0);
+      const totIncVar = month.periods.reduce((acc, p) => acc + p.income.variable, 0);
+      const totInc = month.totals.income;
+      const totExpRec = month.periods.reduce((acc, p) => acc + p.expenses.recurring, 0);
+      const totExpVar = month.periods.reduce((acc, p) => acc + p.expenses.variable, 0);
+      const totExpVarStandard = month.periods.reduce((acc, p) => acc + p.expenses.variableStandard, 0);
+      const totExpVarExtra = month.periods.reduce((acc, p) => acc + p.expenses.variableExtra, 0);
+      const totExp = month.totals.expenses;
+      const totBal = month.totals.balance;
+
+      // Si le mois est vide, on ne l'exporte pas
+      const isEmpty = Math.abs(totInc) < 0.01 && Math.abs(totExp) < 0.01;
+      if (isEmpty) return;
+
+      // LIGNE 0 : SALAIRES
+      rows.push([
+        escapeCsv(month.monthName),
+        escapeCsv("Salaires"),
+        ...periodsHeader.map(() => escapeCsv("-")),
+        totSalaries > 0.01 ? formatNumberFr(totSalaries) : escapeCsv("-"),
+      ]);
+
+      // LIGNE 1 : REVENUS RÉCURRENTS
+      rows.push([
+        escapeCsv(""), // Pas de répétition du mois
+        escapeCsv("Revenus récurrents"),
+        ...periodsHeader.map((p, idx) => {
+          const period = month.periods[idx];
+          return period && period.income.recurring > 0.01 ? formatNumberFr(period.income.recurring) : escapeCsv("-");
+        }),
+        formatNumberFr(totIncRec),
+      ]);
+
+      // LIGNE 2 : REVENUS VARIABLES
+      rows.push([
+        escapeCsv(""),
+        escapeCsv("Revenus variables"),
+        ...periodsHeader.map((p, idx) => {
+          const period = month.periods[idx];
+          return period && period.income.variable > 0.01 ? formatNumberFr(period.income.variable) : escapeCsv("-");
+        }),
+        formatNumberFr(totIncVar),
+      ]);
+
+      // LIGNE 3 : TOTAL REVENUS
+      rows.push([
+        escapeCsv(""),
+        escapeCsv("TOTAL REVENUS"),
+        ...periodsHeader.map((p, idx) => {
+          const period = month.periods[idx];
+          // Total SANS salaires pour les périodes (récurrents + variables uniquement)
+          const totalPeriod = period ? period.income.recurring + period.income.variable : 0;
+          return totalPeriod > 0.01 ? formatNumberFr(totalPeriod) : escapeCsv("-");
+        }),
+        formatNumberFr(totInc),
+      ]);
+
+      // LIGNE 4 : DÉPENSES RÉCURRENTES
+      rows.push([
+        escapeCsv(""),
+        escapeCsv("Dépenses récurrentes"),
+        ...periodsHeader.map((p, idx) => {
+          const period = month.periods[idx];
+          return period && period.expenses.recurring > 0.01 ? formatNumberFr(period.expenses.recurring) : escapeCsv("-");
+        }),
+        formatNumberFr(totExpRec),
+      ]);
+
+      // LIGNE 5A : DÉPENSES VARIABLES STANDARD
+      rows.push([
+        escapeCsv(""),
+        escapeCsv("Dépenses variables (Standard)"),
+        ...periodsHeader.map((p, idx) => {
+          const period = month.periods[idx];
+          return period && period.expenses.variableStandard > 0.01 ? formatNumberFr(period.expenses.variableStandard) : escapeCsv("-");
+        }),
+        formatNumberFr(totExpVarStandard),
+      ]);
+
+      // LIGNE 5B : DÉPENSES VARIABLES EXTRA
+      rows.push([
+        escapeCsv(""),
+        escapeCsv("Dépenses variables (Extra)"),
+        ...periodsHeader.map((p, idx) => {
+          const period = month.periods[idx];
+          return period && period.expenses.variableExtra > 0.01 ? formatNumberFr(period.expenses.variableExtra) : escapeCsv("-");
+        }),
+        formatNumberFr(totExpVarExtra),
+      ]);
+
+      // LIGNE 5C : TOTAL DÉPENSES VARIABLES
+      rows.push([
+        escapeCsv(""),
+        escapeCsv("TOTAL Dépenses variables"),
+        ...periodsHeader.map((p, idx) => {
+          const period = month.periods[idx];
+          return period && period.expenses.variable > 0.01 ? formatNumberFr(period.expenses.variable) : escapeCsv("-");
+        }),
+        formatNumberFr(totExpVar),
+      ]);
+
+      // LIGNE 6 : TOTAL DÉPENSES
+      rows.push([
+        escapeCsv(""),
+        escapeCsv("TOTAL DÉPENSES"),
+        ...periodsHeader.map((p, idx) => {
+          const period = month.periods[idx];
+          return period ? formatNumberFr(period.expenses.total) : escapeCsv("-");
+        }),
+        formatNumberFr(totExp),
+      ]);
+
+      // LIGNE 7 : SOLDE
+      rows.push([
+        escapeCsv(""),
+        escapeCsv("SOLDE"),
+        ...periodsHeader.map((p, idx) => {
+          const period = month.periods[idx];
+          return period ? formatNumberFr(period.balance) : escapeCsv("-");
+        }),
+        formatNumberFr(totBal),
+      ]);
+    });
+
+    exportToCsv(headers, rows, `analyse_annuelle_${year}`);
+  };
 
   return (
     <Card className="border-slate-200 shadow-sm overflow-hidden">
@@ -40,6 +180,7 @@ export const AnnualIncomeAnalysis: React.FC<AnnualIncomeAnalysisProps> = ({ data
         <h3 className="text-sm font-bold text-slate-700 uppercase tracking-widest flex items-center gap-2">
           <Scale size={16} className="text-indigo-600" /> Analyse Complète (Réel)
         </h3>
+        {hasData && <ExportCsvButton onClick={handleExport} label="Export CSV" />}
       </div>
 
       <div className="overflow-x-auto">
@@ -66,6 +207,7 @@ export const AnnualIncomeAnalysis: React.FC<AnnualIncomeAnalysisProps> = ({ data
             )}
             {data.map((month) => {
               // Calcul des totaux mensuels pour affichage colonne cumul
+              const totSalaries = month.periods.reduce((acc, p) => acc + (p.income.salaries || 0), 0);
               const totIncRec = month.periods.reduce((acc, p) => acc + p.income.recurring, 0);
               const totIncVar = month.periods.reduce((acc, p) => acc + p.income.variable, 0);
               const totInc = month.totals.income;
@@ -84,14 +226,43 @@ export const AnnualIncomeAnalysis: React.FC<AnnualIncomeAnalysisProps> = ({ data
 
               return (
                 <React.Fragment key={month.monthIndex}>
-                  {/* LIGNE 1 : REVENUS RÉCURRENTS */}
-                  <tr className="group bg-emerald-50/40 hover:bg-emerald-50/60 transition-colors border-t-2 border-slate-400">
-                    <td rowSpan={9} className="px-4 py-3 align-top bg-gradient-to-r from-slate-50 to-white border-r-2 border-slate-200">
+                  {/* LIGNE 0 : SALAIRES (Mensuel - Cumul uniquement) */}
+                  <tr className="group bg-blue-50/40 hover:bg-blue-50/60 transition-colors border-t-2 border-slate-400">
+                    <td rowSpan={10} className="px-4 py-3 align-top bg-gradient-to-r from-slate-50 to-white border-r-2 border-slate-200">
                       <div className="flex flex-col sticky left-0">
                         <span className="font-bold text-slate-900 capitalize text-sm">{month.monthName}</span>
                         <span className="text-[10px] text-slate-400 font-medium">{year}</span>
                       </div>
                     </td>
+                    <td className="px-3 py-1.5 border-r border-slate-50">
+                      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-blue-700 font-bold text-[10px] w-full">
+                        <Briefcase size={10} /> Salaires
+                      </span>
+                    </td>
+                    {periodsHeader.map((p, idx) => (
+                      <td key={idx} className="px-3 py-1.5 text-center">
+                        <span className="text-slate-300 font-light text-[9px]">-</span>
+                      </td>
+                    ))}
+                    <td className="px-4 py-1.5 text-right bg-blue-50/30 text-blue-700 font-bold border-l border-slate-100">
+                      {totSalaries > 0 ? (
+                        <ClickableAmount
+                          date={month.dateObj}
+                          filters={{ flux: "INCOME", source: "RECURRING", salary: "ONLY" }}
+                          onNavigate={onNavigateToPlanner}
+                          className="hover:underline text-blue-700"
+                          as="button"
+                        >
+                          {totSalaries.toFixed(2)} €
+                        </ClickableAmount>
+                      ) : (
+                        <span className="text-slate-200 font-light">-</span>
+                      )}
+                    </td>
+                  </tr>
+
+                  {/* LIGNE 1 : REVENUS RÉCURRENTS */}
+                  <tr className="group bg-emerald-50/40 hover:bg-emerald-50/60 transition-colors">
                     <td className="px-3 py-1.5 border-r border-slate-50">
                       <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-emerald-700 font-medium text-[10px] w-full">
                         <CalendarClock size={10} /> Rev. Récurrents
@@ -143,11 +314,16 @@ export const AnnualIncomeAnalysis: React.FC<AnnualIncomeAnalysisProps> = ({ data
                         <ArrowUpRight size={10} /> Total Revenus
                       </span>
                     </td>
-                    {periodsHeader.map((p, idx) => (
-                      <td key={idx} className="px-3 py-2 text-right font-bold text-emerald-700">
-                        {renderCell(month.periods[idx]?.income.total, month.dateObj, month.periods[idx]?.period.id, "INCOME", "ALL", onNavigateToPlanner)}
-                      </td>
-                    ))}
+                    {periodsHeader.map((p, idx) => {
+                      const period = month.periods[idx];
+                      // Total SANS salaires pour les périodes (récurrents + variables uniquement)
+                      const totalPeriod = period ? period.income.recurring + period.income.variable : 0;
+                      return (
+                        <td key={idx} className="px-3 py-2 text-right font-bold text-emerald-700">
+                          {renderCell(totalPeriod, month.dateObj, period?.period.id, "INCOME", "ALL", onNavigateToPlanner)}
+                        </td>
+                      );
+                    })}
                     <td className="px-4 py-2 text-right bg-emerald-100/30 font-black text-emerald-700 border-l border-slate-200">+{totInc.toFixed(2)} €</td>
                   </tr>
 

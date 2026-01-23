@@ -3,7 +3,8 @@ import { PlannedItem, Person, Account, Tag } from "../../../../types";
 import { DataList } from "../../../ui/molecules/DataList";
 import { DataListRow } from "../../../ui/molecules/DataListRow";
 import { SortableRow } from "../../../ui/molecules/SortableRow";
-import { ShoppingBag, CalendarClock, Plus, Briefcase, Download } from "lucide-react";
+import { ExportCsvButton } from "../../../ui/atoms/ExportCsvButton";
+import { ShoppingBag, CalendarClock, Plus, Briefcase } from "lucide-react";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from "@dnd-kit/sortable";
 
@@ -61,16 +62,7 @@ export const OperationsList: React.FC<OperationsListProps> = ({
     return { text: `${currentMonthIndex}/${totalMonths}`, isLast: currentMonthIndex === totalMonths };
   };
 
-  const headerActions =
-    onExport && items.length > 0 ? (
-      <button
-        onClick={onExport}
-        className="flex items-center gap-2 bg-white border border-slate-200 text-slate-600 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-slate-50 hover:text-indigo-600 transition-colors shadow-sm"
-        title="Exporter en CSV"
-      >
-        <Download size={14} /> <span className="hidden sm:inline">Export CSV</span>
-      </button>
-    ) : null;
+  const headerActions = onExport && items.length > 0 ? <ExportCsvButton onClick={onExport} disabled={items.length === 0} /> : null;
 
   return (
     <div className="space-y-4">
