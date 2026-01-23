@@ -18,6 +18,7 @@ import { useDashboardData } from "../../../hooks/dashboard";
 import { DashboardHeader } from "./components/DashboardHeader";
 import { SavingsSummaryCard } from "./components/SavingsSummaryCard";
 import { AnnualIncomeAnalysis } from "./components/charts/AnnualIncomeAnalysis";
+import { AnnualBeneficiaryAnalysis } from "./components/charts/AnnualBeneficiaryAnalysis";
 import { GlobalMonthlyAnalysis } from "./components/charts/GlobalMonthlyAnalysis";
 import {
   Account,
@@ -48,6 +49,7 @@ interface DashboardViewProps {
 
 export const DashboardView: React.FC<DashboardViewProps> = ({
   accounts,
+  people,
   configs,
   incomeConfigs,
   paidItems,
@@ -85,6 +87,19 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
       {/* SECTION MICRO : ANALYSE PAR PÉRIODE (Salaires exclus) */}
       <AnnualIncomeAnalysis data={annualData} year={selectedYear} onYearChange={setSelectedYear} onNavigateToPlanner={onNavigateToPlanner} />
+
+      {/* SECTION BÉNÉFICIAIRES : ANALYSE PAR PERSONNE */}
+      <AnnualBeneficiaryAnalysis
+        accounts={accounts}
+        people={people}
+        configs={configs}
+        incomeConfigs={incomeConfigs}
+        paidItems={paidItems}
+        variableTransactions={variableTransactions}
+        categories={categories}
+        year={selectedYear}
+        onNavigateToPlanner={onNavigateToPlanner}
+      />
     </div>
   );
 };

@@ -21,15 +21,26 @@ export const PeopleManager: React.FC<PeopleManagerProps> = ({ people, onUpsertPe
   // Form State
   const [name, setName] = useState("");
   const [isChild, setIsChild] = useState(false);
+  const [displayOrder, setDisplayOrder] = useState<number | undefined>(undefined);
 
-  // Tri alphabétique des bénéficiaires
+  // Tri par displayOrder (puis nom si égalité)
   const sortedPeople = useMemo(() => {
-    return [...people].sort((a, b) => a.name.localeCompare(b.name));
+    return [...people].sort((a, b) => {
+      const orderA = a.displayOrder ?? 999;
+      const orderB = b.displayOrder ?? 999;
+
+      if (orderA !== orderB) {
+        return orderA - orderB;
+      }
+
+      return a.name.localeCompare(b.name);
+    });
   }, [people]);
 
   const resetForm = () => {
     setName("");
     setIsChild(false);
+    setDisplayOrder(undefined);
     setEditingPerson(null);
     setIsModalOpen(false);
     setDeleteConfirm(null);
@@ -39,12 +50,14 @@ export const PeopleManager: React.FC<PeopleManagerProps> = ({ people, onUpsertPe
     setEditingPerson(null);
     setName("");
     setIsChild(false);
+    setDisplayOrder(undefined);
     setIsModalOpen(true);
   };
 
   const handleEditClick = (p: Person) => {
     setEditingPerson(p);
     setName(p.name);
+    setDisplayOrder(p.displayOrder);
     setIsChild(!!p.isChild);
     setIsModalOpen(true);
   };
@@ -53,6 +66,7 @@ export const PeopleManager: React.FC<PeopleManagerProps> = ({ people, onUpsertPe
     if (!name) return;
     const person: Person = {
       id: editingPerson ? editingPerson.id : `p_${Date.now()}`,
+      displayOrder,
       name,
       isChild,
     };
@@ -93,6 +107,21 @@ export const PeopleManager: React.FC<PeopleManagerProps> = ({ people, onUpsertPe
             required
             autoFocus
           />
+
+          <div>
+            <label className="text-xs font-medium text-slate-500 uppercase block mb-1.5">Ordre d'affichage</label>
+            <input
+              type="number"
+              min="1"
+              value={displayOrder ?? ""}
+              onChange={(e) => setDisplayOrder(e.target.value ? parseInt(e.target.value) : undefined)}
+              placeholder="Ordre (optionnel)"
+              className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-slate-900"
+            />
+            <p className="text-xs text-slate-500 mt-1">
+              Les bénéficiaires seront triés par cet ordre (plus petit = affiché en premier). Si non défini, tri alphabétique.
+            </p>
+          </div>
 
           <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
             <label className="flex items-center gap-3 cursor-pointer">

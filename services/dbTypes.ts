@@ -7,6 +7,7 @@ export interface DbPerson {
   id: string;
   name: string;
   is_child: boolean;
+  display_order?: number;
 }
 
 export interface DbAuthorizedUser {

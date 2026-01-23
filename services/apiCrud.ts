@@ -78,7 +78,8 @@ export const apiDeleteTag = async (id: string) => supabase.from("tags").delete()
 /**
  * Opérations sur les Membres (People)
  */
-export const apiUpsertPerson = async (person: Person) => supabase.from("people").upsert({ id: person.id, name: person.name, is_child: person.isChild });
+export const apiUpsertPerson = async (person: Person) =>
+  supabase.from("people").upsert({ id: person.id, name: person.name, is_child: person.isChild, display_order: person.displayOrder });
 
 export const apiDeletePerson = async (id: string) => supabase.from("people").delete().eq("id", id);
 

@@ -4,3 +4,6 @@
  */
 export { useDashboardData, getDetailedAnalysisFilters, getGlobalAnalysisFilters } from "./useDashboardData";
 export type { GlobalMonthData, AnnualMonthData, GlobalAnalysisColumn } from "./useDashboardData";
+
+export { useBeneficiaryData, getBeneficiaryAnalysisFilters } from "./useBeneficiaryData";
+export type { BeneficiaryData, BeneficiaryMonthData } from "./useBeneficiaryData";

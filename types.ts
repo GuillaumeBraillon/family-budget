@@ -8,6 +8,7 @@ export interface Person {
   id: string;
   name: string;
   isChild?: boolean;
+  displayOrder?: number;
 }
 
 export interface Tag {

@@ -35,6 +35,7 @@ export const mapDbPerson = (person: DbPerson): Person => ({
   id: person.id,
   name: person.name,
   isChild: person.is_child,
+  displayOrder: person.display_order,
 });
 
 export const mapDbAuthorizedUser = (user: DbAuthorizedUser): AuthorizedUser => {
