@@ -7,6 +7,108 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.6.17] - 2026-01-23
+
+### ✨ Nouvelles Fonctionnalités
+
+#### **Analyse Annuelle des Bénéficiaires**
+
+**Ajout** : Nouveau tableau d'analyse des revenus et dépenses par bénéficiaire sur l'année complète dans le Dashboard.
+
+**Composants créés** :
+
+- `AnnualBeneficiaryAnalysis.tsx` : Tableau interactif avec tri par mois/bénéficiaire
+- `useBeneficiaryData.ts` : Hook de calcul des données financières par bénéficiaire et par mois
+  - Détection automatique des remboursements (revenus dans catégories EXPENSE)
+  - Calcul des balances (revenus - dépenses) par bénéficiaire
+  - Support des opérations récurrentes et variables
+  - Filtrage sur comptes courants uniquement
+
+**Fonctionnalités** :
+
+- 📊 Vue annuelle avec 12 mois de données
+- 👥 Analyse par bénéficiaire (revenus, dépenses, balance)
+- 🔄 Tri par colonne (mois/bénéficiaire/montant)
+- 💰 Totaux mensuels et par bénéficiaire
+- 🎨 Code couleur (revenus verts, dépenses rouges, balance conditionnelle)
+- 📱 Responsive avec scroll horizontal sur mobile
+
+**Impact** :
+
+- ✅ Vision complète de la répartition des finances par bénéficiaire
+- ✅ Détection des déséquilibres financiers entre membres
+- ✅ Suivi des contributions et consommations individuelles
+
+---
+
+#### **Ordre d'Affichage Personnalisé des Bénéficiaires**
+
+**Ajout** : Système de tri manuel des bénéficiaires avec champ `displayOrder`.
+
+**Modifications base de données** :
+
+- Ajout colonne `display_order` (smallint null) dans table `people`
+
+**Modifications types et mappers** :
+
+- `Person` : Ajout propriété `displayOrder?: number`
+- `DbPerson` : Ajout champ `display_order?: number`
+- `mapDbPerson` : Mapping du champ display_order
+- `apiUpsertPerson` : Persistence du displayOrder en base
+
+**Logique de tri** :
+
+```typescript
+sort((a, b) => {
+  const orderA = a.displayOrder ?? 999;
+  const orderB = b.displayOrder ?? 999;
+
+  if (orderA !== orderB) {
+    return orderA - orderB; // Tri par ordre numérique
+  }
+
+  return a.name.localeCompare(b.name); // Fallback alphabétique
+});
+```
+
+**Interface utilisateur** (PeopleManager) :
+
+- 🔢 Champ "Ordre d'affichage" dans le formulaire d'édition
+- #️⃣ Badge `#N` affichant l'ordre dans la liste
+- 📝 Aide contextuelle : "Les bénéficiaires seront triés par cet ordre"
+- ↕️ Tri automatique de la liste selon displayOrder
+
+**Impact** :
+
+- ✅ Contrôle total de l'ordre d'affichage des bénéficiaires
+- ✅ Ordre appliqué globalement (dashboard, configuration, analyses)
+- ✅ Fallback alphabétique si ordre non défini
+- ✅ Facilite l'organisation selon les préférences (famille, parents, enfants par âge)
+
+---
+
+### 🐛 Corrections
+
+#### **Fix Warning React Hook useMemo**
+
+**Problème** : Deux warnings ESLint dans `useBeneficiaryData.ts`
+
+1. "React Hook useMemo has a missing dependency: 'isRefund'"
+2. "React Hook useMemo has an unnecessary dependency: 'accounts'"
+
+**Corrections** :
+
+1. **isRefund** : Fonction déplacée à l'intérieur du `useMemo` pour être dans la bonne portée
+2. **accounts** : Retiré des dépendances car déjà couvert par `checkingAccountIds`
+
+**Impact** :
+
+- ✅ Code conforme aux règles `react-hooks/exhaustive-deps`
+- ✅ 0 erreur, 0 warning ESLint
+- ✅ Performance optimale (pas de recalculs inutiles)
+
+---
+
 ## [2.6.15] - 2026-01-23
 
 ### 🐛 Corrections
