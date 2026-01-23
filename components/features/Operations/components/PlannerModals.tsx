@@ -37,7 +37,7 @@ export const PlannerModals: React.FC<PlannerModalsProps> = ({
           <div className="bg-white rounded-xl shadow-lg w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
             <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
               <h3 className="font-semibold text-slate-900">{confirmModal.item?.type === "INCOME" ? "Confirmer la réception" : "Confirmer le paiement"}</h3>
-              <button onClick={onCloseConfirm} className="text-slate-400 hover:text-slate-600">
+              <button onClick={onCloseConfirm} className="text-slate-400 hover:text-slate-600" aria-label="Fermer">
                 <X size={20} />
               </button>
             </div>

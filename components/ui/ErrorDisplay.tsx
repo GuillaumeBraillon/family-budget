@@ -42,7 +42,12 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({ error, context, show
             <p className="text-sm text-slate-600">L'application a rencontré un problème inattendu</p>
           </div>
           {onClose && (
-            <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition-colors p-1 rounded-lg hover:bg-white/50" title="Fermer">
+            <button
+              onClick={onClose}
+              className="text-slate-400 hover:text-slate-600 transition-colors p-1 rounded-lg hover:bg-white/50"
+              title="Fermer"
+              aria-label="Fermer"
+            >
               <X size={24} />
             </button>
           )}

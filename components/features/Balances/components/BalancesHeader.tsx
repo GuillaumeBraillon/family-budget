@@ -108,7 +108,7 @@ export const BalancesHeader: React.FC<BalancesHeaderProps> = ({
             <div className="p-1 bg-slate-700/50 rounded text-slate-300">
               <CalendarClock size={14} />
             </div>
-            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Récurrentes</span>
+            <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Récurrentes</span>
             <MobileTooltip
               text={renderTooltipContent(pendingRecurringDetails)}
               icon={<Info size={12} className="text-slate-600 hover:text-slate-800" />}
@@ -137,7 +137,7 @@ export const BalancesHeader: React.FC<BalancesHeaderProps> = ({
             <div className="p-1 bg-indigo-500/20 rounded text-indigo-400">
               <ShoppingBag size={14} />
             </div>
-            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Variables</span>
+            <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Variables</span>
             <MobileTooltip
               text={renderTooltipContent(pendingVariablesDetails)}
               icon={<Info size={12} className="text-indigo-500 hover:text-indigo-700" />}
@@ -163,7 +163,7 @@ export const BalancesHeader: React.FC<BalancesHeaderProps> = ({
         {/* Section 3: Total */}
         <div className="flex-1 flex flex-col justify-between items-end text-right">
           <div className="flex items-center gap-1.5 mb-1.5">
-            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Total en attente</span>
+            <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Total en attente</span>
             <div className="p-1 bg-white/10 rounded text-white">
               <Wallet size={14} />
             </div>

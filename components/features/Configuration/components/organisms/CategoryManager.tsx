@@ -121,10 +121,15 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({ categories, on
                     setTempName(cat.name);
                   }}
                   className="p-1.5 text-slate-300 hover:text-indigo-600 transition-colors"
+                  aria-label={`Modifier la catégorie ${cat.name}`}
                 >
                   <Pencil size={16} />
                 </button>
-                <button onClick={() => setDeleteConfirm({ id: cat.id, name: cat.name })} className="p-1.5 text-slate-300 hover:text-red-600 transition-colors">
+                <button
+                  onClick={() => setDeleteConfirm({ id: cat.id, name: cat.name })}
+                  className="p-1.5 text-slate-300 hover:text-red-600 transition-colors"
+                  aria-label={`Supprimer la catégorie ${cat.name}`}
+                >
                   <Trash2 size={16} />
                 </button>
               </div>
@@ -161,10 +166,15 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({ categories, on
                                 setTempSubName(sub.name);
                               }}
                               className="text-slate-300 hover:text-indigo-500"
+                              aria-label={`Modifier la sous-catégorie ${sub.name}`}
                             >
                               <Pencil size={14} />
                             </button>
-                            <button onClick={() => removeSubCat(cat.id, sub.id)} className="text-slate-300 hover:text-red-500">
+                            <button
+                              onClick={() => removeSubCat(cat.id, sub.id)}
+                              className="text-slate-300 hover:text-red-500"
+                              aria-label={`Supprimer la sous-catégorie ${sub.name}`}
+                            >
                               <X size={14} />
                             </button>
                           </div>

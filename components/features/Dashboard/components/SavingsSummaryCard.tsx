@@ -103,7 +103,7 @@ export const SavingsSummaryCard: React.FC<SavingsSummaryCardProps> = ({ accounts
                   </div>
                   <div className="min-w-0">
                     <h4 className="font-bold text-slate-700 text-sm truncate">{acc.name}</h4>
-                    <p className="text-[10px] text-slate-400 font-medium uppercase truncate flex items-center gap-1">
+                    <p className="text-[10px] text-slate-500 font-medium uppercase truncate flex items-center gap-1">
                       {acc.bankName || "Banque"}
                       {acc.isJoint && <span className="bg-purple-100 text-purple-700 px-1 rounded-[2px] text-[8px]">JOINT</span>}
                     </p>

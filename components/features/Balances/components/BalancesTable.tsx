@@ -13,6 +13,48 @@ interface BalancesTableProps {
   hasCurrentAccountsSurplus?: boolean;
 }
 
+/**
+ * Composant réutilisable pour l'affichage harmonisé d'un solde avec tooltip
+ */
+interface BalanceDisplayProps {
+  label: string;
+  amount: number;
+  onClick: (e: React.MouseEvent) => void;
+  tooltipContent: React.ReactNode;
+}
+
+const BalanceDisplay: React.FC<BalanceDisplayProps> = ({ label, amount, onClick, tooltipContent }) => {
+  return (
+    <div className="flex items-center gap-1">
+      <span className="text-[9px] text-slate-500 font-medium">{label}</span>
+      <div
+        className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-slate-100 rounded font-mono font-bold text-xs text-slate-700 hover:bg-slate-200 transition-colors cursor-pointer"
+        onClick={onClick}
+        title="Cliquer pour modifier le solde"
+      >
+        {amount.toFixed(2)} €
+        <button
+          type="button"
+          className="p-0.5 bg-slate-200 rounded-full text-slate-400 hover:text-indigo-600 transition-colors"
+          aria-label="Modifier le solde"
+          onClick={(e) => {
+            e.stopPropagation();
+            onClick(e);
+          }}
+        >
+          <Pencil size={10} />
+        </button>
+      </div>
+      <MobileTooltip
+        text={tooltipContent}
+        icon={<Calculator size={9} className="text-slate-400 hover:text-slate-600" />}
+        widthClass="w-48"
+        ariaLabel="Voir le détail du calcul"
+      />
+    </div>
+  );
+};
+
 export const BalancesTable: React.FC<BalancesTableProps> = ({
   rows,
   onUpdateBalance,
@@ -147,7 +189,7 @@ export const BalancesTable: React.FC<BalancesTableProps> = ({
                         <div className="flex items-center gap-2">
                           <p className="font-bold text-slate-900 text-xs sm:text-sm">{row.name}</p>
                           {row.isJoint && <span className="text-[9px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded uppercase tracking-wide">PIVOT</span>}
-                          <span className="text-[10px] text-slate-400">({row.owner})</span>
+                          <span className="text-[10px] text-slate-500">({row.owner})</span>
                         </div>
 
                         {/* Règles de Trésorerie */}
@@ -195,10 +237,11 @@ export const BalancesTable: React.FC<BalancesTableProps> = ({
                           <button
                             onClick={(e) => saveEdit(row.id, e, row.pendingAmount)}
                             className="bg-emerald-100 text-emerald-600 p-1 rounded hover:bg-emerald-200"
+                            aria-label="Valider la modification"
                           >
                             <Check size={12} />
                           </button>
-                          <button onClick={(e) => cancelEdit(e)} className="bg-slate-100 text-slate-500 p-1 rounded hover:bg-slate-200">
+                          <button onClick={(e) => cancelEdit(e)} className="bg-slate-100 text-slate-500 p-1 rounded hover:bg-slate-200" aria-label="Annuler">
                             <X size={12} />
                           </button>
                         </div>
@@ -219,118 +262,103 @@ export const BalancesTable: React.FC<BalancesTableProps> = ({
                         </div>
                       </div>
                     ) : (
-                      <div className="flex flex-col items-end">
-                        <div
-                          className="inline-flex items-center gap-1.5 px-1.5 py-0.5 bg-slate-100 rounded font-mono font-bold text-xs text-slate-700 hover:bg-slate-200 transition-colors cursor-pointer"
-                          title="Cliquer pour modifier le solde"
-                        >
-                          {row.balance.toFixed(2)} €
-                          <div className="p-0.5 bg-slate-200 rounded-full text-slate-400 hover:text-indigo-600 transition-colors">
-                            <Pencil size={10} />
-                          </div>
-                          <MobileTooltip
-                            text={
+                      <div className="flex flex-col items-end gap-0.5">
+                        {/* Solde "Avec attente" */}
+                        <BalanceDisplay
+                          label="Avec attente:"
+                          amount={row.balance}
+                          onClick={(e) => {
+                            if (editingId !== row.id) startEdit(row.id, row.balance, e, "WITH_PENDING");
+                          }}
+                          tooltipContent={
+                            <div className="space-y-1 text-[10px]">
+                              <ClickableAmount
+                                date={currentDate}
+                                filters={{ status: "REAL", nature: "EXCLUDE", accountIds: [row.id] }}
+                                weekNumber={activeWeek}
+                                onNavigate={onNavigateToPlanner}
+                                className="flex items-center gap-1 hover:bg-blue-50 px-1 py-0.5 rounded cursor-pointer"
+                                title="Cliquer pour voir les opérations standards réelles"
+                              >
+                                <div className="flex justify-between gap-4">
+                                  <span className="text-slate-800 hover:text-slate-900">Dépenses standards</span>
+                                  <span className="font-mono font-bold text-blue-700 hover:text-blue-800">{row.paidStandard.toFixed(2)}€</span>
+                                </div>
+                              </ClickableAmount>
+                              <ClickableAmount
+                                date={currentDate}
+                                filters={{ status: "REAL", nature: "ONLY", accountIds: [row.id] }}
+                                weekNumber={activeWeek}
+                                onNavigate={onNavigateToPlanner}
+                                className="flex items-center gap-1 hover:bg-purple-50 px-1 py-0.5 rounded cursor-pointer"
+                                title="Cliquer pour voir les opérations Extra réelles"
+                              >
+                                <div className="flex justify-between gap-4">
+                                  <span className="text-slate-800 hover:text-slate-900">Dépenses Extra</span>
+                                  <span className="font-mono font-bold text-purple-700 hover:text-purple-800">{row.paidExtra.toFixed(2)}€</span>
+                                </div>
+                              </ClickableAmount>
+                              <ClickableAmount
+                                date={currentDate}
+                                filters={{ status: "REAL", nature: "ALL", accountIds: [row.id] }}
+                                weekNumber={activeWeek}
+                                onNavigate={onNavigateToPlanner}
+                                className="flex items-center gap-1 hover:bg-emerald-50 px-1 py-0.5 rounded cursor-pointer"
+                                title="Cliquer pour voir toutes les opérations réelles"
+                              >
+                                <div className="flex justify-between gap-4 border-t border-slate-200 pt-1">
+                                  <span className="text-slate-900 hover:text-slate-950 font-bold">Dépenses réelles</span>
+                                  <span className="font-mono font-bold text-emerald-700 hover:text-emerald-800">{row.paidAmount.toFixed(2)}€</span>
+                                </div>
+                              </ClickableAmount>
+                            </div>
+                          }
+                        />
+
+                        {/* Solde "Hors attente" */}
+                        {row.pendingAmount !== undefined && Math.abs(row.pendingAmount) > 0.01 && (
+                          <BalanceDisplay
+                            label="Hors attente:"
+                            amount={row.balance + row.pendingAmount}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              startEdit(row.id, row.balance + row.pendingAmount, e, "WITHOUT_PENDING");
+                            }}
+                            tooltipContent={
                               <div className="space-y-1 text-[10px]">
-                                {" "}
-                                <ClickableAmount
-                                  date={currentDate}
-                                  filters={{ status: "REAL", nature: "EXCLUDE", accountIds: [row.id] }}
-                                  weekNumber={activeWeek}
-                                  onNavigate={onNavigateToPlanner}
-                                  className="flex items-center gap-1 hover:bg-blue-50 px-1 py-0.5 rounded cursor-pointer"
-                                  title="Cliquer pour voir les opérations standards réelles"
-                                >
-                                  <div className="flex justify-between gap-4">
-                                    <span className="text-slate-800 hover:text-slate-900">Dépenses standards</span>
-                                    <span className="font-mono font-bold text-blue-700 hover:text-blue-800">{row.paidStandard.toFixed(2)}€</span>
-                                  </div>
-                                </ClickableAmount>
-                                <ClickableAmount
-                                  date={currentDate}
-                                  filters={{ status: "REAL", nature: "ONLY", accountIds: [row.id] }}
-                                  weekNumber={activeWeek}
-                                  onNavigate={onNavigateToPlanner}
-                                  className="flex items-center gap-1 hover:bg-purple-50 px-1 py-0.5 rounded cursor-pointer"
-                                  title="Cliquer pour voir les opérations Extra réelles"
-                                >
-                                  <div className="flex justify-between gap-4">
-                                    <span className="text-slate-800 hover:text-slate-900">Dépenses Extra</span>
-                                    <span className="font-mono font-bold text-purple-700 hover:text-purple-800">{row.paidExtra.toFixed(2)}€</span>
-                                  </div>
-                                </ClickableAmount>
                                 <ClickableAmount
                                   date={currentDate}
                                   filters={{ status: "REAL", nature: "ALL", accountIds: [row.id] }}
                                   weekNumber={activeWeek}
                                   onNavigate={onNavigateToPlanner}
                                   className="flex items-center gap-1 hover:bg-emerald-50 px-1 py-0.5 rounded cursor-pointer"
-                                  title="Cliquer pour voir toutes les opérations réelles"
+                                  title="Cliquer pour voir les opérations réelles"
                                 >
-                                  <div className="flex justify-between gap-4 border-t border-slate-200 pt-1">
-                                    <span className="text-slate-900 hover:text-slate-950 font-bold">Dépenses réelles</span>
-                                    <span className="font-mono font-bold text-emerald-700 hover:text-emerald-800">{row.paidAmount.toFixed(2)}€</span>
+                                  <div className="flex justify-between gap-4">
+                                    <span className="text-slate-800 hover:text-slate-900">Solde actuel</span>
+                                    <span className="font-mono font-bold text-emerald-700 hover:text-emerald-800">{row.balance.toFixed(2)}€</span>
                                   </div>
                                 </ClickableAmount>
+                                <ClickableAmount
+                                  date={currentDate}
+                                  filters={{ status: "WAITING", nature: "ALL", accountIds: [row.id] }}
+                                  weekNumber={activeWeek}
+                                  onNavigate={onNavigateToPlanner}
+                                  className="flex items-center gap-1 hover:bg-amber-50 px-1 py-0.5 rounded cursor-pointer"
+                                  title="Cliquer pour voir les opérations en attente"
+                                >
+                                  <div className="flex justify-between gap-4">
+                                    <span className="text-slate-800 hover:text-slate-900">En attente</span>
+                                    <span className="font-mono font-bold text-amber-700 hover:text-amber-800">{row.pendingAmount.toFixed(2)}€</span>
+                                  </div>
+                                </ClickableAmount>
+                                <div className="flex justify-between gap-4 border-t border-slate-200 pt-1">
+                                  <span className="text-slate-900 font-bold">Solde hors attente</span>
+                                  <span className="font-mono font-bold text-slate-950">{(row.balance + row.pendingAmount).toFixed(2)}€</span>
+                                </div>
                               </div>
                             }
-                            icon={<Calculator size={9} className="text-slate-400 hover:text-slate-600" />}
-                            widthClass="w-48"
                           />
-                        </div>
-                        {/* Ligne "Hors attente" cliquable */}
-                        {row.pendingAmount !== undefined && Math.abs(row.pendingAmount) > 0.01 && (
-                          <div
-                            className="text-[9px] text-slate-500 flex items-center gap-1 mt-0.5 cursor-pointer hover:bg-slate-50 px-1 py-0.5 rounded transition-colors"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              startEdit(row.id, row.balance + row.pendingAmount, e, "WITHOUT_PENDING");
-                            }}
-                          >
-                            <span className="font-medium">Hors attente:</span>
-                            <span className="font-mono font-bold text-slate-700">{(row.balance + row.pendingAmount).toFixed(2)} €</span>
-                            <div className="p-0.5 bg-slate-100 rounded-full text-slate-400 hover:text-indigo-600 transition-colors">
-                              <Pencil size={8} />
-                            </div>
-                            <MobileTooltip
-                              text={
-                                <div className="space-y-1 text-[10px]">
-                                  {" "}
-                                  <ClickableAmount
-                                    date={currentDate}
-                                    filters={{ status: "REAL", nature: "ALL", accountIds: [row.id] }}
-                                    weekNumber={activeWeek}
-                                    onNavigate={onNavigateToPlanner}
-                                    className="flex items-center gap-1 hover:bg-emerald-50 px-1 py-0.5 rounded cursor-pointer"
-                                    title="Cliquer pour voir les opérations réelles"
-                                  >
-                                    <div className="flex justify-between gap-4">
-                                      <span className="text-slate-800 hover:text-slate-900">Solde actuel</span>
-                                      <span className="font-mono font-bold text-emerald-700 hover:text-emerald-800">{row.balance.toFixed(2)}€</span>
-                                    </div>
-                                  </ClickableAmount>
-                                  <ClickableAmount
-                                    date={currentDate}
-                                    filters={{ status: "WAITING", nature: "ALL", accountIds: [row.id] }}
-                                    weekNumber={activeWeek}
-                                    onNavigate={onNavigateToPlanner}
-                                    className="flex items-center gap-1 hover:bg-amber-50 px-1 py-0.5 rounded cursor-pointer"
-                                    title="Cliquer pour voir les opérations en attente"
-                                  >
-                                    <div className="flex justify-between gap-4">
-                                      <span className="text-slate-800 hover:text-slate-900">En attente</span>
-                                      <span className="font-mono font-bold text-amber-700 hover:text-amber-800">{row.pendingAmount.toFixed(2)}€</span>
-                                    </div>
-                                  </ClickableAmount>
-                                  <div className="flex justify-between gap-4 border-t border-slate-200 pt-1">
-                                    <span className="text-slate-900 font-bold">Solde hors attente</span>
-                                    <span className="font-mono font-bold text-slate-950">{(row.balance + row.pendingAmount).toFixed(2)}€</span>
-                                  </div>
-                                </div>
-                              }
-                              icon={<Calculator size={9} className="text-slate-400 hover:text-slate-600" />}
-                              widthClass="w-48"
-                            />
-                          </div>
                         )}
                       </div>
                     )}
@@ -447,7 +475,7 @@ export const BalancesTable: React.FC<BalancesTableProps> = ({
                           />
                         )}
                       </div>
-                      <span className="text-[9px] text-indigo-400 uppercase font-medium">{getTransferLabel(row)}</span>
+                      <span className="text-[9px] text-indigo-600 uppercase font-medium">{getTransferLabel(row)}</span>
                     </div>
                   </td>
                 </tr>

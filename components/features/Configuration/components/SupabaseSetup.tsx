@@ -61,7 +61,7 @@ export const SupabaseSetup: React.FC<SupabaseSetupProps> = ({ onConfigured: _onC
 
             <div className="space-y-3">
               <div className="bg-indigo-50/50 p-4 rounded-xl border border-indigo-100">
-                <h4 className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                <h4 className="text-[10px] font-black text-indigo-600 uppercase tracking-widest mb-2 flex items-center gap-1.5">
                   <Info size={12} /> Où trouver ces informations ?
                 </h4>
                 <p className="text-xs text-slate-600 leading-relaxed">

@@ -29,7 +29,7 @@ export const ListSorter: React.FC<ListSorterProps> = ({ options, currentSort, cu
 
   return (
     <div className={`flex items-center gap-1 sm:gap-2 overflow-x-auto no-scrollbar ${className}`}>
-      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest hidden sm:inline mr-1">Trier</span>
+      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest hidden sm:inline mr-1">Trier</span>
       {options.map((opt) => {
         const isActive = currentSort === opt.key;
         return (

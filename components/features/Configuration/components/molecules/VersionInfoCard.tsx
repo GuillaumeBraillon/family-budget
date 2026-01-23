@@ -97,16 +97,16 @@ export const VersionInfoCard: React.FC = () => {
             {latestVersionNotes.split("\n").map((line, idx) => {
               if (line.startsWith("###")) {
                 return (
-                  <h3 key={idx} className="text-lg font-bold text-slate-900 mt-4 mb-2">
+                  <h4 key={idx} className="text-lg font-bold text-slate-900 mt-4 mb-2">
                     {line.replace("###", "").trim()}
-                  </h3>
+                  </h4>
                 );
               }
               if (line.startsWith("####")) {
                 return (
-                  <h4 key={idx} className="text-md font-bold text-indigo-700 mt-3 mb-1 flex items-center gap-2">
+                  <h5 key={idx} className="text-md font-bold text-indigo-700 mt-3 mb-1 flex items-center gap-2">
                     {line.replace("####", "").trim()}
-                  </h4>
+                  </h5>
                 );
               }
               if (line.startsWith("- **")) {

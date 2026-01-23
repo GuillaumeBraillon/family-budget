@@ -31,7 +31,14 @@ export const SortableRow: React.FC<SortableRowProps> = ({ id, disabled, children
   return (
     <div ref={setNodeRef} style={style} className={`flex items-center bg-white border-b border-slate-100 last:border-0 relative ${className}`}>
       {!disabled && (
-        <div {...attributes} {...listeners} className="px-2 py-4 cursor-grab active:cursor-grabbing text-slate-300 hover:text-indigo-500 touch-none">
+        <div
+          {...attributes}
+          {...listeners}
+          className="px-2 py-4 cursor-grab active:cursor-grabbing text-slate-300 hover:text-indigo-500 touch-none"
+          role="button"
+          aria-label="Glisser pour réorganiser"
+          tabIndex={0}
+        >
           <GripVertical size={16} />
         </div>
       )}

@@ -8,6 +8,7 @@ interface MobileTooltipProps {
   iconSize?: number;
   iconClassName?: string;
   widthClass?: string;
+  ariaLabel?: string;
 }
 
 export const MobileTooltip: React.FC<MobileTooltipProps> = ({
@@ -16,6 +17,7 @@ export const MobileTooltip: React.FC<MobileTooltipProps> = ({
   iconSize = 14,
   iconClassName = "text-slate-300 hover:text-indigo-500",
   widthClass = "w-56",
+  ariaLabel = "Afficher les détails",
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [position, setPosition] = useState({ top: 0, left: 0 });
@@ -63,6 +65,8 @@ export const MobileTooltip: React.FC<MobileTooltipProps> = ({
 
   return (
     <>
+      {" "}
+      aria-label={ariaLabel}
       <button type="button" onClick={toggle} className={`inline-flex align-middle transition-colors ml-1 ${iconClassName}`}>
         {icon || <Info size={iconSize} />}
       </button>
@@ -89,7 +93,9 @@ export const MobileTooltip: React.FC<MobileTooltipProps> = ({
             >
               <div className="flex justify-between items-start mb-1 font-bold border-b border-slate-200 pb-1">
                 <span>Détails</span>
-                <X size={10} className="cursor-pointer hover:text-red-500" onClick={() => setIsOpen(false)} />
+                <button type="button" className="cursor-pointer hover:text-red-500 transition-colors" onClick={() => setIsOpen(false)} aria-label="Fermer">
+                  <X size={10} />
+                </button>
               </div>
               {text}
               <div

@@ -21,7 +21,7 @@ export const TransfersKPIs: React.FC<TransfersKPIsProps> = ({ stats }) => {
           <div className="p-1.5 bg-emerald-500/20 rounded-lg text-emerald-400">
             <TrendingUp size={16} />
           </div>
-          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Épargne Constituée</span>
+          <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Épargne Constituée</span>
         </div>
         <div className="flex items-baseline gap-2">
           <span className="text-2xl font-black">+{stats.toSavings.toFixed(2)} €</span>
@@ -37,7 +37,7 @@ export const TransfersKPIs: React.FC<TransfersKPIsProps> = ({ stats }) => {
           <div className="p-1.5 bg-amber-500/20 rounded-lg text-amber-400">
             <TrendingDown size={16} />
           </div>
-          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Reprises sur Épargne</span>
+          <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Reprises sur Épargne</span>
         </div>
         <div className="flex items-baseline gap-2">
           <span className="text-2xl font-black">-{stats.fromSavings.toFixed(2)} €</span>
@@ -50,7 +50,7 @@ export const TransfersKPIs: React.FC<TransfersKPIsProps> = ({ stats }) => {
       {/* 3. SOLDE NET (Variation) */}
       <div className="flex-1 flex flex-col justify-between items-end text-right">
         <div className="flex items-center gap-2 mb-2">
-          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Variation Nette</span>
+          <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Variation Nette</span>
           <div className={`p-1.5 rounded-lg ${isPositive ? "bg-emerald-500/20 text-emerald-400" : "bg-rose-500/20 text-rose-400"}`}>
             <PiggyBank size={16} />
           </div>

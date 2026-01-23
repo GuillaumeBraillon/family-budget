@@ -92,7 +92,7 @@ const NavBtn: React.FC<{ active: boolean; onClick: () => void; icon: React.React
   <button
     onClick={onClick}
     className={`px-3 lg:px-4 py-1.5 text-sm font-semibold rounded-lg transition-all flex items-center gap-2 whitespace-nowrap ${
-      active ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500 hover:text-slate-900"
+      active ? "bg-white text-indigo-600 shadow-sm" : "text-slate-600 hover:text-slate-900"
     }`}
   >
     {icon}

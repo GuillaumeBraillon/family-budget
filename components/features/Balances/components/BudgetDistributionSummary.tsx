@@ -122,7 +122,7 @@ export const BudgetDistributionSummary: React.FC<BudgetDistributionSummaryProps>
             <div className="p-1.5 bg-indigo-500/20 rounded-lg text-indigo-300">
               <Layers size={16} />
             </div>
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Budget Initial Période</span>
+            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Budget Initial Période</span>
             <MobileTooltip
               text={
                 previousCarryover !== undefined
@@ -158,7 +158,7 @@ export const BudgetDistributionSummary: React.FC<BudgetDistributionSummaryProps>
             <div className="p-1.5 bg-rose-500/20 rounded-lg text-rose-400">
               <TrendingDown size={16} />
             </div>
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Consommation Variables</span>
+            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Consommation Variables</span>
             <MobileTooltip
               text={
                 <div className="space-y-1">
@@ -196,7 +196,7 @@ export const BudgetDistributionSummary: React.FC<BudgetDistributionSummaryProps>
         {/* 3. Reste sur la Période */}
         <div className="flex-1 flex flex-col justify-between items-end text-right">
           <div className="flex items-center gap-2 mb-2">
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Reste sur la Période</span>
+            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Reste sur la Période</span>
             <div className="p-1.5 bg-white/10 rounded-lg text-white">
               <Wallet size={16} />
             </div>
@@ -213,7 +213,7 @@ export const BudgetDistributionSummary: React.FC<BudgetDistributionSummaryProps>
           </div>
           <div className="mt-3 flex flex-col items-end gap-1">
             {Math.abs(roundTo5(distributable) - distributable) > 0.01 && (
-              <div className="flex items-center gap-1 text-[10px] font-medium text-slate-400 italic">
+              <div className="flex items-center gap-1 text-[10px] font-medium text-slate-500 italic">
                 Exact : <span className="font-bold text-slate-200">{distributable.toFixed(2)} €</span>
               </div>
             )}

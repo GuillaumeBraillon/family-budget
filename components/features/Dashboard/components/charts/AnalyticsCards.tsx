@@ -66,7 +66,7 @@ export const HealthCard: React.FC<AnalyticsProps> = ({ data, onNavigate }) => {
         </div>
 
         <div className="mt-4 space-y-2">
-          <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Par Compte</h4>
+          <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Par Compte</h4>
           {data.byAccount.slice(0, 3).map((acc, idx) => (
             <div key={idx} className="flex justify-between items-center text-xs border-b border-slate-50 pb-1 last:border-0">
               <span className="text-slate-600 font-medium truncate max-w-[120px]">{acc.name}</span>

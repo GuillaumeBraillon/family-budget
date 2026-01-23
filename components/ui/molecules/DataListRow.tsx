@@ -61,6 +61,19 @@ export const DataListRow: React.FC<DataListRowProps> = ({
     <div
       onClick={onClick}
       className={`p-3 sm:p-4 flex items-center gap-2 sm:gap-4 group transition-all cursor-pointer border-b border-slate-100 last:border-0 ${bgClass}`}
+      role={onClick ? "button" : undefined}
+      aria-label={onClick ? `Voir les détails de ${label}` : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={
+        onClick
+          ? (e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onClick();
+              }
+            }
+          : undefined
+      }
     >
       {/* STATUS INDICATOR */}
       <div className="flex-shrink-0 w-5 sm:w-8 flex items-center justify-center">
@@ -79,7 +92,7 @@ export const DataListRow: React.FC<DataListRowProps> = ({
           }`}
         >
           <span className="text-sm sm:text-lg font-bold block text-slate-700 leading-none">{date.day}</span>
-          <span className="text-[8px] sm:text-[9px] text-slate-400 uppercase font-black tracking-wider leading-none mt-0.5">{date.month}</span>
+          <span className="text-[8px] sm:text-[9px] text-slate-500 uppercase font-black tracking-wider leading-none mt-0.5">{date.month}</span>
         </div>
       ) : icon ? (
         <div className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center bg-indigo-50 text-indigo-600 rounded-lg border border-indigo-100">

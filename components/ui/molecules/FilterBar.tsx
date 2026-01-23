@@ -229,7 +229,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             !showAllFilters ? "hidden sm:flex" : ""
           }`}
         >
-          <span className="text-[9px] font-bold text-slate-400 uppercase mr-1">Avancé :</span>
+          <span className="text-[9px] font-bold text-slate-500 uppercase mr-1">Avancé :</span>
 
           {/* COMPTES */}
           {!hiddenFilters.includes("accounts") && (showAllFilters || isAccountActive) && (

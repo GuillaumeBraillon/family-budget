@@ -91,10 +91,16 @@ export const TagAmountSelector: React.FC<TagAmountSelectorProps> = ({ tags, tota
                   onClick={() => handleToggleExtra(tag.id)}
                   className={`p-1 rounded transition-all ${tagAmount.isExtra ? "bg-amber-100 text-amber-600" : "bg-slate-100 text-slate-400 hover:text-amber-500"}`}
                   title={tagAmount.isExtra ? "Hors budget" : "Dans le budget"}
+                  aria-label={tagAmount.isExtra ? "Marquer comme standard (dans le budget)" : "Marquer comme Extra (hors budget)"}
                 >
                   <Star size={14} fill={tagAmount.isExtra ? "currentColor" : "none"} />
                 </button>
-                <button type="button" onClick={() => handleRemoveTag(tag.id)} className="text-slate-400 hover:text-red-500 transition-colors">
+                <button
+                  type="button"
+                  onClick={() => handleRemoveTag(tag.id)}
+                  className="text-slate-400 hover:text-red-500 transition-colors"
+                  aria-label={`Retirer le tag ${tag.name}`}
+                >
                   <X size={16} />
                 </button>
               </div>

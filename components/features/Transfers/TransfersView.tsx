@@ -326,7 +326,7 @@ export const TransfersView: React.FC<TransfersViewProps> = ({
                 <div onClick={() => handleEdit(item)} className="p-4 flex items-center gap-4 group transition-all cursor-pointer hover:bg-slate-50">
                   <div className="flex-shrink-0 w-12 text-center flex flex-col items-center justify-center rounded-lg py-1 border bg-slate-50 border-slate-100">
                     <span className="text-sm font-bold block text-slate-700 leading-none">{new Date(item.date).getDate()}</span>
-                    <span className="text-[9px] text-slate-400 uppercase font-black tracking-wider leading-none mt-0.5">
+                    <span className="text-[9px] text-slate-500 uppercase font-black tracking-wider leading-none mt-0.5">
                       {new Date(item.date).toLocaleDateString("fr-FR", { month: "short" })}
                     </span>
                   </div>

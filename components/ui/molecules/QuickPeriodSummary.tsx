@@ -29,7 +29,7 @@ export const QuickPeriodSummary: React.FC<QuickPeriodSummaryProps> = ({ expenses
             <TrendingDown size={14} />
           </div>
           <div className="flex flex-col">
-            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">Dépenses</span>
+            <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest leading-none">Dépenses</span>
             <span className="text-xl md:text-2xl font-black leading-tight">{(expenses.real + expenses.pending + expenses.delays).toFixed(0)} €</span>
           </div>
         </div>
@@ -50,7 +50,7 @@ export const QuickPeriodSummary: React.FC<QuickPeriodSummaryProps> = ({ expenses
             <TrendingUp size={14} />
           </div>
           <div className="flex flex-col">
-            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">Revenus</span>
+            <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest leading-none">Revenus</span>
             <span className="text-xl md:text-2xl font-black leading-tight">{(income.real + income.pending + income.delays).toFixed(0)} €</span>
           </div>
         </div>
@@ -71,7 +71,7 @@ export const QuickPeriodSummary: React.FC<QuickPeriodSummaryProps> = ({ expenses
             <Wallet size={14} />
           </div>
           <div className="flex flex-col items-end">
-            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">Bilan Net</span>
+            <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest leading-none">Bilan Net</span>
             <span className={`text-2xl md:text-3xl font-black tracking-tighter leading-tight ${isPositive ? "text-emerald-400" : "text-rose-400"}`}>
               {isPositive ? "+" : ""}
               {netReal.toFixed(0)} €
