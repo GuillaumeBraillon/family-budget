@@ -65,9 +65,7 @@ export const MobileTooltip: React.FC<MobileTooltipProps> = ({
 
   return (
     <>
-      {" "}
-      aria-label={ariaLabel}
-      <button type="button" onClick={toggle} className={`inline-flex align-middle transition-colors ml-1 ${iconClassName}`}>
+      <button type="button" onClick={toggle} className={`inline-flex align-middle transition-colors ml-1 ${iconClassName}`} aria-label={ariaLabel}>
         {icon || <Info size={iconSize} />}
       </button>
       {isOpen &&

@@ -7,6 +7,40 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.6.15] - 2026-01-23
+
+### 🐛 Corrections
+
+#### **Fix Affichage aria-label dans MobileTooltip**
+
+**Problème** : Le texte `aria-label={ariaLabel}` s'affichait comme du texte visible sur toutes les pages au lieu d'être un attribut HTML du bouton.
+
+**Cause** : Erreur de syntaxe JSX - l'attribut `aria-label` était en dehors de la balise `<button>`
+
+**Correction** : `MobileTooltip.tsx` (lignes 67-71)
+
+- ❌ Avant :
+  ```tsx
+  <>
+    {" "}
+    aria-label={ariaLabel}  // ← Affiché comme texte !
+    <button onClick={...}>
+  ```
+- ✅ Après :
+  ```tsx
+  <>
+    <button onClick={...} aria-label={ariaLabel}>  // ← Attribut correct
+  ```
+
+**Impact** :
+
+- ✅ Suppression du texte parasite visible sur toutes les pages
+- ✅ Attribut aria-label correctement appliqué au bouton
+- ✅ Accessibilité fonctionnelle (lecteurs d'écran)
+- ✅ UX restaurée (interface propre)
+
+---
+
 ## [2.6.14] - 2026-01-23
 
 ### ♿ Accessibilité

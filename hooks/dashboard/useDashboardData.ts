@@ -200,6 +200,8 @@ interface PeriodData {
   expenses: {
     recurring: number;
     variable: number;
+    variableStandard: number; // Dépenses variables dans le budget
+    variableExtra: number; // Dépenses variables hors budget
     total: number;
   };
   balance: number;
@@ -500,7 +502,7 @@ export const useDashboardData = ({
       const periodData: PeriodData[] = periods.map((p) => ({
         period: p,
         income: { recurring: 0, variable: 0, total: 0 },
-        expenses: { recurring: 0, variable: 0, total: 0 },
+        expenses: { recurring: 0, variable: 0, variableStandard: 0, variableExtra: 0, total: 0 },
         balance: 0,
       }));
 
@@ -510,8 +512,14 @@ export const useDashboardData = ({
        * @param {number} day - Jour du mois (1-31)
        * @param {number} amount - Montant à ajouter (peut être négatif pour remboursements)
        * @param {"income_recurring" | "income_variable" | "expense_recurring" | "expense_variable"} type - Type d'opération
+       * @param {boolean} isExtra - Si true, montant hors budget (uniquement pour expense_variable)
        */
-      const addToPeriod = (day: number, amount: number, type: "income_recurring" | "income_variable" | "expense_recurring" | "expense_variable") => {
+      const addToPeriod = (
+        day: number,
+        amount: number,
+        type: "income_recurring" | "income_variable" | "expense_recurring" | "expense_variable",
+        isExtra = false
+      ) => {
         const pIndex = periods.findIndex((p) => day >= p.start && day <= p.end);
         if (pIndex !== -1) {
           if (type === "income_recurring") {
@@ -527,7 +535,13 @@ export const useDashboardData = ({
             periodData[pIndex].expenses.total += amount;
             periodData[pIndex].balance -= amount;
           } else if (type === "expense_variable") {
+            // Ventilation Standard/Extra pour les dépenses variables
             periodData[pIndex].expenses.variable += amount;
+            if (isExtra) {
+              periodData[pIndex].expenses.variableExtra += amount;
+            } else {
+              periodData[pIndex].expenses.variableStandard += amount;
+            }
             periodData[pIndex].expenses.total += amount;
             periodData[pIndex].balance -= amount;
           }
@@ -593,12 +607,37 @@ export const useDashboardData = ({
           if (tx.type === "INCOME") {
             if (isRefundCategory(tx.category)) {
               // Remboursement variable -> Réduit les dépenses variables
-              addToPeriod(d, -tx.amount, "expense_variable");
+              // Note: Les remboursements ne sont pas concernés par Extra/Standard
+              addToPeriod(d, -tx.amount, "expense_variable", false);
             } else {
-              addToPeriod(d, tx.amount, "income_variable");
+              addToPeriod(d, tx.amount, "income_variable", false);
             }
           } else {
-            addToPeriod(d, tx.amount, "expense_variable");
+            // Dépense variable : Gestion des montants Extra/Standard avec tags
+            // RÈGLE 1 : Si toggle global Extra activé → Tout est Extra
+            if (tx.isExtra) {
+              addToPeriod(d, tx.amount, "expense_variable", true);
+            }
+            // RÈGLE 2 : Pas de toggle global → Analyser les tags individuels
+            else if (tx.tagAmounts && tx.tagAmounts.length > 0) {
+              // Calculer la somme des montants Extra dans les tags
+              const extraSum = tx.tagAmounts.filter((ta) => ta.isExtra === true).reduce((sum, ta) => sum + ta.amount, 0);
+
+              // Calculer la somme des montants Standard (reste)
+              const standardSum = tx.amount - extraSum;
+
+              // Ajouter les deux parties séparément
+              if (extraSum > 0.01) {
+                addToPeriod(d, extraSum, "expense_variable", true);
+              }
+              if (standardSum > 0.01) {
+                addToPeriod(d, standardSum, "expense_variable", false);
+              }
+            }
+            // RÈGLE 3 : Pas de toggle, pas de tags → Tout est Standard
+            else {
+              addToPeriod(d, tx.amount, "expense_variable", false);
+            }
           }
         }
       });
