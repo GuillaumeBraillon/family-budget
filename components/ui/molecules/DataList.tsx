@@ -25,10 +25,10 @@ export const DataList: React.FC<DataListProps> = ({
   return (
     <div className={`bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden flex flex-col ${className}`}>
       <div className="px-6 py-4 border-b border-slate-100 bg-slate-50 flex flex-wrap gap-2 justify-between items-center flex-shrink-0">
-        <h3 className="font-semibold text-slate-900 flex items-center gap-2">
+        <h2 className="font-semibold text-slate-900 flex items-center gap-2">
           {title}
           {count !== undefined && <span className="text-xs font-normal text-slate-500 bg-white border border-slate-200 px-2 py-0.5 rounded-full">{count}</span>}
-        </h3>
+        </h2>
         <div className="flex items-center gap-2">
           {headerActions}
           {onAdd && (

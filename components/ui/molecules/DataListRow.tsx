@@ -62,7 +62,6 @@ export const DataListRow: React.FC<DataListRowProps> = ({
       onClick={onClick}
       className={`p-3 sm:p-4 flex items-center gap-2 sm:gap-4 group transition-all cursor-pointer border-b border-slate-100 last:border-0 ${bgClass}`}
       role={onClick ? "button" : undefined}
-      aria-label={onClick ? `Voir les détails de ${label}` : undefined}
       tabIndex={onClick ? 0 : undefined}
       onKeyDown={
         onClick

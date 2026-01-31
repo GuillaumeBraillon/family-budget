@@ -41,8 +41,7 @@ export const UserMenu: React.FC<UserMenuProps> = ({ userEmail, onLogout, session
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="md:hidden focus:outline-none"
-        title="Voir les infos du compte"
-        aria-label="Voir les infos du compte"
+        aria-label={`Menu utilisateur ${userName || userEmail?.split("@")[0] || ""}`}
       >
         {avatarUrl ? (
           <img src={avatarUrl} alt="Avatar" className="w-8 h-8 rounded-full border-2 border-slate-200 hover:border-indigo-400 transition-colors" />
@@ -57,8 +56,7 @@ export const UserMenu: React.FC<UserMenuProps> = ({ userEmail, onLogout, session
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="hidden md:flex items-center gap-2 hover:bg-slate-50 rounded-lg px-2 py-1 transition-colors focus:outline-none group"
-        title="Voir les infos du compte"
-        aria-label="Voir les infos du compte"
+        aria-label={`Menu utilisateur ${userName || userEmail?.split("@")[0] || ""}`}
       >
         {avatarUrl && (
           <img src={avatarUrl} alt="Avatar" className="w-8 h-8 rounded-full border-2 border-slate-200 group-hover:border-indigo-400 transition-colors" />

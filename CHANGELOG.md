@@ -7,6 +7,49 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.6.21] - 2026-01-31
+
+### ♿ Accessibilité (WCAG 2.1 AA)
+
+#### **Corrections pour conformité Vercel Accessibility Audit**
+
+Résolution de 3 catégories d'avertissements d'accessibilité détectés par Vercel lors du déploiement en production :
+
+**1. Taille minimale des cibles tactiles (WCAG 2.5.5 - Target Size)**
+
+- **Problème** : Boutons d'info dans MobileTooltip inférieurs à 24px
+- **Solution** : Ajout de `min-w-[24px]` et `min-h-[24px]` avec centrage flex
+- **Conformité** : Toutes les cibles tactiles respectent maintenant le minimum de 24x24px
+- **Fichier modifié** : `components/ui/MobileTooltip.tsx`
+
+**2. Texte visible dans les noms accessibles (WCAG 2.5.3 - Label in Name)**
+
+- **Problème** : Labels ARIA masquant le texte visible (ex: "Voir les infos" au lieu d'inclure le nom d'utilisateur)
+- **Solutions** :
+  - **UserMenu** : `aria-label` modifié de "Voir les infos du compte" à "Menu utilisateur {userName}" (inclut le nom visible)
+  - **DataListRow** : Suppression de l'`aria-label` redondant (le texte visible + `role="button"` suffisent)
+- **Conformité** : Les lecteurs d'écran annoncent maintenant correctement le texte visible
+- **Fichiers modifiés** :
+  - `components/Layout/UserMenu.tsx`
+  - `components/ui/molecules/DataListRow.tsx`
+
+**3. Hiérarchie des titres (WCAG 1.3.1 - Info and Relationships)**
+
+- **Problème** : Utilisation de `<h3>` comme premier niveau de titre (sans `<h1>` ou `<h2>` parent)
+- **Solution** : Remplacement de `<h3>` par `<h2>` dans le composant DataList
+- **Rationale** : `<h2>` est le niveau approprié pour les titres de sections (pas de `<h1>` dans l'app car SPA)
+- **Impact** : Navigation améliorée pour les lecteurs d'écran via structure sémantique correcte
+- **Fichier modifié** : `components/ui/molecules/DataList.tsx`
+
+**Résultat** :
+
+- ✅ Tous les avertissements d'accessibilité Vercel résolus
+- ✅ Conformité WCAG 2.1 niveau AA maintenue
+- ✅ Meilleure expérience utilisateur pour navigation tactile et lecteurs d'écran
+- ✅ Prêt pour déploiement en production sans warnings
+
+---
+
 ## [2.6.20] - 2026-01-31
 
 ### 🐛 Corrections de bugs
