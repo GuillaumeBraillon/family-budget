@@ -101,12 +101,14 @@ export const usePlannerUI = (initialDate: Date = new Date(), initialWeek?: numbe
 
   const handlePrevMonth = () => {
     const newDate = new Date(currentDate);
+    newDate.setDate(1); // Éviter le bug du "31 février"
     newDate.setMonth(newDate.getMonth() - 1);
     setCurrentDate(newDate);
   };
 
   const handleNextMonth = () => {
     const newDate = new Date(currentDate);
+    newDate.setDate(1); // Éviter le bug du "31 février"
     newDate.setMonth(newDate.getMonth() + 1);
     setCurrentDate(newDate);
   };

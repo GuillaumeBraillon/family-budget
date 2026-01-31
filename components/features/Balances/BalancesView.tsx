@@ -143,6 +143,7 @@ export const BalancesView: React.FC<BalancesViewProps> = ({
   // Handlers de navigation
   const handlePrevMonth = () => {
     const newDate = new Date(currentDate);
+    newDate.setDate(1); // Éviter le bug du "31 février"
     newDate.setMonth(newDate.getMonth() - 1);
     setCurrentDate(newDate);
     setActiveWeek(1); // Réinitialiser à la première période
@@ -150,6 +151,7 @@ export const BalancesView: React.FC<BalancesViewProps> = ({
 
   const handleNextMonth = () => {
     const newDate = new Date(currentDate);
+    newDate.setDate(1); // Éviter le bug du "31 février"
     newDate.setMonth(newDate.getMonth() + 1);
     setCurrentDate(newDate);
     setActiveWeek(1); // Réinitialiser à la première période

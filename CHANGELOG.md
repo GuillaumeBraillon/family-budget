@@ -7,6 +7,52 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.6.20] - 2026-01-31
+
+### 🐛 Corrections de bugs
+
+#### **Correction du bug de navigation mensuelle (saut de mois en fin de mois)**
+
+**Problème** :
+
+- Quand on est le 31 d'un mois (31 janvier, 31 mars, etc.), cliquer sur "Mois suivant" sautait un mois
+- Exemple : 31 janvier → Mars (au lieu de Février)
+- Cause : JavaScript tente de créer "31 février" qui n'existe pas et déborde automatiquement sur mars
+
+**Explication technique** :
+
+```javascript
+// ❌ Comportement incorrect
+const date = new Date(2026, 0, 31); // 31 janvier 2026
+date.setMonth(date.getMonth() + 1); // Essaie de créer "31 février" → déborde sur mars
+// Résultat : 2-3 mars 2026
+
+// ✅ Solution
+const date = new Date(2026, 0, 31);
+date.setDate(1); // Réinitialiser au 1er du mois
+date.setMonth(date.getMonth() + 1); // 1er février 2026
+// Résultat : 1er février 2026
+```
+
+**Solution** :
+
+- Ajout de `setDate(1)` avant `setMonth()` dans tous les handlers de navigation
+- Garantit qu'on part toujours du 1er du mois avant de changer le mois
+- Corrige également la navigation vers le mois précédent
+
+**Impact** :
+
+- ✅ Navigation mensuelle correcte même en fin de mois (31, 30, 29)
+- ✅ Pas de saut de mois avec les boutons "Précédent" et "Suivant"
+- ✅ Comportement cohérent sur toutes les vues (Opérations, Soldes, Virements)
+
+**Fichiers modifiés** :
+
+- `hooks/usePlannerUI.ts` (utilisé par OperationsView et TransfersView)
+- `components/features/Balances/BalancesView.tsx`
+
+---
+
 ## [2.6.19] - 2026-01-31
 
 ### 🐛 Corrections de bugs
