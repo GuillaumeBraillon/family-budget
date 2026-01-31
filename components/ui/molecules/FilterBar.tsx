@@ -67,6 +67,8 @@ interface FilterBarProps {
   sortOrder?: "asc" | "desc";
   /** Callback de changement de tri */
   onSortChange?: (key: string, order: "asc" | "desc") => void;
+  /** Indique si on peut changer l'ordre de tri (false en mode manuel) */
+  canToggleOrder?: boolean;
 }
 
 /**
@@ -111,6 +113,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   sortKey,
   sortOrder,
   onSortChange,
+  canToggleOrder = true,
 }) => {
   // Logique métier déléguée au hook
   const {
@@ -218,7 +221,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
 
         {/* SECTION TRI (à droite) */}
         {sortOptions && sortKey && sortOrder && onSortChange && (
-          <ListSorter options={sortOptions} currentSort={sortKey} currentOrder={sortOrder} onSortChange={onSortChange} />
+          <ListSorter options={sortOptions} currentSort={sortKey} currentOrder={sortOrder} onSortChange={onSortChange} canToggleOrder={canToggleOrder} />
         )}
       </div>
 

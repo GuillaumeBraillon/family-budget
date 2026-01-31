@@ -80,7 +80,16 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
   // Hooks spécialisés (responsabilités déléguées)
   const ui = usePlannerUI(initialDate, initialWeek);
   const { filters, setFilters, resetFilters } = useOperationsFilters(initialFilters);
-  const { sortKey, sortOrder, setSorting, sortItems, isManualSort, sortOptions, getEffectivePosition: _getEffectivePosition } = useOperationsSorting();
+  const {
+    sortKey,
+    sortOrder,
+    setSorting,
+    sortItems,
+    isManualSort,
+    sortOptions,
+    getEffectivePosition: _getEffectivePosition,
+    canToggleOrder,
+  } = useOperationsSorting();
   // Scope intelligent : PERIOD par défaut (ou si initialWeek fourni), MONTH si navigation sans période spécifique
   const [scope, setScope] = useState<"MONTH" | "PERIOD">(() => {
     // Si initialWeek === undefined ET initialDate === undefined, on arrive directement → PERIOD
@@ -336,6 +345,7 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
           sortKey={sortKey}
           sortOrder={sortOrder}
           onSortChange={setSorting}
+          canToggleOrder={canToggleOrder}
         />
       </div>
 

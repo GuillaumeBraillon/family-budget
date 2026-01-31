@@ -13,12 +13,15 @@ interface ListSorterProps {
   currentSort: string;
   currentOrder: SortOrder;
   onSortChange: (key: string, order: SortOrder) => void;
+  canToggleOrder?: boolean; // Si false, empêche le changement d'ordre (ex: tri manuel)
   className?: string;
 }
 
-export const ListSorter: React.FC<ListSorterProps> = ({ options, currentSort, currentOrder, onSortChange, className = "" }) => {
+export const ListSorter: React.FC<ListSorterProps> = ({ options, currentSort, currentOrder, onSortChange, canToggleOrder = true, className = "" }) => {
   const handleClick = (key: string) => {
     if (currentSort === key) {
+      // Si on ne peut pas toggler l'ordre (ex: tri manuel), ne rien faire
+      if (!canToggleOrder) return;
       onSortChange(key, currentOrder === "asc" ? "desc" : "asc");
     } else {
       // Par défaut descendant pour les dates et montants souvent préférés, ascendant pour le texte
@@ -40,14 +43,20 @@ export const ListSorter: React.FC<ListSorterProps> = ({ options, currentSort, cu
               isActive
                 ? "bg-indigo-50 text-indigo-700 border-indigo-200 shadow-sm"
                 : "bg-white text-slate-500 hover:text-slate-700 border-slate-200 hover:border-slate-300"
-            }`}
+            } ${isActive && !canToggleOrder ? "cursor-default" : "cursor-pointer"}`}
+            title={isActive && !canToggleOrder ? "Ordre fixe en mode manuel" : ""}
           >
             {opt.label}
             {isActive ? (
-              currentOrder === "asc" ? (
-                <ArrowUp size={10} strokeWidth={3} />
+              canToggleOrder ? (
+                currentOrder === "asc" ? (
+                  <ArrowUp size={10} strokeWidth={3} />
+                ) : (
+                  <ArrowDown size={10} strokeWidth={3} />
+                )
               ) : (
-                <ArrowDown size={10} strokeWidth={3} />
+                // En mode manuel, afficher une icône fixe pour indiquer que l'ordre ne peut pas changer
+                <ArrowDown size={10} strokeWidth={3} className="opacity-50" />
               )
             ) : (
               <ArrowUpDown size={10} className="opacity-30" />

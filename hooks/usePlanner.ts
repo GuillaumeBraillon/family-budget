@@ -364,37 +364,26 @@ export const usePlanner = (
         });
       });
 
-    // --- SYSTÈME DE TRI SIMPLIFIÉ ---
-    // Les items avec position manuelle (drag & drop) ont priorité absolue
-    // Les items sans position sont triés par jour + hash pour stabilité
-    const getItemSortScore = (item: PlannedItem) => {
-      // Priorité absolue : Position manuelle (1, 2, 3, 4...)
-      if (typeof item.position === "number" && item.position > 0) {
-        return item.position;
-      }
-
-      // Tri par défaut : jour + hash stable
-      // On utilise une base élevée pour séparer clairement du tri manuel
-      const AUTO_BASE = 1_000_000; // 1 Million
-      const DAY_STEP = 10_000; // 10k par jour
-
-      // Hash stable pour ordre déterministe intra-jour
-      let hash = 0;
-      for (let i = 0; i < item.instanceId.length; i++) {
-        hash = (hash << 5) - hash + item.instanceId.charCodeAt(i);
-        hash |= 0;
-      }
-      const safeHash = Math.abs(hash) % DAY_STEP;
-
-      return AUTO_BASE + item.day * DAY_STEP + safeHash;
-    };
-
+    // --- SYSTÈME DE TRI ROBUSTE ---
+    // Identique à useOperationsSorting pour cohérence totale
     periods.forEach((w) =>
       w.items.sort((a, b) => {
-        const scoreA = getItemSortScore(a);
-        const scoreB = getItemSortScore(b);
-        if (scoreA !== scoreB) return scoreA - scoreB;
-        // Si égalité de score (positions identiques), tri par instanceId pour stabilité
+        const posA = typeof a.position === "number" && a.position > 0 ? a.position : null;
+        const posB = typeof b.position === "number" && b.position > 0 ? b.position : null;
+
+        // RÈGLE 1 : Items avec position manuelle d'abord
+        if (posA !== null && posB !== null) {
+          return posA - posB;
+        } else if (posA !== null && posB === null) {
+          return -1;
+        } else if (posA === null && posB !== null) {
+          return 1;
+        }
+
+        // RÈGLE 2 : Sans position → tri par jour puis instanceId
+        if (a.day !== b.day) {
+          return a.day - b.day;
+        }
         return a.instanceId.localeCompare(b.instanceId);
       })
     );

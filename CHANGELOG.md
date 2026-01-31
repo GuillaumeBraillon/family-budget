@@ -7,6 +7,125 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.6.19] - 2026-01-31
+
+### 🐛 Corrections de bugs
+
+#### **Correction de l'erreur `sortKey is not defined` dans IncomeEditor**
+
+**Problème** :
+
+- `IncomeEditor.tsx` déclarait `sortKey` et `sortOrder` en props mais ne les utilisait pas dans la destructuration
+- L'erreur `ReferenceError: sortKey is not defined` se produisait à la ligne 166 dans `sortedIncomes` useMemo
+- Les dépendances du useMemo ne contenaient pas `sortKey` et `sortOrder`, causant des calculs incorrects
+
+**Solution** :
+
+1. Ajout de `sortKey` et `sortOrder` dans la destructuration des props de `IncomeEditor`
+2. Ajout de `sortKey` et `sortOrder` dans les dépendances du useMemo de `sortedIncomes`
+3. Alignement avec le comportement de `ExpenseRulesEditor` (identique)
+
+**Impact** :
+
+- ✅ Plus d'erreur de référence dans la console
+- ✅ Tri fonctionnel dans la gestion des revenus récurrents
+- ✅ Cohérence avec l'éditeur de dépenses
+
+**Fichiers modifiés** :
+
+- `components/features/Configuration/components/organisms/IncomeEditor.tsx`
+
+---
+
+## [2.6.18] - 2026-01-31
+
+### 🔧 Améliorations
+
+#### **Refonte Complète du Système de Tri Manuel**
+
+**Problème résolu** : Le tri manuel des opérations était instable avec :
+
+- Plusieurs opérations ayant la même position → ordre imprévisible
+- Position 0 traitée comme valide → collisions
+- Système de scores complexes (AUTO_BASE + DAY_STEP + hash) → désynchronisations
+
+**Solution implémentée** :
+
+1. **Simplification radicale de `getEffectivePosition()`** :
+   - Retourne la position manuelle si `position > 0`
+   - Retourne `null` si `position = 0` ou `undefined`
+   - Plus de système de scores auto-générés
+
+2. **Logique de tri robuste dans `sortItems()`** :
+
+   ```typescript
+   // RÈGLE 1 : Items avec position manuelle TOUJOURS en premier
+   if (posA && posB) → Comparer les positions
+   if (posA && !posB) → A avant B
+   if (!posA && posB) → B avant A
+
+   // RÈGLE 2 : Items sans position → Tri chronologique
+   → Tri par payment_date (format YYYY-MM-DD)
+   → Fallback sur instanceId pour stabilité
+   ```
+
+3. **Synchronisation parfaite** :
+   - `usePlanner.ts` et `useOperationsSorting.ts` utilisent la même logique
+   - Élimination des désynchronisations entre génération et affichage
+
+**Modifications techniques** :
+
+- **Hook `useOperationsSorting.ts`** :
+  - Simplification de `getEffectivePosition()` : retour de `number | null` au lieu de scores complexes
+  - Refonte de `sortItems()` avec logique de tri explicite et déterministe
+  - Tri des items sans position par date de paiement puis instanceId
+
+- **Hook `usePlanner.ts`** :
+  - Remplacement du système `getItemSortScore()` par logique identique à `useOperationsSorting`
+  - Tri robuste : position manuelle → jour → instanceId
+
+**Impact** :
+
+- ✅ Ordre stable et prévisible des opérations
+- ✅ Plus de changements spontanés d'ordre
+- ✅ Drag & drop fiable avec positions uniques
+- ✅ Items sans position triés chronologiquement (plus récent en haut)
+
+---
+
+#### **Verrouillage de l'Ordre en Mode Tri Manuel**
+
+**Ajout** : Le tri manuel n'autorise plus le changement d'ordre (asc/desc).
+
+**Justification** :
+
+- L'ordre décroissant (plus récent en haut) est le comportement par défaut optimal
+- Évite la perte d'ordre manuel lors de basculements asc/desc
+
+**Modifications** :
+
+1. **Hook `useOperationsSorting.ts`** :
+   - Méthode `setSorting()` : force `sortOrder = "desc"` si `sortKey === "manual"`
+   - Export de `canToggleOrder` : retourne `false` en mode manuel
+   - Tri manuel toujours en ordre décroissant (return `-res`)
+
+2. **Composant `ListSorter.tsx`** :
+   - Ajout prop `canToggleOrder?: boolean`
+   - Désactivation du clic sur le bouton actif si `canToggleOrder = false`
+   - Icône flèche descendante grisée avec tooltip "Ordre fixe en mode manuel"
+   - Curseur par défaut au lieu de pointer
+
+3. **Composants `FilterBar.tsx` et `OperationsView.tsx`** :
+   - Passage du prop `canToggleOrder` au composant `ListSorter`
+
+**Impact** :
+
+- ✅ Interface claire : impossible de changer l'ordre en mode manuel
+- ✅ Comportement prévisible et stable
+- ✅ Évite les confusions utilisateur
+
+---
+
 ## [2.6.17] - 2026-01-23
 
 ### ✨ Nouvelles Fonctionnalités

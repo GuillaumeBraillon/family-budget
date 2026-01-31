@@ -45,65 +45,44 @@ export interface SortOption {
 }
 
 /**
- * Calcule une position effective pour le tri Manuel.
+ * Extrait la position manuelle d'un item.
  *
  * @description
- * **ATTENTION : Cette fonction DOIT être strictement identique à getItemSortScore dans usePlanner.**
+ * **SYSTÈME SIMPLIFIÉ ET ROBUSTE :**
+ * - Retourne la position manuelle si elle existe ET est > 0
+ * - Retourne null sinon (pas de position ou position = 0)
  *
- * **Algorithme :**
- * 1. Si `item.position` est défini et non nul → Utiliser la position manuelle enregistrée
- * 2. Sinon, calculer un score par défaut basé sur :
- *    - BASE_SCORE : 100 Milliards (évite les collisions)
- *    - DAY_STEP : 100 Millions par jour (espace pour insertions)
- *    - Hash stable de l'instanceId (ordre intra-jour déterministe)
+ * **Pourquoi 0 = null ?**
+ * - Position 0 dans la DB signifie "pas encore de position manuelle"
+ * - Évite les collisions avec les vrais items positionnés
  *
- * **Formule :**
- * ```
- * score = 100_000_000_000 + (jour * 100_000_000) + hash(instanceId)
- * ```
+ * **Important :**
+ * Les items sans position sont triés par date + instanceId dans sortItems(),
+ * pas ici. Cette fonction ne fait QUE extraire la position manuelle.
  *
- * **Pourquoi des grands nombres ?**
- * - Espace de 100M entre chaque jour → 50M insertions possibles avant/après chaque item
- * - Hash < 100M → Jamais de débordement dans un jour
- * - BASE_SCORE de 100 Milliards → Pas de scores négatifs
- *
- * **Synchronisation avec usePlanner :**
- * Les scores calculés ici doivent correspondre exactement à ceux de usePlanner pour que
- * le tri manuel soit cohérent entre la génération initiale et l'affichage dans OperationsView.
- *
- * @param {PlannedItem} item - Opération à scorer
- * @returns {number} Score de position (entier large, compatible BigInt conceptuel)
+ * @param {PlannedItem} item - Opération à analyser
+ * @returns {number | null} Position manuelle ou null
  *
  * @example
  * ```tsx
- * const item1 = { day: 5, position: undefined, instanceId: "exp_123-2025-01" };
- * const score1 = getEffectivePosition(item1);
- * // score1 ≈ 100_500_000_000 + hash("exp_123-2025-01")
+ * const item1 = { position: 5000 };
+ * getEffectivePosition(item1); // 5000
  *
- * const item2 = { day: 5, position: 100_550_000_000, instanceId: "exp_456-2025-01" };
- * const score2 = getEffectivePosition(item2);
- * // score2 = 100_550_000_000 (position manuelle prioritaire)
+ * const item2 = { position: 0 };
+ * getEffectivePosition(item2); // null
+ *
+ * const item3 = { position: undefined };
+ * getEffectivePosition(item3); // null
  * ```
  */
-const getEffectivePosition = (item: PlannedItem): number => {
-  // Priorité absolue : Position manuelle (1, 2, 3, 4...)
+const getEffectivePosition = (item: PlannedItem): number | null => {
+  // Position manuelle valide : > 0
   if (typeof item.position === "number" && item.position > 0) {
     return item.position;
   }
 
-  // Tri par défaut : jour + hash stable
-  const AUTO_BASE = 1_000_000; // 1 Million
-  const DAY_STEP = 10_000; // 10k par jour
-
-  // Hash stable
-  let hash = 0;
-  for (let i = 0; i < item.instanceId.length; i++) {
-    hash = (hash << 5) - hash + item.instanceId.charCodeAt(i);
-    hash |= 0;
-  }
-  const safeHash = Math.abs(hash) % DAY_STEP;
-
-  return AUTO_BASE + item.day * DAY_STEP + safeHash;
+  // Pas de position manuelle
+  return null;
 };
 
 /**
@@ -114,14 +93,15 @@ const getEffectivePosition = (item: PlannedItem): number => {
  * et application de la logique de tri selon la clé sélectionnée.
  *
  * **Clés de tri disponibles :**
- * - **"manual"** : Ordre manuel (drag & drop) basé sur `item.position` ou score calculé
+ * - **"manual"** : Ordre manuel (drag & drop) basé sur `item.position` ou score calculé.
+ *   TOUJOURS en ordre décroissant (du plus récent au plus vieux par défaut).
  * - **"date"** : Tri par jour du mois (1-31)
  * - **"amount"** : Tri par montant (€)
  * - **"label"** : Tri alphabétique par libellé
  *
  * **Ordres disponibles :**
- * - **"asc"** : Croissant (défaut pour tous les tris)
- * - **"desc"** : Décroissant
+ * - **"asc"** : Croissant (défaut pour date, montant, libellé)
+ * - **"desc"** : Décroissant (forcé pour tri manuel)
  *
  * **Persistance automatique :**
  * Les préférences sont sauvegardées dans localStorage :
@@ -139,7 +119,8 @@ const getEffectivePosition = (item: PlannedItem): number => {
  * **Comportement spécial du tri manuel :**
  * - Utilise `getEffectivePosition()` pour calculer les scores
  * - Fallback sur `instanceId` en cas d'égalité (stabilité du tri)
- * - Ordre toujours "asc" en mode manuel (le score encode déjà l'ordre visuel)
+ * - Ordre TOUJOURS "desc" (décroissant) pour afficher du plus récent au plus vieux
+ * - Le changement d'ordre est désactivé en mode manuel (canToggleOrder = false)
  *
  * @returns {Object} Interface de gestion du tri
  * @returns {SortKey} sortKey - Clé de tri active (reactive)
@@ -147,6 +128,7 @@ const getEffectivePosition = (item: PlannedItem): number => {
  * @returns {function(SortKey, SortOrder): void} setSorting - Modifier le tri (+ sauvegarde auto)
  * @returns {function(PlannedItem[]): PlannedItem[]} sortItems - Fonction de tri (memoized)
  * @returns {boolean} isManualSort - True si tri manuel actif (pour activer drag & drop)
+ * @returns {boolean} canToggleOrder - True si on peut changer l'ordre (false en mode manuel)
  * @returns {SortOption[]} sortOptions - Options pour le sélecteur de tri
  *
  * @example
@@ -201,9 +183,11 @@ export const useOperationsSorting = () => {
    *
    * @description
    * Mise à jour synchrone des deux états de tri.
+   * **IMPORTANT :** Si key === "manual", l'ordre est FORCÉ à "desc" (décroissant)
+   * pour garantir un affichage du plus récent au plus vieux par défaut.
    *
    * @param {SortKey} key - Nouvelle clé de tri
-   * @param {SortOrder} order - Nouvel ordre de tri
+   * @param {SortOrder} order - Nouvel ordre de tri (ignoré si key === "manual")
    *
    * @example
    * ```tsx
@@ -213,13 +197,14 @@ export const useOperationsSorting = () => {
    * // Tri par montant décroissant
    * setSorting("amount", "desc");
    *
-   * // Tri manuel inversé
-   * setSorting("manual", "desc");
+   * // Tri manuel (ordre forcé à "desc")
+   * setSorting("manual", "asc"); // → Sera converti en "desc"
    * ```
    */
   const setSorting = (key: SortKey, order: SortOrder) => {
     setSortKey(key);
-    setSortOrder(order);
+    // Forcer l'ordre à "desc" en mode manuel
+    setSortOrder(key === "manual" ? "desc" : order);
   };
 
   /**
@@ -252,12 +237,37 @@ export const useOperationsSorting = () => {
           const posA = getEffectivePosition(a);
           const posB = getEffectivePosition(b);
 
-          if (posA !== posB) {
+          // RÈGLE 1 : Items avec position manuelle d'abord, dans l'ordre de leur position
+          if (posA !== null && posB !== null) {
+            // Les deux ont une position : comparer les positions
             res = posA - posB;
+          } else if (posA !== null && posB === null) {
+            // A a une position, B non : A avant B
+            res = -1;
+          } else if (posA === null && posB !== null) {
+            // B a une position, A non : B avant A
+            res = 1;
           } else {
-            // Fallback ultime stable sur l'ID
-            res = a.instanceId.localeCompare(b.instanceId);
+            // RÈGLE 2 : Aucun des deux n'a de position → Tri par date puis instanceId
+            // Extraire la date de payment_date si disponible (items variables)
+            const dateA =
+              a.paidDetails?.paymentDate ||
+              `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}-${String(a.day).padStart(2, "0")}`;
+            const dateB =
+              b.paidDetails?.paymentDate ||
+              `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}-${String(b.day).padStart(2, "0")}`;
+
+            // Comparer les dates (format YYYY-MM-DD)
+            if (dateA !== dateB) {
+              res = dateA.localeCompare(dateB);
+            } else {
+              // Même date : fallback sur instanceId pour stabilité
+              res = a.instanceId.localeCompare(b.instanceId);
+            }
           }
+
+          // Tri manuel TOUJOURS en ordre décroissant (plus récent en haut)
+          return -res;
         } else if (sortKey === "date") {
           res = a.day - b.day;
         } else if (sortKey === "amount") {
@@ -266,7 +276,7 @@ export const useOperationsSorting = () => {
           res = a.label.localeCompare(b.label);
         }
 
-        // Application de l'ordre (asc/desc)
+        // Application de l'ordre (asc/desc) pour les autres tris
         return sortOrder === "asc" ? res : -res;
       });
     };
@@ -276,6 +286,12 @@ export const useOperationsSorting = () => {
    * Indicateur de tri manuel actif (pour activer le drag & drop).
    */
   const isManualSort = sortKey === "manual";
+
+  /**
+   * Indicateur si on peut basculer l'ordre de tri.
+   * False en mode manuel car l'ordre est fixe (toujours décroissant).
+   */
+  const canToggleOrder = sortKey !== "manual";
 
   /**
    * Options du sélecteur de tri (pour ListSorter).
@@ -293,6 +309,7 @@ export const useOperationsSorting = () => {
     setSorting,
     sortItems,
     isManualSort,
+    canToggleOrder,
     sortOptions,
     // Export de getEffectivePosition pour handleReorder (drag & drop)
     getEffectivePosition,

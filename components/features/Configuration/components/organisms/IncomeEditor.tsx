@@ -25,7 +25,17 @@ interface IncomeEditorProps {
   sortOrder: SortOrder;
 }
 
-export const IncomeEditor: React.FC<IncomeEditorProps> = ({ incomeConfigs, people, categories, accounts, onAddIncome, onUpdateIncome, onDeleteIncome }) => {
+export const IncomeEditor: React.FC<IncomeEditorProps> = ({
+  incomeConfigs,
+  people,
+  categories,
+  accounts,
+  onAddIncome,
+  onUpdateIncome,
+  onDeleteIncome,
+  sortKey,
+  sortOrder,
+}) => {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -170,7 +180,7 @@ export const IncomeEditor: React.FC<IncomeEditorProps> = ({ incomeConfigs, peopl
       }
       return sortOrder === "asc" ? res : -res;
     });
-  }, [incomeConfigs]);
+  }, [incomeConfigs, sortKey, sortOrder]);
 
   if (showDeleteConfirm) {
     return (
