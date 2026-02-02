@@ -23,8 +23,9 @@
  * @dependencies
  * - types.ts : PlannedItem
  */
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { PlannedItem } from "../../types";
+import { logger } from "../../services/logger";
 
 /**
  * Ordre de tri possible.
@@ -75,7 +76,7 @@ export interface SortOption {
  * getEffectivePosition(item3); // null
  * ```
  */
-const getEffectivePosition = (item: PlannedItem): number | null => {
+const getEffectivePosition = (item: PlannedItem): number => {
   // Position manuelle valide : > 0
   if (typeof item.position === "number" && item.position > 0) {
     return item.position;
@@ -83,6 +84,114 @@ const getEffectivePosition = (item: PlannedItem): number | null => {
 
   // Pas de position manuelle
   return null;
+};
+
+/**
+ * Corrige les collisions de positions manuelles pour éviter les réorganisations aléatoires.
+ *
+ * @description
+ * **PROBLÈME RÉSOLU :**
+ * Plusieurs opérations peuvent avoir la même position (ex: 98019, 97023), ce qui
+ * fait que le tri tombe sur le fallback (jour + instanceId) et cause des déplacements
+ * imprévisibles lors du drag & drop.
+ *
+ * **SOLUTION ROBUSTE :**
+ * Détecter les vraies collisions et réassigner des positions séquentielles uniques.
+ *
+ * **ALGORITHME :**
+ * 1. Vérifier s'il y a des collisions (plusieurs items avec même position)
+ * 2. Si oui, collecter tous les items avec positions manuelles
+ * 3. Les trier par position actuelle (pour préserver l'ordre relatif)
+ * 4. Réassigner des positions séquentielles : 1000, 2000, 3000, etc.
+ * 5. Si pas de collision, laisser inchangé
+ *
+ * **GARANTIES :**
+ * - Toutes les positions deviennent uniques (pas de collision)
+ * - L'ordre relatif est préservé (tri par position actuelle)
+ * - Espace laissé pour insertions futures (drag & drop)
+ * - Performance : O(n log n) pour le tri, seulement si collisions détectées
+ *
+ * @param {PlannedItem[]} items - Tableau d'opérations à corriger
+ * @returns {Object} Objet avec correctedItems et flag hasCorrections
+ *
+ * @example
+ * ```tsx
+ * const items = [
+ *   { instanceId: '1', position: 1000 },
+ *   { instanceId: '2', position: 1000 }, // Collision !
+ *   { instanceId: '3', position: 1000 }, // Collision !
+ *   { instanceId: '4', position: 2000 },
+ *   { instanceId: '5', position: 2000 }, // Collision !
+ * ];
+ *
+ * const { correctedItems, hasCorrections } = fixPositionCollisions(items);
+ * // Résultat garanti :
+ * // correctedItems = [{ instanceId: '1', position: 1000 },
+ * //                   { instanceId: '2', position: 2000 },
+ * //                   { instanceId: '3', position: 3000 },
+ * //                   { instanceId: '4', position: 4000 },
+ * //                   { instanceId: '5', position: 5000 }]
+ * // hasCorrections = true
+ * ```
+ */
+const fixPositionCollisions = (items: PlannedItem[]): { correctedItems: PlannedItem[]; hasCorrections: boolean } => {
+  const POSITION_STEP = 1000;
+
+  // Étape 1 : Détecter s'il y a des collisions
+  const positionCounts: Record<number, number> = {};
+  items.forEach((item) => {
+    const pos = getEffectivePosition(item);
+    if (pos !== null && pos > 0) {
+      positionCounts[pos] = (positionCounts[pos] || 0) + 1;
+    }
+  });
+
+  const hasCollisions = Object.values(positionCounts).some((count) => count > 1);
+
+  // Si pas de collisions, retourner tel quel
+  if (!hasCollisions) {
+    return { correctedItems: items, hasCorrections: false };
+  }
+
+  // Étape 2 : Collecter tous les items avec positions manuelles
+  const itemsWithPositions = items.filter((item) => {
+    const pos = getEffectivePosition(item);
+    return pos !== null && pos > 0;
+  });
+
+  // Étape 3 : Trier par position actuelle pour préserver l'ordre relatif
+  itemsWithPositions.sort((a, b) => {
+    const posA = getEffectivePosition(a);
+    const posB = getEffectivePosition(b);
+    if (posA === null || posB === null) return 0;
+    return posA - posB;
+  });
+
+  // Étape 4 : Réassigner des positions séquentielles uniques
+  const fixedItems = items.map((item) => {
+    const pos = getEffectivePosition(item);
+    if (pos === null || pos <= 0) {
+      // Pas de position manuelle : laisser inchangé
+      return item;
+    }
+
+    // Trouver l'index dans le tableau trié
+    const sortedIndex = itemsWithPositions.findIndex((i) => i.instanceId === item.instanceId);
+    if (sortedIndex === -1) {
+      // Ne devrait pas arriver, mais sécurité
+      return item;
+    }
+
+    // Nouvelle position séquentielle
+    const newPosition = (sortedIndex + 1) * POSITION_STEP;
+
+    return {
+      ...item,
+      position: newPosition,
+    };
+  });
+
+  return { correctedItems: fixedItems, hasCorrections: true };
 };
 
 /**
@@ -108,6 +217,11 @@ const getEffectivePosition = (item: PlannedItem): number | null => {
  * - `operationsView_sortKey` : Clé de tri active
  * - `operationsView_sortOrder` : Ordre de tri actif
  *
+ * **Correction des collisions de positions :**
+ * En mode manuel, les positions identiques sont automatiquement corrigées.
+ * Si un callback `onPositionCorrection` est fourni, il sera appelé avec les items corrigés
+ * pour permettre la persistance des corrections en base de données.
+ *
  * **Restauration :**
  * Au chargement du composant, les préférences sont automatiquement restaurées
  * depuis localStorage. Par défaut : `sortKey="manual"`, `sortOrder="asc"`.
@@ -122,6 +236,8 @@ const getEffectivePosition = (item: PlannedItem): number | null => {
  * - Ordre TOUJOURS "desc" (décroissant) pour afficher du plus récent au plus vieux
  * - Le changement d'ordre est désactivé en mode manuel (canToggleOrder = false)
  *
+ * @param {Object} [options] - Options du hook
+ * @param {function(PlannedItem[]): void} [options.onPositionCorrection] - Callback appelé quand des corrections de positions sont appliquées
  * @returns {Object} Interface de gestion du tri
  * @returns {SortKey} sortKey - Clé de tri active (reactive)
  * @returns {SortOrder} sortOrder - Ordre de tri actif (reactive)
@@ -133,7 +249,16 @@ const getEffectivePosition = (item: PlannedItem): number | null => {
  *
  * @example
  * ```tsx
- * const { sortKey, sortOrder, setSorting, sortItems, isManualSort, sortOptions } = useOperationsSorting();
+ * const { sortKey, sortOrder, setSorting, sortItems, isManualSort, sortOptions } = useOperationsSorting({
+ *   onPositionCorrection: (correctedItems) => {
+ *     // Persister les corrections en base de données
+ *     correctedItems.forEach(item => {
+ *       if (item.position !== originalPosition) {
+ *         updatePositionInDB(item.instanceId, item.position);
+ *       }
+ *     });
+ *   }
+ * });
  *
  * // Afficher le sélecteur de tri
  * <ListSorter
@@ -157,9 +282,11 @@ const getEffectivePosition = (item: PlannedItem): number | null => {
  * 1. **Initialisation** : Restauration depuis localStorage ou défauts
  * 2. **Changement de tri** : setSorting(key, order) → État React + localStorage
  * 3. **Tri des items** : sortItems(items) → Nouveau tableau trié (useMemo)
- * 4. **Drag & drop** : isManualSort ? activer : désactiver
+ * 4. **Correction des collisions** : Si callback fourni, persister les corrections
+ * 5. **Drag & drop** : isManualSort ? activer : désactiver
  */
-export const useOperationsSorting = () => {
+export const useOperationsSorting = (options?: { onPositionCorrection?: (correctedItems: PlannedItem[], originalItems: PlannedItem[]) => void }) => {
+  const { onPositionCorrection } = options || {};
   // État du tri avec restauration depuis localStorage
   const [sortKey, setSortKey] = useState<SortKey>(() => {
     return (localStorage.getItem("operationsView_sortKey") as SortKey) || "manual";
@@ -176,18 +303,18 @@ export const useOperationsSorting = () => {
 
   useEffect(() => {
     localStorage.setItem("operationsView_sortOrder", sortOrder);
-  }, [sortOrder]);
+  }, [sortOrder, sortKey]);
 
   /**
    * Modifie les paramètres de tri (clé + ordre).
    *
    * @description
    * Mise à jour synchrone des deux états de tri.
-   * **IMPORTANT :** Si key === "manual", l'ordre est FORCÉ à "desc" (décroissant)
+   * **IMPORTANT :** Si key === "manual", l'ordre est IGNORÉ et forcé à "desc" (décroissant)
    * pour garantir un affichage du plus récent au plus vieux par défaut.
    *
    * @param {SortKey} key - Nouvelle clé de tri
-   * @param {SortOrder} order - Nouvel ordre de tri (ignoré si key === "manual")
+   * @param {SortOrder} [order] - Nouvel ordre de tri (ignoré si key === "manual")
    *
    * @example
    * ```tsx
@@ -197,14 +324,20 @@ export const useOperationsSorting = () => {
    * // Tri par montant décroissant
    * setSorting("amount", "desc");
    *
-   * // Tri manuel (ordre forcé à "desc")
-   * setSorting("manual", "asc"); // → Sera converti en "desc"
+   * // Tri manuel (ordre ignoré, forcé à "desc")
+   * setSorting("manual", "asc"); // → L'ordre "asc" est ignoré, sera "desc"
    * ```
    */
-  const setSorting = (key: SortKey, order: SortOrder) => {
+  const setSorting = (key: SortKey, order?: SortOrder) => {
     setSortKey(key);
-    // Forcer l'ordre à "desc" en mode manuel
-    setSortOrder(key === "manual" ? "desc" : order);
+
+    // En mode manuel : IGNORER l'ordre passé, forcer "desc"
+    // En autres modes : utiliser l'ordre fourni ou garder l'ordre actuel
+    if (key === "manual") {
+      setSortOrder("desc");
+    } else if (order) {
+      setSortOrder(order);
+    }
   };
 
   /**
@@ -215,10 +348,14 @@ export const useOperationsSorting = () => {
    * Utilise `useMemo` pour éviter les recalculs inutiles (dépendances : sortKey, sortOrder).
    *
    * **Algorithmes de tri :**
-   * - **manual** : Compare getEffectivePosition() → Fallback sur instanceId
+   * - **manual** : Corrige les collisions de positions PUIS compare getEffectivePosition() → Fallback sur instanceId
    * - **date** : Compare item.day (jour du mois)
    * - **amount** : Compare item.amount (montant en €)
    * - **label** : Compare item.label (alphabétique, insensible à la casse)
+   *
+   * **Correction des collisions (tri manuel uniquement) :**
+   * Avant le tri, `fixPositionCollisions()` détecte et corrige automatiquement
+   * les positions identiques pour éviter les réorganisations imprévisibles.
    *
    * **Stabilité du tri :**
    * - En mode manuel : Fallback sur instanceId garantit un ordre déterministe
@@ -228,59 +365,64 @@ export const useOperationsSorting = () => {
    * @param {PlannedItem[]} items - Tableau d'opérations à trier
    * @returns {PlannedItem[]} Nouveau tableau trié (shallow copy)
    */
-  const sortItems = useMemo(() => {
-    return (items: PlannedItem[]): PlannedItem[] => {
-      return [...items].sort((a, b) => {
-        let res = 0;
+  const sortItems = useCallback(
+    (items: PlannedItem[]): PlannedItem[] => {
+      if (!items) return []; // Gérer le cas où les items sont temporairement undefined
+      let sorted = [...items];
 
-        if (sortKey === "manual") {
-          const posA = getEffectivePosition(a);
-          const posB = getEffectivePosition(b);
+      if (sortKey === "manual") {
+        const collisionResult = fixPositionCollisions(items);
 
-          // RÈGLE 1 : Items avec position manuelle d'abord, dans l'ordre de leur position
-          if (posA !== null && posB !== null) {
-            // Les deux ont une position : comparer les positions
-            res = posA - posB;
-          } else if (posA !== null && posB === null) {
-            // A a une position, B non : A avant B
-            res = -1;
-          } else if (posA === null && posB !== null) {
-            // B a une position, A non : B avant A
-            res = 1;
-          } else {
-            // RÈGLE 2 : Aucun des deux n'a de position → Tri par date puis instanceId
-            // Extraire la date de payment_date si disponible (items variables)
-            const dateA =
-              a.paidDetails?.paymentDate ||
-              `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}-${String(a.day).padStart(2, "0")}`;
-            const dateB =
-              b.paidDetails?.paymentDate ||
-              `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}-${String(b.day).padStart(2, "0")}`;
-
-            // Comparer les dates (format YYYY-MM-DD)
-            if (dateA !== dateB) {
-              res = dateA.localeCompare(dateB);
-            } else {
-              // Même date : fallback sur instanceId pour stabilité
-              res = a.instanceId.localeCompare(b.instanceId);
-            }
-          }
-
-          // Tri manuel TOUJOURS en ordre décroissant (plus récent en haut)
-          return -res;
-        } else if (sortKey === "date") {
-          res = a.day - b.day;
-        } else if (sortKey === "amount") {
-          res = a.amount - b.amount;
-        } else if (sortKey === "label") {
-          res = a.label.localeCompare(b.label);
+        // Protection renforcée pour éviter le crash pendant les re-rendus rapides
+        if (!collisionResult || !collisionResult.correctedItems) {
+          logger.error("useOperationsSorting", "fixPositionCollisions did not return correctedItems", { items });
+          return []; // Retourner un tableau vide pour empêcher le crash
         }
 
-        // Application de l'ordre (asc/desc) pour les autres tris
-        return sortOrder === "asc" ? res : -res;
-      });
-    };
-  }, [sortKey, sortOrder]);
+        const { correctedItems, hasCorrections } = collisionResult;
+
+        if (hasCorrections && onPositionCorrection) {
+          logger.debug("useOperationsSorting", "Collisions de position détectées, correction...", {
+            count: correctedItems.filter((c, i) => items[i] && c.position !== items[i].position).length,
+          });
+          onPositionCorrection(correctedItems, items);
+        }
+
+        soreturn []; // Retourner un tableau vide pour empêcher le crash
+        }
+
+        const { correctedItems, hasCorrections } = collisionResult;
+
+        if (hasCorrections && onPositionCorrection) {tch (sortKey) {
+            case "label":
+              valA = a.label;
+              valB = b.label;
+              break;
+            case "amount":
+              valA = a.amount;
+              valB = b.amount;
+              break;
+            case "category":
+              valA = a.category;
+              valB = b.category;
+              break;
+            default:
+              return 0;
+          }
+
+          if (typeof valA === "string" && typeof valB === "string") {
+            return sortOrder === "asc" ? valA.localeCompare(valB) : valB.localeCompare(valA);
+          }
+          if (typeof valA === "number" && typeof valB === "number") {
+            return sortOrder === "asc" ? valA - valB : valB - valA;
+          }
+          return 0;
+        });
+      }
+      return sorted;
+    },
+    [sortKey, sortOrder, onPositionCorrection]
+  );
 
   /**
    * Indicateur de tri manuel actif (pour activer le drag & drop).
@@ -303,8 +445,11 @@ export const useOperationsSorting = () => {
     { key: "amount", label: "Montant" },
   ];
 
-  return {
-    sortKey,
+  // Log final du hook pour déboguer les changements
+  useEffect(() => {
+    logger.debug("useOperationsSorting - ÉTAT FINAL", {
+      sortKey,
+     Retour du hook avec toutes les valeurs et actionstKey,
     sortOrder,
     setSorting,
     sortItems,

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import { usePlannerUI } from "../../../hooks/usePlannerUI";
 import { usePlanner } from "../../../hooks/usePlanner";
 import { useError } from "../../../contexts/ErrorContext";
@@ -80,16 +80,6 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
   // Hooks spécialisés (responsabilités déléguées)
   const ui = usePlannerUI(initialDate, initialWeek);
   const { filters, setFilters, resetFilters } = useOperationsFilters(initialFilters);
-  const {
-    sortKey,
-    sortOrder,
-    setSorting,
-    sortItems,
-    isManualSort,
-    sortOptions,
-    getEffectivePosition: _getEffectivePosition,
-    canToggleOrder,
-  } = useOperationsSorting();
   // Scope intelligent : PERIOD par défaut (ou si initialWeek fourni), MONTH si navigation sans période spécifique
   const [scope, setScope] = useState<"MONTH" | "PERIOD">(() => {
     // Si initialWeek === undefined ET initialDate === undefined, on arrive directement → PERIOD
@@ -129,13 +119,49 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
     activeWeek: ui.activeWeek,
   });
 
+  // Callback pour persister les corrections de positions en base de données
+  const handlePositionCorrection = useCallback(
+    async (correctedItems: PlannedItem[], originalItems: PlannedItem[]) => {
+      if (!onMoveItem) return;
+
+      try {
+        // Pour chaque item corrigé, persister la nouvelle position
+        for (const correctedItem of correctedItems) {
+          // Trouver l'item original dans les données brutes pour comparer
+          const originalItem = originalItems.find((item) => item.instanceId === correctedItem.instanceId);
+          if (originalItem && originalItem.position !== correctedItem.position) {
+            // Position a changé, persister en base
+            await onMoveItem(correctedItem, correctedItem.position);
+          }
+        }
+      } catch (err) {
+        showError(err as Error, "Correction automatique des positions");
+      }
+    },
+    [onMoveItem, showError]
+  );
+
+  // Hook de tri avec callback de persistance
+  const {
+    sortKey,
+    sortOrder,
+    setSorting,
+    sortItems: sortItemsWithCallback,
+    isManualSort,
+    sortOptions,
+    getEffectivePosition: _getEffectivePosition,
+    canToggleOrder,
+  } = useOperationsSorting({
+    onPositionCorrection: handlePositionCorrection,
+  });
+
   // État UI local
   const [isVarFormOpen, setIsVarFormOpen] = useState(false);
   const [editingVar, setEditingVar] = useState<VariableTransaction | null>(null);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
   // Tri des items
-  const currentItems = sortItems(unsortedItems);
+  const currentItems = sortItemsWithCallback(unsortedItems);
 
   // Handlers
   const handleDeleteVariable = async (id: string) => {
@@ -205,7 +231,7 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
     return new Date().toISOString().split("T")[0];
   })();
 
-  // DRAG & DROP : SYSTÈME D'INTERVALLES LARGES (Scalable)
+  // DRAG & DROP : SYSTÈME ROBUSTE AVEC RENORMALISATION DE POSITIONS
   const handleReorder = (item: PlannedItem, oldIndex: number, newIndex: number) => {
     try {
       if (onMoveItem && sortKey === "manual") {
@@ -220,96 +246,33 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
         // 1. Simuler le nouveau tableau après déplacement
         const reorderedList: PlannedItem[] = arrayMove(currentItems, oldIndex, newIndex);
 
-        // IMPORTANT : En mode DESC, l'ordre visuel est inversé
-        // prev devient next et vice-versa pour le calcul des positions
-        const isDescending = sortOrder === "desc";
-        const prevItem = (isDescending ? reorderedList[newIndex + 1] : reorderedList[newIndex - 1]) as PlannedItem | undefined;
-        const nextItem = (isDescending ? reorderedList[newIndex - 1] : reorderedList[newIndex + 1]) as PlannedItem | undefined;
+        // 2. RENORMALISER LES POSITIONS : Assigner des positions séquentiques cohérentes
+        // IMPORTANT : Respecter l'ordre de tri actuel (ASC vs DESC)
+        // En DESC : positions décroissantes (25000, 24000, 23000... 1000)
+        // En ASC : positions croissantes (1000, 2000, 3000... 25000)
+        const POSITION_STEP = 1000;
+        const renormalizedList = reorderedList.map((i, idx) => {
+          const newPosition =
+            sortOrder === "desc"
+              ? (reorderedList.length - idx) * POSITION_STEP // 25000, 24000, 23000...
+              : (idx + 1) * POSITION_STEP; // 1000, 2000, 3000...
 
-        // 2. Calculer la nouvelle position entre les voisins
-        const POSITION_STEP = 1000; // Intervalles larges (1000, 2000, 3000...)
-        const MIN_POSITION = 1; // Position minimale
-        const MAX_MANUAL = 999_999; // Position manuelle max (< 1M)
+          return { ...i, position: newPosition };
+        });
 
-        // Helper : Récupère la position manuelle ou null (< 1M = manuel, >= 1M = auto)
-        const getManualPosition = (item: PlannedItem | undefined): number | null => {
-          if (!item) return null;
-          // Les positions manuelles sont < 1M (1, 2, 3... 999999)
-          // Les positions automatiques sont >= 1M (générées par jour + hash)
-          return item.position && item.position > 0 && item.position < 1_000_000 ? item.position : null;
-        };
-
-        const prevPos = getManualPosition(prevItem);
-        const nextPos = getManualPosition(nextItem);
-
-        let newPosition: number;
-
-        if (!prevItem && !nextItem) {
-          // Liste vide
-          newPosition = POSITION_STEP;
-        } else if (!prevItem) {
-          // Première position
-          if (nextPos !== null && nextPos > POSITION_STEP) {
-            // Il y a de l'espace avant le suivant
-            newPosition = Math.floor(nextPos / 2);
-          } else {
-            // Pas d'espace : assigner 1, décaler le suivant
-            newPosition = MIN_POSITION;
-            if (nextItem) onMoveItem(nextItem, POSITION_STEP);
+        // 3. Persister TOUS les items qui ont changé de position
+        // Important : ne pas persister juste l'item déplacé, sinon le tri devient incohérent
+        renormalizedList.forEach((normalizedItem) => {
+          const originalItem = currentItems.find((i) => i.instanceId === normalizedItem.instanceId);
+          if (originalItem && originalItem.position !== normalizedItem.position) {
+            logger.debug("drag-drop", "Persister position renormalisée", {
+              item: normalizedItem.label,
+              oldPosition: originalItem.position,
+              newPosition: normalizedItem.position,
+            });
+            onMoveItem(normalizedItem, normalizedItem.position);
           }
-        } else if (!nextItem) {
-          // Dernière position
-          if (prevPos !== null && prevPos < MAX_MANUAL - POSITION_STEP) {
-            newPosition = prevPos + POSITION_STEP;
-          } else {
-            // Prev n'a pas de position ou trop proche de la limite
-            if (prevItem) onMoveItem(prevItem, MAX_MANUAL - POSITION_STEP);
-            newPosition = MAX_MANUAL;
-          }
-        } else {
-          // Entre deux items
-          if (prevPos !== null && nextPos !== null) {
-            // Les deux ont des positions manuelles
-            const gap = nextPos - prevPos;
-            if (gap > 2) {
-              // Espace suffisant : moyenne
-              newPosition = Math.floor((prevPos + nextPos) / 2);
-            } else {
-              // Espace trop petit : forcer un écart en décalant tout vers le haut
-              newPosition = prevPos + POSITION_STEP;
-              // Décaler tous les items suivants de +POSITION_STEP
-              for (let i = newIndex + 1; i < reorderedList.length; i++) {
-                const futureItem = reorderedList[i];
-                const futurePos = getManualPosition(futureItem);
-                if (futurePos !== null) {
-                  onMoveItem(futureItem, futurePos + POSITION_STEP);
-                }
-              }
-            }
-          } else if (prevPos !== null && nextPos === null) {
-            // Seul prev a une position
-            newPosition = prevPos + POSITION_STEP;
-            if (nextItem) onMoveItem(nextItem, prevPos + 2 * POSITION_STEP);
-          } else if (prevPos === null && nextPos !== null) {
-            // Seul next a une position
-            if (nextPos > POSITION_STEP) {
-              if (prevItem) onMoveItem(prevItem, nextPos - 2 * POSITION_STEP);
-              newPosition = nextPos - POSITION_STEP;
-            } else {
-              if (prevItem) onMoveItem(prevItem, MIN_POSITION);
-              newPosition = POSITION_STEP;
-              if (nextItem) onMoveItem(nextItem, 2 * POSITION_STEP);
-            }
-          } else {
-            // Aucun des deux n'a de position : initialiser séquentiellement
-            if (prevItem) onMoveItem(prevItem, POSITION_STEP);
-            newPosition = 2 * POSITION_STEP;
-            if (nextItem) onMoveItem(nextItem, 3 * POSITION_STEP);
-          }
-        }
-
-        // 3. Persister l'item déplacé
-        onMoveItem(item, newPosition);
+        });
       }
     } catch (err) {
       showError(err as Error, "Drag & drop d'opération");

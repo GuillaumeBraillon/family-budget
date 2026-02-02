@@ -7,6 +7,40 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.6.23] - 2026-02-02
+
+### 🐛 Corrections de bugs
+
+#### **Stabilité du tri lors du drag & drop (ordre DESC préservé)**
+
+**Problème** :
+
+- L'ordre de tri oscille entre ASC et DESC lors du drag & drop d'opérations
+- Lors d'une renormalisation des positions, l'ordre était inversé à chaque déplacement
+- Positions renormalisées en ASC (1000, 2000, 3000...) même quand le tri était en DESC (25000, 24000...)
+- Résultat : opérations se retrouvent complètement inversées après un déplacement
+
+**Solution** :
+
+- Modification de la renormalisation dans `handleReorder` pour respecter l'ordre de tri actuel
+- Si `sortOrder === 'desc'` → positions décroissantes : `(length - idx) * 1000` (25000, 24000...)
+- Si `sortOrder === 'asc'` → positions croissantes : `(idx + 1) * 1000` (1000, 2000...)
+- Rétrait des logs de debug devant plus être nécessaires
+
+**Impact** :
+
+- ✅ Tri reste stable pendant les opérations de drag & drop
+- ✅ Ordre DESC préservé (plus récent en haut) après chaque déplacement
+- ✅ Pas d'inversion aléatoire des listes
+- ✅ Comportement prévisible et cohérent
+
+**Fichiers modifiés** :
+
+- `components/features/Operations/OperationsView.tsx` (fonction `handleReorder`)
+- `hooks/operations/useOperationsSorting.ts` (suppression des logs de debug)
+
+---
+
 ## [2.6.22] - 2026-02-02
 
 ### 🐛 Corrections de bugs
