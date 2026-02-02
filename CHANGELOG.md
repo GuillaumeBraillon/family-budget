@@ -7,6 +7,36 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.6.22] - 2026-02-02
+
+### 🐛 Corrections de bugs
+
+#### **Exclusion des salaires en attente des calculs de soldes**
+
+**Problème** :
+
+- Les salaires en attente (non pointés) étaient incorrectement inclus dans les calculs de soldes de comptes
+- Cela gonflait artificiellement les montants "restant à payer" dans la vue Soldes
+- Vision déformée des dettes réelles des comptes bancaires
+
+**Solution** :
+
+- Ajout d'une condition dans `calculatePeriodStatistics` pour exclure les salaires en attente
+- Condition : `if (item.isSalary && item.isWaiting) return;`
+- Les salaires déjà payés continuent d'être inclus normalement dans les calculs
+
+**Impact** :
+
+- ✅ Soldes de comptes plus précis (excluent les salaires non perçus)
+- ✅ Vision réaliste des montants réellement dus
+- ✅ Cohérence avec la logique métier (seuls les revenus perçus impactent les soldes)
+
+**Fichier modifié** :
+
+- `hooks/usePlanner.ts` (fonction `calculatePeriodStatistics`)
+
+---
+
 ## [2.6.21] - 2026-01-31
 
 ### ♿ Accessibilité (WCAG 2.1 AA)

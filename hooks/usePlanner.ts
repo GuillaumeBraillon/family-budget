@@ -586,6 +586,9 @@ export const usePlanner = (
     const incByBeneficiary: Record<string, BeneficiaryStats> = {};
 
     [...currentItems, ...previousUnpaidItems].forEach((item) => {
+      // Exclure les salaires en attente des calculs de soldes
+      if (item.isSalary && item.isWaiting) return;
+
       if (!byAccount[item.accountId]) byAccount[item.accountId] = { paid: 0, remaining: 0, remainingStandard: 0, paidStandard: 0, planned: 0, pendingCount: 0 };
       const val = item.amount;
       const originalVal = item.originalAmount;
