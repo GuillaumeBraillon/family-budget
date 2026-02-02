@@ -23,9 +23,8 @@
  * @dependencies
  * - types.ts : PlannedItem
  */
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { PlannedItem } from "../../types";
-import { logger } from "../../services/logger";
 
 /**
  * Ordre de tri possible.
