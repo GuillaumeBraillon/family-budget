@@ -375,25 +375,27 @@ export const useOperationsSorting = (options?: { onPositionCorrection?: (correct
 
         // Protection renforcée pour éviter le crash pendant les re-rendus rapides
         if (!collisionResult || !collisionResult.correctedItems) {
-          logger.error("useOperationsSorting", "fixPositionCollisions did not return correctedItems", { items });
           return []; // Retourner un tableau vide pour empêcher le crash
         }
 
         const { correctedItems, hasCorrections } = collisionResult;
 
         if (hasCorrections && onPositionCorrection) {
-          logger.debug("useOperationsSorting", "Collisions de position détectées, correction...", {
-            count: correctedItems.filter((c, i) => items[i] && c.position !== items[i].position).length,
-          });
           onPositionCorrection(correctedItems, items);
         }
 
-        soreturn []; // Retourner un tableau vide pour empêcher le crash
-        }
+        sorted = [...correctedItems].sort((a, b) => {
+          const posA = getEffectivePosition(a);
+          const posB = getEffectivePosition(b);
+          return sortOrder === "asc" ? posA - posB : posB - posA;
+        });
+      } else {
+        // Tri par date, libellé ou montant
+        let valA: string | number | undefined;
+        let valB: string | number | undefined;
 
-        const { correctedItems, hasCorrections } = collisionResult;
-
-        if (hasCorrections && onPositionCorrection) {tch (sortKey) {
+        sorted.sort((a, b) => {
+          switch (sortKey) {
             case "label":
               valA = a.label;
               valB = b.label;
@@ -445,11 +447,9 @@ export const useOperationsSorting = (options?: { onPositionCorrection?: (correct
     { key: "amount", label: "Montant" },
   ];
 
-  // Log final du hook pour déboguer les changements
-  useEffect(() => {
-    logger.debug("useOperationsSorting - ÉTAT FINAL", {
-      sortKey,
-     Retour du hook avec toutes les valeurs et actionstKey,
+  // Retour du hook avec toutes les valeurs et actions
+  return {
+    sortKey,
     sortOrder,
     setSorting,
     sortItems,
