@@ -125,11 +125,15 @@ export const useBalancesRows = ({
     if (jointAccount) {
       const jointStats = stats.byAccount[jointAccount.id];
       const pendingOnJoint = jointStats ? jointStats.remaining : 0;
-      jointTarget = pendingOnJoint;
-      // CORRECTION : Utiliser le solde HORS attente (currentBalance + pending) pour éviter le double-comptage
-      // Le solde actuel INCLUT déjà les opérations en attente, donc il faut soustraire depuis le solde hors attente
-      const balanceExcludingPending = jointAccount.currentBalance + pendingOnJoint;
-      jointGap = pendingOnJoint - balanceExcludingPending;
+
+      // Target : Montant des dépenses à couvrir (valeur absolue)
+      jointTarget = pendingOnJoint < 0 ? -pendingOnJoint : 0;
+
+      // Gap : Ce qu'il manque pour finir à l'équilibre (0€) après paiement des opérations en attente
+      // Solde Prévisionnel = Solde Actuel + Opérations en attente
+      // Gap = 0 - Solde Prévisionnel
+      const projectedBalance = jointAccount.currentBalance + pendingOnJoint;
+      jointGap = -projectedBalance;
     }
 
     // --- ÉTAPE 2 : Calculer excédent OU déficit budgétaire global ---

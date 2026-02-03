@@ -145,15 +145,18 @@ export const BalancesTable: React.FC<BalancesTableProps> = ({
                 <MobileTooltip
                   text={
                     <div className="space-y-1.5 text-[10px]">
-                      <p className="font-bold text-indigo-700 border-b border-slate-200 pb-1 mb-1">Deux visions du solde :</p>
+                      <p className="font-bold text-indigo-700 border-b border-slate-200 pb-1 mb-1">Deux types de solde :</p>
+
                       <div className="flex items-start gap-2">
-                        <span className="text-indigo-700 font-bold">Avec attente</span>
-                        <span className="text-slate-700">Solde réel incluant les opérations non encore validées</span>
+                        <span className="text-slate-800 font-bold">Solde réel</span>
+                        <span className="text-slate-700">Solde sur le compte bancaire qui ne prend pas en compte les opérations en attente</span>
                       </div>
+
                       <div className="flex items-start gap-2">
-                        <span className="text-slate-800 font-bold">Hors attente</span>
-                        <span className="text-slate-700">Solde en excluant les opérations à venir</span>
+                        <span className="text-indigo-700 font-bold">Solde prévisionnel</span>
+                        <span className="text-slate-700">Prend en compte les opérations en attente</span>
                       </div>
+
                       <p className="text-slate-600 text-[9px] italic mt-1 pt-1 border-t border-slate-200">Cliquez sur le solde pour le modifier.</p>
                     </div>
                   }
@@ -246,11 +249,11 @@ export const BalancesTable: React.FC<BalancesTableProps> = ({
                           </button>
                         </div>
                         <div className="text-[9px] text-slate-500 flex items-center gap-1.5">
-                          <span className="font-medium">{editMode === "WITH_PENDING" ? "Édition: Avec attente" : "Édition: Hors attente"}</span>
+                          <span className="font-medium">{editMode === "WITH_PENDING" ? "Édition: Solde prévisionnel" : "Édition: Solde réel"}</span>
                           {row.pendingAmount !== undefined && Math.abs(row.pendingAmount) > 0.01 && (
                             <>
                               <span className="text-slate-500">→</span>
-                              <span className="font-medium">{editMode === "WITH_PENDING" ? "Hors attente:" : "Avec attente:"}</span>
+                              <span className="font-medium">{editMode === "WITH_PENDING" ? "Solde réel:" : "Solde prévisionnel:"}</span>
                               <span className="font-mono font-bold text-slate-700">
                                 {editMode === "WITH_PENDING"
                                   ? (parseFloat(tempBalance || "0") + row.pendingAmount).toFixed(2)
@@ -263,9 +266,9 @@ export const BalancesTable: React.FC<BalancesTableProps> = ({
                       </div>
                     ) : (
                       <div className="flex flex-col items-end gap-0.5">
-                        {/* Solde "Avec attente" */}
+                        {/* Solde "Solde réél" */}
                         <BalanceDisplay
-                          label="Avec attente:"
+                          label="Solde réél:"
                           amount={row.balance}
                           onClick={(e) => {
                             if (editingId !== row.id) startEdit(row.id, row.balance, e, "WITH_PENDING");
@@ -315,10 +318,10 @@ export const BalancesTable: React.FC<BalancesTableProps> = ({
                           }
                         />
 
-                        {/* Solde "Hors attente" */}
+                        {/* Solde "Solde prévisionnel"*/}
                         {row.pendingAmount !== undefined && Math.abs(row.pendingAmount) > 0.01 && (
                           <BalanceDisplay
-                            label="Hors attente:"
+                            label="Solde prévisionnel:"
                             amount={row.balance + row.pendingAmount}
                             onClick={(e) => {
                               e.stopPropagation();
@@ -370,7 +373,6 @@ export const BalancesTable: React.FC<BalancesTableProps> = ({
                       </div>
                       {row.isJoint && row.pendingAmount !== undefined && Math.abs(row.pendingAmount) > 0.01 && (
                         <div className="text-[9px] text-slate-500 flex items-center gap-1 mt-0.5">
-                          <span className="font-medium">Hors attente:</span>
                           <span className="font-mono font-bold text-slate-700">{(row.target + row.pendingAmount).toFixed(2)} €</span>
                         </div>
                       )}

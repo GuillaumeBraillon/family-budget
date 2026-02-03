@@ -7,6 +7,22 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.6.24] - 2026-02-03
+
+### 🐛 Corrections (Bug Fixes)
+
+#### **Calcul des soldes et opérations en attente**
+
+- **Logique de signe (usePlanner)** : Correction critique du calcul des montants en attente. Les dépenses en attente sont désormais correctement déduites (négatives) et les revenus en attente ajoutés (positifs), au lieu de l'inverse.
+- **Compte Joint (useBalancesRows)** : Ajustement du calcul du "Solde prévu" et du "Gap" (besoin de virement). Le solde prévu reflète maintenant correctement la projection financière (Solde Actuel + Opérations en attente), et le virement est calculé pour atteindre l'équilibre parfait (0€).
+
+### 🔧 Modifications techniques
+
+- `hooks/usePlanner.ts` : Inversion des signes dans le calcul de `remaining` et `remainingStandard`.
+- `hooks/balances/useBalancesRows.ts` : Refonte du calcul de `jointTarget` et `jointGap` pour utiliser le solde projeté.
+
+---
+
 ## [2.6.23] - 2026-02-02
 
 ### 🐛 Corrections de bugs

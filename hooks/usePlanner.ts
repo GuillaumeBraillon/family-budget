@@ -608,7 +608,7 @@ export const usePlanner = (
         const standardImpact = item.type === "EXPENSE" ? standardAmount : -standardAmount;
         byAccount[item.accountId].paidStandard += standardImpact;
       } else {
-        const impact = item.type === "EXPENSE" ? val : -val;
+        const impact = item.type === "EXPENSE" ? -val : val;
         byAccount[item.accountId].remaining += impact;
         byAccount[item.accountId].pendingCount++;
 
@@ -622,7 +622,7 @@ export const usePlanner = (
           const extraSum = item.tagAmounts.filter((ta) => ta.isExtra === true).reduce((sum, ta) => sum + ta.amount, 0);
           standardAmount = Math.max(0, val - extraSum);
         }
-        const standardImpact = item.type === "EXPENSE" ? standardAmount : -standardAmount;
+        const standardImpact = item.type === "EXPENSE" ? -standardAmount : standardAmount;
         byAccount[item.accountId].remainingStandard += standardImpact;
       }
 
