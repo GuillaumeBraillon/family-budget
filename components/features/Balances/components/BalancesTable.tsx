@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Card, CardHeader, CardTitle } from "../../../ui/Card";
-import { Wallet, Pencil, Check, X, Users, Percent, Ban, Calculator } from "lucide-react";
+import { Wallet, Pencil, Check, X, Users, Percent, Ban, Calculator, AlertTriangle } from "lucide-react";
 import { MobileTooltip } from "../../../ui/MobileTooltip";
 import { ClickableAmount } from "../../../ui/atoms/ClickableAmount";
 import { BalanceRow } from "../../../../hooks/balances";
@@ -11,6 +11,10 @@ interface BalancesTableProps {
   title?: string;
   totalRow?: BalanceRow;
   hasCurrentAccountsSurplus?: boolean;
+  onNavigateToPlanner?: (date: Date, filters: Record<string, unknown>, weekNumber?: number) => void;
+  currentDate?: Date;
+  activeWeek?: number;
+  distributableAmount?: number;
 }
 
 /**
@@ -64,6 +68,7 @@ export const BalancesTable: React.FC<BalancesTableProps> = ({
   onNavigateToPlanner,
   currentDate,
   activeWeek,
+  distributableAmount,
 }) => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [tempBalance, setTempBalance] = useState<string>("");
@@ -497,8 +502,32 @@ export const BalancesTable: React.FC<BalancesTableProps> = ({
                 <td className="px-4 py-2.5 flex items-center gap-2 uppercase tracking-wider">
                   <Calculator size={14} /> TOTAL
                 </td>
-                <td className="px-4 py-2.5 text-right">{totalRow.balance.toFixed(2)} €</td>
-                <td className="px-4 py-2.5 text-right">{totalRow.target.toFixed(2)} €</td>
+                <td
+                  className={`px-4 py-2.5 text-right ${distributableAmount !== undefined && totalRow.balance > distributableAmount ? "text-rose-600 font-bold" : ""}`}
+                >
+                  <div className="flex items-center justify-end gap-1.5">
+                    {distributableAmount !== undefined && totalRow.balance > distributableAmount && (
+                      <MobileTooltip
+                        text={`Attention : Supérieur au montant distribuable (${distributableAmount.toFixed(2)}€)`}
+                        icon={<AlertTriangle size={14} className="text-rose-600" />}
+                      />
+                    )}
+                    {totalRow.balance.toFixed(2)} €
+                  </div>
+                </td>
+                <td
+                  className={`px-4 py-2.5 text-right ${distributableAmount !== undefined && totalRow.target > distributableAmount ? "text-rose-600 font-bold" : ""}`}
+                >
+                  <div className="flex items-center justify-end gap-1.5">
+                    {distributableAmount !== undefined && totalRow.target > distributableAmount && (
+                      <MobileTooltip
+                        text={`Attention : Supérieur au montant distribuable (${distributableAmount.toFixed(2)}€)`}
+                        icon={<AlertTriangle size={14} className="text-rose-600" />}
+                      />
+                    )}
+                    {totalRow.target.toFixed(2)} €
+                  </div>
+                </td>
                 <td className="px-4 py-2.5 text-right bg-indigo-100/50 text-indigo-800">
                   {totalRow.transfer > 0 ? "+" : ""}
                   {totalRow.transfer.toFixed(2)} €

@@ -200,6 +200,19 @@ export const BalancesView: React.FC<BalancesViewProps> = ({
         carryoverStrategy={settings.carryover_strategy || "NEXT_PERIOD"}
       />
 
+      <BalancesTable
+        title="Comptes Courants"
+        rows={personalRows}
+        onUpdateBalance={handleUpdateBalance}
+        totalRow={totalPersonalRow}
+        onNavigateToPlanner={onNavigateToPlanner}
+        currentDate={currentDate}
+        activeWeek={scope === "PERIOD" ? activeWeek : undefined}
+        distributableAmount={distributableBalance}
+      />
+
+      <TransferSummaryCard amount={virLddsTotal} toJoint={lddsToJoint} toPersonals={lddsToPersonals} />
+
       {/* SECTION DÉTAILS DES CALCULS */}
       <CalculationDetailsCard
         budgetPeriod={budgetPeriodeGlobal}
@@ -218,18 +231,6 @@ export const BalancesView: React.FC<BalancesViewProps> = ({
         totalSurplus={personalRows.reduce((sum, r) => sum + Math.abs(Math.min(0, r.transfer)), 0)}
         lddsNeeded={virLddsTotal}
       />
-
-      <BalancesTable
-        title="Comptes Courants"
-        rows={personalRows}
-        onUpdateBalance={handleUpdateBalance}
-        totalRow={totalPersonalRow}
-        onNavigateToPlanner={onNavigateToPlanner}
-        currentDate={currentDate}
-        activeWeek={scope === "PERIOD" ? activeWeek : undefined}
-      />
-
-      <TransferSummaryCard amount={virLddsTotal} toJoint={lddsToJoint} toPersonals={lddsToPersonals} />
     </div>
   );
 };
