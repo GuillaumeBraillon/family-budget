@@ -7,6 +7,17 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.6.25] - 2026-02-03
+
+### ✨ Fonctionnalités (Features)
+
+#### **Amélioration de l'affichage des soldes**
+
+- **Alerte de dépassement** : Ajout d'une alerte visuelle (texte rouge + icône ⚠️) dans le tableau des soldes lorsque le total des comptes courants dépasse le montant distribuable sur la période.
+- **Détails contextuels** : Intégration d'un tooltip expliquant la cause de l'alerte au survol.
+
+---
+
 ## [2.6.24] - 2026-02-03
 
 ### 🐛 Corrections (Bug Fixes)
