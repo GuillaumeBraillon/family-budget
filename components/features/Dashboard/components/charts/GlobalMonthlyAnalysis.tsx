@@ -7,6 +7,7 @@ import { OperationFilters } from "../../../../../types";
 
 interface MonthlyGlobalData {
   monthName: string;
+  monthIndex: number;
   salaries: number;
   otherIncome: number;
   totalIncome: number;
@@ -57,7 +58,7 @@ export const GlobalMonthlyAnalysis: React.FC<GlobalMonthlyAnalysisProps> = ({ da
             {activeMonths.map((m, idx) => {
               const isPos = m.balance >= 0;
               // Calculer la date du mois pour la navigation
-              const monthDate = new Date(year, idx, 1);
+              const monthDate = new Date(year, m.monthIndex, 1);
 
               return (
                 <tr key={idx} className="hover:bg-slate-50 transition-colors group">

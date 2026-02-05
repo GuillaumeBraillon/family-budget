@@ -173,6 +173,7 @@ export const getGlobalAnalysisFilters = (column: GlobalAnalysisColumn): Operatio
  */
 export interface GlobalMonthData {
   monthName: string;
+  monthIndex: number;
   salaries: number;
   otherIncome: number;
   totalIncome: number;
@@ -418,6 +419,7 @@ export const useDashboardData = ({
 
       data.push({
         monthName: new Intl.DateTimeFormat("fr-FR", { month: "long" }).format(currentMonthDate),
+        monthIndex: month,
         salaries: salaryTotal,
         otherIncome: otherIncomeTotal,
         totalIncome,

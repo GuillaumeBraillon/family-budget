@@ -63,32 +63,34 @@ const version = packageJson.version; // "2.5.0"
 - Sections structurées (Nouveautés, Corrections, etc.)
 - Lien vers toutes les versions GitHub
 
-### 4. **Workflow de Release**
+### 4. **Workflow de Release (Automatisé)**
+
+Le processus est entièrement automatisé par des **hooks Git locaux** (`.git/hooks/`).
 
 1. **Update CHANGELOG.md** :
+   Ajouter la nouvelle version en haut du fichier :
 
-   ```bash
-   # Ajouter section [X.Y.Z] avec date
-   ## [2.5.0] - 2026-01-12
+   ```markdown
+   ## [2.6.0] - 2026-02-05
    ```
 
-2. **Update package.json** :
+2. **Commit** :
 
    ```bash
-   npm version 2.5.0
-   # OU manuellement changer "version": "2.5.0"
+   git add .
+   git commit -m "feat: ma nouvelle fonctionnalité"
    ```
 
-3. **Create Git Tag** :
+3. **Automation (Hooks)** :
+   - **Pre-commit** : Lit la version du `CHANGELOG.md` et met à jour automatiquement `package.json` avant de finaliser le commit.
+   - **Post-commit** : Détecte la nouvelle version et crée automatiquement le tag Git correspondant (ex: `v2.6.0`).
 
+4. **Push** :
    ```bash
-   git tag -a v2.5.0 -m "Release v2.5.0: Description..."
-   git push origin v2.5.0
+   git push origin main --tags
    ```
 
-4. **Update VersionInfoCard** :
-   - Mettre à jour `latestVersionNotes` avec les nouvelles notes
-   - Copier depuis CHANGELOG.md
+_Note : Si les hooks ne sont pas actifs sur votre machine, assurez-vous de copier les scripts dans `.git/hooks/` et de les rendre exécutables._
 
 ### 5. **Fonctionnalités Optionnelles**
 

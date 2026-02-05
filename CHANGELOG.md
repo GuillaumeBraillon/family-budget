@@ -7,6 +7,24 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.6.26] - 2026-02-05
+
+### 🐛 Corrections de bugs (Bug Fixes)
+
+#### **Navigation Dashboard**
+
+- Correction du lien de navigation dans le tableau `GlobalMonthlyAnalysis` qui ouvrait le mauvais mois (inversion de l'index). Le clic sur une ligne mensuelle ouvre désormais correctement la vue détaillée du mois correspondant.
+
+#### **Formulaires de Configuration**
+
+- Correction de la saisie des montants dans `ExpenseRulesEditor` et `IncomeEditor`. Il est désormais possible de vider le champ ou de saisir des décimales sans que la valeur ne soit automatiquement convertie ou forcée à "0" à chaque frappe.
+
+### 🧹 Nettoyage (Chores)
+
+- Suppression de la dépendance `vite-plugin-pwa` inutilisée (la gestion PWA étant faite manuellement).
+
+---
+
 ## [2.6.25] - 2026-02-03
 
 ### ✨ Fonctionnalités (Features)

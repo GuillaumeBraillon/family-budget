@@ -48,9 +48,9 @@ export const IncomeEditor: React.FC<IncomeEditorProps> = ({
 
   const defaultAccount = accounts[0]?.id || "";
 
-  const [formData, setFormData] = useState<Partial<IncomeConfig>>({
+  const [formData, setFormData] = useState<Partial<Omit<IncomeConfig, "amount">> & { amount: string | number }>({
     label: "",
-    amount: 0,
+    amount: "",
     dayOfMonth: 1,
     accountId: defaultAccount,
     beneficiaryId: people.find((p) => p.name === "Famille")?.id || people[0]?.id,
@@ -85,7 +85,7 @@ export const IncomeEditor: React.FC<IncomeEditorProps> = ({
   const clearForm = () => {
     setFormData({
       label: "",
-      amount: 0,
+      amount: "",
       dayOfMonth: 1,
       accountId: accounts[0]?.id || "",
       beneficiaryId: people.find((p) => p.name === "Famille")?.id || people[0]?.id,
@@ -115,7 +115,7 @@ export const IncomeEditor: React.FC<IncomeEditorProps> = ({
     setEditingId(null);
     setFormData({
       label: "",
-      amount: 0,
+      amount: "",
       dayOfMonth: 1,
       accountId: accounts[0]?.id || "",
       beneficiaryId: people[0]?.id,
@@ -131,9 +131,10 @@ export const IncomeEditor: React.FC<IncomeEditorProps> = ({
 
   const handleFormSubmit = () => {
     const errors: string[] = [];
+    const amountVal = typeof formData.amount === "string" ? parseFloat(formData.amount.replace(",", ".")) : formData.amount;
 
     if (!formData.label?.trim()) errors.push("Le libellé est obligatoire");
-    if (!formData.amount || formData.amount <= 0) errors.push("Le montant est obligatoire et doit être positif");
+    if (!amountVal || amountVal <= 0) errors.push("Le montant est obligatoire et doit être positif");
     if (!formData.dayOfMonth || formData.dayOfMonth < 1 || formData.dayOfMonth > 31) errors.push("Le jour du mois doit être entre 1 et 31");
     if (!formData.category) errors.push("La catégorie est obligatoire");
     if (!formData.accountId) errors.push("Le compte est obligatoire");
@@ -148,7 +149,7 @@ export const IncomeEditor: React.FC<IncomeEditorProps> = ({
     const final: IncomeConfig = {
       id: editingId || Date.now().toString(),
       label: formData.label,
-      amount: formData.amount,
+      amount: amountVal || 0,
       accountId: formData.accountId,
       beneficiaryId: formData.beneficiaryId,
       dayOfMonth: formData.dayOfMonth,
@@ -215,8 +216,8 @@ export const IncomeEditor: React.FC<IncomeEditorProps> = ({
             label="Montant"
             value={formData.amount}
             onChange={(e) => {
-              const val = parseFloat(e.target.value);
-              setFormData((prev) => ({ ...prev, amount: isNaN(val) ? 0 : val }));
+              const val = e.target.value;
+              setFormData((prev) => ({ ...prev, amount: val }));
             }}
             color="emerald"
             required
