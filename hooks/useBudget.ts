@@ -96,7 +96,7 @@ const DEFAULT_VARIABLE_LABELS = ["Courses Alimentaires", "Essence / Carburant", 
  * **Architecture :**
  * ```
  * useBudget (200L)
- *   ├─ État : budgetData (comptes, configs, categories, etc.)
+ *   ├─ État : budgetData (comptes, configs, catégories, etc.)
  *   ├─ Chargement : loadData + fetchInitialData
  *   ├─ Délégation : useBudgetBalances + useBudgetActions
  *   └─ Actions spécifiques : setPaidStatus, moveItem, transfers, variables
@@ -260,6 +260,26 @@ export const useBudget = () => {
   // --- ACTIONS SPÉCIFIQUES (NON DÉLÉGUÉES) ---
 
   /**
+   * Met à jour le tri manuel des opérations.
+   *
+   * @param {string[]} newSorting - Nouvel ordre complet des instance_ids
+   */
+  const updateOperationsSorting = async (newSorting: string[]) => {
+    const newSettings = { ...budgetDataRef.current.settings, operations_sorting: newSorting };
+
+    // Mise à jour optimiste
+    setBudgetData((prev) => ({ ...prev, settings: newSettings }));
+
+    try {
+      const { error: apiErr } = await apiUpdateSettings(newSettings);
+      if (apiErr) throw apiErr;
+    } catch (err) {
+      setErrorMessage((err as Error).message || "Erreur lors de la mise à jour du tri");
+      loadData();
+    }
+  };
+
+  /**
    * Pointe ou dépointe une opération récurrente pour un mois donné.
    *
    * @description
@@ -302,143 +322,83 @@ export const useBudget = () => {
   const setPaidStatus = async (details: PaidItemDetails | null, instanceId: string) => {
     const oldItem = budgetDataRef.current.paidItems[instanceId];
 
+    // Si on crée un nouvel item (passage d'attente à réel), on l'ajoute au début du tri manuel
+    let newSorting = budgetDataRef.current.settings.operations_sorting || [];
+    if (details && !oldItem && !newSorting.includes(instanceId)) {
+      newSorting = [instanceId, ...newSorting];
+    }
+
     // 1. Mise à jour Optimiste de l'UI
     setBudgetData((prev) => {
       const nextPaid = { ...prev.paidItems };
       if (!details) delete nextPaid[instanceId];
       else nextPaid[instanceId] = details;
-      return { ...prev, paidItems: nextPaid };
+
+      return {
+        ...prev,
+        paidItems: nextPaid,
+        settings: { ...prev.settings, operations_sorting: newSorting },
+      };
     });
 
     try {
-      // 2. Gestion des impacts solde (DÉLÉGUÉ à useBudgetBalances)
+      // 2. Impacts solde
       await balanceHandlers.handlePaidItemBalance(oldItem, details);
 
-      // 3. Appel API
+      // 3. Appel API (Statut)
       const { error: apiErr } = await apiSetPaidStatus(details, instanceId);
       if (apiErr) throw apiErr;
+
+      // 4. Appel API (Tri si changé)
+      if (newSorting !== budgetDataRef.current.settings.operations_sorting) {
+        await apiUpdateSettings({ ...budgetDataRef.current.settings, operations_sorting: newSorting });
+      }
     } catch (err) {
-      const error = err as Error;
-      setErrorMessage(error.message || "Erreur lors de la mise à jour du statut");
+      setErrorMessage((err as Error).message || "Erreur lors de la mise à jour du statut");
       loadData();
     }
   };
 
   /**
    * Déplace une opération dans l'ordre d'affichage manuel.
-   *
-   * @description
-   * Modifie la position d'affichage d'une opération sans changer sa date théorique.
-   * Permet un réordonnancement manuel des opérations dans l'échéancier (drag & drop).
-   *
-   * **Important :**
-   * - Ne modifie QUE la position, jamais la date de paiement
-   * - La position sert uniquement à l'ordre d'affichage dans la liste
-   * - Crée un enregistrement virtuel si l'opération n'est pas encore pointée
-   *
-   * **Gestion des transactions variables :**
-   * Met à jour également le tableau `variableTransactions` pour maintenir la cohérence
-   * car `usePlanner` utilise ce tableau pour générer l'affichage des variables.
-   *
-   * @param {PlannedItem} item - Opération à déplacer (provient de usePlanner)
-   * @param {number} newPosition - Nouvelle position numérique (score de tri)
-   *
-   * @example
-   * ```tsx
-   * // Déplacer une opération après drag & drop
-   * await moveItem(plannedItem, 150_000_000_000);
-   * ```
    */
-  const moveItem = async (item: PlannedItem, newPosition: number) => {
-    // IMPORTANT: On ne modifie QUE la position, jamais la date de paiement
-    // La position sert uniquement à l'ordre d'affichage dans la liste
+  const moveItem = async (item: PlannedItem, newIndex: number) => {
+    // Le système utilise maintenant operations_sorting dans app_settings
+    // On ne touche plus à paidItems.position
 
-    // On met à jour l'UI localement immédiatement (optimistic)
-    setBudgetData((prev) => {
-      const newPaidItems = { ...prev.paidItems };
+    const currentSorting = budgetDataRef.current.settings.operations_sorting || [];
+    let newSorting = [...currentSorting];
 
-      // Mise à jour de paidItems (utilisé pour les récurrents et la persistance globale)
-      if (newPaidItems[item.instanceId]) {
-        // L'item existe déjà en base : on met juste à jour la position
-        newPaidItems[item.instanceId] = { ...newPaidItems[item.instanceId], position: newPosition };
-      } else {
-        // Si c'est un item virtuel (calculé depuis config), on doit le "créer" virtuellement pour l'UI
-        // MAIS on garde la date théorique (année-mois-jour) de l'opération
-        const yearMonth = item.instanceId.match(/-(\d{4}-\d{2})$/)?.[1] || `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`;
-        const targetDate = `${yearMonth}-${String(item.day).padStart(2, "0")}`;
-
-        newPaidItems[item.instanceId] = {
-          instanceId: item.instanceId,
-          amount: item.amount,
-          paymentDate: targetDate,
-          accountId: item.accountId,
-          beneficiaryId: item.beneficiaryId,
-          label: item.label,
-          category: item.category,
-          subCategory: item.subCategory,
-          type: item.type,
-          isVariable: item.source === "VARIABLE",
-          isWaiting: true, // Reste en attente (ne modifie pas le statut)
-          isExtra: item.isExtra,
-          comments: item.comments,
-          tagAmounts: item.tagAmounts,
-          position: newPosition,
-        };
-      }
-
-      // IMPORTANT: Si c'est une opération variable, on DOIT aussi mettre à jour variableTransactions
-      // car usePlanner utilise ce tableau pour générer l'affichage des variables.
-      let newVariableTransactions = prev.variableTransactions;
-      if (item.source === "VARIABLE") {
-        newVariableTransactions = prev.variableTransactions.map((t) => (t.id === item.instanceId ? { ...t, position: newPosition } : t));
-      }
-
-      return { ...prev, paidItems: newPaidItems, variableTransactions: newVariableTransactions };
-    });
-
-    // Persistance
-    // Si l'item existe déjà en base, on ne modifie que sa position
-    // Sinon on crée un enregistrement minimal avec la position
-    const existingDetails = budgetDataRef.current.paidItems[item.instanceId];
-
-    if (existingDetails) {
-      // L'item existe : on met à jour uniquement la position (conserve date, statut, etc.)
-      const details: PaidItemDetails = {
-        ...existingDetails,
-        position: newPosition,
-      };
-      await apiSetPaidStatus(details, item.instanceId);
-    } else {
-      // L'item n'existe pas : on crée un enregistrement minimal (virtuel)
-      const yearMonth = item.instanceId.match(/-(\d{4}-\d{2})$/)?.[1] || `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`;
-      const targetDate = `${yearMonth}-${String(item.day).padStart(2, "0")}`;
-
-      const details: PaidItemDetails = {
-        instanceId: item.instanceId,
-        amount: item.amount,
-        paymentDate: targetDate,
-        accountId: item.accountId,
-        beneficiaryId: item.beneficiaryId,
-        label: item.label,
-        category: item.category,
-        subCategory: item.subCategory,
-        type: item.type,
-        isVariable: item.source === "VARIABLE",
-        isWaiting: true, // Reste en attente
-        isExtra: item.isExtra,
-        comments: item.comments,
-        tagAmounts: item.tagAmounts,
-        position: newPosition,
-      };
-      await apiSetPaidStatus(details, item.instanceId);
+    // Si l'item n'est pas dans la liste, on l'ajoute
+    if (!newSorting.includes(item.instanceId)) {
+      newSorting.push(item.instanceId);
     }
+
+    // Calcul du déplacement
+    const oldIndex = newSorting.indexOf(item.instanceId);
+    if (oldIndex !== -1) {
+      newSorting.splice(oldIndex, 1);
+      newSorting.splice(newIndex, 0, item.instanceId);
+    }
+
+    await updateOperationsSorting(newSorting);
   };
 
   const upsertVariableTransaction = async (tx: VariableTransaction) => {
     const oldTx = budgetDataRef.current.variableTransactions.find((t) => t.id === tx.id);
+    const isNew = !oldTx;
 
-    // Gestion des soldes (DÉLÉGUÉ)
+    // Gestion des soldes
     await balanceHandlers.handleVariableTransactionBalance(oldTx, tx);
+
+    // Si c'est une nouvelle transaction, on l'ajoute au tri manuel
+    if (isNew) {
+      const currentSorting = budgetDataRef.current.settings.operations_sorting || [];
+      if (!currentSorting.includes(tx.id)) {
+        const newSorting = [tx.id, ...currentSorting];
+        await apiUpdateSettings({ ...budgetDataRef.current.settings, operations_sorting: newSorting });
+      }
+    }
 
     // CRUD avec reload
     const res = await apiUpsertVariableTransaction(tx);
@@ -480,17 +440,6 @@ export const useBudget = () => {
     const res = await apiDeleteTransfer(id);
     await loadData(true);
     return res;
-  };
-
-  const moveTransfer = async (transfer: Transfer, newPosition: number) => {
-    // Mise à jour optimiste
-    setBudgetData((prev) => ({
-      ...prev,
-      transfers: prev.transfers.map((t) => (t.id === transfer.id ? { ...t, position: newPosition } : t)),
-    }));
-
-    // Persistance
-    await apiUpsertTransfer({ ...transfer, position: newPosition });
   };
 
   const updateSettings = async (settings: AppSettings) => {
@@ -541,7 +490,6 @@ export const useBudget = () => {
       updateSettings,
       upsertTransfer,
       deleteTransfer,
-      moveTransfer,
       upsertVariableTransaction,
       deleteVariableTransaction,
 

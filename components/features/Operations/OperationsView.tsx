@@ -52,7 +52,7 @@ interface OperationsViewProps {
   onTogglePaid: (details: PaidItemDetails | null, instanceId: string) => void;
   onUpsertVariable: (t: VariableTransaction) => void;
   onDeleteVariable: (id: string) => void;
-  onMoveItem?: (item: PlannedItem, newPosition: number) => void;
+  onMoveItem?: (item: PlannedItem, newIndex: number) => void;
 }
 
 export const OperationsView: React.FC<OperationsViewProps> = ({
@@ -119,28 +119,6 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
     activeWeek: ui.activeWeek,
   });
 
-  // Callback pour persister les corrections de positions en base de données
-  const handlePositionCorrection = useCallback(
-    async (correctedItems: PlannedItem[], originalItems: PlannedItem[]) => {
-      if (!onMoveItem) return;
-
-      try {
-        // Pour chaque item corrigé, persister la nouvelle position
-        for (const correctedItem of correctedItems) {
-          // Trouver l'item original dans les données brutes pour comparer
-          const originalItem = originalItems.find((item) => item.instanceId === correctedItem.instanceId);
-          if (originalItem && originalItem.position !== correctedItem.position) {
-            // Position a changé, persister en base
-            await onMoveItem(correctedItem, correctedItem.position);
-          }
-        }
-      } catch (err) {
-        showError(err as Error, "Correction automatique des positions");
-      }
-    },
-    [onMoveItem, showError]
-  );
-
   // Hook de tri avec callback de persistance
   const {
     sortKey,
@@ -149,11 +127,8 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
     sortItems: sortItemsWithCallback,
     isManualSort,
     sortOptions,
-    getEffectivePosition: _getEffectivePosition,
     canToggleOrder,
-  } = useOperationsSorting({
-    onPositionCorrection: handlePositionCorrection,
-  });
+  } = useOperationsSorting(settings.operations_sorting || []);
 
   // État UI local
   const [isVarFormOpen, setIsVarFormOpen] = useState(false);
@@ -231,48 +206,19 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
     return new Date().toISOString().split("T")[0];
   })();
 
-  // DRAG & DROP : SYSTÈME ROBUSTE AVEC RENORMALISATION DE POSITIONS
+  // DRAG & DROP : SYSTÈME ROBUSTE BASÉ SUR ARRAY DETERMINISTE
   const handleReorder = (item: PlannedItem, oldIndex: number, newIndex: number) => {
     try {
       if (onMoveItem && sortKey === "manual") {
-        logger.debug("drag-drop", "Début handleReorder", {
+        logger.debug("drag-drop", "Début handleReorder (Array)", {
           item: item.label,
           oldIndex,
           newIndex,
-          sortOrder,
-          currentPosition: item.position,
         });
 
-        // 1. Simuler le nouveau tableau après déplacement
-        const reorderedList: PlannedItem[] = arrayMove(currentItems, oldIndex, newIndex);
-
-        // 2. RENORMALISER LES POSITIONS : Assigner des positions séquentiques cohérentes
-        // IMPORTANT : Respecter l'ordre de tri actuel (ASC vs DESC)
-        // En DESC : positions décroissantes (25000, 24000, 23000... 1000)
-        // En ASC : positions croissantes (1000, 2000, 3000... 25000)
-        const POSITION_STEP = 1000;
-        const renormalizedList = reorderedList.map((i, idx) => {
-          const newPosition =
-            sortOrder === "desc"
-              ? (reorderedList.length - idx) * POSITION_STEP // 25000, 24000, 23000...
-              : (idx + 1) * POSITION_STEP; // 1000, 2000, 3000...
-
-          return { ...i, position: newPosition };
-        });
-
-        // 3. Persister TOUS les items qui ont changé de position
-        // Important : ne pas persister juste l'item déplacé, sinon le tri devient incohérent
-        renormalizedList.forEach((normalizedItem) => {
-          const originalItem = currentItems.find((i) => i.instanceId === normalizedItem.instanceId);
-          if (originalItem && originalItem.position !== normalizedItem.position) {
-            logger.debug("drag-drop", "Persister position renormalisée", {
-              item: normalizedItem.label,
-              oldPosition: originalItem.position,
-              newPosition: normalizedItem.position,
-            });
-            onMoveItem(normalizedItem, normalizedItem.position);
-          }
-        });
+        // Avec le nouveau système, on passe simplement l'item et le nouvel index global
+        // Le hook useBudget s'occupera de mettre à jour l'array complet
+        onMoveItem(item, newIndex);
       }
     } catch (err) {
       showError(err as Error, "Drag & drop d'opération");

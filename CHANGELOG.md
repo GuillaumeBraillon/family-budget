@@ -7,6 +7,42 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.6.27] - 2026-02-08
+
+### 🚀 Améliorations (Enhancements)
+
+#### **Refonte du Système de Tri Manuel : Passage à un Ordre Déterministe**
+
+**Problème :** L'ancien système de tri basé sur une propriété `position` numérique était instable, causant des collisions de valeurs, des pertes d'ordre et un comportement imprévisible lors du glisser-déposer (drag & drop).
+
+**Solution :** Remplacement complet du système de position par un **tri déterministe basé sur un tableau d'identifiants (`instance_id`)** stocké dans `app_settings.operations_sorting`. Ce changement garantit un ordre stable, persistant et sans collisions.
+
+**Modifications Techniques :**
+
+1.  **Base de Données (Supabase) :**
+    - Ajout de la colonne `operations_sorting` (`text[]`) à la table `app_settings`.
+    - Création d'un script de migration pour initialiser ce tableau avec l'ordre existant (basé sur la date).
+    - Suppression de la colonne `position` de la table `paid_items` (dépréciée).
+
+2.  **Hooks (`useBudget`, `useOperationsSorting`, `usePlanner`) :**
+    - **`useOperationsSorting` :** La logique de tri manuel se base désormais sur l'index des `instance_id` dans le tableau `operations_sorting`. Les opérations non présentes dans le tableau sont ajoutées à la fin.
+    - **`useBudget` :**
+      - La fonction `moveItem` a été remplacée par `updateOperationsSorting` qui sauvegarde le nouvel ordre complet du tableau dans Supabase après un drag & drop.
+      - Lors du pointage ou de la création d'une nouvelle opération, son `instance_id` est automatiquement ajouté au début du tableau de tri.
+    - **`usePlanner` :** Le tri des opérations planifiées respecte maintenant l'ordre défini par `operations_sorting` pour une cohérence parfaite.
+
+3.  **Composants (`OperationsView`) :**
+    - Le `handleReorder` (glisser-déposer) a été simplifié pour mettre à jour l'ordre directement via `useBudget`.
+
+**Impacts & Avantages :**
+
+- ✅ **Stabilité Absolue :** L'ordre des opérations est maintenant 100% prévisible et contrôlé.
+- ✅ **Zéro Collision :** La nature même du tableau d'identifiants uniques élimine tout risque de collision de positions.
+- ✅ **Persistance Fiable :** Le tri manuel est conservé de manière robuste entre les sessions.
+- ✅ **Simplicité :** Suppression de la logique complexe de calcul et de correction des positions numériques.
+
+---
+
 ## [2.6.26] - 2026-02-05
 
 ### 🐛 Corrections de bugs (Bug Fixes)

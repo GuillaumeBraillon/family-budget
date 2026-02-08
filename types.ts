@@ -84,7 +84,6 @@ export interface Transfer {
   sourceAccountId: string;
   destinationAccountId: string;
   createdAt?: string;
-  position?: number;
   isInterest?: boolean; // Indique si le virement est un ajout d'intérêts ou un ajustement exceptionnel
 }
 
@@ -110,7 +109,6 @@ export interface VariableTransaction {
   isExtra: boolean; // True = Hors budget
   comments?: string;
   tagAmounts?: TagAmount[]; // Ventilation des montants par tag
-  position?: number; // Ordre d'affichage manuel
 }
 
 export type PeriodType = "FIXED_DAYS" | "CALENDAR_WEEKS" | "CUSTOM_SPLIT";
@@ -123,6 +121,7 @@ export interface AppSettings {
   carryover_strategy?: CarryoverStrategy;
   savings_labels?: string[];
   variable_labels?: string[];
+  operations_sorting?: string[];
 }
 
 export interface ExpenseConfig {
@@ -171,7 +170,6 @@ export interface PaidItemDetails {
   isExtra: boolean;
   comments?: string;
   tagAmounts?: TagAmount[]; // Ventilation des montants par tag
-  position?: number; // Ordre d'affichage manuel
 }
 
 export type PlannedItemType = "EXPENSE" | "INCOME";
@@ -199,7 +197,6 @@ export interface PlannedItem {
   endMonth?: string;
   comments?: string;
   tagAmounts?: TagAmount[]; // Ventilation des montants par tag
-  position?: number; // Ordre d'affichage manuel
 }
 
 export interface WeeklyBudget {

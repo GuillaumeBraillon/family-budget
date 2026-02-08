@@ -143,7 +143,6 @@ export const mapDbPaidItem = (item: DbPaidItem): PaidItemDetails => ({
   isWaiting: !!item.is_waiting,
   isExtra: !!item.is_extra,
   comments: item.comments || undefined,
-  position: item.position !== null ? Number(item.position) : undefined,
 });
 
 export const mapDbTransfer = (transfer: DbTransfer): Transfer => ({
@@ -154,7 +153,6 @@ export const mapDbTransfer = (transfer: DbTransfer): Transfer => ({
   sourceAccountId: transfer.source_account_id,
   destinationAccountId: transfer.destination_account_id,
   createdAt: transfer.created_at,
-  position: transfer.position !== null ? Number(transfer.position) : undefined,
   isInterest: !!transfer.is_interest,
 });
 
@@ -171,15 +169,15 @@ export const mapDbVariableTransaction = (transaction: DbPaidItem): VariableTrans
   isWaiting: !!transaction.is_waiting,
   isExtra: !!transaction.is_extra,
   comments: transaction.comments || undefined,
-  position: transaction.position !== null ? Number(transaction.position) : undefined,
 });
 
 export const mapDbSettings = (data: DbSettings | null): AppSettings => {
-  if (!data) return { monthly_envelope: 2000, period_type: "FIXED_DAYS", period_value: 7, carryover_strategy: "NEXT_PERIOD" };
+  if (!data) return { monthly_envelope: 2000, period_type: "FIXED_DAYS", period_value: 7, carryover_strategy: "NEXT_PERIOD", operations_sorting: [] };
   return {
     monthly_envelope: Number(data.monthly_envelope || 2000),
     period_type: (data.period_type || "FIXED_DAYS") as "FIXED_DAYS" | "CALENDAR_WEEKS" | "CUSTOM_SPLIT",
     period_value: Number(data.period_value || 7),
     carryover_strategy: (data.carryover_strategy || "NEXT_PERIOD") as "NEXT_PERIOD" | "SPREAD_REMAINING",
+    operations_sorting: data.operations_sorting || [],
   };
 };

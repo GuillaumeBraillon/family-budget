@@ -142,4 +142,5 @@ export interface DbSettings {
   period_type: string;
   period_value: number;
   carryover_strategy?: string;
+  operations_sorting?: string[];
 }

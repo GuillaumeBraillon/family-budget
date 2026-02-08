@@ -296,7 +296,6 @@ export const usePlanner = (
           paidDetails: paid,
           comments: paid?.comments || "",
           tagAmounts,
-          position: paid?.position,
         });
       });
 
@@ -330,7 +329,6 @@ export const usePlanner = (
         isSalary: !!inc.isSalary,
         comments: paid?.comments || "",
         tagAmounts,
-        position: paid?.position,
       });
     });
 
@@ -360,31 +358,28 @@ export const usePlanner = (
           isExtraGlobal: !!vt.isExtra, // Toggle brut de la variable
           comments: vt.comments || "",
           tagAmounts: vt.tagAmounts,
-          position: vt.position,
         });
       });
 
+    const sortingMap = new Map<string, number>();
+    (settings.operations_sorting || []).forEach((id, index) => {
+      sortingMap.set(id, index);
+    });
+
     // --- SYSTÈME DE TRI ROBUSTE ---
-    // Identique à useOperationsSorting pour cohérence totale
+    // Utilise operations_sorting pour cohérence totale
     periods.forEach((w) =>
       w.items.sort((a, b) => {
-        const posA = typeof a.position === "number" && a.position > 0 ? a.position : null;
-        const posB = typeof b.position === "number" && b.position > 0 ? b.position : null;
+        const indexA = sortingMap.has(a.instanceId) ? sortingMap.get(a.instanceId)! : Infinity;
+        const indexB = sortingMap.has(b.instanceId) ? sortingMap.get(b.instanceId)! : Infinity;
 
-        // RÈGLE 1 : Items avec position manuelle d'abord
-        if (posA !== null && posB !== null) {
-          return posA - posB;
-        } else if (posA !== null && posB === null) {
-          return -1;
-        } else if (posA === null && posB !== null) {
-          return 1;
+        // Si les deux sont hors de la liste, tri par jour puis ID
+        if (indexA === Infinity && indexB === Infinity) {
+          if (a.day !== b.day) return a.day - b.day;
+          return a.instanceId.localeCompare(b.instanceId);
         }
 
-        // RÈGLE 2 : Sans position → tri par jour puis instanceId
-        if (a.day !== b.day) {
-          return a.day - b.day;
-        }
-        return a.instanceId.localeCompare(b.instanceId);
+        return indexA - indexB;
       })
     );
     return periods;

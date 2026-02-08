@@ -367,6 +367,7 @@ export const apiUpdateSettings = async (settings: AppSettings) =>
     period_type: settings.period_type,
     period_value: Math.floor(Number(settings.period_value)),
     carryover_strategy: settings.carryover_strategy || "NEXT_PERIOD",
+    operations_sorting: settings.operations_sorting || [],
   });
 
 /**
@@ -473,7 +474,6 @@ export const apiSetPaidStatus = async (details: PaidItemDetails | null, instance
       is_waiting: !!details.isWaiting,
       is_extra: !!details.isExtra,
       comments: details.comments || null,
-      position: details.position,
     });
 
     // 2. Gérer les tagAmounts si présents
@@ -514,7 +514,6 @@ export const apiUpsertTransfer = async (transfer: Transfer) =>
     amount: transfer.amount,
     source_account_id: transfer.sourceAccountId,
     destination_account_id: transfer.destinationAccountId,
-    position: transfer.position,
     is_interest: transfer.isInterest || false,
   });
 
@@ -539,7 +538,6 @@ export const apiUpsertVariableTransaction = async (transaction: VariableTransact
     is_waiting: !!transaction.isWaiting,
     is_extra: !!transaction.isExtra,
     comments: transaction.comments || null,
-    position: transaction.position,
   });
 
   // 2. Gérer les tagAmounts si présents

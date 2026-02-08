@@ -60,8 +60,6 @@ interface TransfersViewProps {
   onUpsertTransfer: (t: Transfer) => void;
   onUpsertTransaction: (t: VariableTransaction) => void;
   onDeleteTransfer: (id: string) => void;
-  onMoveTransfer?: (transfer: Transfer, newPosition: number) => void;
-  onMoveTransaction?: (transaction: VariableTransaction, newPosition: number) => void;
 }
 
 export const TransfersView: React.FC<TransfersViewProps> = ({
