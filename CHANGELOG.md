@@ -7,6 +7,49 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.7.1] - 2026-02-19
+
+### 🐛 Corrections de bugs (Bugfixes)
+
+#### **Correction du type d'input date dans VariableTransactionForm**
+
+- Correction typo : `type="form.date"` → `type="date"` (line 172)
+- Impact : Date picker HTML5 s'affiche correctement, format cohérent avec `TransferForm`
+
+### ✨ Fonctionnalités (Features)
+
+#### **Bouton d'effacement pour les champs de catégorie**
+
+- Ajout d'une croix (✖) dans `SearchableTextInput` pour nettoyer rapidement les sélections erronées
+- Apparaît uniquement si la valeur n'est pas vide, hover → couleur rose
+- Intégration dans `CategorySelector` (catégorie + sous-catégorie)
+- Props `onClear?: () => void` exposée pour les callbacks personnalisés
+
+### 🚀 Améliorations (Enhancements)
+
+#### **Sélection intelligente du compte par défaut (isJoint)**
+
+- Harmonisation complète de la logique à travers tous les formulaires (VariableTransactionForm, TransferForm)
+- Priorité `isJoint` au lieu du "premier compte" pour meilleure UX en production
+- Extraction en fonction utilitaire centralisée `getDefaultAccountId(accounts, filterChecking)` → [hooks/accounts/getDefaultAccountId.ts](hooks/accounts/getDefaultAccountId.ts)
+- Élimine 18 lignes de code dupliqué
+
+#### **Sélection intelligente du bénéficiaire par défaut (displayOrder)**
+
+- Remplacement de la valeur en dur `p.name === "Famille"` par logique flexible basée sur `displayOrder`
+- Appliqué dans :
+  - `useTransactionForm.ts` (VariableTransactionForm)
+  - `ExpenseRulesEditor.tsx` (création dépenses récurrentes)
+  - `IncomeEditor.tsx` (création revenus récurrents)
+- Avantage : Configuration automatique sans codage si le `displayOrder` change
+
+### 🧹 Nettoyage (Chores)
+
+- Code cleanup : suppression de 4 occurrences de `p.name === "Famille"` hardcodé
+- Meilleure maintenabilité : sélections par ordre de priorité au lieu de noms fixes
+
+---
+
 ## [2.7.0] - 2026-02-19
 
 ### ✨ Fonctionnalités (Features)

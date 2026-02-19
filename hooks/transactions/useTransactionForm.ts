@@ -24,6 +24,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { VariableTransaction, Account, AccountType, Person, SavedLabel, TagAmount, CategoryDef } from "../../types";
 import { useCategoryAutoSuggest } from "../useCategoryAutoSuggest";
+import { getDefaultAccountId } from "../accounts/getDefaultAccountId";
 
 /**
  * Type du mode formulaire.
@@ -190,12 +191,29 @@ export const useTransactionForm = ({
   // Filtrer les comptes COURANTS pour l'initialisation par défaut
   const checkingAccounts = useMemo(() => accounts.filter((a) => a.type === AccountType.CHECKING), [accounts]);
 
-  const [accountId, setAccountId] = useState(checkingAccounts[0]?.id || accounts[0]?.id || "");
+  // Déterminer le compte par défaut : priorité au compte joint, sinon premier compte COURANT
+  // (filterChecking=true car pour les transactions variables, on privilégie les comptes COURANTS)
+  const defaultAccountId = useMemo(() => getDefaultAccountId(accounts, true), [accounts]);
+
+  const [accountId, setAccountId] = useState(defaultAccountId);
 
   const [category, setCategory] = useState("");
   const [subCategory, setSubCategory] = useState("");
 
-  const defaultBeneficiary = people.find((p) => p.name === "Famille")?.id || people.find((p) => !p.isChild)?.id || people[0]?.id || "";
+  // Déterminer le bénéficiaire par défaut : priorité au displayOrder
+  const defaultBeneficiary = useMemo(() => {
+    // 1) Chercher la personne avec le plus petit displayOrder (première dans l'ordre)
+    const sortedByOrder = [...people].sort((a, b) => (a.displayOrder ?? Infinity) - (b.displayOrder ?? Infinity));
+    if (sortedByOrder.length > 0) return sortedByOrder[0].id;
+    // 2) Sinon, première personne non-enfant
+    const nonChild = people.find((p) => !p.isChild);
+    if (nonChild) return nonChild.id;
+    // 3) Sinon, première personne
+    if (people.length > 0) return people[0].id;
+    // 4) Sinon, vide
+    return "";
+  }, [people]);
+
   const [beneficiaryId, setBeneficiaryId] = useState(defaultBeneficiary);
 
   // --- COMPUTED VALUES ---
@@ -242,9 +260,9 @@ export const useTransactionForm = ({
     setIsExtra(false);
     setComments("");
     setSelectedTagAmounts([]);
-    if (checkingAccounts.length > 0) setAccountId(checkingAccounts[0].id);
+    setAccountId(defaultAccountId);
     setValidationErrors([]);
-  }, [initialMode, defaultDate, checkingAccounts, defaultBeneficiary]);
+  }, [initialMode, defaultDate, defaultBeneficiary, defaultAccountId]);
 
   /**
    * Initialise le formulaire depuis editingTransaction ou reset.
@@ -282,7 +300,7 @@ export const useTransactionForm = ({
       }
       setValidationErrors([]);
     }
-  }, [isOpen, editingTransaction, defaultDate, defaultBeneficiary, initialMode, accounts, checkingAccounts, resetForm]);
+  }, [isOpen, editingTransaction, defaultDate, defaultBeneficiary, initialMode, accounts, defaultAccountId, resetForm]);
 
   // --- VALIDATION & SOUMISSION ---
 

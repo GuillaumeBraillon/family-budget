@@ -23,6 +23,7 @@
  */
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { Transfer, Account, AccountType, SavedLabel } from "../../types";
+import { getDefaultAccountId } from "../accounts/getDefaultAccountId";
 
 /**
  * Props du hook useTransferForm.
@@ -125,12 +126,12 @@ export const useTransferForm = ({ editingTransfer, accounts, savedLabels = [], d
   const [amount, setAmount] = useState<string>("");
   const [isInterest, setIsInterest] = useState<boolean>(false);
 
-  // Initialisation intelligente : Privilégier le compte joint comme source par défaut
-  const defaultSourceId = accounts.find((a) => a.isJoint)?.id || accounts[0]?.id || "";
-  const defaultDestId = accounts.find((a) => !a.isJoint)?.id || accounts[1]?.id || accounts[0]?.id || "";
+  // Déterminer le compte par défaut : priorité au compte joint, sinon premier compte
+  // (filterChecking=false car pour les virements, tous les types de comptes sont acceptés)
+  const defaultAccountId = useMemo(() => getDefaultAccountId(accounts, false), [accounts]);
 
-  const [sourceAccountId, setSourceAccountId] = useState(defaultSourceId);
-  const [destinationAccountId, setDestinationAccountId] = useState(defaultDestId);
+  const [sourceAccountId, setSourceAccountId] = useState(defaultAccountId);
+  const [destinationAccountId, setDestinationAccountId] = useState(defaultAccountId);
 
   // --- COMPUTED VALUES ---
 
@@ -192,16 +193,10 @@ export const useTransferForm = ({ editingTransfer, accounts, savedLabels = [], d
     setLabel("");
     setAmount("");
     setIsInterest(false);
-    if (accounts.length > 0) {
-      // Initialisation intelligente : Privilégier le compte joint comme source
-      const jointAccount = accounts.find((a) => a.isJoint);
-      const firstNonJoint = accounts.find((a) => !a.isJoint);
-
-      setSourceAccountId(jointAccount?.id || accounts[0].id);
-      setDestinationAccountId(firstNonJoint?.id || accounts[1]?.id || accounts[0].id);
-    }
+    setSourceAccountId(defaultAccountId);
+    setDestinationAccountId(defaultAccountId);
     setValidationErrors([]);
-  }, [defaultDate, accounts]);
+  }, [defaultDate, defaultAccountId]);
 
   /**
    * Initialise le formulaire depuis editingTransfer ou reset.

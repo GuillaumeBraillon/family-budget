@@ -62,6 +62,10 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
           onCategoryChange(val);
           onSubCategoryChange("");
         }}
+        onClear={() => {
+          onCategoryChange("");
+          onSubCategoryChange("");
+        }}
         suggestions={suggestions}
         placeholder="Sélectionner ou saisir (ex: Intérêts)"
         className="w-full bg-slate-100"
@@ -73,6 +77,7 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
         value={selectedSubCategory}
         onChange={(e) => onSubCategoryChange(e.target.value)}
         onSelectSuggestion={onSubCategoryChange}
+        onClear={() => onSubCategoryChange("")}
         suggestions={activeSubCats}
         placeholder={activeSubCats.length === 0 ? "Aucune sous-catégorie" : "Sélectionner ou saisir"}
         disabled={activeSubCats.length === 0}

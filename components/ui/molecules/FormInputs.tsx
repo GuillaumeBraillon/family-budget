@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { LucideIcon, Search, ChevronDown } from "lucide-react";
+import { LucideIcon, Search, ChevronDown, X } from "lucide-react";
 
 interface BaseInputProps {
   label: string;
@@ -34,12 +34,14 @@ export const TextInput: React.FC<TextInputProps> = ({ label, icon: Icon, error, 
 interface SearchableTextInputProps extends TextInputProps {
   suggestions?: string[];
   onSelectSuggestion?: (val: string) => void;
+  onClear?: () => void;
 }
 
-export const SearchableTextInput: React.FC<SearchableTextInputProps> = ({ suggestions = [], onSelectSuggestion, ...props }) => {
+export const SearchableTextInput: React.FC<SearchableTextInputProps> = ({ suggestions = [], onSelectSuggestion, onClear, ...props }) => {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [filtered, setFiltered] = useState<string[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
+  const hasValue = Boolean(props.value && String(props.value).length > 0);
 
   useEffect(() => {
     const val = String(props.value || "").toLowerCase();
@@ -72,7 +74,20 @@ export const SearchableTextInput: React.FC<SearchableTextInputProps> = ({ sugges
           onFocus={() => setShowSuggestions(true)}
           autoComplete="off"
         />
-        <div className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
+        <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
+          {hasValue && onClear && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onClear();
+              }}
+              className="text-slate-400 hover:text-rose-500 transition-colors p-1"
+              title="Effacer la sélection"
+            >
+              <X size={16} />
+            </button>
+          )}
           <ChevronDown size={16} />
         </div>
       </div>

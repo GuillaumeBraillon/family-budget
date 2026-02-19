@@ -48,12 +48,19 @@ export const IncomeEditor: React.FC<IncomeEditorProps> = ({
 
   const defaultAccount = accounts[0]?.id || "";
 
+  // Déterminer le bénéficiaire par défaut : priorité au displayOrder
+  const defaultBeneficiary = useMemo(() => {
+    const sortedByOrder = [...people].sort((a, b) => (a.displayOrder ?? Infinity) - (b.displayOrder ?? Infinity));
+    if (sortedByOrder.length > 0) return sortedByOrder[0].id;
+    return people[0]?.id || "";
+  }, [people]);
+
   const [formData, setFormData] = useState<Partial<Omit<IncomeConfig, "amount">> & { amount: string | number }>({
     label: "",
     amount: "",
     dayOfMonth: 1,
     accountId: defaultAccount,
-    beneficiaryId: people.find((p) => p.name === "Famille")?.id || people[0]?.id,
+    beneficiaryId: defaultBeneficiary,
     category: "",
     subCategory: "",
     isExtra: false,
@@ -88,7 +95,7 @@ export const IncomeEditor: React.FC<IncomeEditorProps> = ({
       amount: "",
       dayOfMonth: 1,
       accountId: accounts[0]?.id || "",
-      beneficiaryId: people.find((p) => p.name === "Famille")?.id || people[0]?.id,
+      beneficiaryId: defaultBeneficiary,
       category: "",
       subCategory: "",
       isExtra: false,
