@@ -163,7 +163,11 @@ export const ExpenseRulesEditor: React.FC<ExpenseRulesEditorProps> = ({
       endMonth: formData.endMonth,
       isExtra: formData.isExtra,
     };
-    editingId ? onUpdateConfig(finalConfig) : onAddConfig(finalConfig);
+    if (editingId) {
+      onUpdateConfig(finalConfig);
+    } else {
+      onAddConfig(finalConfig);
+    }
     clearForm();
   };
 

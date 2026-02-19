@@ -150,7 +150,11 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
 
   const handleItemClick = (item: PlannedItem) => {
     if (item.source === "RECURRING") {
-      item.isPaid ? ui.openUncheckModal(item) : ui.openConfirmModal(item, accounts.find((a) => a.id === item.accountId)?.id || accounts[0]?.id || "");
+      if (item.isPaid) {
+        ui.openUncheckModal(item);
+      } else {
+        ui.openConfirmModal(item, accounts.find((a) => a.id === item.accountId)?.id || accounts[0]?.id || "");
+      }
     } else {
       const tx = variableTransactions.find((t) => t.id === item.instanceId);
       if (tx) {

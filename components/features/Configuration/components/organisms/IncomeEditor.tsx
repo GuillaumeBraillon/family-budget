@@ -167,7 +167,11 @@ export const IncomeEditor: React.FC<IncomeEditorProps> = ({
       startMonth: formData.startMonth,
       endMonth: formData.endMonth,
     };
-    editingId ? onUpdateIncome(final) : onAddIncome(final);
+    if (editingId) {
+      onUpdateIncome(final);
+    } else {
+      onAddIncome(final);
+    }
     clearForm();
   };
 
