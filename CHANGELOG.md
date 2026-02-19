@@ -7,6 +7,34 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.8.0] - 2026-02-19
+
+### ✨ Fonctionnalités (Features)
+
+- Mise en place d'une stack de tests unitaires : `vitest` + `@testing-library/react` + `@testing-library/jest-dom`.
+- Ajout de scripts npm : `test`, `test:watch`, `test:ui` pour lancer Vitest en local.
+
+### 🚀 Améliorations (Enhancements)
+
+- CI GitHub Actions : workflow `CI` exécutant `npm ci --legacy-peer-deps`, `prettier --check`, `tsc --noEmit`, `eslint` et `npm test` sur `push`/`PR`.
+- Export de deux helpers de `usePlanner` pour testabilité : `hasExtraAmounts` et `hasStandardAmounts`.
+- Ajout de tests unitaires pour :
+  - `getDefaultAccountId` (tests utilitaire de sélection de compte)
+  - `usePlanner` helpers (tests pour la logique Extra / Standard)
+- Mise à jour des scripts `package.json` pour intégrer les checks de format et tests automatiques.
+
+### 🐛 Corrections de bugs (Bugfixes)
+
+- Refactorisation de quelques expressions ternaires orphelines en `if/else` pour satisfaire les règles ESLint plus strictes (prévenir des comportements ambigus et améliorer la lisibilité).
+
+### 🧹 Nettoyage (Chores)
+
+- Mise à jour d'`@typescript-eslint/parser` et `@typescript-eslint/eslint-plugin` (→ version compatible avec TypeScript 5.8).
+- Ajout d'un hook `pre-commit` qui exécute `npm run fix` (Prettier + ESLint --fix + `tsc`) et ajoute automatiquement les modifications au commit. Ce hook synchronise toujours la version `package.json` avec le `CHANGELOG.md`.
+- Formatage automatique des fichiers de tests/config pour respecter Prettier.
+
+---
+
 ## [2.7.1] - 2026-02-19
 
 ### 🐛 Corrections de bugs (Bugfixes)
@@ -48,8 +76,6 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 - Code cleanup : suppression de 4 occurrences de `p.name === "Famille"` hardcodé
 - Suppression du composant inutilisé `CalculationDetailsCard` → simplification de `BalancesView`
 - Meilleure maintenabilité : sélections par ordre de priorité au lieu de noms fixes
-
----
 
 ## [2.7.0] - 2026-02-19
 

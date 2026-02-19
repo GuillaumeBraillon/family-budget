@@ -66,7 +66,7 @@ import {
  * hasExtraAmounts(false, [{ tagId: 't1', amount: 50 }]) // false
  * ```
  */
-const hasExtraAmounts = (isExtraGlobal: boolean, tagAmounts?: TagAmount[]): boolean => {
+export const hasExtraAmounts = (isExtraGlobal: boolean, tagAmounts?: TagAmount[]): boolean => {
   // Niveau 1 : Si l'opération entière est Extra
   if (isExtraGlobal) return true;
 
@@ -108,7 +108,7 @@ const hasExtraAmounts = (isExtraGlobal: boolean, tagAmounts?: TagAmount[]): bool
  * hasStandardAmounts(false, 100, [{ tagId: 't1', amount: 50 }]) // true
  * ```
  */
-const _hasStandardAmounts = (isExtraGlobal: boolean, totalAmount: number, tagAmounts?: TagAmount[]): boolean => {
+export const hasStandardAmounts = (isExtraGlobal: boolean, totalAmount: number, tagAmounts?: TagAmount[]): boolean => {
   // Si toggle global Extra : tout est Extra, rien de Standard
   if (isExtraGlobal) return false;
 
