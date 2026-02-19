@@ -9,15 +9,7 @@ export const LocalStorageManager: React.FC = () => {
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   const clearLocalStorage = () => {
-    // Préserver uniquement la connexion Supabase
-    const supabaseProjectId = localStorage.getItem("SUPABASE_PROJECT_ID");
-    const supabaseAnonKey = localStorage.getItem("SUPABASE_ANON_KEY");
-
     localStorage.clear();
-
-    if (supabaseProjectId) localStorage.setItem("SUPABASE_PROJECT_ID", supabaseProjectId);
-    if (supabaseAnonKey) localStorage.setItem("SUPABASE_ANON_KEY", supabaseAnonKey);
-
     setShowClearConfirm(false);
     window.location.reload();
   };

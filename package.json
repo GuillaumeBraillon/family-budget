@@ -1,7 +1,7 @@
 {
   "name": "budget-familiale",
   "private": true,
-  "version": "2.6.27",
+  "version": "2.7.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -10,27 +10,28 @@
     "fix": "npm run format && npm run lint:fix",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "lint:fix": "eslint . --ext ts,tsx --fix",
-    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\""
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "tsc": "tsc --noEmit"
   },
   "dependencies": {
     "@dnd-kit/core": "6.3.1",
     "@dnd-kit/sortable": "10.0.0",
     "@dnd-kit/utilities": "3.2.2",
     "@supabase/supabase-js": "^2.89.0",
-    "@vitejs/plugin-react": "^5.1.2",
     "date-fns": "^4.1.0",
     "lucide-react": "^0.562.0",
     "path": "^0.12.7",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
-    "recharts": "^3.6.0",
-    "vite": "^7.3.0"
+    "recharts": "^3.6.0"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
     "@typescript-eslint/eslint-plugin": "^6.21.0",
     "@typescript-eslint/parser": "^6.21.0",
-    "@vitejs/plugin-react": "^5.0.0",
+    "@vitejs/plugin-react": "^5.1.2",
     "autoprefixer": "^10.4.23",
     "eslint": "^8.57.0",
     "eslint-plugin-react": "^7.33.2",
@@ -40,6 +41,6 @@
     "prettier": "^3.2.4",
     "tailwindcss": "^3.4.19",
     "typescript": "~5.8.2",
-    "vite": "^6.2.0"
+    "vite": "^7.3.0"
   }
 }

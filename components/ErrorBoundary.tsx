@@ -1,9 +1,9 @@
-import React, { Component, ReactNode } from "react";
+import * as React from "react";
 import { logger } from "../services/logger";
 import { ErrorDisplay } from "./ui/ErrorDisplay";
 
 interface Props {
-  children: ReactNode;
+  children: React.ReactNode;
 }
 
 interface State {
@@ -33,7 +33,7 @@ interface State {
  * </ErrorBoundary>
  * ```
  */
-export class ErrorBoundary extends Component<Props, State> {
+export class ErrorBoundary extends React.Component<Props, State> {
   constructor(props: Props) {
     super(props);
     this.state = {

@@ -12,7 +12,6 @@ import { BalancesView } from "./components/features/Balances/BalancesView";
 import { OperationsView } from "./components/features/Operations/OperationsView";
 import { TransfersView } from "./components/features/Transfers/TransfersView";
 import { ConfigurationView } from "./components/features/Configuration/ConfigurationView";
-import { SupabaseSetup } from "./components/features/Configuration/components/SupabaseSetup";
 import { LoginView } from "./components/features/Auth/LoginView";
 import { UnauthorizedView } from "./components/features/Auth/UnauthorizedView";
 import { WelcomeEmptyState } from "./components/features/Dashboard/components/WelcomeEmptyState";
@@ -26,8 +25,7 @@ const VIEWS: ViewState[] = ["dashboard", "balances", "planner", "transfers", "co
 const AppContent: React.FC = () => {
   const { currentError, clearError } = useError();
 
-  // 1. Authentification & Configuration
-  const [isConfigured, setIsConfigured] = useState(isSupabaseConfigured());
+  // 1. Authentification
   const { session, loading: authLoading, signInWithGoogle, signOut, error: authError } = useAuth();
 
   // 2. Autorisation (whitelist)
@@ -109,11 +107,6 @@ const AppContent: React.FC = () => {
   };
   // -------------------
 
-  useEffect(() => {
-    setIsConfigured(isSupabaseConfigured());
-  }, []);
-
-  // SUPPRIMÉ : Ne plus recharger automatiquement les données
   // Les données sont chargées UNE FOIS dans useBudget au montage initial
 
   const navigateToConfig = (tab: ConfigTab) => {
@@ -133,22 +126,21 @@ const AppContent: React.FC = () => {
     }
   }, [currentView, plannerContext]);
 
-  const handleResetConnection = () => {
-    localStorage.removeItem("SUPABASE_PROJECT_ID");
-    localStorage.removeItem("SUPABASE_ANON_KEY");
-    setIsConfigured(false);
-  };
-
   // --- RENDU CONDITIONNEL ---
 
-  // 1. Setup Supabase manquant
-  if (!isConfigured) {
+  // 1. Setup Supabase manquant (Configuration par variable d'environnement uniquement)
+  if (!isSupabaseConfigured()) {
     return (
-      <SupabaseSetup
-        onConfigured={() => {
-          setIsConfigured(true);
-        }}
-      />
+      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 text-slate-500 gap-4 p-4 text-center">
+        <div className="bg-rose-100 p-4 rounded-full text-rose-600 mb-2">
+          <AlertCircle size={48} />
+        </div>
+        <h1 className="text-xl font-bold text-slate-900">Application non configurée</h1>
+        <p className="max-w-md">
+          Les variables d'environnement Supabase sont manquantes. <br />
+          Veuillez configurer <code>VITE_SUPABASE_PROJECT_ID</code> et <code>VITE_SUPABASE_ANON_KEY</code> dans votre fichier <code>.env</code>.
+        </p>
+      </div>
     );
   }
 
@@ -254,6 +246,7 @@ const AppContent: React.FC = () => {
             settings={settings}
             categories={categories}
             onUpdateAccount={actions.upsertAccount}
+            onUpdateAccountsSorting={actions.updateAccountsSorting}
             onNavigateToPlanner={navigateToPlannerWithContext}
           />
         )}
@@ -292,8 +285,7 @@ const AppContent: React.FC = () => {
             onUpsertTransfer={actions.upsertTransfer}
             onUpsertTransaction={actions.upsertVariableTransaction}
             onDeleteTransfer={actions.deleteTransfer}
-            onMoveTransfer={actions.moveTransfer}
-            onMoveTransaction={(tx, position) => actions.upsertVariableTransaction({ ...tx, position })}
+            onUpdateAccountsSorting={actions.updateAccountsSorting}
           />
         )}
 
@@ -317,7 +309,7 @@ const AppContent: React.FC = () => {
             onUpsertAccount={actions.upsertAccount}
             onDeleteAccount={actions.deleteAccount}
             onUpdateSettings={actions.updateSettings}
-            onResetConnection={handleResetConnection}
+            onUpdateAccountsSorting={actions.updateAccountsSorting}
             onUpsertLabel={actions.upsertLabel}
             onDeleteLabel={actions.deleteLabel}
             onAddConfig={actions.upsertConfig}

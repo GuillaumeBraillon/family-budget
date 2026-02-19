@@ -35,7 +35,7 @@ interface ConfigurationViewProps {
   onUpsertAccount: (a: Account) => void;
   onDeleteAccount: (id: string) => void;
   onUpdateSettings: (newSettings: AppSettings) => void;
-  onResetConnection: () => void;
+  onUpdateAccountsSorting: (newSorting: string[]) => void;
   onUpsertLabel: (l: SavedLabel) => void;
   onDeleteLabel: (id: string) => void;
   onAddConfig: (c: ExpenseConfig) => void;
@@ -72,7 +72,6 @@ export const ConfigurationView: React.FC<ConfigurationViewProps> = ({
   onUpsertAccount,
   onDeleteAccount,
   onUpdateSettings,
-  onResetConnection,
   onUpsertLabel,
   onDeleteLabel,
   onAddConfig,
@@ -88,6 +87,7 @@ export const ConfigurationView: React.FC<ConfigurationViewProps> = ({
   onToggleUserAuthorization,
   onUpdateUserNotes,
   onDeleteUser,
+  onUpdateAccountsSorting,
 }) => {
   return (
     <div className="space-y-1 animate-in fade-in duration-500">
@@ -111,7 +111,14 @@ export const ConfigurationView: React.FC<ConfigurationViewProps> = ({
             description="Gérez vos comptes courants et d'épargne. Assignez un propriétaire pour le suivi des soldes et des ratios de répartition."
             icon={<CreditCard size={18} />}
           />
-          <AccountManager accounts={accounts} people={people} onUpsertAccount={onUpsertAccount} onDeleteAccount={onDeleteAccount} />
+          <AccountManager
+            accounts={accounts}
+            people={people}
+            onUpsertAccount={onUpsertAccount}
+            onDeleteAccount={onDeleteAccount}
+            settings={settings}
+            onUpdateAccountsSorting={onUpdateAccountsSorting}
+          />
         </>
       )}
 
@@ -201,7 +208,7 @@ export const ConfigurationView: React.FC<ConfigurationViewProps> = ({
             description="Actions système et informations techniques : version de l'application, gestion du localStorage, connexion à la base de données."
             icon={<Settings size={18} />}
           />
-          <SystemSettings onResetConnection={onResetConnection} />
+          <SystemSettings />
         </>
       )}
     </div>

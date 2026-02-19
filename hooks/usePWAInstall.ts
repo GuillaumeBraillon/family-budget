@@ -42,7 +42,7 @@ export const usePWAInstall = () => {
       // Empêcher Chrome d'afficher la bannière automatiquement
       e.preventDefault();
       // Stocker l'événement pour le déclencher plus tard
-      setDeferredPrompt(e);
+      setDeferredPrompt(e as BeforeInstallPromptEvent);
       setIsInstallable(true);
     };
 

@@ -10,7 +10,7 @@ import { useCsvExport } from "../../../../../hooks/useCsvExport";
 interface PeriodData {
   period: { id: number; label: string; start: number; end: number };
   income: { salaries: number; recurring: number; variable: number; total: number };
-  expenses: { recurring: number; variable: number; total: number };
+  expenses: { recurring: number; variable: number; variableStandard: number; variableExtra: number; total: number };
   balance: number;
 }
 

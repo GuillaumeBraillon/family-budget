@@ -58,7 +58,15 @@ interface UseBalancesRowsParams {
   jointAccount: Account | undefined;
   personalAccounts: Account[];
   stats: {
-    byAccount: Record<string, { remaining: number }>;
+    byAccount: Record<
+      string,
+      {
+        remaining: number;
+        remainingStandard: number;
+        paid: number;
+        paidStandard: number;
+      }
+    >;
   };
 }
 

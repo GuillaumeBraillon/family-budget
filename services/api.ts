@@ -68,21 +68,33 @@ export const fetchInitialData = async () => {
     savedLabelsRes,
     tagsRes,
     authUsersRes,
-    tagAmountsRes,
   ] = await Promise.all([
-    supabase.from("people").select("*"),
-    supabase.from("accounts").select("*"),
-    supabase.from("categories").select("*"),
-    supabase.from("sub_categories").select("*"),
-    supabase.from("expense_configs").select("*"),
-    supabase.from("income_configs").select("*"),
-    supabase.from("paid_items").select("*"),
-    supabase.from("app_settings").select("*").maybeSingle(),
-    supabase.from("transfers").select("*").order("date", { ascending: false }),
-    supabase.from("saved_labels").select("*"),
-    supabase.from("tags").select("*"),
-    supabase.from("authorized_users").select("*").order("added_at", { ascending: false }),
-    supabase.from("paid_item_tags").select("*"),
+    supabase.from("people").select("id, name, is_child, display_order"),
+    supabase.from("accounts").select("id, name, type, owner_id, current_balance, bank_name, is_joint, target_ratio, target_cap"),
+    supabase.from("categories").select("id, name, type"),
+    supabase.from("sub_categories").select("id, name, category_id, created_at"),
+    supabase
+      .from("expense_configs")
+      .select("id, label, amount, category, sub_category, beneficiary_id, account_id, day_of_month, start_month, end_month, is_extra"),
+    supabase
+      .from("income_configs")
+      .select("id, label, amount, account_id, beneficiary_id, day_of_month, category, sub_category, is_extra, is_salary, start_month, end_month"),
+    supabase
+      .from("paid_items")
+      .select(
+        "instance_id, amount, payment_date, account_id, beneficiary_id, label, category, sub_category, type, is_variable, is_waiting, is_extra, comments"
+      ),
+    supabase
+      .from("app_settings")
+      .select("id, monthly_envelope, period_type, period_value, carryover_strategy, operations_sorting, accounts_sorting")
+      .maybeSingle(),
+    supabase
+      .from("transfers")
+      .select("id, date, label, amount, source_account_id, destination_account_id, created_at, is_interest")
+      .order("date", { ascending: false }),
+    supabase.from("saved_labels").select("id, name, type, is_expense, category_id, sub_category_id, account_id, beneficiary_id"),
+    supabase.from("tags").select("id, name, color"),
+    supabase.from("authorized_users").select("email, name, avatar_url, is_allowed, added_at, added_by").order("added_at", { ascending: false }),
   ]);
 
   const responses = [
@@ -98,7 +110,6 @@ export const fetchInitialData = async () => {
     savedLabelsRes,
     tagsRes,
     authUsersRes,
-    tagAmountsRes,
   ];
   const errors = responses.map((r) => r.error).filter((e) => e !== null);
 
@@ -118,9 +129,25 @@ export const fetchInitialData = async () => {
   const tags = (tagsRes.data || []).map(mappers.mapDbTag);
   const authorizedUsers = (authUsersRes.data || []).map(mappers.mapDbAuthorizedUser);
 
+  // Optimisation payload: charger uniquement les tags des paid_items réellement récupérés
+  const paidItemInstanceIds = Array.from(new Set((paidItemsRes.data || []).map((item: DbPaidItem) => item.instance_id)));
+  let paidItemTagsData: DbPaidItemTag[] = [];
+  if (paidItemInstanceIds.length > 0) {
+    const { data: tagData, error: tagError } = await supabase
+      .from("paid_item_tags")
+      .select("id, paid_item_instance_id, tag_id, amount, is_extra, created_at")
+      .in("paid_item_instance_id", paidItemInstanceIds);
+
+    if (tagError) {
+      throw new Error(tagError.message || "Erreur lors du chargement des tags des opérations");
+    }
+
+    paidItemTagsData = tagData || [];
+  }
+
   // Grouper les tag amounts par instance_id
   const tagAmountsByInstance: Record<string, TagAmount[]> = {};
-  (tagAmountsRes.data || []).forEach((ta: DbPaidItemTag) => {
+  paidItemTagsData.forEach((ta: DbPaidItemTag) => {
     if (!tagAmountsByInstance[ta.paid_item_instance_id]) {
       tagAmountsByInstance[ta.paid_item_instance_id] = [];
     }
@@ -154,7 +181,6 @@ export const fetchInitialData = async () => {
         isExtra: mapped.isExtra,
         comments: mapped.comments,
         tagAmounts: mapped.tagAmounts,
-        position: mapped.position,
       });
     }
   });

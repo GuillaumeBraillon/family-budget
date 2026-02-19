@@ -194,6 +194,7 @@ interface PeriodData {
     label: string;
   };
   income: {
+    salaries: number;
     recurring: number;
     variable: number;
     total: number;

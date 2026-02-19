@@ -84,7 +84,9 @@ CREATE TABLE IF NOT EXISTS app_settings (
   monthly_envelope numeric DEFAULT 2000 NOT NULL,
   period_value integer DEFAULT 4 NOT NULL CHECK (period_value > 0),
   period_type text DEFAULT 'FIXED_DAYS' NOT NULL CHECK (period_type IN ('FIXED_DAYS', 'CALENDAR_WEEKS', 'CUSTOM_SPLIT')),
-  carryover_strategy text DEFAULT 'NEXT_PERIOD' NOT NULL CHECK (carryover_strategy IN ('NEXT_PERIOD', 'SPREAD_REMAINING'))
+  carryover_strategy text DEFAULT 'NEXT_PERIOD' NOT NULL CHECK (carryover_strategy IN ('NEXT_PERIOD', 'SPREAD_REMAINING')),
+  operations_sorting text[] NOT NULL DEFAULT '{}',
+  accounts_sorting text[] NOT NULL DEFAULT '{}'
 );
 
 -- Table: saved_labels
@@ -286,6 +288,148 @@ CREATE POLICY "Enable all for authenticated users" ON transfers
   FOR ALL USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
 
 -- =====================================
+-- 3.1 FONCTIONS RPC TRANSACTIONNELLES
+-- =====================================
+
+-- Fonction RPC: upsert paid_item + remplacement atomique des tags
+CREATE OR REPLACE FUNCTION public.upsert_paid_item_with_tags(
+  p_instance_id text,
+  p_amount numeric,
+  p_payment_date date,
+  p_account_id text,
+  p_beneficiary_id text,
+  p_label text,
+  p_category text,
+  p_sub_category text,
+  p_type text,
+  p_is_variable boolean,
+  p_is_waiting boolean,
+  p_is_extra boolean,
+  p_comments text,
+  p_tag_amounts jsonb DEFAULT NULL
+)
+RETURNS void
+LANGUAGE plpgsql
+SET search_path = public
+AS $$
+DECLARE
+  v_sum_tags numeric := 0;
+BEGIN
+  IF p_instance_id IS NULL OR length(trim(p_instance_id)) = 0 THEN
+    RAISE EXCEPTION 'instance_id requis';
+  END IF;
+
+  IF p_amount IS NULL OR p_amount <= 0 THEN
+    RAISE EXCEPTION 'amount invalide: %', p_amount;
+  END IF;
+
+  IF p_tag_amounts IS NOT NULL AND jsonb_typeof(p_tag_amounts) <> 'array' THEN
+    RAISE EXCEPTION 'p_tag_amounts doit être un array JSON';
+  END IF;
+
+  INSERT INTO public.paid_items (
+    instance_id,
+    amount,
+    payment_date,
+    account_id,
+    beneficiary_id,
+    label,
+    category,
+    sub_category,
+    type,
+    is_variable,
+    is_waiting,
+    is_extra,
+    comments,
+    date
+  ) VALUES (
+    p_instance_id,
+    p_amount,
+    p_payment_date,
+    p_account_id,
+    p_beneficiary_id,
+    p_label,
+    p_category,
+    p_sub_category,
+    p_type,
+    COALESCE(p_is_variable, false),
+    COALESCE(p_is_waiting, false),
+    COALESCE(p_is_extra, false),
+    p_comments,
+    p_payment_date
+  )
+  ON CONFLICT (instance_id) DO UPDATE
+  SET
+    amount = EXCLUDED.amount,
+    payment_date = EXCLUDED.payment_date,
+    account_id = EXCLUDED.account_id,
+    beneficiary_id = EXCLUDED.beneficiary_id,
+    label = EXCLUDED.label,
+    category = EXCLUDED.category,
+    sub_category = EXCLUDED.sub_category,
+    type = EXCLUDED.type,
+    is_variable = EXCLUDED.is_variable,
+    is_waiting = EXCLUDED.is_waiting,
+    is_extra = EXCLUDED.is_extra,
+    comments = EXCLUDED.comments,
+    date = EXCLUDED.date;
+
+  IF p_tag_amounts IS NOT NULL THEN
+    SELECT COALESCE(sum((entry->>'amount')::numeric), 0)
+      INTO v_sum_tags
+    FROM jsonb_array_elements(p_tag_amounts) AS entry;
+
+    IF v_sum_tags > p_amount THEN
+      RAISE EXCEPTION 'Somme des tags (%) > montant (%)', v_sum_tags, p_amount;
+    END IF;
+
+    IF EXISTS (
+      SELECT 1
+      FROM jsonb_array_elements(p_tag_amounts) AS entry
+      WHERE COALESCE((entry->>'amount')::numeric, 0) <= 0
+    ) THEN
+      RAISE EXCEPTION 'Chaque montant de tag doit être > 0';
+    END IF;
+
+    DELETE FROM public.paid_item_tags
+    WHERE paid_item_instance_id = p_instance_id;
+
+    IF jsonb_array_length(p_tag_amounts) > 0 THEN
+      INSERT INTO public.paid_item_tags (
+        paid_item_instance_id,
+        tag_id,
+        amount,
+        is_extra
+      )
+      SELECT
+        p_instance_id,
+        entry->>'tagId',
+        (entry->>'amount')::numeric,
+        COALESCE((entry->>'isExtra')::boolean, false)
+      FROM jsonb_array_elements(p_tag_amounts) AS entry;
+    END IF;
+  END IF;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.upsert_paid_item_with_tags(
+  text,
+  numeric,
+  date,
+  text,
+  text,
+  text,
+  text,
+  text,
+  text,
+  boolean,
+  boolean,
+  boolean,
+  text,
+  jsonb
+) TO authenticated;
+
+-- =====================================
 -- 4. COMMENTAIRES DE DOCUMENTATION
 -- =====================================
 
@@ -368,6 +512,9 @@ Ce schéma inclut déjà toutes les migrations jusqu'à v2.6.5 :
 - 003_add_tag_amounts.sql : Système de ventilation par tags
 - 004_refactor_categories_to_relational.sql : Structure relationnelle sous-catégories
 - 005_finalize_relational_structure.sql : Suppression colonnes obsolètes + saved_labels
+
+Les ajouts récents (tri manuel + RPC transactionnelle tags) sont désormais intégrés directement
+dans ce schéma complet pour faciliter les déploiements manuels sans rejouer les migrations.
 
 Pour les futures modifications, créer de nouvelles migrations numérotées
 dans le dossier migrations/ et les documenter dans CHANGELOG.md.

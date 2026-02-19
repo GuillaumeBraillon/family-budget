@@ -56,7 +56,7 @@ interface FilterBarProps {
   /** Liste des tags de ventilation */
   tags?: TagType[];
   /** Filtres à masquer (pour contextes spécifiques) */
-  hiddenFilters?: ("flux" | "source" | "status" | "extra" | "transfer" | "salary" | "accounts" | "beneficiaries" | "tags")[];
+  hiddenFilters?: ("flux" | "source" | "status" | "nature" | "transfer" | "salary" | "accounts" | "beneficiaries" | "tags")[];
   /** Callback optionnel de réinitialisation personnalisée */
   onReset?: () => void;
   /** Options de tri disponibles */
@@ -87,7 +87,7 @@ interface FilterBarProps {
  * - Flux : Tous / Dépenses / Revenus
  * - Source : Variable / Récurrent / Toutes
  * - Statut : Tous / Réel / En attente
- * - Extra : Tout / Standard / Extra
+ * - Nature : Tout / Standard / Extra
  *
  * **Filtres Secondaires (repliables) :**
  * - Comptes (multi-sélection)
@@ -165,7 +165,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
 
           {!hiddenFilters.includes("status") && <CyclicFilterButton {...statusConfig} onClick={cycleStatus} />}
 
-          {!hiddenFilters.includes("extra") && <CyclicFilterButton {...extraConfig} onClick={cycleExtra} />}
+          {!hiddenFilters.includes("nature") && <CyclicFilterButton {...extraConfig} onClick={cycleExtra} />}
 
           {/* BOUTON TOGGLE "PLUS DE FILTRES" */}
           <button

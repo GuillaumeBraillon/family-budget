@@ -179,5 +179,6 @@ export const mapDbSettings = (data: DbSettings | null): AppSettings => {
     period_value: Number(data.period_value || 7),
     carryover_strategy: (data.carryover_strategy || "NEXT_PERIOD") as "NEXT_PERIOD" | "SPREAD_REMAINING",
     operations_sorting: data.operations_sorting || [],
+    accounts_sorting: data.accounts_sorting || [],
   };
 };

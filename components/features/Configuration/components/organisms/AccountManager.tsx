@@ -1,21 +1,28 @@
 import React, { useState, useMemo } from "react";
 import { Trash2, CreditCard, Save, PiggyBank, Users, Wallet } from "lucide-react";
-import { Account, Person, AccountType } from "../../../../../types";
+import { Account, Person, AccountType, AppSettings } from "../../../../../types";
 import { ConfirmModal } from "../../../../ui/atoms/ConfirmModal";
 import { MobileTooltip } from "../../../../ui/MobileTooltip";
 import { DataList } from "../../../../ui/molecules/DataList";
 import { DataListRow } from "../../../../ui/molecules/DataListRow";
 import { Modal } from "../../../../ui/Modal";
 import { TextInput, SelectInput } from "../../../../ui/molecules/FormInputs";
+import { useAccountsSorting } from "../../../../../hooks/accounts/useAccountsSorting";
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
+import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { SortableRow } from "../../../../ui/molecules/SortableRow";
+import { ListSorter } from "../../../../ui/molecules/ListSorter";
 
 interface AccountManagerProps {
   accounts: Account[];
   people: Person[];
   onUpsertAccount: (a: Account) => void;
   onDeleteAccount: (id: string) => void;
+  settings: AppSettings; // Ajouté pour récupérer accounts_sorting
+  onUpdateAccountsSorting: (newSorting: string[]) => void; // Nouvelle prop pour persister l'ordre
 }
 
-export const AccountManager: React.FC<AccountManagerProps> = ({ accounts, people, onUpsertAccount, onDeleteAccount }) => {
+export const AccountManager: React.FC<AccountManagerProps> = ({ accounts, people, onUpsertAccount, onDeleteAccount, settings, onUpdateAccountsSorting }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string } | null>(null);
@@ -30,9 +37,13 @@ export const AccountManager: React.FC<AccountManagerProps> = ({ accounts, people
   const [targetCap, setTargetCap] = useState<string>("");
 
   // Tri alphabétique des comptes
-  const sortedAccounts = useMemo(() => {
-    return [...accounts].sort((a, b) => a.name.localeCompare(b.name));
-  }, [accounts]);
+  const { sortKey, sortOrder, setSorting, sortAccounts, isManualSort, sortOptions, canToggleOrder } = useAccountsSorting(settings.accounts_sorting || []);
+
+  // Tri des comptes en utilisant le hook
+  const sortedAndFilteredAccounts = useMemo(() => {
+    // Filtrage simple si nécessaire, ici juste le tri
+    return sortAccounts(accounts);
+  }, [accounts, sortAccounts]);
 
   const clearForm = () => {
     setName("");
@@ -100,6 +111,23 @@ export const AccountManager: React.FC<AccountManagerProps> = ({ accounts, people
     }
   };
 
+  const sensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
+
+  const handleReorder = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (active.id !== over?.id && isManualSort) {
+      const oldIndex = sortedAndFilteredAccounts.findIndex((acc) => acc.id === active.id);
+      const newIndex = sortedAndFilteredAccounts.findIndex((acc) => acc.id === over?.id);
+
+      if (oldIndex !== -1 && newIndex !== -1) {
+        const newSorting = [...sortedAndFilteredAccounts].map((acc) => acc.id);
+        const [movedId] = newSorting.splice(oldIndex, 1);
+        newSorting.splice(newIndex, 0, movedId);
+        onUpdateAccountsSorting(newSorting);
+      }
+    }
+  };
+
   return (
     <div className="space-y-4">
       <ConfirmModal
@@ -107,7 +135,8 @@ export const AccountManager: React.FC<AccountManagerProps> = ({ accounts, people
         title="Supprimer le compte ?"
         message={
           <span>
-            Voulez-vous vraiment supprimer le compte <strong>{deleteConfirm?.name}</strong> ?
+            Voulez-vous vraiment supprimer le compte <strong>{deleteConfirm?.name}</strong> ? Cette action est irréversible et affectera tous les mouvements de
+            trésorerie associés.
           </span>
         }
         onConfirm={handleDelete}
@@ -177,27 +206,37 @@ export const AccountManager: React.FC<AccountManagerProps> = ({ accounts, people
         </div>
       </Modal>
 
-      <DataList title="Vos Comptes" count={sortedAccounts.length} onAdd={handleAddClick} addButtonLabel="Ajouter un compte">
-        {sortedAccounts.map((acc) => {
-          const owner = people.find((p) => p.id === acc.ownerId)?.name || "Inconnu";
-          let iconNode = <CreditCard size={20} />;
-          if (acc.type === AccountType.SAVINGS) iconNode = <PiggyBank size={20} />;
-          else if (acc.isJoint) iconNode = <Users size={20} />;
-          else iconNode = <Wallet size={20} />;
+      <DataList title="Vos Comptes" count={sortedAndFilteredAccounts.length} onAdd={handleAddClick} addButtonLabel="Ajouter un compte">
+        <div className="bg-white p-2 rounded-xl border border-slate-200 shadow-sm mb-4">
+          <ListSorter options={sortOptions} currentSort={sortKey} currentOrder={sortOrder} onSortChange={setSorting} canToggleOrder={canToggleOrder} />
+        </div>
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleReorder}>
+          <SortableContext items={sortedAndFilteredAccounts.map((acc) => acc.id)} strategy={verticalListSortingStrategy}>
+            {sortedAndFilteredAccounts.map((acc) => {
+              const owner = people.find((p) => p.id === acc.ownerId)?.name || "Inconnu";
+              let iconNode = <CreditCard size={20} />;
+              if (acc.type === AccountType.SAVINGS) iconNode = <PiggyBank size={20} />;
+              else if (acc.isJoint) iconNode = <Users size={20} />;
+              else iconNode = <Wallet size={20} />;
 
-          return (
-            <DataListRow
-              key={acc.id}
-              icon={iconNode}
-              label={acc.name}
-              amount={acc.currentBalance}
-              category={acc.bankName || "Banque"}
-              beneficiary={owner}
-              onClick={() => handleEditClick(acc)}
-              badge={acc.isJoint ? <span className="text-[9px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded font-bold uppercase">Joint</span> : null}
-            />
-          );
-        })}
+              return (
+                <SortableRow key={acc.id} id={acc.id} disabled={!isManualSort}>
+                  <DataListRow
+                    icon={iconNode}
+                    label={acc.name}
+                    amount={acc.currentBalance}
+                    category={acc.bankName || "Banque"}
+                    beneficiary={owner}
+                    onClick={() => handleEditClick(acc)}
+                    badge={
+                      acc.isJoint ? <span className="text-[9px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded font-bold uppercase">Joint</span> : null
+                    }
+                  />
+                </SortableRow>
+              );
+            })}
+          </SortableContext>
+        </DndContext>
       </DataList>
     </div>
   );

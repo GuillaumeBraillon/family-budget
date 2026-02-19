@@ -14,9 +14,10 @@
  * - Après : ~150 lignes, séparation claire des responsabilités
  * - Gain : -80% de code dans le composant, +testabilité
  */
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { Account, Person, ExpenseConfig, IncomeConfig, PaidItemDetails, AppSettings, VariableTransaction, CategoryDef, OperationFilters } from "../../../types";
 import { useBalancesData, useBalancesRows } from "../../../hooks/balances";
+import { useAccountsSorting, AccountSortKey } from "../../../hooks/accounts/useAccountsSorting";
 import { MonthNavigator } from "../../ui/molecules/MonthNavigator";
 import { ScopeSelector } from "../../ui/molecules/ScopeSelector";
 import { WeekSelector } from "../../ui/molecules/WeekSelector";
@@ -25,6 +26,8 @@ import { BalancesTable } from "./components/BalancesTable";
 import { TransferSummaryCard } from "./components/TransferSummaryCard";
 import { BudgetDistributionSummary } from "./components/BudgetDistributionSummary";
 import { CalculationDetailsCard } from "./components/CalculationDetailsCard";
+import { ListSorter } from "../../ui/molecules/ListSorter";
+import { arrayMove } from "@dnd-kit/sortable";
 
 interface BalancesViewProps {
   accounts: Account[];
@@ -36,6 +39,7 @@ interface BalancesViewProps {
   settings: AppSettings;
   categories: CategoryDef[];
   onUpdateAccount: (account: Account) => void;
+  onUpdateAccountsSorting: (newSorting: string[]) => void;
   onNavigateToPlanner: (date: Date, filters?: Partial<OperationFilters>, weekNumber?: number) => void;
 }
 
@@ -49,6 +53,7 @@ export const BalancesView: React.FC<BalancesViewProps> = ({
   settings,
   categories,
   onUpdateAccount,
+  onUpdateAccountsSorting,
   onNavigateToPlanner,
 }) => {
   // --- ÉTAT UI (Navigation) ---
@@ -74,6 +79,27 @@ export const BalancesView: React.FC<BalancesViewProps> = ({
     return 1;
   });
 
+  // --- TRI MANUEL ---
+  const { sortAccounts, sortKey, sortOrder, setSorting } = useAccountsSorting(settings.accounts_sorting || []);
+  const sortedAccounts = useMemo(() => sortAccounts(accounts), [accounts, sortAccounts]);
+
+  const accountSortOptions = [
+    { key: "manual", label: "Manuel" },
+    { key: "name", label: "Nom" },
+    { key: "balance", label: "Solde" },
+    { key: "type", label: "Type" },
+  ];
+
+  const handleAccountMove = (id: string, newIndex: number) => {
+    const currentList = sortedAccounts;
+    const oldIndex = currentList.findIndex((a) => a.id === id);
+    if (oldIndex === -1) return;
+
+    const reordered = arrayMove<Account>(currentList, oldIndex, newIndex);
+    const newSortingIds = reordered.map((a) => a.id);
+    onUpdateAccountsSorting(newSortingIds);
+  };
+
   // --- HOOKS SPÉCIALISÉS (Logique métier déléguée) ---
 
   // Hook 1 : Calculs de données (carryovers, budget, consommation, détails)
@@ -94,7 +120,7 @@ export const BalancesView: React.FC<BalancesViewProps> = ({
     stats,
     filteredPeriodBudgets,
   } = useBalancesData({
-    accounts,
+    accounts: sortedAccounts,
     configs,
     incomeConfigs,
     paidItems,
@@ -200,6 +226,12 @@ export const BalancesView: React.FC<BalancesViewProps> = ({
         carryoverStrategy={settings.carryover_strategy || "NEXT_PERIOD"}
       />
 
+      <div className="flex justify-end mb-2">
+        <div className="bg-white p-1 rounded-lg border border-slate-200 shadow-sm">
+          <ListSorter options={accountSortOptions} currentSort={sortKey} currentOrder={sortOrder} onSortChange={(k, o) => setSorting(k as AccountSortKey, o)} />
+        </div>
+      </div>
+
       <BalancesTable
         title="Comptes Courants"
         rows={personalRows}
@@ -209,6 +241,8 @@ export const BalancesView: React.FC<BalancesViewProps> = ({
         currentDate={currentDate}
         activeWeek={scope === "PERIOD" ? activeWeek : undefined}
         distributableAmount={distributableBalance}
+        onMove={handleAccountMove}
+        isManualSort={sortKey === "manual"}
       />
 
       <TransferSummaryCard amount={virLddsTotal} toJoint={lddsToJoint} toPersonals={lddsToPersonals} />

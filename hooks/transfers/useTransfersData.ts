@@ -60,6 +60,8 @@ export type CombinedOperation = {
     }
 );
 
+export type TransfersHistoryEntry = CombinedOperation & { balanceAfter: number };
+
 /**
  * Interface des statistiques calculées.
  */
@@ -97,15 +99,13 @@ export interface TransfersStats {
  * @param {Date} params.currentDate - Mois actuellement affiché
  * @param {string} params.searchQuery - Requête de recherche
  * @param {string | null} params.selectedMotif - Motif sélectionné pour filtrage
- * @param {string} params.sortKey - Clé de tri ("manual" | "date" | "amount" | "label")
- * @param {string} params.sortOrder - Ordre de tri ("asc" | "desc")
  * @param {string} params.accountTypeFilter - Filtre type compte ("ALL" | "CHECKING" | "SAVINGS")
  * @param {string | null} params.specificAccountId - ID du compte spécifique filtré
  * @param {string} params.interestFilter - Filtre des opérations directes ("ALL" | "EXCLUDE" | "ONLY")
  *
  * @returns {Object} Données calculées
  * @returns {Account[]} accountsWithBalances - Comptes avec soldes calculés
- * @returns {CombinedOperation[]} currentItems - Items filtrés et triés pour affichage
+ * @returns {CombinedOperation[]} unsortedItems - Items filtrés non triés
  * @returns {string[]} motifs - Liste des libellés uniques (pour filtrage)
  * @returns {any[]} historyWithBalances - Historique avec soldes évolutifs (si compte spécifique)
  * @returns {TransfersStats} stats - Statistiques des mouvements
@@ -126,8 +126,6 @@ export interface TransfersStats {
  *   currentDate: new Date(),
  *   searchQuery: "",
  *   selectedMotif: null,
- *   sortKey: "manual",
- *   sortOrder: "asc",
  *   accountTypeFilter: "ALL",
  *   specificAccountId: null,
  *   interestFilter: "EXCLUDE"
@@ -141,8 +139,6 @@ export const useTransfersData = ({
   currentDate,
   searchQuery,
   selectedMotif,
-  sortKey,
-  sortOrder,
   accountTypeFilter,
   specificAccountId,
   interestFilter,
@@ -153,8 +149,6 @@ export const useTransfersData = ({
   currentDate: Date;
   searchQuery: string;
   selectedMotif: string | null;
-  sortKey: string;
-  sortOrder: "asc" | "desc";
   accountTypeFilter: "ALL" | "CHECKING" | "SAVINGS";
   specificAccountId: string | null;
   interestFilter: "ALL" | "EXCLUDE" | "ONLY";
@@ -175,25 +169,7 @@ export const useTransfersData = ({
    * @param {Transfer} transfer - Virement à scorer
    * @returns {number} Score de position (entier large)
    */
-  const getEffectivePosition = (transfer: Transfer): number => {
-    if (typeof transfer.position === "number" && transfer.position !== 0) {
-      return transfer.position;
-    }
-
-    const BASE_SCORE = 100_000_000_000; // 100 Milliards
-    const DAY_STEP = 100_000_000; // 100 Millions par jour
-
-    // Génération d'un hash stable à partir de l'ID
-    let hash = 0;
-    for (let i = 0; i < transfer.id.length; i++) {
-      hash = (hash << 5) - hash + transfer.id.charCodeAt(i);
-      hash |= 0; // Conversion 32-bit integer
-    }
-    const safeHash = Math.abs(hash) % DAY_STEP;
-    const dayOfMonth = new Date(transfer.date).getDate();
-
-    return BASE_SCORE + dayOfMonth * DAY_STEP + safeHash;
-  };
+  // Fonctions de position supprimées (Option A : tri par date/montant uniquement)
 
   /**
    * Calcul des soldes effectifs des comptes d'épargne.
@@ -231,16 +207,16 @@ export const useTransfersData = ({
    * 5. Filtre recherche textuelle
    * 6. Filtre motif sélectionné
    * 7. Unification des flux en CombinedOperation[]
-   * 8. Tri selon sortKey + sortOrder
+  * 8. Préparation des items (tri appliqué dans un hook dédié)
    * 9. Extraction des motifs uniques
    * 10. Calcul de l'historique des soldes (si compte spécifique)
    *
    * @returns {Object} Données calculées
-   * - currentItems : Items filtrés et triés
+  * - unsortedItems : Items filtrés
    * - motifs : Libellés uniques pour filtrage
    * - historyWithBalances : Historique avec soldes évolutifs
    */
-  const { currentItems, motifs, historyWithBalances } = useMemo(() => {
+  const { unsortedItems, motifs, historyWithBalances } = useMemo(() => {
     const currentMonth = currentDate.getMonth();
     const currentYear = currentDate.getFullYear();
     const foundMotifs = new Set<string>();
@@ -311,7 +287,6 @@ export const useTransfersData = ({
           sourceAccountId: t.sourceAccountId,
           destinationAccountId: t.destinationAccountId,
           createdAt: t.createdAt,
-          position: t.position,
           transferData: t,
         })
       ),
@@ -325,7 +300,6 @@ export const useTransfersData = ({
           accountId: tx.accountId,
           type: tx.type,
           createdAt: tx.id,
-          position: tx.position,
           directOpData: tx,
         })
       ),
@@ -334,40 +308,13 @@ export const useTransfersData = ({
     // 7b. Si interestFilter === "ONLY", ne garder que les opérations directes
     const finalOps = interestFilter === "ONLY" ? combinedOps.filter((op) => op.source === "DIRECT") : combinedOps;
 
-    // 8. Tri selon la clé choisie
-    const sorted = finalOps.sort((a, b) => {
-      let res = 0;
-
-      if (sortKey === "manual") {
-        const posA = "transferData" in a ? getEffectivePosition(a.transferData) : a.position || 0;
-        const posB = "transferData" in b ? getEffectivePosition(b.transferData) : b.position || 0;
-        if (posA !== posB) {
-          res = posA - posB;
-        } else {
-          res = a.id.localeCompare(b.id);
-        }
-      } else if (sortKey === "amount") {
-        res = Math.abs(a.amount) - Math.abs(b.amount);
-      } else if (sortKey === "label") {
-        res = a.label.localeCompare(b.label);
-      } else {
-        // 'date'
-        const dateDiff = new Date(a.date).getTime() - new Date(b.date).getTime();
-        if (dateDiff !== 0) res = dateDiff;
-        else res = (a.createdAt || "").localeCompare(b.createdAt || "");
-      }
-
-      return sortOrder === "asc" ? res : -res;
-    });
-
     // 9. Extraction des motifs uniques
     [...filteredTransfers, ...filteredDirectOps].forEach((item) => {
       foundMotifs.add(item.label);
     });
 
     // 10. Calcul du solde évolutif (si compte spécifique sélectionné)
-    type HistoryEntry = { date: string; balance: number; label: string; amount: number; type: string };
-    let history: HistoryEntry[] = [];
+    let history: TransfersHistoryEntry[] = [];
     if (specificAccountId) {
       const chronological = [...combinedOps].sort((a, b) => {
         const timeDiff = new Date(a.date).getTime() - new Date(b.date).getTime();
@@ -376,7 +323,7 @@ export const useTransfersData = ({
       });
 
       let runningBalance = 0;
-      history = chronological.map((item) => {
+      history = chronological.map((item): TransfersHistoryEntry => {
         let deltaForAccount = 0;
 
         if ("transferData" in item) {
@@ -393,7 +340,7 @@ export const useTransfersData = ({
     }
 
     return {
-      currentItems: sorted,
+      unsortedItems: finalOps,
       motifs: Array.from(foundMotifs).sort(),
       historyWithBalances: history,
     };
@@ -403,8 +350,6 @@ export const useTransfersData = ({
     currentDate,
     searchQuery,
     selectedMotif,
-    sortKey,
-    sortOrder,
     accountTypeFilter,
     specificAccountId,
     interestFilter,
@@ -430,7 +375,7 @@ export const useTransfersData = ({
     let fromSavings = 0;
     let internalChecking = 0;
 
-    currentItems
+    unsortedItems
       .filter((item): item is Extract<CombinedOperation, { source: "TRANSFER" }> => item.source === "TRANSFER")
       .forEach((item) => {
         const source = accounts.find((a) => a.id === item.sourceAccountId);
@@ -449,14 +394,13 @@ export const useTransfersData = ({
       });
 
     return { toSavings, fromSavings, internalChecking };
-  }, [currentItems, accounts]);
+  }, [unsortedItems, accounts]);
 
   return {
     accountsWithBalances,
-    currentItems,
+    unsortedItems,
     motifs,
     historyWithBalances,
     stats,
-    getEffectivePosition,
   };
 };

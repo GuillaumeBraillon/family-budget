@@ -7,6 +7,43 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.7.0] - 2026-02-19
+
+### ✨ Fonctionnalités (Features)
+
+#### **Atomicité réelle des écritures `paid_items` + `paid_item_tags`**
+
+- Ajout d'une RPC PostgreSQL transactionnelle `upsert_paid_item_with_tags`.
+- L'upsert de l'opération et le remplacement des tags sont désormais exécutés dans une seule transaction côté base.
+- Validation SQL intégrée : format JSON des tags, montants strictement positifs, somme des tags ≤ montant total.
+
+### 🚀 Améliorations (Enhancements)
+
+#### **Tri manuel unifié entre Operations et Transfers**
+
+- Alignement du Drag & Drop Transfers sur le comportement Operations (capteurs, collisions, mode manuel).
+- Introduction d'un hook générique réutilisable `useManualSorting` pour éviter la duplication de logique.
+- Nouveau hook `useTransfersSorting` branché sur `app_settings.accounts_sorting`.
+- Persistance Supabase des réordonnancements Transfers (source de vérité serveur), en cohérence avec `operations_sorting`.
+
+#### **Performance du chargement initial**
+
+- `fetchInitialData` ne charge plus toute la table `paid_item_tags`.
+- Les tags sont désormais chargés uniquement pour les `instance_id` réellement récupérés dans `paid_items`.
+
+#### **Configuration et sécurité Supabase**
+
+- Standardisation de la configuration client via variables d'environnement `VITE_SUPABASE_*`.
+- Nettoyage des flux de configuration legacy côté navigateur.
+
+### 🧹 Nettoyage (Chores)
+
+- Nettoyage des dépendances Vite : suppression des doublons entre `dependencies` et `devDependencies`, versions unifiées.
+- Intégration des ajouts récents (tri manuel + RPC transactionnelle) dans `startup/database_complete.sql` pour bootstrap direct.
+- Mise à jour de la documentation projet (`AUDIT_TECHNIQUE.md`, `README.md`, `copilot-instructions.md`).
+
+---
+
 ## [2.6.27] - 2026-02-08
 
 ### 🚀 Améliorations (Enhancements)
@@ -3299,7 +3336,7 @@ P4: Budget ajusté = 500€ - 100€ (P1) - 25€ (P2) = 375€
 
   - **Gestion d'erreurs** :
     - `catch (err)` → `const error = err as Error` (3 occurrences dans useBudget)
-    - Variables d'environnement : `process.env` (supabase.ts)
+    - Variables d'environnement : configuration Supabase côté client (supabase.ts)
 
   - **Formulaires** :
     - Spread `as any` → propriétés explicites (ExpenseRulesEditor, IncomeEditor)

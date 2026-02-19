@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState } from "react";
 import { usePlannerUI } from "../../../hooks/usePlannerUI";
 import { usePlanner } from "../../../hooks/usePlanner";
 import { useError } from "../../../contexts/ErrorContext";
@@ -18,7 +18,6 @@ import {
   CategoryDef,
   OperationFilters,
 } from "../../../types";
-import { arrayMove } from "@dnd-kit/sortable";
 import { logger } from "../../../services/logger";
 
 // Imports UI Atomic (Generic)

@@ -33,7 +33,7 @@ import { OperationFilters } from "../../types";
  * - **flux**: "ALL" → Afficher dépenses ET revenus
  * - **source**: "VARIABLE" → Focus sur les transactions variables (suivi réel)
  * - **status**: "REAL" → Opérations pointées uniquement (pas les "en attente")
- * - **extra**: "EXCLUDE" → Exclure les dépenses hors budget (vue budget normal)
+ * - **nature**: "EXCLUDE" → Exclure les dépenses hors budget (vue budget normal)
  * - **transfer**: "EXCLUDE" → Masquer les virements internes (mouvements entre comptes)
  * - **salary**: "EXCLUDE" → Masquer les salaires (revenus structurels)
  * - **accountIds**: [] → Tous les comptes (pas de filtrage)
@@ -44,7 +44,7 @@ import { OperationFilters } from "../../types";
  *
  * **Cas d'usage typiques :**
  * - Vue "Budget mensuel" : Voir toutes les dépenses variables réelles
- * - Vue "Suivi Extra" : Changer `extra` à "ONLY" pour voir uniquement hors budget
+ * - Vue "Suivi Extra" : Changer `nature` à "ONLY" pour voir uniquement hors budget
  * - Vue "Revenus" : Changer `flux` à "INCOME" + `source` à "ALL"
  * - Vue "En attente" : Changer `status` à "WAITING"
  *

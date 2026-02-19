@@ -95,7 +95,7 @@ export const DataListRow: React.FC<DataListRowProps> = ({
         </div>
       ) : icon ? (
         <div className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center bg-indigo-50 text-indigo-600 rounded-lg border border-indigo-100">
-          {React.isValidElement(icon) ? React.cloneElement(icon as React.ReactElement, { size: 20 }) : icon}
+          {React.isValidElement(icon) ? React.cloneElement(icon as React.ReactElement<{ size?: number }>, { size: 20 }) : icon}
         </div>
       ) : null}
 

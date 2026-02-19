@@ -25,6 +25,7 @@
  */
 import { logger } from "../../services/logger";
 import { formatDatabaseError } from "../../services/errorFormatter";
+import type { Account } from "../../types";
 import {
   apiToggleUserAuthorization,
   apiUpdateUserNotes,
@@ -105,127 +106,109 @@ import {
  * // → API call + reload automatique + error handling
  * ```
  */
-export const useBudgetActions = (loadData: (silent?: boolean) => Promise<void>, setErrorMessage: (message: string | null) => void) => {
+export const useBudgetActions = (
+  loadData: (silent?: boolean) => Promise<void>,
+  setErrorMessage: (message: string) => void,
+  onUpsertAccountCallback?: (account: Account) => void
+) => {
   /**
-   * Wrapper HOF pour les opérations CRUD avec rechargement automatique.
+   * HOF pour wrapper les fonctions CRUD avec logging et rechargement.
    *
-   * @description
-   * Pattern de composition fonctionnelle qui décore une fonction API avec :
-   * 1. **Logging structuré** : Trace début/fin/erreur avec contexte
-   * 2. **Rechargement automatique** : `loadData(true)` en mode silencieux après succès
-   * 3. **Error handling centralisé** : Formatage + affichage des erreurs DB
-   * 4. **Retour uniforme** : Format `{ data, error }` comme Supabase
-   *
-   * **Workflow :**
-   * ```
-   * 1. Log opération démarrée (avec args)
-   * 2. Exécution fonction API
-   * 3. Log résultat API
-   * 4. Vérification erreur (throw si res.error)
-   * 5. Rechargement silencieux loadData(true)
-   * 6. Log succès
-   * 7. Retour résultat
-   *    OU
-   * 8. Catch erreur → Format → Set error message → Retour { error }
-   * ```
-   *
-   * **Pourquoi HOF plutôt que middleware ?**
-   * - Plus simple à comprendre (pas de chaîne de responsabilité)
-   * - Composable facilement (on peut ajouter d'autres wrappers)
-   * - TypeScript-friendly (préserve les types)
-   *
-   * @param {Function} fn - Fonction API à wrapper (ex: apiUpsertConfig)
-   * @returns {Function} Fonction wrappée avec reload automatique
-   *
-   * @example
-   * ```tsx
-   * // Wrapper une fonction API
-   * const wrappedUpsert = wrapCrudWithReload(apiUpsertConfig);
-   *
-   * // Utilisation transparente
-   * await wrappedUpsert(config);
-   * // → apiUpsertConfig(config) + reload + error handling
-   * ```
+   * @param {Function} apiFunction - Fonction API à wrapper (ex: apiUpsertConfig)
+   * @param {string} operationName - Nom de l'opération pour les logs (ex: "Upsert Config")
+   * @param {boolean} [reloadOnSuccess=true] - Recharger les données après succès
+   * @returns {Function} Fonction wrappée
    */
-  const wrapCrudWithReload =
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    <T = unknown>(fn: (...args: any[]) => Promise<T>) =>
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      async (...args: any[]): Promise<T> => {
-        logger.log("🔧 wrapCrudWithReload: Opération en cours", {
-          functionName: fn.name,
-          argsCount: args.length,
-        });
+  type ApiResult = { data?: unknown; error?: unknown };
 
-        try {
-          // Exécution de la fonction API
-          const res = await fn(...args);
-          logger.log("🔧 wrapCrudWithReload: Résultat API", {
-            hasError: !!res?.error,
-            hasData: !!res?.data,
-          });
-
-          // Vérification du résultat
-          if (res && res.error) throw res.error;
-
-          // Rechargement silencieux des données
-          logger.log("🔧 wrapCrudWithReload: Appel de loadData...");
-          await loadData(true);
-          logger.log("🔧 wrapCrudWithReload: loadData terminé");
-
-          return res;
-        } catch (err) {
-          // Gestion centralisée des erreurs
-          const error = err as Error & { code?: string; details?: unknown };
-          logger.error("❌ wrapCrudWithReload: Erreur", {
-            message: error.message,
-            code: error.code,
-            details: error.details,
-          });
-
-          // Formatage pour l'utilisateur
-          const userMessage = formatDatabaseError(err.message || "Erreur lors de l'opération");
-          setErrorMessage(userMessage);
-
-          return { error: err };
+  const wrapCrudWithReload = <T extends (...args: unknown[]) => Promise<ApiResult>>(apiFunction: T, operationName: string, reloadOnSuccess = true) => {
+    return (async (...args: Parameters<T>): Promise<{ data: unknown; error: unknown }> => {
+      logger.log(`📡 API: Début ${operationName}`, args);
+      try {
+        const result = await apiFunction(...args);
+        if (result.error) {
+          const rawMessage =
+            typeof result.error === "string" ? result.error : ((result.error as { message?: string } | null | undefined)?.message ?? "Erreur base de données");
+          const formattedError = formatDatabaseError(rawMessage);
+          logger.error(`❌ API: Erreur ${operationName}`, formattedError);
+          setErrorMessage(formattedError);
+          return { data: null, error: new Error(formattedError) };
         }
-      };
+        logger.log(`✅ API: Succès ${operationName}`, "data" in result ? (result as ApiResult).data : null);
+        if (reloadOnSuccess) {
+          await loadData(true);
+        }
 
-  // Exposition des actions wrappées
+        // Appel du callback spécifique pour upsertAccount
+        const maybeData = (result as ApiResult).data;
+        if (operationName === "Upsert Account" && onUpsertAccountCallback && Array.isArray(maybeData) && maybeData.length > 0) {
+          onUpsertAccountCallback(maybeData[0] as Account);
+        }
+
+        // Important: conserver la forme de retour originale (ex: { count } pour imports)
+        return result as unknown as { data: unknown; error: unknown };
+      } catch (err) {
+        const error = err as Error;
+        const formattedError = `Erreur inconnue lors de l'opération ${operationName}: ${error.message}`;
+        logger.error(`❌ API: Exception ${operationName}`, formattedError, error);
+        setErrorMessage(formattedError);
+        return { data: null, error };
+      }
+    }) as T;
+  };
+
+  // Wrapper toutes les actions CRUD
+  const upsertConfig = wrapCrudWithReload(apiUpsertConfig, "Upsert Config");
+  const deleteConfig = wrapCrudWithReload(apiDeleteConfig, "Delete Config");
+  const upsertIncome = wrapCrudWithReload(apiUpsertIncome, "Upsert Income");
+  const deleteIncome = wrapCrudWithReload(apiDeleteIncome, "Delete Income");
+  const upsertCategory = wrapCrudWithReload(apiUpsertCategory, "Upsert Category");
+  const deleteCategory = wrapCrudWithReload(apiDeleteCategory, "Delete Category");
+  const upsertPerson = wrapCrudWithReload(apiUpsertPerson, "Upsert Person");
+  const deletePerson = wrapCrudWithReload(apiDeletePerson, "Delete Person");
+  const upsertAccount = wrapCrudWithReload(apiUpsertAccount, "Upsert Account");
+  const deleteAccount = wrapCrudWithReload(apiDeleteAccount, "Delete Account");
+  const upsertLabel = wrapCrudWithReload(apiUpsertLabel, "Upsert Label");
+  const deleteLabel = wrapCrudWithReload(apiDeleteLabel, "Delete Label");
+  const importLabels = wrapCrudWithReload(apiImportLabels, "Import Labels");
+  const importVirLabels = wrapCrudWithReload(apiImportVirLabels, "Import VIR Labels");
+  const upsertTag = wrapCrudWithReload(apiUpsertTag, "Upsert Tag");
+  const deleteTag = wrapCrudWithReload(apiDeleteTag, "Delete Tag");
+
   return {
     // Utilisateurs autorisés
-    toggleUserAuthorization: wrapCrudWithReload(apiToggleUserAuthorization),
-    updateUserNotes: wrapCrudWithReload(apiUpdateUserNotes),
-    deleteAuthorizedUser: wrapCrudWithReload(apiDeleteAuthorizedUser),
+    toggleUserAuthorization: wrapCrudWithReload(apiToggleUserAuthorization, "Toggle User Authorization"),
+    updateUserNotes: wrapCrudWithReload(apiUpdateUserNotes, "Update User Notes"),
+    deleteAuthorizedUser: wrapCrudWithReload(apiDeleteAuthorizedUser, "Delete Authorized User"),
 
     // Dépenses récurrentes
-    upsertConfig: wrapCrudWithReload(apiUpsertConfig),
-    deleteConfig: wrapCrudWithReload(apiDeleteConfig),
+    upsertConfig,
+    deleteConfig,
 
     // Revenus récurrents
-    upsertIncome: wrapCrudWithReload(apiUpsertIncome),
-    deleteIncome: wrapCrudWithReload(apiDeleteIncome),
+    upsertIncome,
+    deleteIncome,
 
     // Catégories
-    upsertCategory: wrapCrudWithReload(apiUpsertCategory),
-    deleteCategory: wrapCrudWithReload(apiDeleteCategory),
+    upsertCategory,
+    deleteCategory,
 
     // Personnes
-    upsertPerson: wrapCrudWithReload(apiUpsertPerson),
-    deletePerson: wrapCrudWithReload(apiDeletePerson),
+    upsertPerson,
+    deletePerson,
 
     // Comptes
-    upsertAccount: wrapCrudWithReload(apiUpsertAccount),
-    deleteAccount: wrapCrudWithReload(apiDeleteAccount),
+    upsertAccount,
+    deleteAccount,
 
     // Libellés
-    upsertLabel: wrapCrudWithReload(apiUpsertLabel),
-    deleteLabel: wrapCrudWithReload(apiDeleteLabel),
-    importLabels: wrapCrudWithReload(apiImportLabels),
-    importVirLabels: wrapCrudWithReload(apiImportVirLabels),
+    upsertLabel,
+    deleteLabel,
+    importLabels,
+    importVirLabels,
 
     // Tags
-    upsertTag: wrapCrudWithReload(apiUpsertTag),
-    deleteTag: wrapCrudWithReload(apiDeleteTag),
+    upsertTag,
+    deleteTag,
   };
 };

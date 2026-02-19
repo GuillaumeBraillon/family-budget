@@ -597,15 +597,27 @@ L'application a subi plusieurs refactorings majeurs :
    - Badge amber "INTÉRÊTS" vs bleu "💰 ÉPARGNE"
    - Exclusion virements internes des calculs budgétaires
 
-**Version actuelle :** 2.5.0 (9 janvier 2026)
+9. **Alignement Tri Manuel Operations/Transfers (v2.7.0)** : Unification complète du drag & drop
+  - `operations_sorting` (Operations) et `accounts_sorting` (Transfers) comme sources de vérité Supabase
+  - Hook générique `useManualSorting` pour éviter la duplication
+  - Hook `useTransfersSorting` dédié avec même UX que `useOperationsSorting`
+
+10. **Atomicité transactionnelle des Tags (v2.7.0)** : Écritures robustes `paid_items` + `paid_item_tags`
+  - RPC PostgreSQL `upsert_paid_item_with_tags` (transaction unique)
+  - Validation SQL : somme tags ≤ montant total, montants tags strictement positifs
+  - Refactor `apiCrud.ts` pour appeler la RPC au lieu du pattern `DELETE + INSERT` côté client
+
+11. **Optimisation chargement initial (v2.7.0)** : Réduction du payload des tags
+  - `fetchInitialData` charge uniquement les `paid_item_tags` liés aux `paid_items` récupérés
+  - Évite le scan complet de la table `paid_item_tags`
+
+**Version actuelle :** 2.7.0 (19 février 2026)
 **Qualité code :** 0 erreurs ESLint, 0 warnings, TypeScript strict
 
 **Dernières fonctionnalités ajoutées :**
 
-- Affichage détaillé des opérations réelles (pointées) dans BalancesTable avec ventilation Standard/Extra
-- ClickableAmount : Navigation filtrée contextuelle vers vue Opérations
-- Persistance du choix de stratégie de gestion des dépassements budgétaires
-- Support des intérêts d'épargne et ajustements exceptionnels
-- Accordéon "Options Avancées" dans tous les formulaires pour hiérarchie visuelle
-- Suivi des retards (délais) dans statistiques budgétaires
-- Exclusion systématique des virements internes des calculs de consommation
+- Tri manuel unifié Operations/Transfers avec persistance Supabase (`operations_sorting` / `accounts_sorting`)
+- Hook générique `useManualSorting` + hook spécialisé `useTransfersSorting`
+- RPC transactionnelle `upsert_paid_item_with_tags` pour garantir l'atomicité des écritures tags
+- Optimisation `fetchInitialData` : chargement scoppé des `paid_item_tags`
+- Nettoyage dépendances Vite (versions unifiées, doublons supprimés)

@@ -3,22 +3,20 @@ import { logger } from "./logger";
 
 /**
  * Récupère la configuration Supabase.
- * Priorité 1 : LocalStorage (ce qui fonctionnait avant)
- * Priorité 2 : Variables d'environnement .env (build time)
+ * Priorité 1 : Variables d'environnement .env (build time)
+ * Note: Le support localStorage a été supprimé pour des raisons de sécurité et de cohérence.
  */
 export const getSupabaseConfig = () => {
-  // Priorité au localStorage (système qui fonctionnait)
-  let projectId = localStorage.getItem("supabase_project_id") || "";
-  let key = localStorage.getItem("supabase_key") || "";
+  // Variables d'environnement Vite (build time)
+  const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID?.trim() || "";
+  const key = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim() || "";
 
-  // Fallback sur les variables d'environnement
-  type ProcessEnv = { env?: Record<string, string | undefined> };
-  if (!projectId) projectId = (process as ProcessEnv).env?.SUPABASE_PROJECT_ID || "";
-  if (!key) key = (process as ProcessEnv).env?.SUPABASE_ANON_KEY || "";
+  // Construction standard de l'URL Supabase
+  const url = projectId ? `https://${projectId}.supabase.co` : "";
 
-  const url = projectId ? `https://${projectId.trim()}.supabase.co` : "";
+  const isFromEnv = !!projectId && !!key;
 
-  return { url, key, projectId };
+  return { url, key, projectId, isFromEnv };
 };
 
 /**

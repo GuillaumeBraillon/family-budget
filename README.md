@@ -194,7 +194,7 @@ Courses alimentaires : 150€
 
 - **Type de compte** : Tous / Courants / Épargne / Compte spécifique
 - **Motif** : Filtrage par libellé récurrent
-- **Inclure opérations directes** : Toggle épargne
+- **Filtre intérêts** : Tous / Intérêts uniquement / Sans intérêts
 
 #### 🎯 Tri Manuel (Drag & Drop)
 
@@ -214,10 +214,9 @@ Réorganisez l'ordre d'affichage des virements pour prioriser visuellement.
   - Semaines calendaires (lundi-dimanche)
   - Découpage personnalisé (N parts égales)
 - **Valeur de période** : Nombre de jours ou de parts
-- **Connexion base de données** :
-  - Project ID Supabase
-  - Statut de connexion
-  - Réinitialisation (déconnexion)
+- **Configuration base de données** :
+  - Variables d'environnement Supabase (`VITE_SUPABASE_PROJECT_ID`, `VITE_SUPABASE_ANON_KEY`)
+  - Statut de configuration détecté automatiquement au démarrage
 
 #### 👥 Membres du Foyer
 
@@ -347,7 +346,9 @@ Le script crée automatiquement :
 - ✅ 12 tables principales
 - ✅ Tous les index de performance
 - ✅ Politiques Row Level Security
-- ✅ Triggers et contraintes
+- ✅ Contraintes, colonnes de tri manuel (`operations_sorting` / `accounts_sorting`) et fonction RPC transactionnelle pour les tags
+
+Ce fichier inclut désormais les évolutions récentes (tri manuel déterministe + RPC transactionnelle) pour permettre un bootstrap complet sans rejouer des migrations historiques.
 
 **Détails** : Voir [startup/database_complete.sql](./startup/database_complete.sql) (commenté)
 

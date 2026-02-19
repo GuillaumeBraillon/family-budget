@@ -117,7 +117,7 @@ export const CashFlowCard: React.FC<AnalyticsProps> = ({ data, onNavigate }) => 
       </CardHeader>
       <CardContent className="flex-1 pt-0">
         <div className="h-32 mb-4 w-full relative min-h-[128px]">
-          {ready && (
+          {_isChartReady && (
             <ResponsiveContainer width="99%" height="100%" minWidth={10}>
               <BarChart data={chartData} layout="vertical" barSize={20}>
                 <XAxis type="number" hide />
@@ -203,7 +203,7 @@ export const ExtrasCard: React.FC<AnalyticsProps> = ({ data, onNavigate }) => {
 export const TopExpensesCard: React.FC<AnalyticsProps> = ({ data, onNavigate: _onNavigate }) => {
   const [mode, setMode] = useState<"CAT" | "BEN">("CAT");
   // Hack pour éviter le rendu Recharts avant que le DOM ne soit prêt
-  const [_isChartReady2, setIsChartReady] = useState(false);
+  const [_isChartReady, setIsChartReady] = useState(false);
   useEffect(() => {
     const timer = requestAnimationFrame(() => setIsChartReady(true));
     return () => cancelAnimationFrame(timer);
@@ -237,7 +237,7 @@ export const TopExpensesCard: React.FC<AnalyticsProps> = ({ data, onNavigate: _o
       </CardHeader>
       <CardContent className="flex-1 pt-0 flex gap-4 items-center">
         <div className="h-28 w-28 flex-shrink-0 relative">
-          {ready && (
+          {_isChartReady && (
             <ResponsiveContainer width="100%" height="100%" minWidth={10}>
               <PieChart>
                 <Pie data={displayData} cx="50%" cy="50%" innerRadius={35} outerRadius={50} paddingAngle={5} dataKey="value">

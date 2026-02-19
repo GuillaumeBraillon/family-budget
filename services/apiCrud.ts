@@ -368,6 +368,7 @@ export const apiUpdateSettings = async (settings: AppSettings) =>
     period_value: Math.floor(Number(settings.period_value)),
     carryover_strategy: settings.carryover_strategy || "NEXT_PERIOD",
     operations_sorting: settings.operations_sorting || [],
+    accounts_sorting: settings.accounts_sorting || [],
   });
 
 /**
@@ -459,44 +460,23 @@ export const apiSetPaidStatus = async (details: PaidItemDetails | null, instance
   });
 
   if (details) {
-    // 1. Upsert du paid_item principal
-    const result = await supabase.from("paid_items").upsert({
-      instance_id: details.instanceId,
-      amount: details.amount,
-      payment_date: details.paymentDate,
-      account_id: details.accountId,
-      beneficiary_id: details.beneficiaryId,
-      label: details.label,
-      category: details.category,
-      sub_category: details.subCategory,
-      type: details.type,
-      is_variable: !!details.isVariable,
-      is_waiting: !!details.isWaiting,
-      is_extra: !!details.isExtra,
-      comments: details.comments || null,
+    // RPC transactionnelle: upsert paid_item + remplacement tags atomique
+    return supabase.rpc("upsert_paid_item_with_tags", {
+      p_instance_id: details.instanceId,
+      p_amount: details.amount,
+      p_payment_date: details.paymentDate,
+      p_account_id: details.accountId,
+      p_beneficiary_id: details.beneficiaryId,
+      p_label: details.label,
+      p_category: details.category,
+      p_sub_category: details.subCategory || null,
+      p_type: details.type,
+      p_is_variable: !!details.isVariable,
+      p_is_waiting: !!details.isWaiting,
+      p_is_extra: !!details.isExtra,
+      p_comments: details.comments || null,
+      p_tag_amounts: details.tagAmounts === undefined ? null : details.tagAmounts,
     });
-
-    // 2. Gérer les tagAmounts si présents
-    if (details.tagAmounts && details.tagAmounts.length > 0) {
-      // Supprimer les anciens tagAmounts
-      await supabase.from("paid_item_tags").delete().eq("paid_item_instance_id", details.instanceId);
-
-      // Insérer les nouveaux
-      const tagAmountsToInsert = details.tagAmounts.map((ta) => ({
-        id: `tag_amount_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        paid_item_instance_id: details.instanceId,
-        tag_id: ta.tagId,
-        amount: ta.amount,
-        is_extra: !!ta.isExtra,
-      }));
-
-      await supabase.from("paid_item_tags").insert(tagAmountsToInsert);
-    } else if (details.tagAmounts && details.tagAmounts.length === 0) {
-      // Si tagAmounts est vide explicitement, supprimer les anciens
-      await supabase.from("paid_item_tags").delete().eq("paid_item_instance_id", details.instanceId);
-    }
-
-    return result;
   } else {
     // La suppression du paid_item déclenche automatiquement la suppression des paid_item_tags (CASCADE)
     return supabase.from("paid_items").delete().eq("instance_id", instanceId);
@@ -523,44 +503,22 @@ export const apiDeleteTransfer = async (id: string) => supabase.from("transfers"
  * Opérations sur les Transactions Variables (Suivi Réel)
  */
 export const apiUpsertVariableTransaction = async (transaction: VariableTransaction) => {
-  // 1. Upsert de la transaction principale
-  const result = await supabase.from("paid_items").upsert({
-    instance_id: transaction.id,
-    payment_date: transaction.date,
-    label: transaction.label,
-    amount: transaction.amount,
-    category: transaction.category,
-    sub_category: transaction.subCategory || null,
-    account_id: transaction.accountId,
-    beneficiary_id: transaction.beneficiaryId || null,
-    type: transaction.type,
-    is_variable: true,
-    is_waiting: !!transaction.isWaiting,
-    is_extra: !!transaction.isExtra,
-    comments: transaction.comments || null,
+  return supabase.rpc("upsert_paid_item_with_tags", {
+    p_instance_id: transaction.id,
+    p_amount: transaction.amount,
+    p_payment_date: transaction.date,
+    p_account_id: transaction.accountId,
+    p_beneficiary_id: transaction.beneficiaryId || null,
+    p_label: transaction.label,
+    p_category: transaction.category,
+    p_sub_category: transaction.subCategory || null,
+    p_type: transaction.type,
+    p_is_variable: true,
+    p_is_waiting: !!transaction.isWaiting,
+    p_is_extra: !!transaction.isExtra,
+    p_comments: transaction.comments || null,
+    p_tag_amounts: transaction.tagAmounts === undefined ? null : transaction.tagAmounts,
   });
-
-  // 2. Gérer les tagAmounts si présents
-  if (transaction.tagAmounts && transaction.tagAmounts.length > 0) {
-    // Supprimer les anciens tagAmounts
-    await supabase.from("paid_item_tags").delete().eq("paid_item_instance_id", transaction.id);
-
-    // Insérer les nouveaux
-    const tagAmountsToInsert = transaction.tagAmounts.map((ta) => ({
-      id: `tag_amount_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      paid_item_instance_id: transaction.id,
-      tag_id: ta.tagId,
-      amount: ta.amount,
-      is_extra: !!ta.isExtra,
-    }));
-
-    await supabase.from("paid_item_tags").insert(tagAmountsToInsert);
-  } else if (transaction.tagAmounts && transaction.tagAmounts.length === 0) {
-    // Si tagAmounts est vide explicitement, supprimer les anciens
-    await supabase.from("paid_item_tags").delete().eq("paid_item_instance_id", transaction.id);
-  }
-
-  return result;
 };
 
 export const apiDeleteVariableTransaction = async (id: string) => supabase.from("paid_items").delete().eq("instance_id", id);

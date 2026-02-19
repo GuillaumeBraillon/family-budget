@@ -20,6 +20,7 @@
  * - services/api : apiUpsertAccount pour persistence
  * - types : Account pour le typage
  */
+import type { Dispatch, MutableRefObject, SetStateAction } from "react";
 import { Account, VariableTransaction, Transfer, PaidItemDetails } from "../../types";
 import { apiUpsertAccount } from "../../services/api";
 
@@ -76,7 +77,7 @@ type BudgetData = {
   authorizedUsers: unknown[];
 };
 
-export const useBudgetBalances = (budgetDataRef: React.MutableRefObject<BudgetData>, setBudgetData: React.Dispatch<React.SetStateAction<BudgetData>>) => {
+export const useBudgetBalances = (budgetDataRef: MutableRefObject<BudgetData>, setBudgetData: Dispatch<SetStateAction<BudgetData>>) => {
   /**
    * Ajuste le solde d'un compte bancaire d'un montant delta.
    *

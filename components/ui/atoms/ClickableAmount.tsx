@@ -78,7 +78,7 @@ export const ClickableAmount: React.FC<ClickableAmountProps> = ({ children, date
   const defaultFilters: Partial<OperationFilters> = {
     flux: "ALL",
     source: "ALL",
-    extra: "ALL",
+    nature: "ALL",
     transfer: "EXCLUDE", // Masquer les virements internes par défaut
     salary: "EXCLUDE", // Masquer les salaires par défaut (revenus structurels)
     beneficiaryIds: [], // Tous les bénéficiaires

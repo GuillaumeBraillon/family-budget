@@ -126,7 +126,7 @@ export const useFilterBarLogic = (
         flux: "ALL",
         source: "VARIABLE",
         status: "REAL",
-        extra: "EXCLUDE",
+        nature: "EXCLUDE",
         transfer: "EXCLUDE",
         salary: "EXCLUDE",
         accountIds: [],

@@ -5,4 +5,6 @@
  */
 export { useTransfersFilters } from "./useTransfersFilters";
 export { useTransfersData, isTransfer } from "./useTransfersData";
-export type { CombinedOperation, TransfersStats } from "./useTransfersData";
+export { useTransfersSorting } from "./useTransfersSorting";
+export type { CombinedOperation, TransfersStats, TransfersHistoryEntry } from "./useTransfersData";
+export type { TransferSortKey, TransferSortOption, SortOrder } from "./useTransfersSorting";

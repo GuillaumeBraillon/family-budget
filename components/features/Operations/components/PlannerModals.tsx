@@ -2,19 +2,34 @@ import React, { useState } from "react";
 import { X, Check, MessageSquare } from "lucide-react";
 import { Modal } from "../../../ui/Modal";
 import { FormField } from "../../../ui/atoms/FormField";
-import { Account, PaidItemDetails, Tag } from "../../../../types";
+import { Account, PaidItemDetails, Tag, PlannedItem } from "../../../../types";
 import { useError } from "../../../../contexts/ErrorContext";
 import { AdvancedOptionsAccordion } from "../../../ui/molecules/AdvancedOptionsAccordion";
 
+type ConfirmModalState = {
+  isOpen: boolean;
+  item: PlannedItem | null;
+  amount: number;
+  paymentDate: string;
+  accountId: string;
+  label: string;
+  comments: string;
+};
+
+type UncheckModalState = {
+  isOpen: boolean;
+  item: PlannedItem | null;
+};
+
 interface PlannerModalsProps {
-  confirmModal: { instanceId: string; newStatus: boolean } | null;
-  uncheckModal: { instanceId: string; paidDetails: PaidItemDetails } | null;
+  confirmModal: ConfirmModalState;
+  uncheckModal: UncheckModalState;
   accounts: Account[];
   tags?: Tag[];
   onTogglePaid: (details: PaidItemDetails | null, instanceId: string) => void;
   onCloseConfirm: () => void;
   onCloseUncheck: () => void;
-  setConfirmModal: (data: { instanceId: string; newStatus: boolean } | null) => void;
+  setConfirmModal: React.Dispatch<React.SetStateAction<ConfirmModalState>>;
 }
 
 export const PlannerModals: React.FC<PlannerModalsProps> = ({

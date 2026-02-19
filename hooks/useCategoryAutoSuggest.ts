@@ -106,7 +106,10 @@ export const useCategoryAutoSuggest = () => {
     logger.debug("auto-suggest", `Recherche suggestion pour: "${labelName}"`);
 
     try {
-      const { data, error } = await supabase.rpc("suggest_category_from_label", { p_label_name: labelName }).maybeSingle();
+      const { data, error } = (await supabase.rpc("suggest_category_from_label", { p_label_name: labelName }).maybeSingle()) as unknown as {
+        data: CategorySuggestion | null;
+        error: unknown;
+      };
 
       if (error) throw error;
 

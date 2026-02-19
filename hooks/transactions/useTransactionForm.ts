@@ -103,7 +103,7 @@ interface UseTransactionFormReturn {
 
   // --- COMPUTED VALUES ---
   isExpense: boolean;
-  themeColor: string;
+  themeColor: "indigo" | "emerald";
   checkingAccounts: Account[];
   standardSuggestions: string[];
 
@@ -208,7 +208,7 @@ export const useTransactionForm = ({
    * - EXPENSE : Indigo (dépense)
    * - INCOME : Emerald (revenu)
    */
-  const themeColor = isExpense ? (isRefund ? "emerald" : "indigo") : "emerald";
+  const themeColor: "indigo" | "emerald" = isExpense ? (isRefund ? "emerald" : "indigo") : "emerald";
 
   /**
    * Suggestions de libellés pour mode STANDARD.
@@ -367,7 +367,6 @@ export const useTransactionForm = ({
       isExtra, // Toggle global au niveau opération
       comments: comments.trim() || undefined,
       tagAmounts: selectedTagAmounts.length > 0 ? selectedTagAmounts : undefined,
-      position: editingTransaction?.position,
     };
 
     onSuccess();

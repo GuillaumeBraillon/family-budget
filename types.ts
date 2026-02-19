@@ -109,10 +109,12 @@ export interface VariableTransaction {
   isExtra: boolean; // True = Hors budget
   comments?: string;
   tagAmounts?: TagAmount[]; // Ventilation des montants par tag
+  position?: number; // Tri manuel (legacy/compat)
 }
 
 export type PeriodType = "FIXED_DAYS" | "CALENDAR_WEEKS" | "CUSTOM_SPLIT";
 export type CarryoverStrategy = "NEXT_PERIOD" | "SPREAD_REMAINING";
+export type SortOrder = "asc" | "desc";
 
 export interface AppSettings {
   monthly_envelope: number;
@@ -122,6 +124,7 @@ export interface AppSettings {
   savings_labels?: string[];
   variable_labels?: string[];
   operations_sorting?: string[];
+  accounts_sorting?: string[];
 }
 
 export interface ExpenseConfig {

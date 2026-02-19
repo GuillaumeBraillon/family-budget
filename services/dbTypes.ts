@@ -121,7 +121,6 @@ export interface DbPaidItem {
   comments?: string;
   date?: string; // Alias de payment_date pour compatibilité
   tag_ids?: string[];
-  position?: number;
 }
 
 export interface DbTransfer {
@@ -132,7 +131,6 @@ export interface DbTransfer {
   source_account_id: string;
   destination_account_id: string;
   created_at?: string;
-  position?: number;
   is_interest?: boolean;
 }
 
@@ -143,4 +141,5 @@ export interface DbSettings {
   period_value: number;
   carryover_strategy?: string;
   operations_sorting?: string[];
+  accounts_sorting?: string[];
 }

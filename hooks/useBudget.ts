@@ -280,6 +280,26 @@ export const useBudget = () => {
   };
 
   /**
+   * Met à jour le tri manuel des comptes (Configuration > Comptes).
+   *
+   * @param {string[]} newSorting - Nouvel ordre complet des account_ids
+   */
+  const updateAccountsSorting = async (newSorting: string[]) => {
+    const newSettings = { ...budgetDataRef.current.settings, accounts_sorting: newSorting };
+
+    // Mise à jour optimiste
+    setBudgetData((prev) => ({ ...prev, settings: newSettings }));
+
+    try {
+      const { error: apiErr } = await apiUpdateSettings(newSettings);
+      if (apiErr) throw apiErr;
+    } catch (err) {
+      setErrorMessage((err as Error).message || "Erreur lors de la mise à jour du tri des comptes");
+      loadData();
+    }
+  };
+
+  /**
    * Pointe ou dépointe une opération récurrente pour un mois donné.
    *
    * @description
@@ -367,7 +387,7 @@ export const useBudget = () => {
     // On ne touche plus à paidItems.position
 
     const currentSorting = budgetDataRef.current.settings.operations_sorting || [];
-    let newSorting = [...currentSorting];
+    const newSorting = [...currentSorting];
 
     // Si l'item n'est pas dans la liste, on l'ajoute
     if (!newSorting.includes(item.instanceId)) {
@@ -488,6 +508,7 @@ export const useBudget = () => {
       setPaidStatus,
       moveItem,
       updateSettings,
+      updateAccountsSorting,
       upsertTransfer,
       deleteTransfer,
       upsertVariableTransaction,

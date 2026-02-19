@@ -22,15 +22,12 @@
  * - localStorage : Persistance navigateur
  */
 import { useState, useEffect } from "react";
-import { SortOrder } from "../../components/ui/molecules/ListSorter";
 
 // Clés localStorage pour la persistance
 const STORAGE_KEYS = {
   ACCOUNT_TYPE: "transfersView_accountType",
   SPECIFIC_ACCOUNT: "transfersView_specificAccount",
   INTEREST_FILTER: "transfersView_interestFilter",
-  SORT_KEY: "transfersView_sortKey",
-  SORT_ORDER: "transfersView_sortOrder",
 } as const;
 
 /**
@@ -49,8 +46,6 @@ const STORAGE_KEYS = {
  * - accountTypeFilter : "ALL"
  * - specificAccountId : null
  * - includeDirectOps : true
- * - sortKey : "manual"
- * - sortOrder : "asc"
  * - selectedMotif : null (pas de persistance)
  *
  * @returns {Object} État et setters des filtres
@@ -60,10 +55,6 @@ const STORAGE_KEYS = {
  * @returns {Function} setSpecificAccountId - Modifier le compte spécifique
  * @returns {boolean} includeDirectOps - Inclure les opérations directes (intérêts, frais)
  * @returns {Function} setIncludeDirectOps - Modifier l'inclusion des opérations directes
- * @returns {string} sortKey - Clé de tri actuelle ("manual" | "date" | "amount" | "label")
- * @returns {Function} setSortKey - Modifier la clé de tri
- * @returns {SortOrder} sortOrder - Ordre de tri ("asc" | "desc")
- * @returns {Function} setSortOrder - Modifier l'ordre de tri
  * @returns {string | null} selectedMotif - Motif/libellé sélectionné pour filtrage
  * @returns {Function} setSelectedMotif - Modifier le motif sélectionné
  *
@@ -74,8 +65,7 @@ const STORAGE_KEYS = {
  *   setAccountTypeFilter,
  *   specificAccountId,
  *   includeDirectOps,
- *   sortKey,
- *   sortOrder
+ *   selectedMotif
  * } = useTransfersFilters();
  *
  * // Filtrer uniquement les comptes épargne
@@ -84,9 +74,6 @@ const STORAGE_KEYS = {
  * // Afficher un compte spécifique
  * setSpecificAccountId('acc_123');
  *
- * // Changer le tri
- * setSortKey('date');
- * setSortOrder('desc');
  * ```
  */
 export const useTransfersFilters = () => {
@@ -119,22 +106,6 @@ export const useTransfersFilters = () => {
       return saved;
     }
     return "EXCLUDE";
-  });
-
-  /**
-   * Clé de tri actuelle (manuel, date, montant, motif).
-   * Valeur par défaut : "manual"
-   */
-  const [sortKey, setSortKey] = useState<string>(() => {
-    return localStorage.getItem(STORAGE_KEYS.SORT_KEY) || "manual";
-  });
-
-  /**
-   * Ordre de tri (ascendant / descendant).
-   * Valeur par défaut : "asc"
-   */
-  const [sortOrder, setSortOrder] = useState<SortOrder>(() => {
-    return (localStorage.getItem(STORAGE_KEYS.SORT_ORDER) as SortOrder) || "asc";
   });
 
   /**
@@ -171,20 +142,6 @@ export const useTransfersFilters = () => {
     localStorage.setItem(STORAGE_KEYS.INTEREST_FILTER, interestFilter);
   }, [interestFilter]);
 
-  /**
-   * Sauvegarde automatique de la clé de tri.
-   */
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.SORT_KEY, sortKey);
-  }, [sortKey]);
-
-  /**
-   * Sauvegarde automatique de l'ordre de tri.
-   */
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.SORT_ORDER, sortOrder);
-  }, [sortOrder]);
-
   // --- EXPOSITION DE L'API PUBLIQUE ---
 
   return {
@@ -197,11 +154,5 @@ export const useTransfersFilters = () => {
     setInterestFilter,
     selectedMotif,
     setSelectedMotif,
-
-    // Tri
-    sortKey,
-    setSortKey,
-    sortOrder,
-    setSortOrder,
   };
 };

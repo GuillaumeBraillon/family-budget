@@ -44,6 +44,8 @@ interface VariableTransactionFormProps {
   labelsSuggestions?: string[];
   savedLabels?: SavedLabel[];
   editingTransaction?: VariableTransaction | null;
+  initialMode?: "STANDARD";
+  lockMode?: boolean;
 }
 
 export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = ({
@@ -59,6 +61,8 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
   labelsSuggestions = [],
   savedLabels = [],
   editingTransaction,
+  initialMode = "STANDARD",
+  lockMode: _lockMode = false,
 }) => {
   const { showError } = useError();
   // --- HOOKS SPÉCIALISÉS (LOGIQUE DÉLÉGUÉE) ---
@@ -69,7 +73,7 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
     people,
     savedLabels,
     defaultDate,
-    initialMode: "STANDARD",
+    initialMode,
     labelsSuggestions,
     isOpen,
     categories, // Pour résolution des IDs lors de l'auto-suggestion
