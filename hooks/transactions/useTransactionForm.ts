@@ -270,37 +270,39 @@ export const useTransactionForm = ({
    */
   useEffect(() => {
     if (isOpen) {
-      if (editingTransaction) {
-        setMode(initialMode);
-        setType(editingTransaction.type || "EXPENSE");
+      const timer = setTimeout(() => {
+        if (editingTransaction) {
+          setMode(initialMode);
+          setType(editingTransaction.type || "EXPENSE");
 
-        // Gestion du remboursement (montant négatif pour EXPENSE)
-        const rawAmount = editingTransaction.amount;
-        if (editingTransaction.type === "EXPENSE" && rawAmount < 0) {
-          setIsRefund(true);
-          setAmount(Math.abs(rawAmount).toString());
+          // Gestion du remboursement (montant négatif pour EXPENSE)
+          const rawAmount = editingTransaction.amount;
+          if (editingTransaction.type === "EXPENSE" && rawAmount < 0) {
+            setIsRefund(true);
+            setAmount(Math.abs(rawAmount).toString());
+          } else {
+            setIsRefund(false);
+            setAmount(rawAmount.toString());
+          }
+
+          setDate(editingTransaction.date);
+          setLabel(editingTransaction.label);
+
+          setAccountId(editingTransaction.accountId);
+          setComments(editingTransaction.comments || "");
+          setSelectedTagAmounts(editingTransaction.tagAmounts || []);
+
+          setCategory(editingTransaction.category);
+          setSubCategory(editingTransaction.subCategory || "");
+          setBeneficiaryId(editingTransaction.beneficiaryId || defaultBeneficiary);
+          setIsExtra(!!editingTransaction.isExtra);
         } else {
-          setIsRefund(false);
-          setAmount(rawAmount.toString());
+          resetForm();
         }
-
-        setDate(editingTransaction.date);
-        setLabel(editingTransaction.label);
-
-        setAccountId(editingTransaction.accountId);
-        setComments(editingTransaction.comments || "");
-        setSelectedTagAmounts(editingTransaction.tagAmounts || []);
-
-        setCategory(editingTransaction.category);
-        setSubCategory(editingTransaction.subCategory || "");
-        setBeneficiaryId(editingTransaction.beneficiaryId || defaultBeneficiary);
-        setIsExtra(!!editingTransaction.isExtra);
-      } else {
-        resetForm();
-      }
-      setValidationErrors([]);
+      }, 0);
+      return () => clearTimeout(timer);
     }
-  }, [isOpen, editingTransaction, defaultDate, defaultBeneficiary, initialMode, accounts, defaultAccountId, resetForm]);
+  }, [isOpen, editingTransaction, initialMode, defaultBeneficiary, resetForm]);
 
   // --- VALIDATION & SOUMISSION ---
 

@@ -55,7 +55,8 @@ export const MobileTooltip: React.FC<MobileTooltipProps> = ({
       }
 
       if (newLeft !== position.left) {
-        setAdjustedLeft(newLeft);
+        const timer = setTimeout(() => setAdjustedLeft(newLeft), 0);
+        return () => clearTimeout(timer);
       }
     }
   }, [isOpen, position.left]);

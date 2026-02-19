@@ -7,6 +7,43 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.8.1] - 2026-02-19
+
+### 🐛 Corrections de bugs (Bugfixes)
+
+- **Refactoring majeur : Pattern `setState` dans `useEffect`**
+  - Migration de tous les `setState()` synchrones dans `useEffect` vers le pattern `setTimeout(() => setState(), 0)` avec cleanup
+  - Conformité avec la règle stricte `react-hooks/set-state-in-effect` d'ESLint 8.x (prévient les cascades de renders)
+  - **Fichiers modifiés** :
+    - `App.tsx` : Initialisation `plannerContext`
+    - `PeriodSettingsCard.tsx` : Synchronisation avec les props de paramètres
+    - `ExpenseRulesEditor.tsx` : Calcul automatique de `endMonth`
+    - `IncomeEditor.tsx` : Calcul automatique de `endMonth`
+    - `FormInputs.tsx` : Mise à jour des suggestions filtrées (catégories)
+    - `MobileTooltip.tsx` : Ajustement de position du tooltip
+    - `useTransactionForm.ts` : Initialisation du formulaire à l'ouverture
+    - `useTransferForm.ts` : Initialisation et ajustement automatique des montants
+  - Alignement avec les meilleures pratiques React 18+ (déférer les updates hors de la phase de render)
+
+- **Élimination des assignments inutiles**
+  - `AccountManager.tsx` : Refactoring de `iconNode` avec expressions ternaires imbriquées
+  - `FilterDropdown.tsx` : Conversion des `let` mutables en IIFE retournant un objet littéral
+  - `useBalancesRows.ts` : Suppression de branche `else` redondante (variable déjà initialisée à 0), conversion `effectiveTransfer` en IIFE
+  - `useTransfersData.ts` : Simplification de `deltaForAccount` avec expression ternaire unique
+
+- **Nettoyage de code mort**
+  - `useOperationsFilters.ts` : Suppression du ref inutilisé `hasAppliedInitialFilters` et de son import
+  - `useTransactionForm.ts` : Suppression de lignes orphelines dupliquées (parsing error fix)
+  - `ErrorContext.tsx` : Suppression du commentaire `eslint-disable` pour règle inexistante
+
+### 🧹 Nettoyage (Chores)
+
+- Configuration ESLint : Exclusion des fichiers de test (`**/tests/**`, `**/*.test.ts`, `**/*.test.tsx`) et du service worker (`**/public/sw.js`) pour éviter les warnings techniques légitimes.
+- Suppression de l'ancien fichier `.eslintrc.cjs` (format obsolète remplacé par `eslint.config.cjs`).
+- Maintien de `--max-warnings 0` pour le code de production (contrôle qualité strict sur le code applicatif uniquement).
+
+---
+
 ## [2.8.0] - 2026-02-19
 
 ### ✨ Fonctionnalités (Features)
@@ -22,10 +59,6 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
   - `getDefaultAccountId` (tests utilitaire de sélection de compte)
   - `usePlanner` helpers (tests pour la logique Extra / Standard)
 - Mise à jour des scripts `package.json` pour intégrer les checks de format et tests automatiques.
-
-### 🐛 Corrections de bugs (Bugfixes)
-
-- Refactorisation de quelques expressions ternaires orphelines en `if/else` pour satisfaire les règles ESLint plus strictes (prévenir des comportements ambigus et améliorer la lisibilité).
 
 ### 🧹 Nettoyage (Chores)
 

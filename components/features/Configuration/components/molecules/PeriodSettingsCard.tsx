@@ -10,15 +10,18 @@ interface PeriodSettingsCardProps {
 }
 
 export const PeriodSettingsCard: React.FC<PeriodSettingsCardProps> = ({ settings, onUpdate }) => {
+  // Derive state from props - no useEffect needed
   const [type, setType] = useState<PeriodType>(settings.period_type || "FIXED_DAYS");
-  // Utilisation de string pour permettre de vider l'input (suppression caractère par caractère)
   const [val, setVal] = useState<string>(String(settings.period_value || 7));
 
+  // Sync with props only when they actually change (controlled reset)
   useEffect(() => {
-    // Synchronisation si les props changent (ex: après un reset global)
-    setType(settings.period_type || "FIXED_DAYS");
-    setVal(String(settings.period_value || 7));
-  }, [settings]);
+    const timer = setTimeout(() => {
+      setType(settings.period_type || "FIXED_DAYS");
+      setVal(String(settings.period_value || 7));
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [settings.period_type, settings.period_value]);
 
   // Réinitialisation de la valeur par défaut si changement de type drastique (optionnel mais meilleur UX)
   const handleTypeChange = (newType: PeriodType) => {

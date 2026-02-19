@@ -204,23 +204,26 @@ export const useTransferForm = ({ editingTransfer, accounts, savedLabels = [], d
    */
   useEffect(() => {
     if (isOpen) {
-      if (editingTransfer) {
-        setDate(editingTransfer.date);
-        setLabel(editingTransfer.label);
-        setAmount(editingTransfer.amount.toString());
-        setSourceAccountId(editingTransfer.sourceAccountId);
-        setDestinationAccountId(editingTransfer.destinationAccountId);
-        setIsInterest(!!editingTransfer.isInterest);
+      const timer = setTimeout(() => {
+        if (editingTransfer) {
+          setDate(editingTransfer.date);
+          setLabel(editingTransfer.label);
+          setAmount(editingTransfer.amount.toString());
+          setSourceAccountId(editingTransfer.sourceAccountId);
+          setDestinationAccountId(editingTransfer.destinationAccountId);
+          setIsInterest(!!editingTransfer.isInterest);
 
-        // Détection automatique des intérêts depuis le label
-        const labelLower = editingTransfer.label.toLowerCase();
-        if (labelLower.includes("intérêt") || labelLower.includes("ajustement") || labelLower.startsWith("intérêts")) {
-          setIsInterest(true);
+          // Détection automatique des intérêts depuis le label
+          const labelLower = editingTransfer.label.toLowerCase();
+          if (labelLower.includes("intérêt") || labelLower.includes("ajustement") || labelLower.startsWith("intérêts")) {
+            setIsInterest(true);
+          }
+        } else {
+          resetForm();
         }
-      } else {
-        resetForm();
-      }
-      setValidationErrors([]);
+        setValidationErrors([]);
+      }, 0);
+      return () => clearTimeout(timer);
     }
   }, [isOpen, editingTransfer, resetForm]);
 
@@ -236,7 +239,8 @@ export const useTransferForm = ({ editingTransfer, accounts, savedLabels = [], d
     // Si source = ÉPARGNE et destination actuelle n'est pas le compte joint
     if (srcAccount && srcAccount.type === AccountType.SAVINGS && destAccount && !destAccount.isJoint && jointAccount) {
       // Forcer la destination vers le compte joint
-      setDestinationAccountId(jointAccount.id);
+      const timer = setTimeout(() => setDestinationAccountId(jointAccount.id), 0);
+      return () => clearTimeout(timer);
     }
   }, [sourceAccountId, destinationAccountId, accounts]);
 

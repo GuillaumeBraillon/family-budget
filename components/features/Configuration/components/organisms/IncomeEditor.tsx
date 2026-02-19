@@ -84,7 +84,10 @@ export const IncomeEditor: React.FC<IncomeEditorProps> = ({
       const calculatedEnd = `${endYear}-${endMonth}`;
 
       if (formData.endMonth !== calculatedEnd) {
-        setFormData((prev) => ({ ...prev, endMonth: calculatedEnd }));
+        const timer = setTimeout(() => {
+          setFormData((prev) => ({ ...prev, endMonth: calculatedEnd }));
+        }, 0);
+        return () => clearTimeout(timer);
       }
     }
   }, [formData.startMonth, durationMonths, durationMode, formData.isExtra, formData.endMonth]);
@@ -184,12 +187,7 @@ export const IncomeEditor: React.FC<IncomeEditorProps> = ({
 
   const sortedIncomes = useMemo(() => {
     return [...incomeConfigs].sort((a, b) => {
-      let res = 0;
-      if (sortKey === "label") {
-        res = a.label.localeCompare(b.label);
-      } else {
-        res = (a[sortKey] as number) - (b[sortKey] as number);
-      }
+      const res = sortKey === "label" ? a.label.localeCompare(b.label) : (a[sortKey] as number) - (b[sortKey] as number);
       return sortOrder === "asc" ? res : -res;
     });
   }, [incomeConfigs, sortKey, sortOrder]);

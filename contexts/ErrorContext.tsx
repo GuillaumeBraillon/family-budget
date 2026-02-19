@@ -39,7 +39,6 @@ const ErrorContext = createContext<ErrorContextValue | undefined>(undefined);
 
 // Pattern standard pour les Contexts React : hook + provider dans le même fichier
 // pour garder la logique liée ensemble. Fast Refresh fonctionne correctement.
-// eslint-disable-next-line react-refresh/only-export-components
 export const useError = () => {
   const context = useContext(ErrorContext);
   if (!context) {

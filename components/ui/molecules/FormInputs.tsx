@@ -45,11 +45,14 @@ export const SearchableTextInput: React.FC<SearchableTextInputProps> = ({ sugges
 
   useEffect(() => {
     const val = String(props.value || "").toLowerCase();
-    if (!val) {
-      setFiltered(suggestions);
-    } else {
-      setFiltered(suggestions.filter((s) => s.toLowerCase().includes(val)));
-    }
+    const timer = setTimeout(() => {
+      if (!val) {
+        setFiltered(suggestions);
+      } else {
+        setFiltered(suggestions.filter((s) => s.toLowerCase().includes(val)));
+      }
+    }, 0);
+    return () => clearTimeout(timer);
   }, [props.value, suggestions]);
 
   useEffect(() => {

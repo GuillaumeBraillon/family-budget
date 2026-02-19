@@ -291,12 +291,12 @@ export const useBalancesRows = ({
 
       for (const acc of personalAccounts) {
         const owner = people.find((p) => p.id === acc.ownerId);
-        let transferAmount = 0;
 
         const isContributor = contributorAccounts.some((c) => c.id === acc.id);
         const shareOfTotal = totalPersonalBalance > 0 ? acc.currentBalance / totalPersonalBalance : 0;
         const theoreticalAmount = amountToTakeFromPersonals * shareOfTotal;
 
+        let transferAmount = 0;
         if (isContributor && totalContributorBalance > 0) {
           // Ce compte contribue : calculer sa part proportionnelle du total nécessaire
           const shareOfContributors = acc.currentBalance / totalContributorBalance;
@@ -309,10 +309,8 @@ export const useBalancesRows = ({
 
           transferAmount = -actualAmountToTake;
           totalSurplusFromPersonals += actualAmountToTake;
-        } else {
-          // Ce compte ne contribue pas (montant trop faible)
-          transferAmount = 0;
         }
+        // Sinon, transferAmount reste 0 (compte ne contribue pas)
 
         const targetBalance = acc.currentBalance + transferAmount;
         const pending = stats.byAccount[acc.id]?.remaining || 0;
@@ -391,21 +389,22 @@ export const useBalancesRows = ({
       //   * Gros surplus (> 20€) : transfert négatif vers LDDS
       const SURPLUS_THRESHOLD = 20; // Seuil en dessous duquel on garde le surplus
 
-      let effectiveTransfer = 0;
-      if (jointGap > 0) {
-        // Besoin : transfert positif depuis LDDS
-        effectiveTransfer = jointGap;
-      } else if (amountToGiveToPersonals > 0) {
-        // Surplus du joint ET comptes persos ont besoin : utiliser le surplus pour combler le besoin
-        const surplusAvailable = Math.abs(jointGap);
-        const surplusUsedForPersonals = Math.min(surplusAvailable, amountToGiveToPersonals);
-        // Le surplus est utilisé pour les persos, donc transfert = 0 (ou le reste si tout n'est pas utilisé)
-        const remainingSurplus = surplusAvailable - surplusUsedForPersonals;
-        effectiveTransfer = remainingSurplus > SURPLUS_THRESHOLD ? -remainingSurplus : 0;
-      } else {
-        // Surplus du joint ET comptes persos OK : transférer vers LDDS si > seuil
-        effectiveTransfer = Math.abs(jointGap) > SURPLUS_THRESHOLD ? jointGap : 0;
-      }
+      const effectiveTransfer = (() => {
+        if (jointGap > 0) {
+          // Besoin : transfert positif depuis LDDS
+          return jointGap;
+        } else if (amountToGiveToPersonals > 0) {
+          // Surplus du joint ET comptes persos ont besoin : utiliser le surplus pour combler le besoin
+          const surplusAvailable = Math.abs(jointGap);
+          const surplusUsedForPersonals = Math.min(surplusAvailable, amountToGiveToPersonals);
+          // Le surplus est utilisé pour les persos, donc transfert = 0 (ou le reste si tout n'est pas utilisé)
+          const remainingSurplus = surplusAvailable - surplusUsedForPersonals;
+          return remainingSurplus > SURPLUS_THRESHOLD ? -remainingSurplus : 0;
+        } else {
+          // Surplus du joint ET comptes persos OK : transférer vers LDDS si > seuil
+          return Math.abs(jointGap) > SURPLUS_THRESHOLD ? jointGap : 0;
+        }
+      })();
 
       // CORRECTION : Le solde prévu = solde actuel + virement
       const targetBalance = jointAccount.currentBalance + effectiveTransfer;

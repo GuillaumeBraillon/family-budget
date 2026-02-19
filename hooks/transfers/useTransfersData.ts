@@ -324,15 +324,7 @@ export const useTransfersData = ({
 
       let runningBalance = 0;
       history = chronological.map((item): TransfersHistoryEntry => {
-        let deltaForAccount = 0;
-
-        if ("transferData" in item) {
-          const isCredit = item.destinationAccountId === specificAccountId;
-          deltaForAccount = isCredit ? item.amount : -item.amount;
-        } else {
-          // Direct op: amount déjà signé
-          deltaForAccount = item.amount;
-        }
+        const deltaForAccount = "transferData" in item ? (item.destinationAccountId === specificAccountId ? item.amount : -item.amount) : item.amount;
 
         runningBalance += deltaForAccount;
         return { ...item, balanceAfter: runningBalance };

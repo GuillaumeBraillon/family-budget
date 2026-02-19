@@ -22,7 +22,7 @@
  * @dependencies
  * - types.ts : OperationFilters
  */
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { OperationFilters } from "../../types";
 
 /**
@@ -151,8 +151,6 @@ const DEFAULT_FILTERS: OperationFilters = {
  */
 export const useOperationsFilters = (initialFilters?: Partial<OperationFilters>) => {
   // Ref pour tracker si les initialFilters ont déjà été appliqués
-  const hasAppliedInitialFilters = useRef(false);
-
   // Initialisation avec restauration depuis localStorage
   const [filters, setFilters] = useState<OperationFilters>(() => {
     const saved = localStorage.getItem("operationsView_filters");
@@ -169,7 +167,6 @@ export const useOperationsFilters = (initialFilters?: Partial<OperationFilters>)
 
     // Appliquer initialFilters uniquement au premier montage
     if (initialFilters) {
-      hasAppliedInitialFilters.current = true;
       return { ...baseFilters, ...initialFilters };
     }
 

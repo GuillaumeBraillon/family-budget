@@ -122,7 +122,9 @@ const AppContent: React.FC = () => {
   // Effacer le contexte de navigation quand on quitte Operations
   useEffect(() => {
     if (currentView !== "planner" && plannerContext !== null) {
-      setPlannerContext(null);
+      // Use setTimeout to avoid setState during render cascade
+      const timer = setTimeout(() => setPlannerContext(null), 0);
+      return () => clearTimeout(timer);
     }
   }, [currentView, plannerContext]);
 

@@ -138,23 +138,25 @@ export const FilterDropdown: React.FC<FilterDropdownProps> = ({
 
   const isActive = triStateMode ? includedValues.length > 0 || excludedValues.length > 0 : selectedValues.length > 0;
 
-  let activeBtnClass = "";
-  let activeTextClass = "";
-
-  switch (color) {
-    case "emerald":
-      activeBtnClass = "bg-emerald-50 border-emerald-200 text-emerald-700";
-      activeTextClass = "text-emerald-600";
-      break;
-    case "amber":
-      activeBtnClass = "bg-amber-50 border-amber-200 text-amber-700";
-      activeTextClass = "text-amber-600";
-      break;
-    default:
-      activeBtnClass = "bg-indigo-50 border-indigo-200 text-indigo-700";
-      activeTextClass = "text-indigo-600";
-      break;
-  }
+  const { activeBtnClass, activeTextClass } = (() => {
+    switch (color) {
+      case "emerald":
+        return {
+          activeBtnClass: "bg-emerald-50 border-emerald-200 text-emerald-700",
+          activeTextClass: "text-emerald-600",
+        };
+      case "amber":
+        return {
+          activeBtnClass: "bg-amber-50 border-amber-200 text-amber-700",
+          activeTextClass: "text-amber-600",
+        };
+      default:
+        return {
+          activeBtnClass: "bg-indigo-50 border-indigo-200 text-indigo-700",
+          activeTextClass: "text-indigo-600",
+        };
+    }
+  })();
 
   return (
     <>

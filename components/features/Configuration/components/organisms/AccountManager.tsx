@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { Trash2, CreditCard, Save, PiggyBank, Users, Wallet } from "lucide-react";
+import { Trash2, Save, PiggyBank, Users, Wallet } from "lucide-react";
 import { Account, Person, AccountType, AppSettings } from "../../../../../types";
 import { ConfirmModal } from "../../../../ui/atoms/ConfirmModal";
 import { MobileTooltip } from "../../../../ui/MobileTooltip";
@@ -214,10 +214,7 @@ export const AccountManager: React.FC<AccountManagerProps> = ({ accounts, people
           <SortableContext items={sortedAndFilteredAccounts.map((acc) => acc.id)} strategy={verticalListSortingStrategy}>
             {sortedAndFilteredAccounts.map((acc) => {
               const owner = people.find((p) => p.id === acc.ownerId)?.name || "Inconnu";
-              let iconNode = <CreditCard size={20} />;
-              if (acc.type === AccountType.SAVINGS) iconNode = <PiggyBank size={20} />;
-              else if (acc.isJoint) iconNode = <Users size={20} />;
-              else iconNode = <Wallet size={20} />;
+              const iconNode = acc.type === AccountType.SAVINGS ? <PiggyBank size={20} /> : acc.isJoint ? <Users size={20} /> : <Wallet size={20} />;
 
               return (
                 <SortableRow key={acc.id} id={acc.id} disabled={!isManualSort}>
