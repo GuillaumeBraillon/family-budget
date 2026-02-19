@@ -37,7 +37,13 @@ export const QuickPeriodSummary: React.FC<QuickPeriodSummaryProps> = ({ expenses
           <MetricLabel icon={<Star size={9} />} label="Extra" value={expenses.extra} color="text-rose-300" />
           <MetricLabel icon={<Calendar size={9} />} label="Prévu" value={expenses.planned} color="text-slate-400" />
           <MetricLabel icon={<Clock size={9} />} label="Attente" value={expenses.pending} color="text-amber-400" />
-          {expenses.delays > 0.01 && <MetricLabel icon={<AlertCircle size={9} />} label="Retards" value={expenses.delays} color="text-orange-500" />}
+          {expenses.delays > 0.01 && (
+            <div className="inline-flex items-center gap-1.5 px-2 py-1 bg-red-500/20 border border-red-500/50 rounded-md">
+              <AlertCircle size={9} className="text-red-500 animate-pulse" />
+              <span className="font-bold text-red-500 uppercase">Retards</span>
+              <span className="font-black text-red-600 bg-red-500/40 px-1.5 py-0.5 rounded">{expenses.delays.toFixed(0)}€</span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -58,7 +64,13 @@ export const QuickPeriodSummary: React.FC<QuickPeriodSummaryProps> = ({ expenses
           <MetricLabel icon={<Star size={9} />} label="Extra" value={income.extra} color="text-emerald-300" />
           <MetricLabel icon={<Calendar size={9} />} label="Prévu" value={income.planned} color="text-slate-400" />
           <MetricLabel icon={<Clock size={9} />} label="Attente" value={income.pending} color="text-amber-400" />
-          {income.delays > 0.01 && <MetricLabel icon={<AlertCircle size={9} />} label="Retards" value={income.delays} color="text-orange-500" />}
+          {income.delays > 0.01 && (
+            <div className="inline-flex items-center gap-1.5 px-2 py-1 bg-red-500/20 border border-red-500/50 rounded-md">
+              <AlertCircle size={9} className="text-red-500 animate-pulse" />
+              <span className="font-bold text-red-500 uppercase">Retards</span>
+              <span className="font-black text-red-600 bg-red-500/40 px-1.5 py-0.5 rounded">{income.delays.toFixed(0)}€</span>
+            </div>
+          )}
         </div>
       </div>
 

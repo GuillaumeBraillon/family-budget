@@ -207,12 +207,12 @@ export const useTransfersData = ({
    * 5. Filtre recherche textuelle
    * 6. Filtre motif sélectionné
    * 7. Unification des flux en CombinedOperation[]
-  * 8. Préparation des items (tri appliqué dans un hook dédié)
+   * 8. Préparation des items (tri appliqué dans un hook dédié)
    * 9. Extraction des motifs uniques
    * 10. Calcul de l'historique des soldes (si compte spécifique)
    *
    * @returns {Object} Données calculées
-  * - unsortedItems : Items filtrés
+   * - unsortedItems : Items filtrés
    * - motifs : Libellés uniques pour filtrage
    * - historyWithBalances : Historique avec soldes évolutifs
    */
@@ -344,17 +344,7 @@ export const useTransfersData = ({
       motifs: Array.from(foundMotifs).sort(),
       historyWithBalances: history,
     };
-  }, [
-    transfers,
-    variableTransactions,
-    currentDate,
-    searchQuery,
-    selectedMotif,
-    accountTypeFilter,
-    specificAccountId,
-    interestFilter,
-    accounts,
-  ]);
+  }, [transfers, variableTransactions, currentDate, searchQuery, selectedMotif, accountTypeFilter, specificAccountId, interestFilter, accounts]);
 
   /**
    * Calcul des statistiques de mouvements.

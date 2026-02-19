@@ -46,6 +46,7 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 ### 🧹 Nettoyage (Chores)
 
 - Code cleanup : suppression de 4 occurrences de `p.name === "Famille"` hardcodé
+- Suppression du composant inutilisé `CalculationDetailsCard` → simplification de `BalancesView`
 - Meilleure maintenabilité : sélections par ordre de priorité au lieu de noms fixes
 
 ---

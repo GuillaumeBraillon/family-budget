@@ -25,7 +25,6 @@ import { BalancesHeader } from "./components/BalancesHeader";
 import { BalancesTable } from "./components/BalancesTable";
 import { TransferSummaryCard } from "./components/TransferSummaryCard";
 import { BudgetDistributionSummary } from "./components/BudgetDistributionSummary";
-import { CalculationDetailsCard } from "./components/CalculationDetailsCard";
 import { ListSorter } from "../../ui/molecules/ListSorter";
 import { arrayMove } from "@dnd-kit/sortable";
 
@@ -246,25 +245,6 @@ export const BalancesView: React.FC<BalancesViewProps> = ({
       />
 
       <TransferSummaryCard amount={virLddsTotal} toJoint={lddsToJoint} toPersonals={lddsToPersonals} />
-
-      {/* SECTION DÉTAILS DES CALCULS */}
-      <CalculationDetailsCard
-        budgetPeriod={budgetPeriodeGlobal}
-        consumption={realConsumption}
-        distributable={distributableBalance}
-        totalPersonalBalance={totalPersonalBalance}
-        personalExcess={totalPersonalBalance - distributableBalance}
-        jointGap={jointAccount ? (stats.byAccount[jointAccount.id]?.remaining || 0) - jointAccount.currentBalance : 0}
-        amountToTake={Math.max(
-          0,
-          Math.min(
-            jointAccount ? (stats.byAccount[jointAccount.id]?.remaining || 0) - jointAccount.currentBalance : 0,
-            totalPersonalBalance - distributableBalance
-          )
-        )}
-        totalSurplus={personalRows.reduce((sum, r) => sum + Math.abs(Math.min(0, r.transfer)), 0)}
-        lddsNeeded={virLddsTotal}
-      />
     </div>
   );
 };
