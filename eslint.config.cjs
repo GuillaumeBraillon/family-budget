@@ -1,6 +1,4 @@
 /* eslint-disable @typescript-eslint/no-require-imports, no-undef */
-const { defineConfig, globalIgnores } = require("eslint/config");
-
 const globals = require("globals");
 
 const { fixupConfigRules, fixupPluginRules } = require("@eslint/compat");
@@ -19,7 +17,37 @@ const compat = new FlatCompat({
   allConfig: js.configs.all,
 });
 
-module.exports = defineConfig([
+module.exports = [
+  // Ignores globaux AVANT les configurations
+  {
+    ignores: [
+      "**/node_modules",
+      "**/dist",
+      "**/build",
+      "**/.vite",
+      "**/.vercel",
+      "**/.env",
+      "**/.env.local",
+      "**/.env.production",
+      "**/\\*.log",
+      "**/coverage",
+      "**/tests/**",
+      "**/*.test.ts",
+      "**/*.test.tsx",
+      "**/public/sw.js",
+    ],
+  },
+  // Spread des configs recommandées via FlatCompat
+  ...fixupConfigRules(
+    compat.extends(
+      "eslint:recommended",
+      "plugin:@typescript-eslint/recommended",
+      "plugin:react-hooks/recommended",
+      "plugin:react/recommended",
+      "plugin:react/jsx-runtime"
+    )
+  ),
+  // Configuration principale
   {
     languageOptions: {
       globals: {
@@ -36,16 +64,6 @@ module.exports = defineConfig([
         },
       },
     },
-
-    extends: fixupConfigRules(
-      compat.extends(
-        "eslint:recommended",
-        "plugin:@typescript-eslint/recommended",
-        "plugin:react-hooks/recommended",
-        "plugin:react/recommended",
-        "plugin:react/jsx-runtime"
-      )
-    ),
 
     plugins: {
       "react-refresh": reactRefresh,
@@ -90,20 +108,4 @@ module.exports = defineConfig([
       "prefer-const": "warn",
     },
   },
-  globalIgnores([
-    "**/node_modules",
-    "**/dist",
-    "**/build",
-    "**/.vite",
-    "**/.vercel",
-    "**/.env",
-    "**/.env.local",
-    "**/.env.production",
-    "**/\\*.log",
-    "**/coverage",
-    "**/tests/**",
-    "**/*.test.ts",
-    "**/*.test.tsx",
-    "**/public/sw.js",
-  ]),
-]);
+];

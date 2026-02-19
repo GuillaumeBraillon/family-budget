@@ -7,6 +7,96 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.8.2] - 2026-02-19
+
+### ✨ Fonctionnalités (Features)
+
+- **Extension majeure de la couverture de tests unitaires**
+  - **130 nouveaux tests** (passage de 11 à 141 tests au total)
+  - **4 nouveaux fichiers de tests** créés :
+    - `apiMappers.test.ts` (23 tests) : Tests complets des conversions DB ↔ App
+    - `tagAmounts.test.ts` (24 tests) : Validation de la ventilation des tags et calculs Extra/Standard
+    - `periodCalculations.test.ts` (32 tests) : Tests des algorithmes de périodes budgétaires (FIXED_DAYS, CALENDAR_WEEKS, CUSTOM_SPLIT)
+    - `helpers.test.ts` (51 tests) : Tests des utilitaires (formatage, validation, calculs)
+
+### 🐛 Corrections de bugs (Bugfixes)
+
+- **apiMappers.ts** : Ajout de `accounts_sorting: []` dans la valeur par défaut de `mapDbSettings()` (cohérence avec la structure complète d'`AppSettings`)
+- **eslint.config.cjs** : Correction de la configuration ESLint flat config (v10.x)
+  - Remplacement de `defineConfig()` et `globalIgnores()` par la syntaxe flat config standard
+  - Déplacement des `ignores` en premier objet de configuration
+  - Utilisation du spread operator `...fixupConfigRules(compat.extends(...))` au lieu de `extends` dans l'objet
+  - Garantit que les fichiers de test (`tests/**`, `*.test.ts`, `*.test.tsx`) sont correctement ignorés
+- **tests/apiMappers.test.ts** : Correction des erreurs TypeScript dans les tests
+  - Renommage `paid_item_id` → `paid_item_instance_id` pour conformité avec `DbPaidItemTag`
+  - Ajout des champs manquants `id` et `created_at` dans les objets de test `DbPaidItemTag`
+  - Conversion des `id` de `DbSettings` de `number` vers `string` pour cohérence avec le schéma DB
+
+### 📊 Couverture de Tests
+
+#### **apiMappers.test.ts** (23 tests)
+
+Tests de toutes les fonctions de mapping critiques pour l'intégrité des données :
+
+- `mapDbPerson` : Conversion personnes avec gestion `isChild` et `displayOrder`
+- `mapDbAccount` : Comptes avec types (CHECKING/SAVINGS), ratios et caps d'épargne
+- `mapDbTag` + `mapDbTagAmount` : Tags et ventilation avec flags Extra
+- `mapDbExpenseConfig` + `mapDbIncomeConfig` : Configurations récurrentes avec plages temporelles
+- `mapDbPaidItem` : Opérations pointées avec tous les flags (isVariable, isWaiting, isExtra)
+- `mapDbTransfer` : Virements standards et intérêts d'épargne
+- `mapDbSettings` : Paramètres app avec valeurs par défaut robustes
+
+#### **tagAmounts.test.ts** (24 tests)
+
+Tests de la logique métier de ventilation des tags :
+
+- **validateTagAmounts()** :
+  - Ventilation partielle autorisée (somme tags < total)
+  - Rejet si somme > total
+  - Tolérance erreurs d'arrondi (±0.01€)
+- **calculateExtraSum()** : Calcul montants hors budget
+- **calculateStandardSum()** : Calcul montants dans budget
+- **Scénarios complexes** : Ventilation mixte Extra/Standard, montants décimaux
+
+#### **periodCalculations.test.ts** (32 tests)
+
+Tests des algorithmes de découpage du mois et distribution budgétaire :
+
+- **calculateDistributedBudget()** : Distribution proportionnelle selon nombre de jours (gestion février normal/bissextile, mois de 28/30/31 jours)
+- **generateFixedDaysPeriods()** : Mode FIXED_DAYS avec gestion périodes partielles (dernière semaine)
+- **generateCustomSplitPeriods()** : Mode CUSTOM_SPLIT avec parts égales (dernière part absorbe le reste)
+- **calculateEqualBudgetPerPart()** : Budget égal par part
+- **Scénarios réels complets** : Janvier/Février/Mars/Avril 2026 avec validation somme totale = budget mensuel
+
+#### **helpers.test.ts** (51 tests)
+
+Tests des utilitaires courants de l'application :
+
+- **formatCurrency()** (9 tests) : Formatage euros avec signes +/- optionnels, gestion espaces insécables
+- **formatDate()** + **formatDateShort()** (6 tests) : Formatage dates françaises
+- **isInMonth()** (5 tests) : Vérification appartenance au mois
+- **calculatePercentage()** (8 tests) : Calculs pourcentages avec arrondis
+- **isValidEmail()** (9 tests) : Validation emails (regex robuste)
+- **truncateText()** (6 tests) : Troncature avec ellipsis
+- **generateId()** (4 tests) : Génération IDs uniques avec préfixes
+- **Scénarios d'intégration** (4 tests) : Combinaisons réalistes (budget + pourcentage, transaction avec date)
+
+### 🔍 Méthodologie de Tests
+
+- **Tests unitaires purs** : Fonctions helpers isolées, pas de dépendances React
+- **Cas limites** : Valeurs nulles, décimales complexes, mois particuliers (février)
+- **Validation métier** : Règles strictes (somme tags, distribution budgétaire)
+- **Reproductibilité** : Exemples chiffrés réalistes (budgets 2000-2500€, mois 2026)
+
+### 🚀 Améliorations (Enhancements)
+
+- **Qualité code** : 141 tests passent (100% de réussite)
+- **CI/CD** : Integration automatique via GitHub Actions
+- **Maintenabilité** : Tests documentés avec commentaires explicatifs
+- **Non-régression** : Protection contre les bugs futurs sur les calculs critiques
+
+---
+
 ## [2.8.1] - 2026-02-19
 
 ### 🐛 Corrections de bugs (Bugfixes)
