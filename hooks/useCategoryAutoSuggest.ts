@@ -30,6 +30,23 @@ interface CategorySuggestion {
 }
 
 /**
+ * Vérifie si une valeur correspond au format attendu d'une suggestion.
+ */
+const isCategorySuggestion = (value: unknown): value is CategorySuggestion => {
+  if (!value || typeof value !== "object") return false;
+
+  const candidate = value as {
+    category_id?: unknown;
+    sub_category_id?: unknown;
+  };
+
+  const hasValidCategoryId = typeof candidate.category_id === "string";
+  const hasValidSubCategoryId = typeof candidate.sub_category_id === "string" || candidate.sub_category_id === null || candidate.sub_category_id === undefined;
+
+  return hasValidCategoryId && hasValidSubCategoryId;
+};
+
+/**
  * Hook d'auto-suggestion de catégories depuis les libellés sauvegardés.
  *
  * @description
@@ -106,19 +123,30 @@ export const useCategoryAutoSuggest = () => {
     logger.debug("auto-suggest", `Recherche suggestion pour: "${labelName}"`);
 
     try {
-      const { data, error } = (await supabase.rpc("suggest_category_from_label", { p_label_name: labelName }).maybeSingle()) as unknown as {
-        data: CategorySuggestion | null;
-        error: unknown;
-      };
+      const { data, error, status } = await supabase.rpc("suggest_category_from_label", {
+        p_label_name: labelName,
+      });
+
+      // Cas courant: aucune ligne trouvée sur une RPC attendue en objet -> 406
+      if (error && status === 406) {
+        logger.debug("auto-suggest", `Aucune suggestion pour: "${labelName}"`);
+        return null;
+      }
 
       if (error) throw error;
 
-      if (data) {
+      // Selon la signature SQL/PostgREST, la RPC peut renvoyer un objet ou un tableau
+      const suggestion = Array.isArray(data) ? data[0] : data;
+
+      if (isCategorySuggestion(suggestion)) {
         logger.debug("auto-suggest", `Suggestion trouvée:`, {
-          category: data.category_id,
-          subCategory: data.sub_category_id,
+          category: suggestion.category_id,
+          subCategory: suggestion.sub_category_id,
         });
-        return data as CategorySuggestion;
+        return {
+          category_id: suggestion.category_id,
+          sub_category_id: suggestion.sub_category_id ?? null,
+        };
       }
 
       logger.debug("auto-suggest", `Aucune suggestion pour: "${labelName}"`);

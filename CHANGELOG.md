@@ -7,6 +7,40 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.8.3] - 2026-02-23
+
+### 🐛 Corrections de bugs (Bugfixes)
+
+- **RPC `upsert_paid_item_with_tags` (Supabase/PostgREST)**
+  - Correction de l'ambiguïté de signature en base (`p_type text` vs `p_type public.transaction_type`) pour éviter l'erreur :
+    - _"Could not choose the best candidate function..."_
+  - Alignement de la fonction SQL sur le schéma réel `paid_items` :
+    - suppression de l'usage de la colonne legacy `date`
+    - signature `p_type public.transaction_type`
+    - validation renforcée de `tagId` et normalisation de `beneficiary_id` vide vers `NULL`
+
+- **Flux frontend RPC (propre, sans bypass permanent)**
+  - Retour à un mode **RPC-only** pour les écritures `paid_items` + `paid_item_tags`.
+  - Journalisation d'erreurs SQL détaillées (code/message/details/hint) dans `apiCrud` pour diagnostiquer rapidement les incidents DB.
+  - Normalisation defensive avant appel RPC : montant positif, conversion des remboursements legacy (`EXPENSE` négatif → `INCOME` positif), filtrage des `tagAmounts` invalides.
+
+### ✨ Fonctionnalités (Features)
+
+- **Nouveaux tests unitaires ciblés `apiCrud`**
+  - Ajout du fichier `tests/apiCrud.test.ts` (5 tests) couvrant :
+    - normalisation montant/type pour remboursements legacy
+    - normalisation `beneficiaryId` vide vers `null`
+    - filtrage des `tagAmounts` invalides
+    - validation des champs obligatoires avant appel RPC
+    - journalisation en cas d'erreur RPC
+
+### 🧹 Nettoyage (Chores)
+
+- Suppression des migrations SQL de rattrapage temporaires dans `supabase/migrations/` (contexte dev mono-instance).
+- Consolidation de la **source SQL unique** dans `startup/database_complete.sql`.
+
+---
+
 ## [2.8.2] - 2026-02-19
 
 ### ✨ Fonctionnalités (Features)

@@ -422,6 +422,9 @@ export const useBudget = () => {
 
     // CRUD avec reload
     const res = await apiUpsertVariableTransaction(tx);
+    if (res.error) {
+      throw res.error;
+    }
     await loadData(true);
     return res;
   };

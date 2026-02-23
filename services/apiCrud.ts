@@ -34,7 +34,71 @@ import {
   VariableTransaction,
   SavedLabel,
   Tag,
+  TagAmount,
 } from "../types";
+
+const normalizeTagAmountsForRpc = (tagAmounts: TagAmount[] | undefined): TagAmount[] | null => {
+  if (tagAmounts === undefined) return null;
+
+  return tagAmounts
+    .filter((tagAmount) => Boolean(tagAmount.tagId) && Number.isFinite(tagAmount.amount) && tagAmount.amount > 0)
+    .map((tagAmount) => ({
+      tagId: tagAmount.tagId,
+      amount: tagAmount.amount,
+      isExtra: !!tagAmount.isExtra,
+    }));
+};
+
+const normalizePaidItemForRpc = (amount: number, type: "EXPENSE" | "INCOME") => {
+  const normalizedAmount = Math.abs(Number(amount));
+  const normalizedType = amount < 0 && type === "EXPENSE" ? "INCOME" : type;
+
+  return {
+    amount: normalizedAmount,
+    type: normalizedType,
+  };
+};
+
+const validatePaidItemForRpc = (payload: { instanceId: string; amount: number; paymentDate: string; accountId: string; label: string; category: string }) => {
+  if (!payload.instanceId?.trim()) {
+    throw new Error("Instance ID manquant pour l'enregistrement de l'opération.");
+  }
+  if (!Number.isFinite(payload.amount) || payload.amount <= 0) {
+    throw new Error("Le montant doit être strictement supérieur à 0.");
+  }
+  if (!payload.paymentDate?.trim()) {
+    throw new Error("La date de paiement est obligatoire.");
+  }
+  if (!payload.accountId?.trim()) {
+    throw new Error("Le compte est obligatoire.");
+  }
+  if (!payload.label?.trim()) {
+    throw new Error("Le libellé est obligatoire.");
+  }
+  if (!payload.category?.trim()) {
+    throw new Error("La catégorie est obligatoire.");
+  }
+};
+
+const formatSupabaseError = (error: unknown) => {
+  if (!error || typeof error !== "object") {
+    return { message: String(error) };
+  }
+
+  const candidate = error as {
+    message?: string;
+    details?: string;
+    hint?: string;
+    code?: string;
+  };
+
+  return {
+    message: candidate.message || "Erreur Supabase inconnue",
+    details: candidate.details,
+    hint: candidate.hint,
+    code: candidate.code,
+  };
+};
 
 /**
  * Opérations sur les Utilisateurs Autorisés
@@ -460,23 +524,52 @@ export const apiSetPaidStatus = async (details: PaidItemDetails | null, instance
   });
 
   if (details) {
-    // RPC transactionnelle: upsert paid_item + remplacement tags atomique
-    return supabase.rpc("upsert_paid_item_with_tags", {
+    const normalizedTagAmounts = normalizeTagAmountsForRpc(details.tagAmounts);
+    const normalizedPaidItem = normalizePaidItemForRpc(details.amount, details.type);
+    const normalizedBeneficiaryId = details.beneficiaryId?.trim() ? details.beneficiaryId : null;
+
+    validatePaidItemForRpc({
+      instanceId: details.instanceId,
+      amount: normalizedPaidItem.amount,
+      paymentDate: details.paymentDate,
+      accountId: details.accountId,
+      label: details.label,
+      category: details.category,
+    });
+
+    const rpcPayload = {
       p_instance_id: details.instanceId,
-      p_amount: details.amount,
+      p_amount: normalizedPaidItem.amount,
       p_payment_date: details.paymentDate,
       p_account_id: details.accountId,
-      p_beneficiary_id: details.beneficiaryId,
+      p_beneficiary_id: normalizedBeneficiaryId,
       p_label: details.label,
       p_category: details.category,
       p_sub_category: details.subCategory || null,
-      p_type: details.type,
+      p_type: normalizedPaidItem.type,
       p_is_variable: !!details.isVariable,
       p_is_waiting: !!details.isWaiting,
       p_is_extra: !!details.isExtra,
       p_comments: details.comments || null,
-      p_tag_amounts: details.tagAmounts === undefined ? null : details.tagAmounts,
-    });
+      p_tag_amounts: normalizedTagAmounts,
+    };
+
+    logger.debug("crud", "RPC upsert_paid_item_with_tags payload", rpcPayload);
+
+    const rpcResult = await supabase.rpc("upsert_paid_item_with_tags", rpcPayload);
+    if (rpcResult.error) {
+      logger.error("crud", "RPC upsert_paid_item_with_tags failed", {
+        context: "apiSetPaidStatus",
+        instanceId: details.instanceId,
+        amount: normalizedPaidItem.amount,
+        type: normalizedPaidItem.type,
+        beneficiaryId: normalizedBeneficiaryId,
+        tagCount: normalizedTagAmounts?.length ?? null,
+        error: formatSupabaseError(rpcResult.error),
+      });
+    }
+
+    return rpcResult;
   } else {
     // La suppression du paid_item déclenche automatiquement la suppression des paid_item_tags (CASCADE)
     return supabase.from("paid_items").delete().eq("instance_id", instanceId);
@@ -503,22 +596,52 @@ export const apiDeleteTransfer = async (id: string) => supabase.from("transfers"
  * Opérations sur les Transactions Variables (Suivi Réel)
  */
 export const apiUpsertVariableTransaction = async (transaction: VariableTransaction) => {
-  return supabase.rpc("upsert_paid_item_with_tags", {
+  const normalizedTagAmounts = normalizeTagAmountsForRpc(transaction.tagAmounts);
+  const normalizedPaidItem = normalizePaidItemForRpc(transaction.amount, transaction.type);
+  const normalizedBeneficiaryId = transaction.beneficiaryId?.trim() ? transaction.beneficiaryId : null;
+
+  validatePaidItemForRpc({
+    instanceId: transaction.id,
+    amount: normalizedPaidItem.amount,
+    paymentDate: transaction.date,
+    accountId: transaction.accountId,
+    label: transaction.label,
+    category: transaction.category,
+  });
+
+  const rpcPayload = {
     p_instance_id: transaction.id,
-    p_amount: transaction.amount,
+    p_amount: normalizedPaidItem.amount,
     p_payment_date: transaction.date,
     p_account_id: transaction.accountId,
-    p_beneficiary_id: transaction.beneficiaryId || null,
+    p_beneficiary_id: normalizedBeneficiaryId,
     p_label: transaction.label,
     p_category: transaction.category,
     p_sub_category: transaction.subCategory || null,
-    p_type: transaction.type,
+    p_type: normalizedPaidItem.type,
     p_is_variable: true,
     p_is_waiting: !!transaction.isWaiting,
     p_is_extra: !!transaction.isExtra,
     p_comments: transaction.comments || null,
-    p_tag_amounts: transaction.tagAmounts === undefined ? null : transaction.tagAmounts,
-  });
+    p_tag_amounts: normalizedTagAmounts,
+  };
+
+  logger.debug("crud", "RPC upsert_paid_item_with_tags payload", rpcPayload);
+
+  const rpcResult = await supabase.rpc("upsert_paid_item_with_tags", rpcPayload);
+  if (rpcResult.error) {
+    logger.error("crud", "RPC upsert_paid_item_with_tags failed", {
+      context: "apiUpsertVariableTransaction",
+      instanceId: transaction.id,
+      amount: normalizedPaidItem.amount,
+      type: normalizedPaidItem.type,
+      beneficiaryId: normalizedBeneficiaryId,
+      tagCount: normalizedTagAmounts?.length ?? null,
+      error: formatSupabaseError(rpcResult.error),
+    });
+  }
+
+  return rpcResult;
 };
 
 export const apiDeleteVariableTransaction = async (id: string) => supabase.from("paid_items").delete().eq("instance_id", id);

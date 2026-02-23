@@ -142,7 +142,6 @@ CREATE TABLE IF NOT EXISTS paid_items (
   instance_id text PRIMARY KEY,
   amount numeric NOT NULL,
   payment_date date NOT NULL,
-  date date, -- Alias pour compatibilité
   account_id text NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
   beneficiary_id text REFERENCES people(id) ON DELETE CASCADE,
   label text NOT NULL,
@@ -301,7 +300,7 @@ CREATE OR REPLACE FUNCTION public.upsert_paid_item_with_tags(
   p_label text,
   p_category text,
   p_sub_category text,
-  p_type text,
+  p_type public.transaction_type,
   p_is_variable boolean,
   p_is_waiting boolean,
   p_is_extra boolean,
@@ -340,8 +339,7 @@ BEGIN
     is_variable,
     is_waiting,
     is_extra,
-    comments,
-    date
+    comments
   ) VALUES (
     p_instance_id,
     p_amount,
@@ -355,8 +353,7 @@ BEGIN
     COALESCE(p_is_variable, false),
     COALESCE(p_is_waiting, false),
     COALESCE(p_is_extra, false),
-    p_comments,
-    p_payment_date
+    p_comments
   )
   ON CONFLICT (instance_id) DO UPDATE
   SET
@@ -371,8 +368,7 @@ BEGIN
     is_variable = EXCLUDED.is_variable,
     is_waiting = EXCLUDED.is_waiting,
     is_extra = EXCLUDED.is_extra,
-    comments = EXCLUDED.comments,
-    date = EXCLUDED.date;
+    comments = EXCLUDED.comments;
 
   IF p_tag_amounts IS NOT NULL THEN
     SELECT COALESCE(sum((entry->>'amount')::numeric), 0)
@@ -421,7 +417,7 @@ GRANT EXECUTE ON FUNCTION public.upsert_paid_item_with_tags(
   text,
   text,
   text,
-  text,
+  public.transaction_type,
   boolean,
   boolean,
   boolean,

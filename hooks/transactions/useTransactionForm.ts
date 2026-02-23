@@ -216,6 +216,16 @@ export const useTransactionForm = ({
 
   const [beneficiaryId, setBeneficiaryId] = useState(defaultBeneficiary);
 
+  const isExpenseCategory = useCallback(
+    (categoryName: string) => {
+      if (!categoryName) return false;
+      if (categoryName === "Dépenses" || categoryName === "Remboursement") return true;
+      const catDef = categories.find((c) => c.name === categoryName);
+      return !!catDef && catDef.type === "EXPENSE";
+    },
+    [categories]
+  );
+
   // --- COMPUTED VALUES ---
 
   const isExpense = type === "EXPENSE";
@@ -273,16 +283,20 @@ export const useTransactionForm = ({
       const timer = setTimeout(() => {
         if (editingTransaction) {
           setMode(initialMode);
-          setType(editingTransaction.type || "EXPENSE");
 
-          // Gestion du remboursement (montant négatif pour EXPENSE)
-          const rawAmount = editingTransaction.amount;
-          if (editingTransaction.type === "EXPENSE" && rawAmount < 0) {
+          // Gestion robuste du remboursement (legacy: EXPENSE négatif, nouveau format: INCOME + catégorie de dépense)
+          const rawAmount = Number(editingTransaction.amount);
+          const isLegacyRefund = editingTransaction.type === "EXPENSE" && rawAmount < 0;
+          const isIncomeRefund = editingTransaction.type === "INCOME" && isExpenseCategory(editingTransaction.category);
+
+          if (isLegacyRefund || isIncomeRefund) {
+            setType("EXPENSE");
             setIsRefund(true);
             setAmount(Math.abs(rawAmount).toString());
           } else {
+            setType(editingTransaction.type || "EXPENSE");
             setIsRefund(false);
-            setAmount(rawAmount.toString());
+            setAmount(Math.abs(rawAmount).toString());
           }
 
           setDate(editingTransaction.date);
@@ -302,7 +316,7 @@ export const useTransactionForm = ({
       }, 0);
       return () => clearTimeout(timer);
     }
-  }, [isOpen, editingTransaction, initialMode, defaultBeneficiary, resetForm]);
+  }, [isOpen, editingTransaction, initialMode, defaultBeneficiary, resetForm, isExpenseCategory]);
 
   // --- VALIDATION & SOUMISSION ---
 
@@ -349,8 +363,14 @@ export const useTransactionForm = ({
 
     // Validation des tagAmounts (permet ventilation partielle)
     if (selectedTagAmounts.length > 0) {
-      const totalAmount = parseFloat(amount) || 0;
+      const totalAmount = Math.abs(parseFloat(amount) || 0);
       const sumTagAmounts = selectedTagAmounts.reduce((sum, ta) => sum + ta.amount, 0);
+
+      const hasInvalidTagAmount = selectedTagAmounts.some((ta) => !ta.tagId || !Number.isFinite(ta.amount) || ta.amount <= 0);
+      if (hasInvalidTagAmount) {
+        errors.push("Chaque tag doit avoir un montant strictement supérieur à 0€");
+      }
+
       if (sumTagAmounts > totalAmount + 0.01) {
         errors.push(`La somme des montants affectés aux tags (${sumTagAmounts.toFixed(2)}€) dépasse le montant total (${totalAmount.toFixed(2)}€)`);
       }
@@ -364,14 +384,11 @@ export const useTransactionForm = ({
 
     setValidationErrors([]);
 
-    // Construction de la transaction
-    let finalAmount = parseFloat(amount);
-    if (type === "EXPENSE" && isRefund) {
-      // Remboursement : montant négatif
-      finalAmount = -Math.abs(finalAmount);
-    } else {
-      finalAmount = Math.abs(finalAmount);
-    }
+    // Construction de la transaction (RPC impose un montant strictement positif)
+    const normalizedAmount = Math.abs(parseFloat(amount));
+    const isRefundTransaction = type === "EXPENSE" && isRefund;
+    const finalType: TransactionType = isRefundTransaction ? "INCOME" : type;
+    const finalAmount = normalizedAmount;
 
     const transaction: VariableTransaction = {
       id: editingTransaction?.id || `var_${Date.now()}`,
@@ -382,7 +399,7 @@ export const useTransactionForm = ({
       subCategory,
       accountId,
       beneficiaryId,
-      type,
+      type: finalType,
       isWaiting: targetIsWaiting,
       isExtra, // Toggle global au niveau opération
       comments: comments.trim() || undefined,
