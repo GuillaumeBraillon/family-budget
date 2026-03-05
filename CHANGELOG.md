@@ -7,6 +7,100 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.9.0] - 2026-03-05
+
+### ✨ Fonctionnalités (Features)
+
+#### **Vue Analytics (nouvelle vue dédiée)**
+
+- Ajout de `AnalyticsView` (`components/features/Analytics/AnalyticsView.tsx`) : orchestrateur de la vue "Analytique" accessible depuis le header.
+- Migration des composants graphiques du dashboard vers `components/features/Analytics/charts/` :
+  - `AnnualBeneficiaryAnalysis.tsx` : analyse annuelle par bénéficiaire
+  - `AnalyticsCards.tsx` : cartes KPI analytiques
+  - `AnnualIncomeAnalysis.tsx` : analyse des revenus annuels
+  - `AnnualExpensesCard.tsx` : carte dépenses annuelles
+- Suppression de `components/features/Dashboard/components/charts/` (composants déplacés).
+- `Header.tsx` et `App.tsx` : ajout de l'onglet `analytics` dans la navigation principale.
+
+#### **Navigation de période partagée (`PeriodNavigationContext`)**
+
+- Nouveau contexte `contexts/PeriodNavigationContext.tsx` exposant `usePeriodNav()` : `currentDate`, `scope`, `activeWeek`, `setCurrentDate`, `setScope`, `setActiveWeek`, `handlePrevMonth`, `handleNextMonth`.
+- Nouveau composant `components/ui/molecules/PeriodNavigationBar.tsx` : barre de navigation réutilisable lisant l'état depuis le contexte ; accepte `filteredPeriodBudgets` et un slot `children`.
+- `App.tsx` enveloppé avec `PeriodNavigationProvider` : toutes les vues partagent le même mois/période/semaine.
+- Migration de `DashboardView`, `BalancesView`, `OperationsView` et `TransfersView` pour consommer `usePeriodNav()` au lieu d'un état local dupliqué.
+
+#### **Soldes de comptes contextuels (nouveau hook)**
+
+- Nouveau hook `hooks/accounts/useAccountBalancesAtDate.ts` : recalcule rétroactivement les soldes de tous les comptes à la fin de la période/mois sélectionné en annulant les opérations postérieures à la date de coupure (`paidItems`, `variableTransactions`, `transfers`).
+- `SavingsSummaryCard` affiche désormais les soldes ajustés à la période active et réagit à `PeriodNavigationBar`.
+- Granularité jour en mode `PERIOD` : la coupure correspond au `endDate` de la période sélectionnée.
+
+#### **Support multi-bénéficiaires sur les opérations pointées**
+
+- Nouveau type `BeneficiaryAmount { beneficiaryId, amount }` dans `types.ts`.
+- Nouvelle table PostgreSQL `paid_item_beneficiaries` avec contrainte `UNIQUE(paid_item_instance_id, beneficiary_id)` et FK CASCADE, indexée et soumise à RLS.
+- `fetchInitialData` (`services/api.ts`) : chargement parallèle de `paid_item_tags` et `paid_item_beneficiaries` scopé aux `paid_items` du mois ; mapping via `mapDbBeneficiaryAmount`.
+- RPC `upsert_paid_item_with_tags` étendue : accepte `p_beneficiary_amounts jsonb` (requis, min 1 entrée) ; insère/replace dans `paid_item_beneficiaries` en transactionnel ; validation SQL de la somme des montants bénéficiaires.
+- `services/apiCrud.ts` : helper `normalizeBeneficiaryAmountsForRpc` ; import CB enrichi pour résoudre le bénéficiaire principal depuis `paid_item_beneficiaries`.
+- `usePlanner.ts` : helper `getValidBeneficiaryAmounts` — reconstruit `beneficiaryAmounts[]` pour chaque `PlannedItem` à partir de `paidDetails.beneficiaryAmounts` avec fallback sur `beneficiaryId` legacy.
+- `hooks/balances/useBalancesData.ts` : toute la logique métier (consommation personnelle, family variable, carryover) utilise désormais `beneficiaryAmounts[]` via `getBeneficiaryStandardShare` / `getBeneficiaryExtraShare` / `resolveBeneficiaryAmounts`.
+
+#### **Budget famille variable**
+
+- `familyVariableBudgetRemaining` calculé sur `realStandard` uniquement (dépenses réelles pointées, sans extras, sans attentes) pour cohérence avec `displayedFamilyNet`.
+- Nouveau champ `family_variable_budget` dans `app_settings` (migration 009) ; `AppSettings` mis à jour.
+
+#### **Auto-import de libellés à la sortie du Planner**
+
+- `App.tsx` : `useEffect` surveille `currentView` ; déclenche `actions.importLabels()` / `actions.importVirLabels()` automatiquement dès que l'utilisateur quitte la vue `planner` si de nouvelles opérations CB/VIR ont été saisies.
+- Feedback via `Toast` : succès avec nombre de libellés importés, info si aucun nouveau, erreur en cas d'échec.
+- `OperationsView` notifie `onVariableCreated(type)` pour chaque nouvelle transaction variable.
+
+### 🔄 Refactorisations (Refactoring)
+
+#### **BalancesView simplifiée**
+
+- Suppression de `BalancesHeader.tsx` (header dédié supprimé, navigation absorbée par `PeriodNavigationBar`).
+- Suppression de `BudgetDistributionSummary.tsx` (résumé de répartition budgétaire supprimé).
+- `BalancesView` allégée : tri manuel conservé via `useAccountsSorting`, données déléguées à `useBalancesData` + `useBalancesRows`.
+
+#### **Dashboard simplifié**
+
+- Suppression de `BalancesOverview.tsx` : `PendingOperationsCard` et `FamilyVariableBalanceCard` intégrées directement dans `DashboardView`.
+- Suppression de `DashboardHeader.tsx` (remplacé par `PeriodNavigationBar`).
+- `SavingsSummaryCard` : refactorisation complète — suppression du recalcul interne via `transfers`/`paidItems` (remplacé par `useAccountBalancesAtDate`) ; grille 5 colonnes (`lg:grid-cols-5`) ; UI compacte (`p-2`, icône `w-8`, texte `text-xs`).
+
+#### **Configuration — suppression du concept d'Enveloppe mensuelle**
+
+- Suppression de `CarryoverStrategyCard.tsx` et `WeeklyEnvelopeCard.tsx`.
+- `PeriodSettingsCard.tsx` et `GlobalSettings.tsx` nettoyés : suppression de `monthly_envelope` et `carryover_strategy`.
+- `AppSettings` : `monthly_envelope` et `CarryoverStrategy` supprimés ; remplacés par `personal_budget_amount` et `family_variable_budget`.
+
+#### **Centralisation des filtres**
+
+- `buildOperationsFilters` (`services/financeUtils`) : source unique pour les valeurs par défaut de `OperationFilters`.
+- `useOperationsFilters`, `useFilterBarLogic`, `FamilyVariableBalanceCard` : tous utilisent `buildOperationsFilters`.
+
+### 🗄️ Base de données (Migrations)
+
+| Migration | Description                                                                                                                      |
+| --------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `006`     | Suppression de `beneficiary_id` de `paid_items` — ventilation exclusivement via `paid_item_beneficiaries`                        |
+| `007`     | Ajout de `is_refund boolean DEFAULT false` sur `paid_items`                                                                      |
+| `008`     | Backfill et persistance de `is_salary boolean` sur `paid_items`                                                                  |
+| `009`     | Ajout de `family_variable_budget numeric DEFAULT 0` sur `app_settings` ; renommage `monthly_envelope` → `personal_budget_amount` |
+
+### 🧹 Suppressions et nettoyage
+
+- Fichiers supprimés : `BalancesHeader.tsx`, `BudgetDistributionSummary.tsx`, `DashboardHeader.tsx`, `BalancesOverview.tsx`, `CarryoverStrategyCard.tsx`, `WeeklyEnvelopeCard.tsx`, tous les composants charts dans `components/features/Dashboard/components/charts/`.
+- Suppression des imports `logger` inutilisés dans `OperationsView.tsx`, `useBudget.ts`, `usePlanner.ts`, `useAuth.ts`, `useAuthorization.ts`, `useCategoryAutoSuggest.ts`.
+- Type `CarryoverStrategy` supprimé de `types.ts`.
+- `usePlanner` : suppression de la limite de période calculée depuis `monthly_envelope` (`distributedLimit` fixé à 0 ; `periodLimit` conservé pour compatibilité UI si utilisé).
+
+**Version actuelle :** 2.9.0 (5 mars 2026)
+
+---
+
 ## [2.8.3] - 2026-02-23
 
 ### 🐛 Corrections de bugs (Bugfixes)

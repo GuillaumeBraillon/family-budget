@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { CalendarClock, Split, TableProperties, Info, AlertTriangle } from "lucide-react";
 import { AppSettings, PeriodType } from "../../../../../types";
 import { MobileTooltip } from "../../../../ui/MobileTooltip";
-import { startOfMonth, endOfMonth, eachWeekOfInterval, getDaysInMonth, differenceInDays } from "date-fns";
+import { startOfMonth, endOfMonth, eachWeekOfInterval, getDaysInMonth } from "date-fns";
 
 interface PeriodSettingsCardProps {
   settings: AppSettings;
@@ -54,73 +54,36 @@ export const PeriodSettingsCard: React.FC<PeriodSettingsCardProps> = ({ settings
     }
   };
 
-  // Calcul de l'exemple budgétaire basé sur le mois en cours
+  // Calcul des périodes pour les exemples
   const calculateExample = () => {
-    const monthlyBudget = settings.monthly_envelope || 2000;
     const numValue = parseInt(val) || 7;
     const now = new Date();
     const daysInCurrentMonth = getDaysInMonth(now);
     const monthName = new Intl.DateTimeFormat("fr-FR", { month: "long" }).format(now);
-    const budgetPerDay = monthlyBudget / daysInCurrentMonth;
 
     if (type === "FIXED_DAYS") {
       const periodDays = numValue;
       const numPeriods = Math.ceil(daysInCurrentMonth / periodDays);
-      const budgetPerPeriod = budgetPerDay * periodDays;
       return {
         numPeriods,
-        budgetPerPeriod: Math.round(budgetPerPeriod),
-        example: `${numPeriods} périodes d'environ ${Math.round(budgetPerPeriod)}€ chacune`,
+        example: `${numPeriods} périodes de ${periodDays} jours`,
         detail: `pour ${monthName} (${daysInCurrentMonth} jours)`,
       };
     } else if (type === "CALENDAR_WEEKS") {
-      // Calcul précis des semaines calendaires du mois en cours avec prorata
       const monthStart = startOfMonth(now);
       const monthEnd = endOfMonth(now);
-      const calendarWeeks = eachWeekOfInterval(
-        { start: monthStart, end: monthEnd },
-        { weekStartsOn: 1 } // Lundi
-      );
-
-      // Calculer les jours réels de chaque semaine dans le mois
-      const weekDetails = calendarWeeks.map((weekStart, index) => {
-        const weekEnd = new Date(weekStart);
-        weekEnd.setDate(weekEnd.getDate() + 6); // Dimanche
-
-        // Ajuster pour rester dans le mois
-        const effectiveStart = weekStart < monthStart ? monthStart : weekStart;
-        const effectiveEnd = weekEnd > monthEnd ? monthEnd : weekEnd;
-
-        // Calculer le nombre de jours avec date-fns (plus fiable)
-        const daysInWeek = differenceInDays(effectiveEnd, effectiveStart) + 1;
-        const weekBudget = Math.round(budgetPerDay * daysInWeek);
-
-        return { weekNumber: index + 1, days: daysInWeek, budget: weekBudget };
-      });
-
-      const numPeriods = weekDetails.length;
-
-      // Afficher toutes les semaines avec leur budget respectif au prorata
-      const detailedExample = weekDetails.map((w) => `S${w.weekNumber} (${w.days}j) : ${w.budget}€`).join(", ");
-
-      // Calculer le budget représentatif (moyenne des semaines complètes ou première semaine)
-      const fullWeeks = weekDetails.filter((w) => w.days === 7);
-      const representativeBudget = fullWeeks.length > 0 ? fullWeeks[0].budget : weekDetails[0].budget;
-
+      const calendarWeeks = eachWeekOfInterval({ start: monthStart, end: monthEnd }, { weekStartsOn: 1 });
+      const numPeriods = calendarWeeks.length;
       return {
         numPeriods,
-        budgetPerPeriod: representativeBudget,
-        example: detailedExample,
-        detail: `pour ${monthName} (prorata selon jours réels)`,
+        example: `${numPeriods} semaines`,
+        detail: `pour ${monthName}`,
       };
     } else {
-      // CUSTOM_SPLIT
       const numPeriods = Math.max(1, Math.min(10, numValue));
-      const budgetPerPeriod = monthlyBudget / numPeriods;
       return {
         numPeriods,
-        budgetPerPeriod: Math.round(budgetPerPeriod),
-        example: `${numPeriods} périodes de ${Math.round(budgetPerPeriod)}€ chacune`,
+        example: `${numPeriods} périodes égales`,
         detail: `pour ${monthName}`,
       };
     }
@@ -182,11 +145,9 @@ export const PeriodSettingsCard: React.FC<PeriodSettingsCardProps> = ({ settings
                 </p>
               </div>
               <div className="bg-emerald-50 p-3 rounded-lg border border-emerald-200">
-                <p className="text-xs font-bold text-emerald-900 mb-1">💰 Répartition budgétaire</p>
+                <p className="text-xs font-bold text-emerald-900 mb-1">� Répartition</p>
                 <p className="text-sm font-black text-emerald-700">{budgetExample.example}</p>
-                <p className="text-[10px] text-emerald-600 mt-1">
-                  Basé sur {settings.monthly_envelope}€ mensuels {budgetExample.detail}
-                </p>
+                <p className="text-[10px] text-emerald-600 mt-1">{budgetExample.detail}</p>
               </div>
               <div className="pt-2 border-t border-slate-200/60">
                 <label className="text-xs font-bold text-slate-700 uppercase tracking-tight">Durée d'une période (Jours)</label>
@@ -211,11 +172,9 @@ export const PeriodSettingsCard: React.FC<PeriodSettingsCardProps> = ({ settings
                 </p>
               </div>
               <div className="bg-emerald-50 p-3 rounded-lg border border-emerald-200">
-                <p className="text-xs font-bold text-emerald-900 mb-1">💰 Répartition budgétaire</p>
+                <p className="text-xs font-bold text-emerald-900 mb-1">� Répartition</p>
                 <p className="text-sm font-black text-emerald-700">{budgetExample.example}</p>
-                <p className="text-[10px] text-emerald-600 mt-1">
-                  Basé sur {settings.monthly_envelope}€ mensuels {budgetExample.detail}
-                </p>
+                <p className="text-[10px] text-emerald-600 mt-1">{budgetExample.detail}</p>
               </div>
               <div className="flex items-start gap-2 bg-amber-50 p-2 rounded-lg border border-amber-100 text-amber-800">
                 <AlertTriangle size={14} className="mt-0.5 flex-shrink-0" />
@@ -238,11 +197,9 @@ export const PeriodSettingsCard: React.FC<PeriodSettingsCardProps> = ({ settings
                 </p>
               </div>
               <div className="bg-emerald-50 p-3 rounded-lg border border-emerald-200">
-                <p className="text-xs font-bold text-emerald-900 mb-1">💰 Répartition budgétaire</p>
+                <p className="text-xs font-bold text-emerald-900 mb-1">� Répartition</p>
                 <p className="text-sm font-black text-emerald-700">{budgetExample.example}</p>
-                <p className="text-[10px] text-emerald-600 mt-1">
-                  Basé sur {settings.monthly_envelope}€ mensuels {budgetExample.detail}
-                </p>
+                <p className="text-[10px] text-emerald-600 mt-1">{budgetExample.detail}</p>
               </div>
               <div className="pt-2 border-t border-slate-200/60">
                 <label className="text-xs font-bold text-slate-700 uppercase tracking-tight">Nombre de divisions</label>

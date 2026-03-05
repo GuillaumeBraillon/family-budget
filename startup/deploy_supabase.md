@@ -91,8 +91,8 @@ Guide complet pour configurer et déployer la base de données PostgreSQL avec S
 1. **Créer un enregistrement de paramètres**
 
    ```sql
-   INSERT INTO app_settings (id, monthly_envelope, period_type, period_value)
-   VALUES ('global', 2000, 'FIXED_DAYS', 7);
+   INSERT INTO app_settings (id, personal_budget_amount, period_type, period_value)
+   VALUES ('global', 350, 'FIXED_DAYS', 7);
    ```
 
 2. **Créer des catégories par défaut** (optionnel)

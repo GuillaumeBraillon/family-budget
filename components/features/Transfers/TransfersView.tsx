@@ -31,14 +31,14 @@
 import React, { useState } from "react";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
-import { usePlannerUI } from "../../../hooks/usePlannerUI";
+import { usePeriodNav } from "../../../contexts/PeriodNavigationContext";
 import { useError } from "../../../contexts/ErrorContext";
 import { useTransfersFilters, useTransfersData, useTransfersSorting, isTransfer, type TransfersHistoryEntry } from "../../../hooks/transfers";
 import { Account, Person, Transfer, AppSettings, SavedLabel, VariableTransaction, CategoryDef, AccountType } from "../../../types";
 import { ArrowRight, TrendingUp } from "lucide-react";
 
 // Imports UI Atomic
-import { MonthNavigator } from "../../ui/molecules/MonthNavigator";
+import { PeriodNavigationBar } from "../../ui/molecules/PeriodNavigationBar";
 import { SearchBar } from "../../ui/atoms/SearchBar";
 import { DataList } from "../../ui/molecules/DataList";
 import { ListSorter } from "../../ui/molecules/ListSorter";
@@ -139,8 +139,11 @@ export const TransfersView: React.FC<TransfersViewProps> = ({
   const { showError } = useError();
   // --- HOOKS SPÉCIALISÉS (LOGIQUE DÉLÉGUÉE) ---
 
-  // Navigation et recherche (UI state global)
-  const ui = usePlannerUI();
+  // Navigation partagée (contexte global, persistante entre vues)
+  const { currentDate } = usePeriodNav();
+
+  // Recherche locale (spécifique à la vue Transfers)
+  const [searchQuery, setSearchQuery] = useState<string>(() => "");
 
   // Filtres avec persistance localStorage (187L extraites → useTransfersFilters)
   const filters = useTransfersFilters();
@@ -151,8 +154,8 @@ export const TransfersView: React.FC<TransfersViewProps> = ({
     transfers,
     variableTransactions,
     accounts,
-    currentDate: ui.currentDate,
-    searchQuery: ui.searchQuery,
+    currentDate,
+    searchQuery,
     selectedMotif: filters.selectedMotif,
     accountTypeFilter: filters.accountTypeFilter,
     specificAccountId: filters.specificAccountId,
@@ -219,14 +222,11 @@ export const TransfersView: React.FC<TransfersViewProps> = ({
   // --- RENDER ---
 
   return (
-    <div className="space-y-1 animate-in fade-in duration-500">
+    <div className="flex flex-col gap-1.5 md:gap-2 m-2">
       {/* Navigation de période */}
-      <div className="flex flex-row gap-1.5 md:gap-2 items-center flex-wrap">
-        <MonthNavigator date={ui.currentDate} onPrev={ui.handlePrevMonth} onNext={ui.handleNextMonth} />
-        <div className="ml-auto">
-          <SearchBar value={ui.searchQuery} onChange={ui.setSearchQuery} />
-        </div>
-      </div>
+      <PeriodNavigationBar filteredPeriodBudgets={[]}>
+        <SearchBar value={searchQuery} onChange={setSearchQuery} />
+      </PeriodNavigationBar>
 
       {/* FILTRES COMPACTS */}
       <div className="bg-white p-2 rounded-xl border border-slate-200 shadow-sm">

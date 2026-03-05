@@ -4,7 +4,7 @@ import { Session } from "@supabase/supabase-js";
 import { usePWAInstall } from "../../hooks/usePWAInstall";
 import { UserMenu } from "./UserMenu";
 
-type ViewState = "dashboard" | "balances" | "planner" | "transfers" | "config";
+type ViewState = "dashboard" | "balances" | "planner" | "transfers" | "config" | "analytics";
 
 interface HeaderProps {
   currentView: ViewState;
@@ -23,6 +23,7 @@ export const Header: React.FC<HeaderProps> = ({ currentView, onViewChange, onLog
     { id: "planner", label: "Opérations", icon: <CalendarCheck /> },
     { id: "transfers", label: "Comptes", icon: <ArrowRightLeft /> },
     { id: "config", label: "Réglages", icon: <Settings /> },
+    { id: "analytics", label: "Analytics", icon: <Calculator /> },
   ] as const;
 
   return (

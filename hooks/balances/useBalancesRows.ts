@@ -20,7 +20,6 @@
  */
 import { useMemo } from "react";
 import { Account, Person } from "../../types";
-import { logger } from "../../services/logger";
 
 export interface BalanceRow {
   id: string;
@@ -50,13 +49,10 @@ export interface BalanceRow {
 }
 
 interface UseBalancesRowsParams {
-  _accounts: Account[];
   people: Person[];
-  budgetPeriodeGlobal: number;
-  totalPersonalBalance: number;
-  distributableBalance: number;
   jointAccount: Account | undefined;
   personalAccounts: Account[];
+  consumedDetails: { beneficiaryId: string; name: string; amount: number; available: number; remaining: number }[];
   stats: {
     byAccount: Record<
       string,
@@ -108,306 +104,66 @@ interface UseBalancesRowsParams {
  * });
  * ```
  */
-export const useBalancesRows = ({
-  _accounts,
-  people,
-  budgetPeriodeGlobal: _budgetPeriodeGlobal,
-  totalPersonalBalance,
-  distributableBalance,
-  jointAccount,
-  personalAccounts,
-  stats,
-}: UseBalancesRowsParams) => {
+export const useBalancesRows = ({ people, jointAccount, personalAccounts, consumedDetails, stats }: UseBalancesRowsParams) => {
   return useMemo(() => {
     const jRows: BalanceRow[] = [];
     const pRows: BalanceRow[] = [];
 
-    // Variables pour le détail des virements LDDS
     let lddsToJoint = 0;
     let lddsToPersonals = 0;
 
-    // --- ÉTAPE 1 : Calculer le gap du compte joint ---
-    let jointGap = 0;
-    let jointTarget = 0;
+    for (const acc of personalAccounts) {
+      const owner = people.find((p) => p.id === acc.ownerId);
+      const beneficiaryPocket = consumedDetails.find((detail) => detail.beneficiaryId === acc.ownerId);
+      const pocketToAdd = beneficiaryPocket?.available || 0;
 
-    if (jointAccount) {
-      const jointStats = stats.byAccount[jointAccount.id];
-      const pendingOnJoint = jointStats ? jointStats.remaining : 0;
+      const pending = stats.byAccount[acc.id]?.remaining || 0;
+      const pendingStandard = stats.byAccount[acc.id]?.remainingStandard || 0;
+      const paid = stats.byAccount[acc.id]?.paid || 0;
+      const paidStandard = stats.byAccount[acc.id]?.paidStandard || 0;
 
-      // Target : Montant des dépenses à couvrir (valeur absolue)
-      jointTarget = pendingOnJoint < 0 ? -pendingOnJoint : 0;
-
-      // Gap : Ce qu'il manque pour finir à l'équilibre (0€) après paiement des opérations en attente
-      // Solde Prévisionnel = Solde Actuel + Opérations en attente
-      // Gap = 0 - Solde Prévisionnel
-      const projectedBalance = jointAccount.currentBalance + pendingOnJoint;
-      jointGap = -projectedBalance;
-    }
-
-    // --- ÉTAPE 2 : Calculer excédent OU déficit budgétaire global ---
-    // RÈGLE MÉTIER GLOBALE :
-    // - Si Total Soldes > Reste sur Période → Excédent (on prélève vers Joint)
-    // - Si Total Soldes < Reste sur Période → Déficit (on alimente depuis LDDS via Joint)
-
-    // Calcul de l'excédent ou déficit global
-    const globalSurplus = totalPersonalBalance - distributableBalance;
-
-    // Deux cas de figure :
-    // 1. globalSurplus > 0 : Excédent → prélèvement vers joint
-    // 2. globalSurplus < 0 : Déficit → alimentation depuis LDDS
-    const amountToTakeFromPersonals = Math.max(0, Math.min(jointGap, globalSurplus));
-    const amountToGiveToPersonals = Math.max(0, -globalSurplus);
-
-    let totalTransfersToPersonals = 0;
-    let totalSurplusFromPersonals = 0;
-
-    // CAS 1 : Déficit global → Alimenter les comptes personnels
-    if (globalSurplus < -0.01) {
-      // NOUVELLE LOGIQUE : Répartir selon l'écart entre solde actuel et cible
-      const TRANSFER_THRESHOLD = 20; // Seuil minimum pour éviter petits virements
-      const totalRatio = personalAccounts.filter((acc) => acc.targetRatio && acc.targetRatio > 0).reduce((sum, acc) => sum + (acc.targetRatio || 0), 0);
-
-      // Calculer les écarts pour chaque compte
-      const accountGaps = personalAccounts.map((acc) => {
-        if (!acc.targetRatio || acc.targetRatio <= 0 || totalRatio <= 0) {
-          return { account: acc, targetBalance: acc.currentBalance, gap: 0 };
-        }
-
-        // Cible = ratio × reste disponible
-        const targetBalance = (acc.targetRatio / totalRatio) * distributableBalance;
-
-        // Gap = cible - solde actuel (positif si besoin, négatif si excédent)
-        let gap = targetBalance - acc.currentBalance;
-
-        // Si cap défini, limiter la cible
-        if (acc.targetCap !== undefined && targetBalance > acc.targetCap) {
-          gap = Math.max(0, acc.targetCap - acc.currentBalance);
-        }
-
-        return { account: acc, targetBalance, gap };
+      pRows.push({
+        id: acc.id,
+        name: acc.name,
+        owner: owner?.name || "Inconnu",
+        balance: acc.currentBalance,
+        target: acc.currentBalance + pocketToAdd,
+        transfer: pocketToAdd,
+        isJoint: false,
+        ratio: acc.targetRatio,
+        cap: acc.targetCap,
+        pendingAmount: pending,
+        pendingStandard: pendingStandard,
+        pendingExtra: pending - pendingStandard,
+        paidAmount: paid,
+        paidStandard: paidStandard,
+        paidExtra: paid - paidStandard,
+        calculation: {
+          theoreticalAmount: pocketToAdd,
+          isContributor: false,
+        },
       });
 
-      // Calculer le total des gaps positifs (besoins)
-      const totalPositiveGaps = accountGaps.reduce((sum, item) => sum + Math.max(0, item.gap), 0);
-
-      for (const item of accountGaps) {
-        const acc = item.account;
-        const owner = people.find((p) => p.id === acc.ownerId);
-        let transferAmount = 0;
-
-        if (item.gap > 0) {
-          // Ce compte a besoin d'argent
-          // Calculer sa part du montant disponible proportionnellement à son besoin
-          const shareOfNeeds = totalPositiveGaps > 0 ? item.gap / totalPositiveGaps : 0;
-          let calculatedTransfer = shareOfNeeds * amountToGiveToPersonals;
-
-          // Ne pas dépasser le besoin réel du compte
-          calculatedTransfer = Math.min(calculatedTransfer, item.gap);
-
-          // Appliquer le seuil : pas de virement si < 20€
-          if (calculatedTransfer >= TRANSFER_THRESHOLD) {
-            transferAmount = calculatedTransfer;
-          }
-
-          totalTransfersToPersonals += transferAmount;
-        }
-
-        const targetBalance = acc.currentBalance + transferAmount;
-        const pending = stats.byAccount[acc.id]?.remaining || 0;
-        const pendingStandard = stats.byAccount[acc.id]?.remainingStandard || 0;
-        const paid = stats.byAccount[acc.id]?.paid || 0;
-        const paidStandard = stats.byAccount[acc.id]?.paidStandard || 0;
-
-        pRows.push({
-          id: acc.id,
-          name: acc.name,
-          owner: owner?.name || "Inconnu",
-          balance: acc.currentBalance,
-          target: targetBalance,
-          transfer: transferAmount,
-          isJoint: false,
-          ratio: acc.targetRatio,
-          cap: acc.targetCap,
-          pendingAmount: pending,
-          pendingStandard: pendingStandard,
-          pendingExtra: pending - pendingStandard,
-          paidAmount: paid,
-          paidStandard: paidStandard,
-          paidExtra: paid - paidStandard,
-          calculation: {
-            sharePercent: acc.targetRatio || 0,
-            theoreticalAmount: ((acc.targetRatio || 0) * amountToGiveToPersonals) / 100,
-            isContributor: false, // Ils reçoivent, ne contribuent pas
-          },
-        });
-      }
-    }
-    // CAS 2 : Aucun excédent/déficit → Pas de transfert
-    else if (globalSurplus >= -0.01 && globalSurplus <= 0.01) {
-      // Générer les lignes sans transfert
-      for (const acc of personalAccounts) {
-        const owner = people.find((p) => p.id === acc.ownerId);
-        const pending = stats.byAccount[acc.id]?.remaining || 0;
-        const pendingStandard = stats.byAccount[acc.id]?.remainingStandard || 0;
-        const paid = stats.byAccount[acc.id]?.paid || 0;
-        const paidStandard = stats.byAccount[acc.id]?.paidStandard || 0;
-
-        pRows.push({
-          id: acc.id,
-          name: acc.name,
-          owner: owner?.name || "Inconnu",
-          balance: acc.currentBalance,
-          target: acc.currentBalance,
-          transfer: 0,
-          isJoint: false,
-          ratio: acc.targetRatio,
-          cap: acc.targetCap,
-          pendingAmount: pending,
-          pendingStandard: pendingStandard,
-          pendingExtra: pending - pendingStandard,
-          paidAmount: paid,
-          paidStandard: paidStandard,
-          paidExtra: paid - paidStandard,
-          calculation: {
-            sharePercent: totalPersonalBalance > 0 ? (acc.currentBalance / totalPersonalBalance) * 100 : 0,
-            theoreticalAmount: 0,
-            isContributor: false,
-          },
-        });
-      }
-    }
-    // CAS 3 : Excédent global → Prélever vers joint (logique existante)
-    else {
-      // PASSE 1 : Identifier qui peut contribuer (> seuil 10€)
-      const CONTRIBUTION_THRESHOLD = 10; // Seuil minimum pour participer à la contribution
-      const contributorAccounts = personalAccounts.filter((acc) => {
-        const shareOfTotal = totalPersonalBalance > 0 ? acc.currentBalance / totalPersonalBalance : 0;
-        const theoreticalContribution = amountToTakeFromPersonals * shareOfTotal;
-        return theoreticalContribution > CONTRIBUTION_THRESHOLD;
-      });
-
-      // PASSE 2 : Calculer les transferts effectifs
-      const totalContributorBalance = contributorAccounts.reduce((sum, acc) => sum + acc.currentBalance, 0);
-
-      for (const acc of personalAccounts) {
-        const owner = people.find((p) => p.id === acc.ownerId);
-
-        const isContributor = contributorAccounts.some((c) => c.id === acc.id);
-        const shareOfTotal = totalPersonalBalance > 0 ? acc.currentBalance / totalPersonalBalance : 0;
-        const theoreticalAmount = amountToTakeFromPersonals * shareOfTotal;
-
-        let transferAmount = 0;
-        if (isContributor && totalContributorBalance > 0) {
-          // Ce compte contribue : calculer sa part proportionnelle du total nécessaire
-          const shareOfContributors = acc.currentBalance / totalContributorBalance;
-          const amountToTake = amountToTakeFromPersonals * shareOfContributors;
-
-          // PROTECTION : Ne jamais mettre un compte courant en découvert
-          // On limite le prélèvement au solde disponible
-          const maxCanTake = Math.max(0, acc.currentBalance);
-          const actualAmountToTake = Math.min(amountToTake, maxCanTake);
-
-          transferAmount = -actualAmountToTake;
-          totalSurplusFromPersonals += actualAmountToTake;
-        }
-        // Sinon, transferAmount reste 0 (compte ne contribue pas)
-
-        const targetBalance = acc.currentBalance + transferAmount;
-        const pending = stats.byAccount[acc.id]?.remaining || 0;
-        const pendingStandard = stats.byAccount[acc.id]?.remainingStandard || 0;
-        const paid = stats.byAccount[acc.id]?.paid || 0;
-        const paidStandard = stats.byAccount[acc.id]?.paidStandard || 0;
-
-        pRows.push({
-          id: acc.id,
-          name: acc.name,
-          owner: owner?.name || "Inconnu",
-          balance: acc.currentBalance,
-          target: targetBalance,
-          transfer: transferAmount,
-          isJoint: false,
-          ratio: acc.targetRatio,
-          cap: acc.targetCap,
-          pendingAmount: pending,
-          pendingStandard: pendingStandard,
-          pendingExtra: pending - pendingStandard,
-          paidAmount: paid,
-          paidStandard: paidStandard,
-          paidExtra: paid - paidStandard,
-          calculation: {
-            sharePercent: shareOfTotal * 100,
-            theoreticalAmount: theoreticalAmount,
-            isContributor: isContributor,
-          },
-        });
-      }
+      lddsToPersonals += pocketToAdd;
     }
 
     // --- LOGIQUE COMPTE JOINT ---
-    let jointTransferNeeded = 0;
 
     if (jointAccount) {
       const owner = people.find((p) => p.id === jointAccount.ownerId);
-
-      // FLUX 1 : Si les comptes persos ont des excédents, on les utilise pour financer le joint
-      let remainingGap = jointGap;
-      if (remainingGap > 0 && totalSurplusFromPersonals > 0) {
-        const surplusUsed = Math.min(remainingGap, totalSurplusFromPersonals);
-        remainingGap -= surplusUsed;
-      }
-
-      // FLUX 2 : Si besoin de financer le joint depuis LDDS
-      lddsToJoint = Math.max(0, remainingGap);
-
-      // FLUX 3 : Si besoin de financer les comptes persos depuis LDDS (via joint)
-      lddsToPersonals = totalTransfersToPersonals;
-
-      // Total du virement LDDS nécessaire = flux vers joint + flux vers persos
-      jointTransferNeeded = lddsToJoint + lddsToPersonals;
-
-      logger.debug("balances-rows", "Calcul virement LDDS", {
-        globalSurplus,
-        distributableBalance,
-        totalPersonalBalance,
-        amountToGiveToPersonals,
-        totalTransfersToPersonals,
-        lddsToJoint,
-        lddsToPersonals,
-        jointTransferNeeded,
-      });
 
       const jointPending = stats.byAccount[jointAccount.id]?.remaining || 0;
       const jointPendingStandard = stats.byAccount[jointAccount.id]?.remainingStandard || 0;
       const jointPaid = stats.byAccount[jointAccount.id]?.paid || 0;
       const jointPaidStandard = stats.byAccount[jointAccount.id]?.paidStandard || 0;
 
-      // CORRECTION : Gestion du surplus avec priorité aux comptes courants
-      // - Si besoin (jointGap > 0) : transfert depuis LDDS
-      // - Si surplus ET comptes persos ont besoin (globalSurplus < 0) : utiliser surplus pour combler besoin persos
-      // - Si surplus ET comptes persos OK :
-      //   * Petit surplus (≤ 20€) : pas de transfert (tolérance)
-      //   * Gros surplus (> 20€) : transfert négatif vers LDDS
-      const SURPLUS_THRESHOLD = 20; // Seuil en dessous duquel on garde le surplus
+      // Besoin factures : couvrir uniquement le standard en attente sur le compte joint
+      const projectedAfterStandardPending = jointAccount.currentBalance + jointPendingStandard;
+      const jointTransferNeeded = Math.max(0, -projectedAfterStandardPending);
+      lddsToJoint = jointTransferNeeded;
 
-      const effectiveTransfer = (() => {
-        if (jointGap > 0) {
-          // Besoin : transfert positif depuis LDDS
-          return jointGap;
-        } else if (amountToGiveToPersonals > 0) {
-          // Surplus du joint ET comptes persos ont besoin : utiliser le surplus pour combler le besoin
-          const surplusAvailable = Math.abs(jointGap);
-          const surplusUsedForPersonals = Math.min(surplusAvailable, amountToGiveToPersonals);
-          // Le surplus est utilisé pour les persos, donc transfert = 0 (ou le reste si tout n'est pas utilisé)
-          const remainingSurplus = surplusAvailable - surplusUsedForPersonals;
-          return remainingSurplus > SURPLUS_THRESHOLD ? -remainingSurplus : 0;
-        } else {
-          // Surplus du joint ET comptes persos OK : transférer vers LDDS si > seuil
-          return Math.abs(jointGap) > SURPLUS_THRESHOLD ? jointGap : 0;
-        }
-      })();
-
-      // CORRECTION : Le solde prévu = solde actuel + virement
-      const targetBalance = jointAccount.currentBalance + effectiveTransfer;
+      const targetBalance = jointAccount.currentBalance + jointTransferNeeded;
+      const standardDebts = Math.max(0, -jointPendingStandard);
 
       jRows.push({
         id: jointAccount.id,
@@ -415,7 +171,7 @@ export const useBalancesRows = ({
         owner: owner?.name || "Commun",
         balance: jointAccount.currentBalance,
         target: targetBalance,
-        transfer: effectiveTransfer,
+        transfer: jointTransferNeeded,
         isJoint: true,
         pendingAmount: jointPending,
         pendingStandard: jointPendingStandard,
@@ -424,9 +180,9 @@ export const useBalancesRows = ({
         paidStandard: jointPaidStandard,
         paidExtra: jointPaid - jointPaidStandard,
         calculation: {
-          jointDebts: jointTarget,
-          jointGap: jointGap,
-          fromPersonals: totalSurplusFromPersonals,
+          jointDebts: standardDebts,
+          jointGap: jointTransferNeeded,
+          fromPersonals: 0,
           fromLdds: jointTransferNeeded,
         },
       });
@@ -444,8 +200,7 @@ export const useBalancesRows = ({
       pendingAmount: pRows.reduce((sum, r) => sum + (r.pendingAmount || 0), 0),
     };
 
-    // --- SYNTHÈSE GLOBALE ---
-    const globalTransfer = jointTransferNeeded + totalTransfersToPersonals;
+    const globalTransfer = lddsToJoint + lddsToPersonals;
 
     // Tri par libellé pour affichage cohérent
     jRows.sort((a, b) => a.name.localeCompare(b.name));
@@ -459,5 +214,5 @@ export const useBalancesRows = ({
       lddsToJoint,
       lddsToPersonals,
     };
-  }, [people, totalPersonalBalance, jointAccount, personalAccounts, stats, distributableBalance]);
+  }, [people, jointAccount, personalAccounts, consumedDetails, stats]);
 };

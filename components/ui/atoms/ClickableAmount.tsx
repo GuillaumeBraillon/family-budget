@@ -17,6 +17,7 @@
  */
 import React from "react";
 import { OperationFilters } from "../../../types";
+import { buildOperationsFilters } from "../../../services/financeUtils";
 
 interface ClickableAmountProps {
   /** Contenu à afficher (montant, texte, badge, etc.) */
@@ -72,23 +73,8 @@ interface ClickableAmountProps {
  * @returns {JSX.Element} Élément cliquable stylisé
  */
 export const ClickableAmount: React.FC<ClickableAmountProps> = ({ children, date, filters, weekNumber, onNavigate, className = "", title, as = "div" }) => {
-  // FILTRES PAR DÉFAUT ROBUSTES
-  // Ces valeurs garantissent que les filtres sont toujours réinitialisés proprement
-  // même si on oublie de les passer explicitement dans les props
-  const defaultFilters: Partial<OperationFilters> = {
-    flux: "ALL",
-    source: "ALL",
-    nature: "ALL",
-    transfer: "EXCLUDE", // Masquer les virements internes par défaut
-    salary: "EXCLUDE", // Masquer les salaires par défaut (revenus structurels)
-    beneficiaryIds: [], // Tous les bénéficiaires
-    includedTagIds: [], // Pas de filtre de tags inclus
-    excludedTagIds: [], // Pas de filtre de tags exclus
-    tagPresence: "ALL", // Avec ou sans tags
-  };
-
-  // Merge des filtres : les props écrasent les valeurs par défaut
-  const mergedFilters = { ...defaultFilters, ...filters };
+  // Utilise buildOperationsFilters (source de vérité unique) pour merger les defaults
+  const mergedFilters = buildOperationsFilters(filters);
 
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();

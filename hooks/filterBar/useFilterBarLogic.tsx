@@ -67,6 +67,7 @@ import {
 } from "lucide-react";
 import { OperationFilters, Account, Person, AccountType, Tag as TagType } from "../../types";
 import { FilterOption } from "../../components/ui/molecules/FilterDropdown";
+import { buildOperationsFilters } from "../../services/financeUtils";
 
 /**
  * Configuration d'un bouton cyclique (label, icône, couleur).
@@ -122,19 +123,7 @@ export const useFilterBarLogic = (
     if (onReset) {
       onReset();
     } else {
-      onFilterChange({
-        flux: "ALL",
-        source: "VARIABLE",
-        status: "REAL",
-        nature: "EXCLUDE",
-        transfer: "EXCLUDE",
-        salary: "EXCLUDE",
-        accountIds: [],
-        beneficiaryIds: [],
-        includedTagIds: [],
-        excludedTagIds: [],
-        tagPresence: "ALL",
-      });
+      onFilterChange(buildOperationsFilters({ source: "VARIABLE", status: "REAL", nature: "EXCLUDE" }) as OperationFilters);
     }
   };
 
@@ -441,14 +430,14 @@ export const useFilterBarLogic = (
   const isSalaryActive = filters.salary !== "EXCLUDE";
 
   /**
-   * Détecte si le filtre Bénéficiaires est actif (sélection explicite).
-   */
-  const isBenActive = filters.beneficiaryIds.length > 0;
-
-  /**
    * Détecte si le filtre Source est actif (différent du défaut "ALL").
    */
   const isSourceActive = filters.source !== "ALL";
+
+  /**
+   * Détecte si le filtre Flux est actif (différent du défaut "ALL").
+   */
+  const isFluxActive = filters.flux !== "ALL";
 
   /**
    * Détecte si le filtre Virements est actif (différent du défaut "EXCLUDE").
@@ -463,7 +452,7 @@ export const useFilterBarLogic = (
   /**
    * Détecte si au moins un filtre secondaire (avancé) est actif.
    */
-  const hasActiveSecondary = isTagsActive || isSalaryActive || isBenActive || isTransferActive || isAccountActive;
+  const hasActiveSecondary = isTagsActive || isSalaryActive || isTransferActive || isAccountActive || isFluxActive;
 
   /**
    * Compte total des filtres actifs pour le badge global.
@@ -489,18 +478,19 @@ export const useFilterBarLogic = (
    *
    * @returns {boolean} True si filtres par défaut, False si modifiés
    */
+  const DEFAULT = buildOperationsFilters({ source: "VARIABLE", status: "REAL", nature: "EXCLUDE" });
   const isDefaultFilters =
-    filters.flux === "ALL" &&
-    filters.source === "VARIABLE" &&
-    filters.status === "REAL" &&
-    filters.nature === "EXCLUDE" &&
-    filters.transfer === "EXCLUDE" &&
-    filters.salary === "EXCLUDE" &&
+    filters.flux === DEFAULT.flux &&
+    filters.source === DEFAULT.source &&
+    filters.status === DEFAULT.status &&
+    filters.nature === DEFAULT.nature &&
+    filters.transfer === DEFAULT.transfer &&
+    filters.salary === DEFAULT.salary &&
     filters.accountIds.length === 0 &&
     filters.beneficiaryIds.length === 0 &&
     filters.includedTagIds.length === 0 &&
     filters.excludedTagIds.length === 0 &&
-    filters.tagPresence === "ALL";
+    filters.tagPresence === DEFAULT.tagPresence;
 
   return {
     // État UI
@@ -538,8 +528,8 @@ export const useFilterBarLogic = (
     isTagsActive,
     isExtraActive,
     isSalaryActive,
-    isBenActive,
     isSourceActive,
+    isFluxActive,
     isTransferActive,
     isAccountActive,
     hasActiveSecondary,

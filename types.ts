@@ -23,6 +23,11 @@ export interface TagAmount {
   isExtra?: boolean; // Indique si ce montant est hors budget
 }
 
+export interface BeneficiaryAmount {
+  beneficiaryId: string;
+  amount: number;
+}
+
 export interface AuthorizedUser {
   email: string;
   name?: string;
@@ -104,7 +109,9 @@ export interface VariableTransaction {
   subCategory?: string;
   accountId: string;
   beneficiaryId?: string;
+  beneficiaryAmounts?: BeneficiaryAmount[];
   type: "EXPENSE" | "INCOME";
+  isRefund?: boolean;
   isWaiting: boolean; // True = En attente, False = Pointé
   isExtra: boolean; // True = Hors budget
   comments?: string;
@@ -113,14 +120,13 @@ export interface VariableTransaction {
 }
 
 export type PeriodType = "FIXED_DAYS" | "CALENDAR_WEEKS" | "CUSTOM_SPLIT";
-export type CarryoverStrategy = "NEXT_PERIOD" | "SPREAD_REMAINING";
 export type SortOrder = "asc" | "desc";
 
 export interface AppSettings {
-  monthly_envelope: number;
+  personal_budget_amount?: number;
+  family_variable_budget?: number;
   period_type: PeriodType;
   period_value: number;
-  carryover_strategy?: CarryoverStrategy;
   savings_labels?: string[];
   variable_labels?: string[];
   operations_sorting?: string[];
@@ -163,11 +169,13 @@ export interface PaidItemDetails {
   amount: number;
   paymentDate: string;
   accountId: string;
-  beneficiaryId: string;
+  beneficiaryAmounts?: BeneficiaryAmount[];
   label: string;
   category: string;
   subCategory?: string;
   type: "EXPENSE" | "INCOME";
+  isRefund?: boolean;
+  isSalary?: boolean;
   isVariable: boolean;
   isWaiting: boolean;
   isExtra: boolean;
@@ -192,8 +200,10 @@ export interface PlannedItem {
   category: string;
   subCategory?: string;
   beneficiaryId: string;
+  beneficiaryAmounts?: BeneficiaryAmount[];
   isExtra: boolean; // Calculé : true si toggle global OU au moins un tag Extra
   isExtraGlobal: boolean; // Toggle global uniquement (sans tags)
+  isRefund?: boolean;
   isSalary?: boolean; // Propagation de l'info structurelle
   accountId: string;
   startMonth?: string;

@@ -1,9 +1,9 @@
 import React from "react";
 import { Session } from "@supabase/supabase-js";
-import { AppSettings, PeriodType, CarryoverStrategy } from "../../../../../types";
-import { MonthlyEnvelopeCard } from "../molecules/WeeklyEnvelopeCard";
+import { AppSettings, PeriodType } from "../../../../../types";
 import { PeriodSettingsCard } from "../molecules/PeriodSettingsCard";
-import { CarryoverStrategyCard } from "../molecules/CarryoverStrategyCard";
+import { BudgetModeCard } from "../molecules/BudgetModeCard";
+import { FamilyVariableBudgetCard } from "../molecules/FamilyVariableBudgetCard";
 
 interface GlobalSettingsProps {
   settings: AppSettings;
@@ -16,9 +16,8 @@ interface GlobalSettingsProps {
  *
  * @description
  * Regroupe les paramètres liés à la gestion budgétaire :
- * - Enveloppe mensuelle (budget total alloué)
+ * - Montant mensuel du budget personnel par bénéficiaire (ALLOWANCE)
  * - Découpage des périodes (semaines, jours fixes, parts égales)
- * - Stratégie de gestion des dépassements (déduction simple vs étalement)
  *
  * @param {Object} props - Props du composant
  * @param {AppSettings} props.settings - Paramètres globaux de l'application
@@ -26,24 +25,24 @@ interface GlobalSettingsProps {
  * @param {Session | null} [props.session] - Session utilisateur Supabase (non utilisée actuellement)
  */
 export const GlobalSettings: React.FC<GlobalSettingsProps> = ({ settings, onUpdate, session: _session }) => {
-  const updateEnvelope = (newEnv: number) => {
-    onUpdate({ ...settings, monthly_envelope: newEnv });
-  };
-
   const updatePeriod = (type: PeriodType, value: number) => {
     onUpdate({ ...settings, period_type: type, period_value: value });
   };
 
-  const updateCarryoverStrategy = (strategy: CarryoverStrategy) => {
-    onUpdate({ ...settings, carryover_strategy: strategy });
+  const updateAllowanceAmount = (allowanceAmount: number) => {
+    onUpdate({ ...settings, personal_budget_amount: allowanceAmount });
+  };
+
+  const updateFamilyVariableBudget = (familyVariableBudget: number) => {
+    onUpdate({ ...settings, family_variable_budget: familyVariableBudget });
   };
 
   return (
     <div className="max-w-5xl mx-auto space-y-6 pb-12 animate-in fade-in duration-500">
       {/* Configuration budgétaire */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <MonthlyEnvelopeCard settings={settings} onUpdate={updateEnvelope} />
-        <CarryoverStrategyCard settings={settings} onUpdate={updateCarryoverStrategy} />
+        <BudgetModeCard settings={settings} onUpdateAllowanceAmount={updateAllowanceAmount} />
+        <FamilyVariableBudgetCard settings={settings} onUpdateFamilyVariableBudget={updateFamilyVariableBudget} />
       </div>
       <PeriodSettingsCard settings={settings} onUpdate={updatePeriod} />
     </div>

@@ -79,6 +79,17 @@ export const OperationsList: React.FC<OperationsListProps> = ({
             {items.map((item) => {
               const progress = getExtraProgress(item);
               const person = people.find((p) => p.id === item.beneficiaryId);
+              const beneficiaryLabel =
+                item.beneficiaryAmounts && item.beneficiaryAmounts.length > 0
+                  ? item.beneficiaryAmounts
+                      .map((beneficiaryAmount) => {
+                        const currentPerson = people.find((p) => p.id === beneficiaryAmount.beneficiaryId);
+                        if (!currentPerson) return null;
+                        return `${currentPerson.name} (${beneficiaryAmount.amount.toFixed(2)}€)`;
+                      })
+                      .filter(Boolean)
+                      .join(" • ")
+                  : person?.name;
               const account = accounts.find((a) => a.id === item.accountId);
               const isVariable = item.source === "VARIABLE";
               const itemTags = item.tagAmounts ? tags.filter((t) => item.tagAmounts?.some((ta) => ta.tagId === t.id)) : [];
@@ -91,9 +102,10 @@ export const OperationsList: React.FC<OperationsListProps> = ({
                   amount={item.amount}
                   originalAmount={isVariable ? undefined : item.originalAmount}
                   isIncome={item.type === "INCOME"}
+                  isRefund={!!item.isRefund}
                   category={item.category}
                   subCategory={item.subCategory}
-                  beneficiary={person?.name}
+                  beneficiary={beneficiaryLabel}
                   isChild={person?.isChild}
                   accountName={account?.name}
                   isPaid={!!item.isPaid}

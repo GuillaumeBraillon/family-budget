@@ -22,7 +22,7 @@
  * - useState, useEffect, useMemo : Hooks React pour l'état et la memoization
  */
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { VariableTransaction, Account, AccountType, Person, SavedLabel, TagAmount, CategoryDef } from "../../types";
+import { VariableTransaction, Account, AccountType, Person, SavedLabel, TagAmount, CategoryDef, BeneficiaryAmount } from "../../types";
 import { useCategoryAutoSuggest } from "../useCategoryAutoSuggest";
 import { getDefaultAccountId } from "../accounts/getDefaultAccountId";
 
@@ -91,6 +91,8 @@ interface UseTransactionFormReturn {
   setSubCategory: (subCategory: string) => void;
   beneficiaryId: string;
   setBeneficiaryId: (beneficiaryId: string) => void;
+  selectedBeneficiaryAmounts: BeneficiaryAmount[];
+  setSelectedBeneficiaryAmounts: (beneficiaryAmounts: BeneficiaryAmount[]) => void;
 
   isExtra: boolean;
   setIsExtra: (isExtra: boolean) => void;
@@ -215,6 +217,7 @@ export const useTransactionForm = ({
   }, [people]);
 
   const [beneficiaryId, setBeneficiaryId] = useState(defaultBeneficiary);
+  const [selectedBeneficiaryAmounts, setSelectedBeneficiaryAmounts] = useState<BeneficiaryAmount[]>([]);
 
   const isExpenseCategory = useCallback(
     (categoryName: string) => {
@@ -265,6 +268,7 @@ export const useTransactionForm = ({
     setCategory("");
     setSubCategory("");
     setBeneficiaryId(defaultBeneficiary);
+    setSelectedBeneficiaryAmounts([]);
     setType("EXPENSE");
     setIsRefund(false);
     setIsExtra(false);
@@ -288,8 +292,9 @@ export const useTransactionForm = ({
           const rawAmount = Number(editingTransaction.amount);
           const isLegacyRefund = editingTransaction.type === "EXPENSE" && rawAmount < 0;
           const isIncomeRefund = editingTransaction.type === "INCOME" && isExpenseCategory(editingTransaction.category);
+          const isPersistedRefund = editingTransaction.isRefund === true;
 
-          if (isLegacyRefund || isIncomeRefund) {
+          if (isPersistedRefund || isLegacyRefund || isIncomeRefund) {
             setType("EXPENSE");
             setIsRefund(true);
             setAmount(Math.abs(rawAmount).toString());
@@ -309,6 +314,13 @@ export const useTransactionForm = ({
           setCategory(editingTransaction.category);
           setSubCategory(editingTransaction.subCategory || "");
           setBeneficiaryId(editingTransaction.beneficiaryId || defaultBeneficiary);
+          setSelectedBeneficiaryAmounts(
+            editingTransaction.beneficiaryAmounts && editingTransaction.beneficiaryAmounts.length > 0
+              ? editingTransaction.beneficiaryAmounts
+              : editingTransaction.beneficiaryId && Math.abs(rawAmount) > 0
+                ? [{ beneficiaryId: editingTransaction.beneficiaryId, amount: Math.abs(rawAmount) }]
+                : []
+          );
           setIsExtra(!!editingTransaction.isExtra);
         } else {
           resetForm();
@@ -361,9 +373,30 @@ export const useTransactionForm = ({
     if (!amount || parseFloat(amount) === 0) errors.push("Le montant est obligatoire et doit être différent de 0");
     if (!accountId) errors.push("Le compte est obligatoire");
 
+    const totalAmount = Math.abs(parseFloat(amount) || 0);
+    const normalizedBeneficiaryAmounts =
+      selectedBeneficiaryAmounts.length > 0 ? selectedBeneficiaryAmounts : beneficiaryId ? [{ beneficiaryId, amount: totalAmount }] : [];
+
+    if (normalizedBeneficiaryAmounts.length === 0) {
+      errors.push("Au moins un bénéficiaire est obligatoire");
+    }
+
+    const hasInvalidBeneficiaryAmount = normalizedBeneficiaryAmounts.some(
+      (beneficiaryAmount) => !beneficiaryAmount.beneficiaryId || !Number.isFinite(beneficiaryAmount.amount) || beneficiaryAmount.amount <= 0
+    );
+    if (hasInvalidBeneficiaryAmount) {
+      errors.push("Chaque bénéficiaire doit avoir un montant strictement supérieur à 0€");
+    }
+
+    const sumBeneficiaryAmounts = normalizedBeneficiaryAmounts.reduce((sum, beneficiaryAmount) => sum + beneficiaryAmount.amount, 0);
+    if (sumBeneficiaryAmounts > totalAmount + 0.01) {
+      errors.push(
+        `La somme des montants affectés aux bénéficiaires (${sumBeneficiaryAmounts.toFixed(2)}€) dépasse le montant total (${totalAmount.toFixed(2)}€)`
+      );
+    }
+
     // Validation des tagAmounts (permet ventilation partielle)
     if (selectedTagAmounts.length > 0) {
-      const totalAmount = Math.abs(parseFloat(amount) || 0);
       const sumTagAmounts = selectedTagAmounts.reduce((sum, ta) => sum + ta.amount, 0);
 
       const hasInvalidTagAmount = selectedTagAmounts.some((ta) => !ta.tagId || !Number.isFinite(ta.amount) || ta.amount <= 0);
@@ -398,8 +431,10 @@ export const useTransactionForm = ({
       category,
       subCategory,
       accountId,
-      beneficiaryId,
+      beneficiaryId: normalizedBeneficiaryAmounts[0]?.beneficiaryId || beneficiaryId,
+      beneficiaryAmounts: normalizedBeneficiaryAmounts,
       type: finalType,
+      isRefund: isRefundTransaction,
       isWaiting: targetIsWaiting,
       isExtra, // Toggle global au niveau opération
       comments: comments.trim() || undefined,
@@ -532,6 +567,8 @@ export const useTransactionForm = ({
     setSubCategory,
     beneficiaryId,
     setBeneficiaryId,
+    selectedBeneficiaryAmounts,
+    setSelectedBeneficiaryAmounts,
 
     isExtra,
     setIsExtra,

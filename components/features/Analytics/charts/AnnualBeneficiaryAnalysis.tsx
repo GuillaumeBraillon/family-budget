@@ -22,12 +22,12 @@
  */
 import React from "react";
 import { Scale, Briefcase, CalendarClock, ShoppingBag, ArrowUpRight, ArrowDownLeft } from "lucide-react";
-import { Card } from "../../../../ui/Card";
-import { ExportCsvButton } from "../../../../ui/atoms/ExportCsvButton";
-import { ClickableAmount } from "../../../../ui/atoms/ClickableAmount";
-import { useCsvExport } from "../../../../../hooks/useCsvExport";
-import { useBeneficiaryData, getBeneficiaryAnalysisFilters } from "../../../../../hooks/dashboard/useBeneficiaryData";
-import { Account, Person, ExpenseConfig, IncomeConfig, PaidItemDetails, VariableTransaction, CategoryDef, OperationFilters } from "../../../../../types";
+import { Card } from "../../../ui/Card";
+import { ExportCsvButton } from "../../../ui/atoms/ExportCsvButton";
+import { ClickableAmount } from "../../../ui/atoms/ClickableAmount";
+import { useCsvExport } from "../../../../hooks/useCsvExport";
+import { useBeneficiaryData, getBeneficiaryAnalysisFilters } from "../../../../hooks/dashboard/useBeneficiaryData";
+import { Account, Person, ExpenseConfig, IncomeConfig, PaidItemDetails, VariableTransaction, CategoryDef, OperationFilters } from "../../../../types";
 
 interface AnnualBeneficiaryAnalysisProps {
   accounts: Account[];

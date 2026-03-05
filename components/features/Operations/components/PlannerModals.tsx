@@ -2,9 +2,10 @@ import React, { useState } from "react";
 import { X, Check, MessageSquare } from "lucide-react";
 import { Modal } from "../../../ui/Modal";
 import { FormField } from "../../../ui/atoms/FormField";
-import { Account, PaidItemDetails, Tag, PlannedItem } from "../../../../types";
+import { Account, PaidItemDetails, Tag, PlannedItem, Person, BeneficiaryAmount } from "../../../../types";
 import { useError } from "../../../../contexts/ErrorContext";
 import { AdvancedOptionsAccordion } from "../../../ui/molecules/AdvancedOptionsAccordion";
+import { BeneficiaryAmountSelector } from "../../../ui/molecules/BeneficiaryAmountSelector";
 
 type ConfirmModalState = {
   isOpen: boolean;
@@ -14,6 +15,7 @@ type ConfirmModalState = {
   accountId: string;
   label: string;
   comments: string;
+  beneficiaryAmounts: BeneficiaryAmount[];
 };
 
 type UncheckModalState = {
@@ -25,6 +27,7 @@ interface PlannerModalsProps {
   confirmModal: ConfirmModalState;
   uncheckModal: UncheckModalState;
   accounts: Account[];
+  people: Person[];
   tags?: Tag[];
   onTogglePaid: (details: PaidItemDetails | null, instanceId: string) => void;
   onCloseConfirm: () => void;
@@ -36,6 +39,7 @@ export const PlannerModals: React.FC<PlannerModalsProps> = ({
   confirmModal,
   uncheckModal,
   accounts,
+  people,
   tags: _tags = [],
   onTogglePaid,
   onCloseConfirm,
@@ -44,6 +48,11 @@ export const PlannerModals: React.FC<PlannerModalsProps> = ({
 }) => {
   const { showError } = useError();
   const [showAdvanced, setShowAdvanced] = useState(false);
+
+  const validBeneficiaryAmounts = confirmModal.beneficiaryAmounts.filter(
+    (beneficiaryAmount) => beneficiaryAmount.beneficiaryId?.trim() && Number.isFinite(beneficiaryAmount.amount) && beneficiaryAmount.amount > 0
+  );
+  const hasValidBeneficiaryAllocation = validBeneficiaryAmounts.length > 0;
 
   return (
     <>
@@ -98,6 +107,13 @@ export const PlannerModals: React.FC<PlannerModalsProps> = ({
                 </select>
               </FormField>
 
+              <BeneficiaryAmountSelector
+                people={people}
+                totalAmount={Math.abs(confirmModal.amount)}
+                selectedBeneficiaryAmounts={confirmModal.beneficiaryAmounts}
+                onBeneficiaryAmountsChange={(beneficiaryAmounts) => setConfirmModal({ ...confirmModal, beneficiaryAmounts })}
+              />
+
               <AdvancedOptionsAccordion isOpen={showAdvanced} onToggle={setShowAdvanced}>
                 <FormField label="Note / Commentaire">
                   <div className="relative">
@@ -116,6 +132,10 @@ export const PlannerModals: React.FC<PlannerModalsProps> = ({
               <button
                 onClick={async () => {
                   try {
+                    if (!hasValidBeneficiaryAllocation) {
+                      return;
+                    }
+
                     if (confirmModal.item) {
                       await onTogglePaid(
                         {
@@ -123,6 +143,8 @@ export const PlannerModals: React.FC<PlannerModalsProps> = ({
                           amount: confirmModal.amount,
                           paymentDate: confirmModal.paymentDate,
                           accountId: confirmModal.accountId,
+                          beneficiaryId: validBeneficiaryAmounts[0]?.beneficiaryId || confirmModal.item.beneficiaryId,
+                          beneficiaryAmounts: validBeneficiaryAmounts,
                           label: confirmModal.label,
                           comments: confirmModal.comments.trim() || undefined,
                           isWaiting: false,
@@ -136,12 +158,18 @@ export const PlannerModals: React.FC<PlannerModalsProps> = ({
                     showError(err as Error, "Pointage d'opération");
                   }
                 }}
-                className={`w-full py-3 rounded-lg text-white font-medium shadow-sm hover:opacity-90 flex items-center justify-center gap-2 ${
-                  confirmModal.item?.type === "INCOME" ? "bg-emerald-600" : "bg-indigo-600"
+                disabled={!hasValidBeneficiaryAllocation}
+                className={`w-full py-3 rounded-lg text-white font-medium shadow-sm flex items-center justify-center gap-2 ${
+                  confirmModal.item?.type === "INCOME"
+                    ? "bg-emerald-600 hover:opacity-90 disabled:bg-emerald-300 disabled:cursor-not-allowed"
+                    : "bg-indigo-600 hover:opacity-90 disabled:bg-indigo-300 disabled:cursor-not-allowed"
                 }`}
               >
                 <Check size={20} /> Valider l'opération
               </button>
+              {!hasValidBeneficiaryAllocation && (
+                <p className="text-xs text-rose-600 font-medium">Ajoutez au moins un bénéficiaire valide pour valider l'opération.</p>
+              )}
             </div>
           </div>
         </div>

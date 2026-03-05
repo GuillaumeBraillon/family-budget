@@ -325,7 +325,6 @@ describe("apiMappers - Conversions DB vers App", () => {
         amount: 800,
         payment_date: "2026-02-05",
         account_id: "acc-1",
-        beneficiary_id: "person-1",
         label: "Loyer Février",
         category: "Logement",
         sub_category: "Loyer",
@@ -333,6 +332,8 @@ describe("apiMappers - Conversions DB vers App", () => {
         is_variable: false,
         is_waiting: false,
         is_extra: false,
+        is_refund: false,
+        is_salary: false,
         comments: "Paiement OK",
       };
 
@@ -343,11 +344,12 @@ describe("apiMappers - Conversions DB vers App", () => {
         amount: 800,
         paymentDate: "2026-02-05",
         accountId: "acc-1",
-        beneficiaryId: "person-1",
         label: "Loyer Février",
         category: "Logement",
         subCategory: "Loyer",
         type: "EXPENSE",
+        isRefund: false,
+        isSalary: false,
         isVariable: false,
         isWaiting: false,
         isExtra: false,
@@ -361,7 +363,6 @@ describe("apiMappers - Conversions DB vers App", () => {
         amount: 50,
         payment_date: "2026-02-10",
         account_id: "acc-1",
-        beneficiary_id: "person-1",
         label: "Courses",
         category: "Alimentation",
         sub_category: null,
@@ -382,7 +383,6 @@ describe("apiMappers - Conversions DB vers App", () => {
         amount: 100,
         payment_date: "2026-02-15",
         account_id: "acc-1",
-        beneficiary_id: "person-1",
         label: "Transaction",
         category: "Divers",
         sub_category: null,
@@ -447,10 +447,10 @@ describe("apiMappers - Conversions DB vers App", () => {
     it("convertit les settings complets", () => {
       const dbSettings: DbSettings = {
         id: "1",
-        monthly_envelope: 2500,
+        personal_budget_amount: 400,
+        family_variable_budget: 180,
         period_type: "CUSTOM_SPLIT",
         period_value: 4,
-        carryover_strategy: "SPREAD_REMAINING",
         operations_sorting: ["exp-1", "exp-2", "inc-1"],
         accounts_sorting: ["acc-1", "acc-2"],
       };
@@ -458,10 +458,10 @@ describe("apiMappers - Conversions DB vers App", () => {
       const result = mapDbSettings(dbSettings);
 
       expect(result).toEqual({
-        monthly_envelope: 2500,
+        personal_budget_amount: 400,
+        family_variable_budget: 180,
         period_type: "CUSTOM_SPLIT",
         period_value: 4,
-        carryover_strategy: "SPREAD_REMAINING",
         operations_sorting: ["exp-1", "exp-2", "inc-1"],
         accounts_sorting: ["acc-1", "acc-2"],
       });
@@ -471,10 +471,10 @@ describe("apiMappers - Conversions DB vers App", () => {
       const result = mapDbSettings(null);
 
       expect(result).toEqual({
-        monthly_envelope: 2000,
+        personal_budget_amount: 350,
+        family_variable_budget: 0,
         period_type: "FIXED_DAYS",
         period_value: 7,
-        carryover_strategy: "NEXT_PERIOD",
         operations_sorting: [],
         accounts_sorting: [],
       });
@@ -483,38 +483,34 @@ describe("apiMappers - Conversions DB vers App", () => {
     it("gère les champs null avec valeurs par défaut", () => {
       const dbSettings: DbSettings = {
         id: "1",
-        monthly_envelope: null,
+        personal_budget_amount: null,
+        family_variable_budget: null,
         period_type: null,
         period_value: null,
-        carryover_strategy: null,
         operations_sorting: null,
         accounts_sorting: null,
-      };
+      } as any;
 
       const result = mapDbSettings(dbSettings);
 
-      expect(result.monthly_envelope).toBe(2000);
+      expect(result.personal_budget_amount).toBe(350);
+      expect(result.family_variable_budget).toBe(0);
       expect(result.period_type).toBe("FIXED_DAYS");
       expect(result.period_value).toBe(7);
-      expect(result.carryover_strategy).toBe("NEXT_PERIOD");
       expect(result.operations_sorting).toEqual([]);
     });
 
     it("convertit les valeurs numériques correctement", () => {
       const dbSettings: DbSettings = {
         id: 1,
-        monthly_envelope: "3000", // Peut arriver en string
         period_type: "CALENDAR_WEEKS",
         period_value: "7", // Peut arriver en string
-        carryover_strategy: "NEXT_PERIOD",
         operations_sorting: [],
         accounts_sorting: [],
       } as any;
 
       const result = mapDbSettings(dbSettings);
 
-      expect(result.monthly_envelope).toBe(3000);
-      expect(typeof result.monthly_envelope).toBe("number");
       expect(result.period_value).toBe(7);
       expect(typeof result.period_value).toBe("number");
     });

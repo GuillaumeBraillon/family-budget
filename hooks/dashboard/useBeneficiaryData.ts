@@ -21,6 +21,7 @@
  */
 import { useMemo } from "react";
 import { Account, ExpenseConfig, IncomeConfig, PaidItemDetails, VariableTransaction, CategoryDef, Person, AccountType, OperationFilters } from "../../types";
+import { resolveBeneficiaryAmounts, getStandardAmount, getExtraAmount, isBudgetExcluded } from "../../services/financeUtils";
 
 /**
  * Interface des données d'un bénéficiaire au sein d'un mois.
@@ -157,34 +158,17 @@ export const useBeneficiaryData = ({
         .forEach((inc) => {
           const instanceId = `${inc.id}-${monthKey}`;
           const paid = paidItems[instanceId];
-
-          // Uniquement opérations pointées
           if (!paid || paid.isWaiting) return;
+          if (isBudgetExcluded(paid)) return;
 
-          // Exclure virements internes
-          if (paid.category === "Virement Interne") return;
-
-          const beneficiaryId = paid.beneficiaryId;
-          if (!beneficiariesMap[beneficiaryId]) {
-            // Bénéficiaire inconnu, créer une entrée
-            beneficiariesMap[beneficiaryId] = {
-              beneficiaryId,
-              beneficiaryName: people.find((p) => p.id === beneficiaryId)?.name || "Inconnu",
-              income: { salaries: 0, recurring: 0, variable: 0, total: 0 },
-              expenses: { recurring: 0, variable: 0, variableStandard: 0, variableExtra: 0, total: 0 },
-              balance: 0,
-            };
-          }
-
-          const amount = paid.amount;
           const isSalary = inc.isSalary || false;
-
-          if (isSalary) {
-            beneficiariesMap[beneficiaryId].income.salaries += amount;
-          } else {
-            beneficiariesMap[beneficiaryId].income.recurring += amount;
-          }
-          beneficiariesMap[beneficiaryId].income.total += amount;
+          resolveBeneficiaryAmounts(paid).forEach((ba) => {
+            if (!beneficiariesMap[ba.beneficiaryId]) return;
+            const b = beneficiariesMap[ba.beneficiaryId];
+            if (isSalary) b.income.salaries += ba.amount;
+            else b.income.recurring += ba.amount;
+            b.income.total += ba.amount;
+          });
         });
 
       // ÉTAPE 2 : REVENUS VARIABLES
@@ -196,62 +180,30 @@ export const useBeneficiaryData = ({
           return d.getFullYear() === selectedYear && d.getMonth() === monthIndex;
         })
         .forEach((vt) => {
-          // Uniquement opérations pointées
           if (vt.isWaiting) return;
+          if (isBudgetExcluded(vt)) return;
 
-          // Exclure virements internes
-          if (vt.category === "Virement Interne") return;
-
-          const beneficiaryId = vt.beneficiaryId || "";
-          if (!beneficiariesMap[beneficiaryId]) {
-            beneficiariesMap[beneficiaryId] = {
-              beneficiaryId,
-              beneficiaryName: people.find((p) => p.id === beneficiaryId)?.name || "Inconnu",
-              income: { salaries: 0, recurring: 0, variable: 0, total: 0 },
-              expenses: { recurring: 0, variable: 0, variableStandard: 0, variableExtra: 0, total: 0 },
-              balance: 0,
-            };
-          }
-
-          const amount = vt.amount;
+          const standardAmount = getStandardAmount(vt);
+          const extraAmount = getExtraAmount(vt);
 
           // Remboursements : Réduire les dépenses au lieu d'augmenter revenus
           if (isRefund(vt.category)) {
-            // Calcul intelligent : séparer Standard vs Extra dans les remboursements
-            let standardAmount = 0;
-            let extraAmount = 0;
-
-            if (vt.isExtra) {
-              // Toggle global Extra : tout le remboursement réduit Extra
-              extraAmount = amount;
-            } else if (vt.tagAmounts && vt.tagAmounts.length > 0) {
-              // Pas de toggle global mais tags présents : calculer la ventilation
-              vt.tagAmounts.forEach((ta) => {
-                if (ta.isExtra) {
-                  extraAmount += ta.amount;
-                } else {
-                  standardAmount += ta.amount;
-                }
-              });
-
-              // Le reste non ventilé réduit Standard
-              const ventilated = vt.tagAmounts.reduce((sum, ta) => sum + ta.amount, 0);
-              const remaining = amount - ventilated;
-              if (remaining > 0.01) {
-                standardAmount += remaining;
-              }
-            } else {
-              // Pas de toggle global, pas de tags : tout réduit Standard
-              standardAmount = amount;
-            }
-
-            beneficiariesMap[beneficiaryId].expenses.variableStandard -= standardAmount;
-            beneficiariesMap[beneficiaryId].expenses.variableExtra -= extraAmount;
-            beneficiariesMap[beneficiaryId].expenses.variable -= amount;
-            beneficiariesMap[beneficiaryId].expenses.total -= amount;
+            resolveBeneficiaryAmounts(vt).forEach((ba) => {
+              if (!beneficiariesMap[ba.beneficiaryId]) return;
+              const b = beneficiariesMap[ba.beneficiaryId];
+              const ratio = vt.amount > 0 ? ba.amount / vt.amount : 0;
+              b.expenses.variableStandard -= standardAmount * ratio;
+              b.expenses.variableExtra -= extraAmount * ratio;
+              b.expenses.variable -= ba.amount;
+              b.expenses.total -= ba.amount;
+            });
           } else {
-            beneficiariesMap[beneficiaryId].income.variable += amount;
-            beneficiariesMap[beneficiaryId].income.total += amount;
+            resolveBeneficiaryAmounts(vt).forEach((ba) => {
+              if (!beneficiariesMap[ba.beneficiaryId]) return;
+              const b = beneficiariesMap[ba.beneficiaryId];
+              b.income.variable += ba.amount;
+              b.income.total += ba.amount;
+            });
           }
         });
 
@@ -261,27 +213,14 @@ export const useBeneficiaryData = ({
         .forEach((conf) => {
           const instanceId = `${conf.id}-${monthKey}`;
           const paid = paidItems[instanceId];
-
-          // Uniquement opérations pointées
           if (!paid || paid.isWaiting) return;
+          if (isBudgetExcluded(paid)) return;
 
-          // Exclure virements internes
-          if (paid.category === "Virement Interne") return;
-
-          const beneficiaryId = paid.beneficiaryId;
-          if (!beneficiariesMap[beneficiaryId]) {
-            beneficiariesMap[beneficiaryId] = {
-              beneficiaryId,
-              beneficiaryName: people.find((p) => p.id === beneficiaryId)?.name || "Inconnu",
-              income: { salaries: 0, recurring: 0, variable: 0, total: 0 },
-              expenses: { recurring: 0, variable: 0, variableStandard: 0, variableExtra: 0, total: 0 },
-              balance: 0,
-            };
-          }
-
-          const amount = paid.amount;
-          beneficiariesMap[beneficiaryId].expenses.recurring += amount;
-          beneficiariesMap[beneficiaryId].expenses.total += amount;
+          resolveBeneficiaryAmounts(paid).forEach((ba) => {
+            if (!beneficiariesMap[ba.beneficiaryId]) return;
+            beneficiariesMap[ba.beneficiaryId].expenses.recurring += ba.amount;
+            beneficiariesMap[ba.beneficiaryId].expenses.total += ba.amount;
+          });
         });
 
       // ÉTAPE 4 : DÉPENSES VARIABLES
@@ -293,59 +232,21 @@ export const useBeneficiaryData = ({
           return d.getFullYear() === selectedYear && d.getMonth() === monthIndex;
         })
         .forEach((vt) => {
-          // Uniquement opérations pointées
-          if (vt.isWaiting) return false;
+          if (vt.isWaiting) return;
+          if (isBudgetExcluded(vt)) return;
 
-          // Exclure virements internes
-          if (vt.category === "Virement Interne") return;
+          const standardTotal = getStandardAmount(vt);
+          const extraTotal = getExtraAmount(vt);
 
-          const beneficiaryId = vt.beneficiaryId || "";
-          if (!beneficiariesMap[beneficiaryId]) {
-            beneficiariesMap[beneficiaryId] = {
-              beneficiaryId,
-              beneficiaryName: people.find((p) => p.id === beneficiaryId)?.name || "Inconnu",
-              income: { salaries: 0, recurring: 0, variable: 0, total: 0 },
-              expenses: { recurring: 0, variable: 0, variableStandard: 0, variableExtra: 0, total: 0 },
-              balance: 0,
-            };
-          }
-
-          const amount = vt.amount;
-
-          // Calcul intelligent : séparer Standard vs Extra
-          // Si toggle global Extra → tout est Extra
-          // Sinon, regarder les tags individuels
-          let standardAmount = 0;
-          let extraAmount = 0;
-
-          if (vt.isExtra) {
-            // Toggle global Extra : tout le montant est Extra
-            extraAmount = amount;
-          } else if (vt.tagAmounts && vt.tagAmounts.length > 0) {
-            // Pas de toggle global mais tags présents : calculer la ventilation
-            vt.tagAmounts.forEach((ta) => {
-              if (ta.isExtra) {
-                extraAmount += ta.amount;
-              } else {
-                standardAmount += ta.amount;
-              }
-            });
-
-            // Le reste non ventilé est Standard
-            const ventilated = vt.tagAmounts.reduce((sum, ta) => sum + ta.amount, 0);
-            const remaining = amount - ventilated;
-            if (remaining > 0.01) {
-              standardAmount += remaining;
-            }
-          } else {
-            // Pas de toggle global, pas de tags : tout Standard
-            standardAmount = amount;
-          }
-
-          beneficiariesMap[beneficiaryId].expenses.variableStandard += standardAmount;
-          beneficiariesMap[beneficiaryId].expenses.variableExtra += extraAmount;
-          beneficiariesMap[beneficiaryId].expenses.variable += amount;
-          beneficiariesMap[beneficiaryId].expenses.total += amount;
+          resolveBeneficiaryAmounts(vt).forEach((ba) => {
+            if (!beneficiariesMap[ba.beneficiaryId]) return;
+            const b = beneficiariesMap[ba.beneficiaryId];
+            const ratio = vt.amount > 0 ? ba.amount / vt.amount : 0;
+            b.expenses.variableStandard += standardTotal * ratio;
+            b.expenses.variableExtra += extraTotal * ratio;
+            b.expenses.variable += ba.amount;
+            b.expenses.total += ba.amount;
+          });
         });
 
       // ÉTAPE 5 : CALCUL DES BALANCES

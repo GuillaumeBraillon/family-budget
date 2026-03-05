@@ -35,6 +35,7 @@ import {
   SavedLabel,
   Tag,
   TagAmount,
+  BeneficiaryAmount,
 } from "../types";
 
 const normalizeTagAmountsForRpc = (tagAmounts: TagAmount[] | undefined): TagAmount[] | null => {
@@ -46,6 +47,17 @@ const normalizeTagAmountsForRpc = (tagAmounts: TagAmount[] | undefined): TagAmou
       tagId: tagAmount.tagId,
       amount: tagAmount.amount,
       isExtra: !!tagAmount.isExtra,
+    }));
+};
+
+const normalizeBeneficiaryAmountsForRpc = (beneficiaryAmounts: BeneficiaryAmount[] | undefined): BeneficiaryAmount[] | null => {
+  if (beneficiaryAmounts === undefined) return null;
+
+  return beneficiaryAmounts
+    .filter((beneficiaryAmount) => Boolean(beneficiaryAmount.beneficiaryId) && Number.isFinite(beneficiaryAmount.amount) && beneficiaryAmount.amount > 0)
+    .map((beneficiaryAmount) => ({
+      beneficiaryId: beneficiaryAmount.beneficiaryId,
+      amount: beneficiaryAmount.amount,
     }));
 };
 
@@ -226,13 +238,40 @@ export const apiUpsertLabel = async (label: SavedLabel) =>
 export const apiDeleteLabel = async (id: string) => supabase.from("saved_labels").delete().eq("id", id);
 
 export const apiImportLabels = async () => {
-  // Récupérer tous les paid_items CB avec leurs catégories ET comptes/bénéficiaires
-  const { data: items, error: fetchError } = await supabase
+  // Récupérer tous les paid_items CB avec leurs catégories ET comptes
+  const { data: rawItems, error: fetchError } = await supabase
     .from("paid_items")
-    .select("label, category, sub_category, account_id, beneficiary_id")
-    .ilike("label", "CB %");
+    .select("instance_id, label, category, sub_category, account_id")
+    .ilike("label", "CB%");
 
   if (fetchError) return { error: fetchError };
+
+  const items = (rawItems || []).filter((item) => (item.label || "").toUpperCase().startsWith("CB "));
+  const instanceIds = Array.from(new Set(items.map((item) => item.instance_id).filter(Boolean)));
+
+  let primaryBeneficiaryByInstance: Record<string, string> = {};
+  if (instanceIds.length > 0) {
+    const { data: beneficiaryRows, error: beneficiaryError } = await supabase
+      .from("paid_item_beneficiaries")
+      .select("paid_item_instance_id, beneficiary_id, amount")
+      .in("paid_item_instance_id", instanceIds);
+
+    if (beneficiaryError) return { error: beneficiaryError };
+
+    const bestByInstance: Record<string, { beneficiaryId: string; amount: number }> = {};
+    (beneficiaryRows || []).forEach((row) => {
+      const current = bestByInstance[row.paid_item_instance_id];
+      const amount = Number(row.amount || 0);
+      if (!current || amount > current.amount) {
+        bestByInstance[row.paid_item_instance_id] = {
+          beneficiaryId: row.beneficiary_id,
+          amount,
+        };
+      }
+    });
+
+    primaryBeneficiaryByInstance = Object.fromEntries(Object.entries(bestByInstance).map(([instanceId, value]) => [instanceId, value.beneficiaryId]));
+  }
 
   const { data: existing, error: existError } = await supabase.from("saved_labels").select("name");
 
@@ -247,7 +286,7 @@ export const apiImportLabels = async () => {
 
   const existingSet = new Set(existing?.map((e) => e.name));
 
-  // Grouper par libellé et compter les occurrences de chaque catégorie ET compte/bénéficiaire
+  // Grouper par libellé et compter les occurrences de chaque catégorie ET compte
   const labelStats: Record<
     string,
     Record<
@@ -264,13 +303,14 @@ export const apiImportLabels = async () => {
   items?.forEach((item) => {
     if (!item.label) return;
     if (!labelStats[item.label]) labelStats[item.label] = {};
-    const key = `${item.category}|${item.sub_category || ""}|${item.account_id || ""}|${item.beneficiary_id || ""}`;
+    const beneficiaryId = primaryBeneficiaryByInstance[item.instance_id] || "";
+    const key = `${item.category}|${item.sub_category || ""}|${item.account_id || ""}|${beneficiaryId}`;
     if (!labelStats[item.label][key]) {
       labelStats[item.label][key] = {
         count: 0,
         subCategory: item.sub_category,
         accountId: item.account_id,
-        beneficiaryId: item.beneficiary_id,
+        beneficiaryId: beneficiaryId || undefined,
       };
     }
     labelStats[item.label][key].count++;
@@ -324,13 +364,40 @@ export const apiImportLabels = async () => {
 };
 
 export const apiImportVirLabels = async () => {
-  // Récupérer tous les paid_items VIR avec leurs catégories ET comptes/bénéficiaires
-  const { data: items, error: fetchError } = await supabase
+  // Récupérer tous les paid_items VIR avec leurs catégories ET comptes
+  const { data: rawItems, error: fetchError } = await supabase
     .from("paid_items")
-    .select("label, category, sub_category, account_id, beneficiary_id")
-    .ilike("label", "VIR %");
+    .select("instance_id, label, category, sub_category, account_id")
+    .ilike("label", "VIR%");
 
   if (fetchError) return { error: fetchError };
+
+  const items = (rawItems || []).filter((item) => (item.label || "").toUpperCase().startsWith("VIR "));
+  const instanceIds = Array.from(new Set(items.map((item) => item.instance_id).filter(Boolean)));
+
+  let primaryBeneficiaryByInstance: Record<string, string> = {};
+  if (instanceIds.length > 0) {
+    const { data: beneficiaryRows, error: beneficiaryError } = await supabase
+      .from("paid_item_beneficiaries")
+      .select("paid_item_instance_id, beneficiary_id, amount")
+      .in("paid_item_instance_id", instanceIds);
+
+    if (beneficiaryError) return { error: beneficiaryError };
+
+    const bestByInstance: Record<string, { beneficiaryId: string; amount: number }> = {};
+    (beneficiaryRows || []).forEach((row) => {
+      const current = bestByInstance[row.paid_item_instance_id];
+      const amount = Number(row.amount || 0);
+      if (!current || amount > current.amount) {
+        bestByInstance[row.paid_item_instance_id] = {
+          beneficiaryId: row.beneficiary_id,
+          amount,
+        };
+      }
+    });
+
+    primaryBeneficiaryByInstance = Object.fromEntries(Object.entries(bestByInstance).map(([instanceId, value]) => [instanceId, value.beneficiaryId]));
+  }
 
   const { data: existing, error: existError } = await supabase.from("saved_labels").select("name");
 
@@ -345,7 +412,7 @@ export const apiImportVirLabels = async () => {
 
   const existingSet = new Set(existing?.map((e) => e.name));
 
-  // Grouper par libellé et compter les occurrences de chaque catégorie ET compte/bénéficiaire
+  // Grouper par libellé et compter les occurrences de chaque catégorie ET compte
   const labelStats: Record<
     string,
     Record<
@@ -362,13 +429,14 @@ export const apiImportVirLabels = async () => {
   items?.forEach((item) => {
     if (!item.label) return;
     if (!labelStats[item.label]) labelStats[item.label] = {};
-    const key = `${item.category}|${item.sub_category || ""}|${item.account_id || ""}|${item.beneficiary_id || ""}`;
+    const beneficiaryId = primaryBeneficiaryByInstance[item.instance_id] || "";
+    const key = `${item.category}|${item.sub_category || ""}|${item.account_id || ""}|${beneficiaryId}`;
     if (!labelStats[item.label][key]) {
       labelStats[item.label][key] = {
         count: 0,
         subCategory: item.sub_category,
         accountId: item.account_id,
-        beneficiaryId: item.beneficiary_id,
+        beneficiaryId: beneficiaryId || undefined,
       };
     }
     labelStats[item.label][key].count++;
@@ -427,10 +495,10 @@ export const apiImportVirLabels = async () => {
 export const apiUpdateSettings = async (settings: AppSettings) =>
   supabase.from("app_settings").upsert({
     id: "global",
-    monthly_envelope: Number(settings.monthly_envelope),
+    personal_budget_amount: Number(settings.personal_budget_amount || 350),
+    family_variable_budget: Number(settings.family_variable_budget || 0),
     period_type: settings.period_type,
     period_value: Math.floor(Number(settings.period_value)),
-    carryover_strategy: settings.carryover_strategy || "NEXT_PERIOD",
     operations_sorting: settings.operations_sorting || [],
     accounts_sorting: settings.accounts_sorting || [],
   });
@@ -516,17 +584,10 @@ export const apiDeleteIncome = async (id: string) => supabase.from("income_confi
  * ```
  */
 export const apiSetPaidStatus = async (details: PaidItemDetails | null, instanceId: string) => {
-  logger.debug("crud", "apiSetPaidStatus", {
-    instanceId,
-    hasDetails: !!details,
-    amount: details?.amount,
-    tagAmounts: details?.tagAmounts?.length || 0,
-  });
-
   if (details) {
     const normalizedTagAmounts = normalizeTagAmountsForRpc(details.tagAmounts);
+    const normalizedBeneficiaryAmounts = normalizeBeneficiaryAmountsForRpc(details.beneficiaryAmounts);
     const normalizedPaidItem = normalizePaidItemForRpc(details.amount, details.type);
-    const normalizedBeneficiaryId = details.beneficiaryId?.trim() ? details.beneficiaryId : null;
 
     validatePaidItemForRpc({
       instanceId: details.instanceId,
@@ -542,7 +603,6 @@ export const apiSetPaidStatus = async (details: PaidItemDetails | null, instance
       p_amount: normalizedPaidItem.amount,
       p_payment_date: details.paymentDate,
       p_account_id: details.accountId,
-      p_beneficiary_id: normalizedBeneficiaryId,
       p_label: details.label,
       p_category: details.category,
       p_sub_category: details.subCategory || null,
@@ -550,11 +610,12 @@ export const apiSetPaidStatus = async (details: PaidItemDetails | null, instance
       p_is_variable: !!details.isVariable,
       p_is_waiting: !!details.isWaiting,
       p_is_extra: !!details.isExtra,
+      p_is_refund: !!details.isRefund,
+      p_is_salary: !!details.isSalary,
       p_comments: details.comments || null,
       p_tag_amounts: normalizedTagAmounts,
+      p_beneficiary_amounts: normalizedBeneficiaryAmounts,
     };
-
-    logger.debug("crud", "RPC upsert_paid_item_with_tags payload", rpcPayload);
 
     const rpcResult = await supabase.rpc("upsert_paid_item_with_tags", rpcPayload);
     if (rpcResult.error) {
@@ -563,8 +624,8 @@ export const apiSetPaidStatus = async (details: PaidItemDetails | null, instance
         instanceId: details.instanceId,
         amount: normalizedPaidItem.amount,
         type: normalizedPaidItem.type,
-        beneficiaryId: normalizedBeneficiaryId,
         tagCount: normalizedTagAmounts?.length ?? null,
+        beneficiaryCount: normalizedBeneficiaryAmounts?.length ?? null,
         error: formatSupabaseError(rpcResult.error),
       });
     }
@@ -597,8 +658,8 @@ export const apiDeleteTransfer = async (id: string) => supabase.from("transfers"
  */
 export const apiUpsertVariableTransaction = async (transaction: VariableTransaction) => {
   const normalizedTagAmounts = normalizeTagAmountsForRpc(transaction.tagAmounts);
+  const normalizedBeneficiaryAmounts = normalizeBeneficiaryAmountsForRpc(transaction.beneficiaryAmounts);
   const normalizedPaidItem = normalizePaidItemForRpc(transaction.amount, transaction.type);
-  const normalizedBeneficiaryId = transaction.beneficiaryId?.trim() ? transaction.beneficiaryId : null;
 
   validatePaidItemForRpc({
     instanceId: transaction.id,
@@ -614,7 +675,6 @@ export const apiUpsertVariableTransaction = async (transaction: VariableTransact
     p_amount: normalizedPaidItem.amount,
     p_payment_date: transaction.date,
     p_account_id: transaction.accountId,
-    p_beneficiary_id: normalizedBeneficiaryId,
     p_label: transaction.label,
     p_category: transaction.category,
     p_sub_category: transaction.subCategory || null,
@@ -622,11 +682,12 @@ export const apiUpsertVariableTransaction = async (transaction: VariableTransact
     p_is_variable: true,
     p_is_waiting: !!transaction.isWaiting,
     p_is_extra: !!transaction.isExtra,
+    p_is_refund: !!transaction.isRefund,
+    p_is_salary: false,
     p_comments: transaction.comments || null,
     p_tag_amounts: normalizedTagAmounts,
+    p_beneficiary_amounts: normalizedBeneficiaryAmounts,
   };
-
-  logger.debug("crud", "RPC upsert_paid_item_with_tags payload", rpcPayload);
 
   const rpcResult = await supabase.rpc("upsert_paid_item_with_tags", rpcPayload);
   if (rpcResult.error) {
@@ -635,8 +696,8 @@ export const apiUpsertVariableTransaction = async (transaction: VariableTransact
       instanceId: transaction.id,
       amount: normalizedPaidItem.amount,
       type: normalizedPaidItem.type,
-      beneficiaryId: normalizedBeneficiaryId,
       tagCount: normalizedTagAmounts?.length ?? null,
+      beneficiaryCount: normalizedBeneficiaryAmounts?.length ?? null,
       error: formatSupabaseError(rpcResult.error),
     });
   }

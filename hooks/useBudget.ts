@@ -50,7 +50,6 @@ import {
   PlannedItem,
   AuthorizedUser,
 } from "../types";
-import { logger } from "../services/logger";
 import { useBudgetBalances } from "./budget/useBudgetBalances";
 import { useBudgetActions } from "./budget/useBudgetActions";
 import {
@@ -146,7 +145,8 @@ export const useBudget = () => {
     people: [] as Person[],
     paidItems: {} as Record<string, PaidItemDetails>,
     settings: {
-      monthly_envelope: 2000,
+      personal_budget_amount: 350,
+      family_variable_budget: 0,
       period_type: "FIXED_DAYS",
       period_value: 7,
     } as AppSettings,
@@ -190,7 +190,6 @@ export const useBudget = () => {
    * ```
    */
   const loadData = useCallback(async (silent = false) => {
-    logger.debug("useBudget", "loadData appelé", { silent });
     if (!isSupabaseConfigured()) {
       setIsLoading(false);
       return;
@@ -200,11 +199,6 @@ export const useBudget = () => {
       if (!silent) setIsLoading(true);
       setErrorMessage(null);
       const res = await fetchInitialData();
-      logger.debug("useBudget", "Données rechargées", {
-        accounts: res.accounts.length,
-        configs: res.configs.length,
-        authorizedUsers: res.authorizedUsers.length,
-      });
 
       setIsDbEmpty(res.people.length === 0 && res.accounts.length === 0);
 

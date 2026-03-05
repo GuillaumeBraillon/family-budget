@@ -81,10 +81,10 @@ CREATE TABLE IF NOT EXISTS authorized_users (
 -- Paramètres globaux de l'application
 CREATE TABLE IF NOT EXISTS app_settings (
   id text PRIMARY KEY,
-  monthly_envelope numeric DEFAULT 2000 NOT NULL,
+  personal_budget_amount numeric DEFAULT 350 NOT NULL CHECK (personal_budget_amount >= 0),
+  family_variable_budget numeric DEFAULT 0 NOT NULL CHECK (family_variable_budget >= 0),
   period_value integer DEFAULT 4 NOT NULL CHECK (period_value > 0),
   period_type text DEFAULT 'FIXED_DAYS' NOT NULL CHECK (period_type IN ('FIXED_DAYS', 'CALENDAR_WEEKS', 'CUSTOM_SPLIT')),
-  carryover_strategy text DEFAULT 'NEXT_PERIOD' NOT NULL CHECK (carryover_strategy IN ('NEXT_PERIOD', 'SPREAD_REMAINING')),
   operations_sorting text[] NOT NULL DEFAULT '{}',
   accounts_sorting text[] NOT NULL DEFAULT '{}'
 );
@@ -137,18 +137,21 @@ CREATE TABLE IF NOT EXISTS income_configs (
 
 -- Table: paid_items
 -- Opérations pointées (récurrentes + variables)
+-- Note: le bénéficiaire n'est PAS stocké ici — il est dans paid_item_beneficiaries
+--       (même modèle que paid_item_tags, pas de colonne scalaire redondante)
 CREATE TABLE IF NOT EXISTS paid_items (
   id text DEFAULT gen_random_uuid()::text, -- ID technique (compatibilité)
   instance_id text PRIMARY KEY,
   amount numeric NOT NULL,
   payment_date date NOT NULL,
   account_id text NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
-  beneficiary_id text REFERENCES people(id) ON DELETE CASCADE,
   label text NOT NULL,
   category text NOT NULL,
   sub_category text,
   is_variable boolean DEFAULT false NOT NULL,
   is_extra boolean DEFAULT false NOT NULL,
+  is_refund boolean DEFAULT false NOT NULL,
+  is_salary boolean DEFAULT false NOT NULL,
   is_waiting boolean DEFAULT false NOT NULL,
   comments text,
   position bigint DEFAULT 0,
@@ -166,6 +169,18 @@ CREATE TABLE IF NOT EXISTS paid_item_tags (
   created_at timestamptz DEFAULT now(),
   
   CONSTRAINT unique_paid_item_tag UNIQUE(paid_item_instance_id, tag_id)
+);
+
+-- Table: paid_item_beneficiaries
+-- Ventilation des montants par bénéficiaire
+CREATE TABLE IF NOT EXISTS paid_item_beneficiaries (
+  id text PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  paid_item_instance_id text NOT NULL REFERENCES paid_items(instance_id) ON DELETE CASCADE,
+  beneficiary_id text NOT NULL REFERENCES people(id) ON DELETE CASCADE,
+  amount numeric NOT NULL CHECK (amount > 0),
+  created_at timestamptz DEFAULT now(),
+
+  CONSTRAINT unique_paid_item_beneficiary UNIQUE(paid_item_instance_id, beneficiary_id)
 );
 
 -- Table: transfers
@@ -194,11 +209,12 @@ CREATE INDEX IF NOT EXISTS idx_expense_configs_account ON expense_configs(accoun
 CREATE INDEX IF NOT EXISTS idx_income_configs_account ON income_configs(account_id);
 CREATE INDEX IF NOT EXISTS idx_income_configs_beneficiary ON income_configs(beneficiary_id);
 CREATE INDEX IF NOT EXISTS idx_paid_items_account ON paid_items(account_id);
-CREATE INDEX IF NOT EXISTS idx_paid_items_beneficiary ON paid_items(beneficiary_id);
 CREATE INDEX IF NOT EXISTS idx_transfers_source ON transfers(source_account_id);
 CREATE INDEX IF NOT EXISTS idx_transfers_dest ON transfers(destination_account_id);
 CREATE INDEX IF NOT EXISTS idx_paid_item_tags_instance ON paid_item_tags(paid_item_instance_id);
 CREATE INDEX IF NOT EXISTS idx_paid_item_tags_tag ON paid_item_tags(tag_id);
+CREATE INDEX IF NOT EXISTS idx_paid_item_beneficiaries_instance ON paid_item_beneficiaries(paid_item_instance_id);
+CREATE INDEX IF NOT EXISTS idx_paid_item_beneficiaries_beneficiary ON paid_item_beneficiaries(beneficiary_id);
 CREATE INDEX IF NOT EXISTS idx_sub_categories_category ON sub_categories(category_id);
 CREATE INDEX IF NOT EXISTS idx_saved_labels_category ON saved_labels(category_id);
 CREATE INDEX IF NOT EXISTS idx_saved_labels_sub_category ON saved_labels(sub_category_id);
@@ -242,6 +258,7 @@ ALTER TABLE expense_configs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE income_configs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE paid_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE paid_item_tags ENABLE ROW LEVEL SECURITY;
+ALTER TABLE paid_item_beneficiaries ENABLE ROW LEVEL SECURITY;
 ALTER TABLE transfers ENABLE ROW LEVEL SECURITY;
 
 -- Politique par défaut : Tous les utilisateurs authentifiés peuvent tout faire
@@ -283,6 +300,9 @@ CREATE POLICY "Enable all for authenticated users" ON paid_items
 CREATE POLICY "Enable all for authenticated users" ON paid_item_tags
   FOR ALL USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
 
+CREATE POLICY "Enable all for authenticated users" ON paid_item_beneficiaries
+  FOR ALL USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
+
 CREATE POLICY "Enable all for authenticated users" ON transfers
   FOR ALL USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
 
@@ -290,22 +310,25 @@ CREATE POLICY "Enable all for authenticated users" ON transfers
 -- 3.1 FONCTIONS RPC TRANSACTIONNELLES
 -- =====================================
 
--- Fonction RPC: upsert paid_item + remplacement atomique des tags
+-- Fonction RPC: upsert paid_item + remplacement atomique des tags et bénéficiaires
+-- Note: p_beneficiary_id supprimé (migration 006) — tout passe par p_beneficiary_amounts
 CREATE OR REPLACE FUNCTION public.upsert_paid_item_with_tags(
-  p_instance_id text,
-  p_amount numeric,
-  p_payment_date date,
-  p_account_id text,
-  p_beneficiary_id text,
-  p_label text,
-  p_category text,
-  p_sub_category text,
-  p_type public.transaction_type,
-  p_is_variable boolean,
-  p_is_waiting boolean,
-  p_is_extra boolean,
-  p_comments text,
-  p_tag_amounts jsonb DEFAULT NULL
+  p_instance_id         text,
+  p_amount              numeric,
+  p_payment_date        date,
+  p_account_id          text,
+  p_label               text,
+  p_category            text,
+  p_sub_category        text,
+  p_type                public.transaction_type,
+  p_is_variable         boolean,
+  p_is_waiting          boolean,
+  p_is_extra            boolean,
+  p_is_refund           boolean,
+  p_is_salary           boolean,
+  p_comments            text,
+  p_tag_amounts         jsonb DEFAULT NULL,
+  p_beneficiary_amounts jsonb DEFAULT NULL
 )
 RETURNS void
 LANGUAGE plpgsql
@@ -313,6 +336,7 @@ SET search_path = public
 AS $$
 DECLARE
   v_sum_tags numeric := 0;
+  v_sum_beneficiaries numeric := 0;
 BEGIN
   IF p_instance_id IS NULL OR length(trim(p_instance_id)) = 0 THEN
     RAISE EXCEPTION 'instance_id requis';
@@ -320,6 +344,13 @@ BEGIN
 
   IF p_amount IS NULL OR p_amount <= 0 THEN
     RAISE EXCEPTION 'amount invalide: %', p_amount;
+  END IF;
+
+  -- p_beneficiary_amounts obligatoire (min 1 entrée)
+  IF p_beneficiary_amounts IS NULL
+     OR jsonb_typeof(p_beneficiary_amounts) <> 'array'
+     OR jsonb_array_length(p_beneficiary_amounts) = 0 THEN
+    RAISE EXCEPTION 'p_beneficiary_amounts requis et doit contenir au moins 1 bénéficiaire';
   END IF;
 
   IF p_tag_amounts IS NOT NULL AND jsonb_typeof(p_tag_amounts) <> 'array' THEN
@@ -331,7 +362,6 @@ BEGIN
     amount,
     payment_date,
     account_id,
-    beneficiary_id,
     label,
     category,
     sub_category,
@@ -339,13 +369,14 @@ BEGIN
     is_variable,
     is_waiting,
     is_extra,
+    is_refund,
+    is_salary,
     comments
   ) VALUES (
     p_instance_id,
     p_amount,
     p_payment_date,
     p_account_id,
-    p_beneficiary_id,
     p_label,
     p_category,
     p_sub_category,
@@ -353,22 +384,24 @@ BEGIN
     COALESCE(p_is_variable, false),
     COALESCE(p_is_waiting, false),
     COALESCE(p_is_extra, false),
+    COALESCE(p_is_refund, false),
+    COALESCE(p_is_salary, false),
     p_comments
   )
-  ON CONFLICT (instance_id) DO UPDATE
-  SET
-    amount = EXCLUDED.amount,
+  ON CONFLICT (instance_id) DO UPDATE SET
+    amount       = EXCLUDED.amount,
     payment_date = EXCLUDED.payment_date,
-    account_id = EXCLUDED.account_id,
-    beneficiary_id = EXCLUDED.beneficiary_id,
-    label = EXCLUDED.label,
-    category = EXCLUDED.category,
+    account_id   = EXCLUDED.account_id,
+    label        = EXCLUDED.label,
+    category     = EXCLUDED.category,
     sub_category = EXCLUDED.sub_category,
-    type = EXCLUDED.type,
-    is_variable = EXCLUDED.is_variable,
-    is_waiting = EXCLUDED.is_waiting,
-    is_extra = EXCLUDED.is_extra,
-    comments = EXCLUDED.comments;
+    type         = EXCLUDED.type,
+    is_variable  = EXCLUDED.is_variable,
+    is_waiting   = EXCLUDED.is_waiting,
+    is_extra     = EXCLUDED.is_extra,
+    is_refund    = EXCLUDED.is_refund,
+    is_salary    = EXCLUDED.is_salary,
+    comments     = EXCLUDED.comments;
 
   IF p_tag_amounts IS NOT NULL THEN
     SELECT COALESCE(sum((entry->>'amount')::numeric), 0)
@@ -405,24 +438,39 @@ BEGIN
       FROM jsonb_array_elements(p_tag_amounts) AS entry;
     END IF;
   END IF;
+
+  -- Bénéficiaires (déjà validés ci-dessus : non NULL, array, min 1 entrée)
+  SELECT COALESCE(sum((entry->>'amount')::numeric), 0)
+    INTO v_sum_beneficiaries
+  FROM jsonb_array_elements(p_beneficiary_amounts) AS entry;
+
+  IF v_sum_beneficiaries > p_amount THEN
+    RAISE EXCEPTION 'Somme des bénéficiaires (%) > montant (%)', v_sum_beneficiaries, p_amount;
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM jsonb_array_elements(p_beneficiary_amounts) AS entry
+    WHERE COALESCE((entry->>'amount')::numeric, 0) <= 0
+  ) THEN
+    RAISE EXCEPTION 'Chaque montant bénéficiaire doit être > 0';
+  END IF;
+
+  DELETE FROM public.paid_item_beneficiaries
+  WHERE paid_item_instance_id = p_instance_id;
+
+  INSERT INTO public.paid_item_beneficiaries (paid_item_instance_id, beneficiary_id, amount)
+  SELECT
+    p_instance_id,
+    entry->>'beneficiaryId',
+    (entry->>'amount')::numeric
+  FROM jsonb_array_elements(p_beneficiary_amounts) AS entry;
 END;
 $$;
 
 GRANT EXECUTE ON FUNCTION public.upsert_paid_item_with_tags(
-  text,
-  numeric,
-  date,
-  text,
-  text,
-  text,
-  text,
-  text,
-  public.transaction_type,
-  boolean,
-  boolean,
-  boolean,
-  text,
-  jsonb
+  text, numeric, date, text, text, text, text,
+  public.transaction_type, boolean, boolean, boolean, boolean, boolean, text, jsonb, jsonb
 ) TO authenticated;
 
 -- =====================================
@@ -435,7 +483,7 @@ COMMENT ON TABLE categories IS 'Catégories hiérarchiques pour les dépenses/re
 COMMENT ON TABLE sub_categories IS 'Sous-catégories liées aux catégories principales avec contrainte d''unicité par catégorie';
 COMMENT ON TABLE tags IS 'Tags pour catégorisation avancée et filtrage';
 COMMENT ON TABLE authorized_users IS 'Whitelist des utilisateurs autorisés à accéder à l''application';
-COMMENT ON TABLE app_settings IS 'Paramètres globaux de l''application (enveloppe budgétaire, périodes)';
+COMMENT ON TABLE app_settings IS 'Paramètres globaux de l''application (budget personnel, périodes de découpage)';
 COMMENT ON TABLE saved_labels IS 'Libellés pré-enregistrés avec association catégorie/sous-catégorie pour auto-suggestion';
 
 COMMENT ON COLUMN saved_labels.category_id IS 'Catégorie suggérée pour auto-complétion (optionnel)';
@@ -446,6 +494,7 @@ COMMENT ON TABLE expense_configs IS 'Modèles de dépenses récurrentes (loyer, 
 COMMENT ON TABLE income_configs IS 'Modèles de revenus récurrents (salaires, etc.)';
 COMMENT ON TABLE paid_items IS 'Opérations réelles pointées (récurrentes + variables)';
 COMMENT ON TABLE paid_item_tags IS 'Ventilation des montants par tag pour analyse granulaire';
+COMMENT ON TABLE paid_item_beneficiaries IS 'Ventilation des montants par bénéficiaire pour calculs budgétaires';
 COMMENT ON TABLE transfers IS 'Virements internes entre comptes (ne comptent pas dans le budget)';
 
 COMMENT ON COLUMN paid_item_tags.amount IS 'Montant affecté à ce tag pour cette opération';
@@ -472,6 +521,7 @@ ANALYZE expense_configs;
 ANALYZE income_configs;
 ANALYZE paid_items;
 ANALYZE paid_item_tags;
+ANALYZE paid_item_beneficiaries;
 ANALYZE transfers;
 
 -- =====================================

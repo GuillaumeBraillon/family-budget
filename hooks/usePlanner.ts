@@ -23,7 +23,7 @@
  */
 import { useMemo } from "react";
 import { startOfMonth, endOfMonth, eachWeekOfInterval, getDate, getDaysInMonth } from "date-fns";
-import { logger } from "../services/logger";
+import { getStandardAmount, resolveBeneficiaryAmounts } from "../services/financeUtils";
 import {
   ExpenseConfig,
   IncomeConfig,
@@ -35,7 +35,26 @@ import {
   OperationFilters,
   CategoryDef,
   TagAmount,
+  BeneficiaryAmount,
 } from "../types";
+
+const getValidBeneficiaryAmounts = (
+  beneficiaryAmounts: BeneficiaryAmount[] | undefined,
+  fallbackBeneficiaryId: string,
+  fallbackAmount: number
+): BeneficiaryAmount[] => {
+  const normalizedAmounts = (beneficiaryAmounts || []).filter((beneficiaryAmount) => beneficiaryAmount.beneficiaryId && beneficiaryAmount.amount > 0);
+
+  if (normalizedAmounts.length > 0) {
+    return normalizedAmounts;
+  }
+
+  if (!fallbackBeneficiaryId || fallbackAmount <= 0) {
+    return [];
+  }
+
+  return [{ beneficiaryId: fallbackBeneficiaryId, amount: fallbackAmount }];
+};
 
 /**
  * Détermine si une opération contient des montants "Extra" (hors budget).
@@ -196,7 +215,6 @@ export const usePlanner = (
 ) => {
   const currentMonthKey = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, "0")}`;
   const daysInMonth = getDaysInMonth(currentDate);
-  const monthlyBudget = settings.monthly_envelope || 0;
 
   const periodBudgets = useMemo(() => {
     const periods: WeeklyBudget[] = [];
@@ -204,8 +222,8 @@ export const usePlanner = (
     const val = settings.period_value || 7;
 
     const createPeriod = (start: number, end: number, num: number, limitOverride?: number) => {
-      const periodDays = end - start + 1;
-      const distributedLimit = limitOverride ?? (monthlyBudget / daysInMonth) * periodDays;
+      const _periodDays = end - start + 1;
+      const distributedLimit = limitOverride ?? 0;
 
       return {
         weekNumber: num,
@@ -239,7 +257,7 @@ export const usePlanner = (
     } else if (type === "CUSTOM_SPLIT") {
       const parts = Math.max(1, Math.min(daysInMonth, val));
       const daysPerPart = Math.floor(daysInMonth / parts);
-      const equalLimit = monthlyBudget / parts;
+      const equalLimit = 0;
 
       for (let i = 0; i < parts; i++) {
         const start = i * daysPerPart + 1;
@@ -275,6 +293,7 @@ export const usePlanner = (
 
         const baseIsExtra = !!(paid ? paid.isExtra : conf.isExtra);
         const tagAmounts = paid?.tagAmounts;
+        const beneficiaryAmounts = getValidBeneficiaryAmounts(paid?.beneficiaryAmounts, conf.beneficiaryId, paid ? paid.amount : conf.amount);
 
         assignToPeriod({
           type: "EXPENSE",
@@ -288,6 +307,7 @@ export const usePlanner = (
           category: conf.category,
           subCategory: conf.subCategory,
           beneficiaryId: conf.beneficiaryId,
+          beneficiaryAmounts,
           accountId: conf.accountId,
           isExtra: hasExtraAmounts(baseIsExtra, tagAmounts),
           isExtraGlobal: baseIsExtra, // Toggle brut
@@ -307,6 +327,7 @@ export const usePlanner = (
 
       const baseIsExtra = !!(paid ? paid.isExtra : inc.isExtra);
       const tagAmounts = paid?.tagAmounts;
+      const beneficiaryAmounts = getValidBeneficiaryAmounts(paid?.beneficiaryAmounts, inc.beneficiaryId, paid ? paid.amount : inc.amount);
 
       assignToPeriod({
         type: "INCOME",
@@ -320,10 +341,12 @@ export const usePlanner = (
         category: inc.category,
         subCategory: inc.subCategory,
         beneficiaryId: inc.beneficiaryId,
+        beneficiaryAmounts,
         accountId: inc.accountId,
         isPaid: isActuallyPaid,
         isWaiting: !isActuallyPaid,
         paidDetails: paid,
+        isRefund: paid?.isRefund || false,
         isExtra: hasExtraAmounts(baseIsExtra, tagAmounts),
         isExtraGlobal: baseIsExtra, // Toggle brut
         isSalary: !!inc.isSalary,
@@ -351,9 +374,16 @@ export const usePlanner = (
           category: vt.category,
           subCategory: vt.subCategory,
           beneficiaryId: vt.beneficiaryId || "",
+          beneficiaryAmounts:
+            vt.beneficiaryAmounts && vt.beneficiaryAmounts.length > 0
+              ? vt.beneficiaryAmounts
+              : vt.beneficiaryId
+                ? [{ beneficiaryId: vt.beneficiaryId, amount: vt.amount }]
+                : [],
           accountId: vt.accountId,
           isPaid: !vt.isWaiting,
           isWaiting: !!vt.isWaiting,
+          isRefund: !!vt.isRefund,
           isExtra: hasExtraAmounts(!!vt.isExtra, vt.tagAmounts),
           isExtraGlobal: !!vt.isExtra, // Toggle brut de la variable
           comments: vt.comments || "",
@@ -383,7 +413,7 @@ export const usePlanner = (
       })
     );
     return periods;
-  }, [configs, incomeConfigs, paidItems, variableTransactions, currentMonthKey, settings, currentDate, daysInMonth, monthlyBudget]);
+  }, [configs, incomeConfigs, paidItems, variableTransactions, currentMonthKey, settings, currentDate, daysInMonth]);
 
   const filteredPeriodBudgets = useMemo(() => {
     return periodBudgets.map((w) => {
@@ -477,7 +507,9 @@ export const usePlanner = (
         else if (filters.salary === "EXCLUDE") items = items.filter((i) => !i.isSalary);
 
         if (filters.accountIds.length > 0) items = items.filter((i) => filters.accountIds.includes(i.accountId));
-        if (filters.beneficiaryIds.length > 0) items = items.filter((i) => filters.beneficiaryIds.includes(i.beneficiaryId));
+        if (filters.beneficiaryIds.length > 0) {
+          items = items.filter((i) => resolveBeneficiaryAmounts(i).some((ba) => filters.beneficiaryIds.includes(ba.beneficiaryId)));
+        }
 
         if (filters.tagPresence === "WITH_TAGS") {
           items = items.filter((i) => i.tagAmounts && i.tagAmounts.length > 0);
@@ -562,14 +594,6 @@ export const usePlanner = (
       .flatMap((w) => w.items)
       .filter((i) => !i.isPaid);
 
-    const isRefund = (item: PlannedItem) => {
-      if (item.type !== "INCOME") return false;
-      if (item.category === "Dépenses" || item.category === "Remboursement") return true;
-      const catDef = categories.find((c) => c.name === item.category);
-      if (catDef && catDef.type === "EXPENSE") return true;
-      return false;
-    };
-
     const sum = (items: PlannedItem[], type: "EXPENSE" | "INCOME", useOriginal = false) =>
       items.filter((i) => i.type === type).reduce((acc, i) => acc + (useOriginal ? i.originalAmount : i.amount), 0);
 
@@ -592,32 +616,14 @@ export const usePlanner = (
         const impact = item.type === "EXPENSE" ? val : -val;
         byAccount[item.accountId].paid += impact;
 
-        // Calculer le montant Standard (hors Extra) pour paidStandard
-        let standardAmount = val;
-        if (item.isExtraGlobal) {
-          standardAmount = 0;
-        } else if (item.tagAmounts && item.tagAmounts.length > 0) {
-          const extraSum = item.tagAmounts.filter((ta) => ta.isExtra === true).reduce((sum, ta) => sum + ta.amount, 0);
-          standardAmount = Math.max(0, val - extraSum);
-        }
-        const standardImpact = item.type === "EXPENSE" ? standardAmount : -standardAmount;
+        const standardImpact = item.type === "EXPENSE" ? getStandardAmount(item) : -getStandardAmount(item);
         byAccount[item.accountId].paidStandard += standardImpact;
       } else {
         const impact = item.type === "EXPENSE" ? -val : val;
         byAccount[item.accountId].remaining += impact;
         byAccount[item.accountId].pendingCount++;
 
-        // Calculer le montant Standard (hors Extra) pour remainingStandard
-        let standardAmount = val;
-        if (item.isExtraGlobal) {
-          // Toggle Extra global : tout est Extra, rien de Standard
-          standardAmount = 0;
-        } else if (item.tagAmounts && item.tagAmounts.length > 0) {
-          // Avec tags : soustraire les montants Extra
-          const extraSum = item.tagAmounts.filter((ta) => ta.isExtra === true).reduce((sum, ta) => sum + ta.amount, 0);
-          standardAmount = Math.max(0, val - extraSum);
-        }
-        const standardImpact = item.type === "EXPENSE" ? -standardAmount : standardAmount;
+        const standardImpact = item.type === "EXPENSE" ? -getStandardAmount(item) : getStandardAmount(item);
         byAccount[item.accountId].remainingStandard += standardImpact;
       }
 
@@ -626,51 +632,34 @@ export const usePlanner = (
       }
 
       if (item.category !== "Virement Interne") {
-        if (item.isPaid) {
-          if (!incByBeneficiary[item.beneficiaryId]) incByBeneficiary[item.beneficiaryId] = { paid: 0, planned: 0 };
-          if (!expByBeneficiary[item.beneficiaryId]) expByBeneficiary[item.beneficiaryId] = { paid: 0, planned: 0 };
+        const beneficiaryAmounts = resolveBeneficiaryAmounts(item);
 
-          if (item.type === "INCOME") incByBeneficiary[item.beneficiaryId].paid += val;
-          else expByBeneficiary[item.beneficiaryId].paid += val;
-        }
+        beneficiaryAmounts.forEach((beneficiaryAmount) => {
+          const beneficiaryShare = item.amount > 0 ? beneficiaryAmount.amount / item.amount : 0;
+          const plannedShare = beneficiaryShare * originalVal;
 
-        if (item.source === "RECURRING") {
-          if (item.type === "INCOME") {
-            if (!incByBeneficiary[item.beneficiaryId]) incByBeneficiary[item.beneficiaryId] = { paid: 0, planned: 0 };
-            incByBeneficiary[item.beneficiaryId].planned += originalVal;
-          } else {
-            if (!expByBeneficiary[item.beneficiaryId]) expByBeneficiary[item.beneficiaryId] = { paid: 0, planned: 0 };
-            expByBeneficiary[item.beneficiaryId].planned += originalVal;
+          if (item.isPaid) {
+            if (!incByBeneficiary[beneficiaryAmount.beneficiaryId]) incByBeneficiary[beneficiaryAmount.beneficiaryId] = { paid: 0, planned: 0 };
+            if (!expByBeneficiary[beneficiaryAmount.beneficiaryId]) expByBeneficiary[beneficiaryAmount.beneficiaryId] = { paid: 0, planned: 0 };
+
+            if (item.type === "INCOME") incByBeneficiary[beneficiaryAmount.beneficiaryId].paid += beneficiaryAmount.amount;
+            else expByBeneficiary[beneficiaryAmount.beneficiaryId].paid += beneficiaryAmount.amount;
           }
-        }
+
+          if (item.source === "RECURRING") {
+            if (item.type === "INCOME") {
+              if (!incByBeneficiary[beneficiaryAmount.beneficiaryId]) incByBeneficiary[beneficiaryAmount.beneficiaryId] = { paid: 0, planned: 0 };
+              incByBeneficiary[beneficiaryAmount.beneficiaryId].planned += plannedShare;
+            } else {
+              if (!expByBeneficiary[beneficiaryAmount.beneficiaryId]) expByBeneficiary[beneficiaryAmount.beneficiaryId] = { paid: 0, planned: 0 };
+              expByBeneficiary[beneficiaryAmount.beneficiaryId].planned += plannedShare;
+            }
+          }
+        });
       }
     });
 
     const periodLimit = currentWeek?.periodLimit || 0;
-    const budgetVariableItems = currentItems.filter((i) => i.source === "VARIABLE" && !i.isExtra && !i.isWaiting && i.category !== "Virement Interne");
-
-    let varExpenses = 0;
-    let varIncome = 0;
-
-    budgetVariableItems.forEach((item) => {
-      if (item.type === "EXPENSE") {
-        varExpenses += item.amount;
-      } else if (item.type === "INCOME") {
-        if (isRefund(item)) {
-          varExpenses -= item.amount;
-        } else {
-          varIncome += item.amount;
-        }
-      }
-    });
-
-    logger.debug("📈 RÉSULTAT FINAL byAccount (Compte Joint ID=3):", {
-      paid: byAccount["3"]?.paid,
-      remaining: byAccount["3"]?.remaining,
-      remainingStandard: byAccount["3"]?.remainingStandard,
-      planned: byAccount["3"]?.planned,
-      pendingCount: byAccount["3"]?.pendingCount,
-    });
 
     return {
       fixedPaid: sum(
@@ -690,10 +679,7 @@ export const usePlanner = (
         "EXPENSE",
         true
       ),
-      varExpenses,
-      varIncome,
       periodLimit,
-      varRemaining: periodLimit + varIncome - varExpenses,
       totalIncomeReal: sum(
         currentItems.filter((i) => i.isPaid && i.category !== "Virement Interne"),
         "INCOME"

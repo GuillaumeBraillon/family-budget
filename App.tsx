@@ -5,7 +5,9 @@ import { useAuth } from "./hooks/useAuth";
 import { useAuthorization } from "./hooks/useAuthorization";
 import { useConfigurationUI, ConfigTab } from "./hooks/useConfigurationUI";
 import { ErrorProvider, useError } from "./contexts/ErrorContext";
+import { PeriodNavigationProvider } from "./contexts/PeriodNavigationContext";
 import { ErrorModal } from "./components/ui/ErrorModal";
+import { Toast } from "./components/ui/Toast";
 import { Header } from "./components/Layout/Header";
 import { DashboardView } from "./components/features/Dashboard/DashboardView";
 import { BalancesView } from "./components/features/Balances/BalancesView";
@@ -17,10 +19,11 @@ import { UnauthorizedView } from "./components/features/Auth/UnauthorizedView";
 import { WelcomeEmptyState } from "./components/features/Dashboard/components/WelcomeEmptyState";
 import { isSupabaseConfigured } from "./services/supabase";
 import { OperationFilters } from "./types";
+import { AnalyticsView } from "./components/features/Analytics/AnalyticsView";
 
-type ViewState = "dashboard" | "balances" | "planner" | "transfers" | "config";
+type ViewState = "dashboard" | "balances" | "planner" | "transfers" | "config" | "analytics";
 
-const VIEWS: ViewState[] = ["dashboard", "balances", "planner", "transfers", "config"];
+const VIEWS: ViewState[] = ["dashboard", "balances", "planner", "transfers", "config", "analytics"];
 
 const AppContent: React.FC = () => {
   const { currentError, clearError } = useError();
@@ -34,6 +37,8 @@ const AppContent: React.FC = () => {
   // 3. État UI
   const [currentView, setCurrentView] = useState<ViewState>("dashboard");
   const [plannerContext, setPlannerContext] = useState<{ date: Date; weekNumber?: number; filters?: Partial<OperationFilters> } | null>(null);
+  const [pendingLabelImports, setPendingLabelImports] = useState<{ cb: boolean; vir: boolean }>({ cb: false, vir: false });
+  const [autoImportToast, setAutoImportToast] = useState<{ type: "success" | "error" | "info"; message: string } | null>(null);
 
   // 4. Données Budget (ne chargent que si authentifié ET autorisé)
   const {
@@ -128,6 +133,42 @@ const AppContent: React.FC = () => {
     }
   }, [currentView, plannerContext]);
 
+  useEffect(() => {
+    if (currentView === "planner") return;
+    if (!pendingLabelImports.cb && !pendingLabelImports.vir) return;
+
+    const importsToRun = pendingLabelImports;
+
+    const runAutoImportOnLeavePlanner = async () => {
+      setPendingLabelImports({ cb: false, vir: false });
+      const cbResult = importsToRun.cb ? await actions.importLabels() : null;
+      const virResult = importsToRun.vir ? await actions.importVirLabels() : null;
+
+      const cbError = !!(cbResult && (cbResult as { error?: unknown }).error);
+      const virError = !!(virResult && (virResult as { error?: unknown }).error);
+
+      if (cbError || virError) {
+        setAutoImportToast({ type: "error", message: "Import auto des libellés: erreur." });
+        return;
+      }
+
+      const cbCount = cbResult && typeof (cbResult as { count?: unknown }).count === "number" ? ((cbResult as { count: number }).count ?? 0) : 0;
+      const virCount = virResult && typeof (virResult as { count?: unknown }).count === "number" ? ((virResult as { count: number }).count ?? 0) : 0;
+      const totalCount = cbCount + virCount;
+
+      if (totalCount > 0) {
+        setAutoImportToast({
+          type: "success",
+          message: `${totalCount} libellé${totalCount > 1 ? "s" : ""} importé${totalCount > 1 ? "s" : ""} automatiquement.`,
+        });
+      } else {
+        setAutoImportToast({ type: "info", message: "Import auto: aucun nouveau libellé." });
+      }
+    };
+
+    void runAutoImportOnLeavePlanner();
+  }, [currentView, pendingLabelImports, actions]);
+
   // --- RENDU CONDITIONNEL ---
 
   // 1. Setup Supabase manquant (Configuration par variable d'environnement uniquement)
@@ -209,7 +250,7 @@ const AppContent: React.FC = () => {
     return (
       <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
         <Header currentView={currentView} onViewChange={setCurrentView} onLogout={signOut} userEmail={session.user.email} session={session} />
-        <main className="max-w-9xl mx-auto px-2 py-2 pb-24 md:pb-8">
+        <main className="max-w-9xl mx-auto animate-in fade-in duration-500 flex flex-col gap-1.5 md:gap-2">
           <WelcomeEmptyState onStartConfig={() => navigateToConfig("family")} />
         </main>
       </div>
@@ -220,7 +261,7 @@ const AppContent: React.FC = () => {
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900" onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
       <Header currentView={currentView} onViewChange={setCurrentView} onLogout={signOut} userEmail={session.user.email} session={session} />
 
-      <main className="max-w-9xl mx-auto px-2 py-2 pb-24 md:pb-8">
+      <main className="max-w-9xl mx-auto animate-in fade-in duration-500 flex flex-col gap-1.5 md:gap-2">
         {currentView === "dashboard" && (
           <DashboardView
             accounts={accounts}
@@ -228,8 +269,8 @@ const AppContent: React.FC = () => {
             configs={configs}
             incomeConfigs={incomeConfigs}
             paidItems={paidItems}
-            settings={settings}
             transfers={transfers}
+            settings={settings}
             variableTransactions={variableTransactions}
             categories={categories}
             onNavigateToPlanner={navigateToPlannerWithContext}
@@ -272,6 +313,12 @@ const AppContent: React.FC = () => {
             onUpsertVariable={actions.upsertVariableTransaction}
             onDeleteVariable={actions.deleteVariableTransaction}
             onMoveItem={actions.moveItem}
+            onVariableCreated={(type) =>
+              setPendingLabelImports((prev) => ({
+                cb: prev.cb || type === "EXPENSE",
+                vir: prev.vir || type === "INCOME",
+              }))
+            }
           />
         )}
 
@@ -329,10 +376,25 @@ const AppContent: React.FC = () => {
             onDeleteUser={actions.deleteAuthorizedUser}
           />
         )}
+        {currentView === "analytics" && (
+          <AnalyticsView
+            accounts={accounts}
+            people={people}
+            configs={configs}
+            incomeConfigs={incomeConfigs}
+            paidItems={paidItems}
+            settings={settings}
+            variableTransactions={variableTransactions}
+            categories={categories}
+            onNavigateToPlanner={navigateToPlannerWithContext}
+            onNavigateToConfig={() => navigateToConfig("budget")}
+          />
+        )}
       </main>
 
       {/* Modale d'erreur globale */}
       {currentError && <ErrorModal isOpen={true} error={currentError.error} context={currentError.context} onClose={clearError} />}
+      {autoImportToast && <Toast type={autoImportToast.type} message={autoImportToast.message} onClose={() => setAutoImportToast(null)} duration={4000} />}
     </div>
   );
 };
@@ -340,7 +402,9 @@ const AppContent: React.FC = () => {
 const App: React.FC = () => {
   return (
     <ErrorProvider>
-      <AppContent />
+      <PeriodNavigationProvider>
+        <AppContent />
+      </PeriodNavigationProvider>
     </ErrorProvider>
   );
 };

@@ -10,6 +10,7 @@ interface DataListRowProps {
   amount?: number;
   originalAmount?: number;
   isIncome?: boolean;
+  isRefund?: boolean;
   category?: string;
   subCategory?: string;
   beneficiary?: string;
@@ -31,6 +32,7 @@ export const DataListRow: React.FC<DataListRowProps> = ({
   amount,
   originalAmount,
   isIncome,
+  isRefund,
   category,
   subCategory,
   beneficiary,
@@ -52,10 +54,17 @@ export const DataListRow: React.FC<DataListRowProps> = ({
   const numericAmount = amount ?? 0;
   const isPositiveFlow = isIncome || numericAmount < 0;
 
-  // Détection visuelle remboursement (Dépense négative)
-  const isRefund = !isIncome && numericAmount < 0;
+  // Détection visuelle remboursement : priorité au flag explicite, fallback legacy (dépense négative)
+  const isRefundRow = typeof isRefund === "boolean" ? isRefund : !isIncome && numericAmount < 0;
 
-  const bgClass = isPending ? "bg-amber-50 border-l-4 border-l-amber-400" : "bg-white hover:bg-slate-50 border-l-4 border-l-transparent";
+  const bgClass = isPending
+    ? "bg-amber-50 border-l-4 border-l-amber-400"
+    : isRefundRow
+      ? "bg-emerald-50/50 hover:bg-emerald-50 border-l-4 border-l-emerald-300"
+      : "bg-white hover:bg-slate-50 border-l-4 border-l-transparent";
+
+  const amountPrefix = isRefundRow ? "↺ " : isPositiveFlow ? "+" : "";
+  const amountColorClass = isRefundRow ? "text-emerald-500" : isPositiveFlow ? "text-emerald-600" : "text-slate-900";
 
   return (
     <div
@@ -103,7 +112,7 @@ export const DataListRow: React.FC<DataListRowProps> = ({
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5 sm:gap-2 mb-0.5 sm:mb-1 flex-wrap">
           <span className="font-bold truncate text-slate-900 text-sm sm:text-base">{label}</span>
-          {isRefund && (
+          {isRefundRow && (
             <span className="text-[9px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded font-bold uppercase flex items-center gap-1">
               <RefreshCcw size={10} /> Remboursement
             </span>
@@ -161,10 +170,11 @@ export const DataListRow: React.FC<DataListRowProps> = ({
       <div className="text-right flex items-center gap-1 sm:gap-3">
         {amount !== undefined && (
           <div>
-            <div className={`font-black text-sm sm:text-base ${isPositiveFlow ? "text-emerald-600" : "text-slate-900"}`}>
-              {isPositiveFlow ? "+" : ""}
+            <div className={`font-black text-sm sm:text-base ${amountColorClass}`}>
+              {amountPrefix}
               {Math.abs(numericAmount).toFixed(2)} €
             </div>
+            {isRefundRow && <div className="text-[9px] sm:text-[10px] text-emerald-600 font-bold whitespace-nowrap">Réduction de dépenses</div>}
             {originalAmount !== undefined && Math.abs(numericAmount - originalAmount) > 0.01 && (
               <div className="text-[9px] sm:text-[10px] text-amber-600 font-bold whitespace-nowrap">Prévu: {originalAmount.toFixed(2)}</div>
             )}

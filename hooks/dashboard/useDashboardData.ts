@@ -43,6 +43,7 @@ import {
   AccountType,
   OperationFilters,
 } from "../../types";
+import { getExtraAmount, getStandardAmount } from "../../services/financeUtils";
 
 /**
  * Retourne les filtres standards pour le tableau "Analyse Complète (Réel)".
@@ -640,31 +641,11 @@ export const useDashboardData = ({
               addToPeriod(d, tx.amount, "income_variable", false);
             }
           } else {
-            // Dépense variable : Gestion des montants Extra/Standard avec tags
-            // RÈGLE 1 : Si toggle global Extra activé → Tout est Extra
-            if (tx.isExtra) {
-              addToPeriod(d, tx.amount, "expense_variable", true);
-            }
-            // RÈGLE 2 : Pas de toggle global → Analyser les tags individuels
-            else if (tx.tagAmounts && tx.tagAmounts.length > 0) {
-              // Calculer la somme des montants Extra dans les tags
-              const extraSum = tx.tagAmounts.filter((ta) => ta.isExtra === true).reduce((sum, ta) => sum + ta.amount, 0);
-
-              // Calculer la somme des montants Standard (reste)
-              const standardSum = tx.amount - extraSum;
-
-              // Ajouter les deux parties séparément
-              if (extraSum > 0.01) {
-                addToPeriod(d, extraSum, "expense_variable", true);
-              }
-              if (standardSum > 0.01) {
-                addToPeriod(d, standardSum, "expense_variable", false);
-              }
-            }
-            // RÈGLE 3 : Pas de toggle, pas de tags → Tout est Standard
-            else {
-              addToPeriod(d, tx.amount, "expense_variable", false);
-            }
+            // Dépense variable : Ventilation Standard/Extra via financeUtils (source de vérité)
+            const extraSum = getExtraAmount(tx);
+            const standardSum = getStandardAmount(tx);
+            if (extraSum > 0.01) addToPeriod(d, extraSum, "expense_variable", true);
+            if (standardSum > 0.01) addToPeriod(d, standardSum, "expense_variable", false);
           }
         }
       });

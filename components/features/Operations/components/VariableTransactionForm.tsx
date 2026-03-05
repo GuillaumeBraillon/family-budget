@@ -22,10 +22,11 @@ import { TrendingUp, TrendingDown, Calendar, Trash2, Clock, CheckCircle2, Star, 
 import { VariableTransaction, Account, CategoryDef, Person, SavedLabel, Tag, AccountType } from "../../../../types";
 import { CategorySelector } from "../../../ui/molecules/CategorySelector";
 import { TextInput, AmountInput, SearchableTextInput } from "../../../ui/molecules/FormInputs";
-import { AccountSelector, BeneficiarySelector } from "../../../ui/molecules/SmartSelectors";
+import { AccountSelector } from "../../../ui/molecules/SmartSelectors";
 import { ConfirmModal } from "../../../ui/atoms/ConfirmModal";
 import { Modal } from "../../../ui/Modal";
 import { TagAmountSelector } from "../../../ui/molecules/TagAmountSelector";
+import { BeneficiaryAmountSelector } from "../../../ui/molecules/BeneficiaryAmountSelector";
 import { ValidationErrorBlock } from "../../../ui/atoms/ValidationErrorBlock";
 import { useValidationScroll } from "../../../../hooks/useValidationScroll";
 import { useTransactionForm } from "../../../../hooks/transactions";
@@ -172,7 +173,7 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
           <TextInput label="Date" type="date" icon={Calendar} value={form.date} onChange={(e) => form.setDate(e.target.value)} required />
         </div>
 
-        <div className="grid grid-cols-2 gap-2.5">
+        <div className="grid grid-cols-1 gap-2.5">
           <AccountSelector
             label={form.isExpense ? (form.isRefund ? "Compte crédité (Remboursement)" : "Compte débité") : "Compte crédité"}
             accounts={accounts}
@@ -181,9 +182,14 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
             color={form.themeColor}
             filterTypes={[AccountType.CHECKING]}
           />
-
-          <BeneficiarySelector people={people} value={form.beneficiaryId} onChange={(e) => form.setBeneficiaryId(e.target.value)} color={form.themeColor} />
         </div>
+
+        <BeneficiaryAmountSelector
+          people={people}
+          totalAmount={Math.abs(parseFloat(form.amount) || 0)}
+          selectedBeneficiaryAmounts={form.selectedBeneficiaryAmounts}
+          onBeneficiaryAmountsChange={form.setSelectedBeneficiaryAmounts}
+        />
 
         <CategorySelector
           categories={categories}

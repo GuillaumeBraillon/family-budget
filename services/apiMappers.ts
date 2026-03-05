@@ -14,12 +14,14 @@ import {
   Tag,
   AuthorizedUser,
   TagAmount,
+  BeneficiaryAmount,
 } from "../types";
 import {
   DbPerson,
   DbAuthorizedUser,
   DbTag,
   DbPaidItemTag,
+  DbPaidItemBeneficiary,
   DbAccount,
   DbCategory,
   DbSubCategory,
@@ -61,6 +63,11 @@ export const mapDbTagAmount = (tagAmount: DbPaidItemTag): TagAmount => ({
   tagId: tagAmount.tag_id,
   amount: Number(tagAmount.amount),
   isExtra: !!tagAmount.is_extra,
+});
+
+export const mapDbBeneficiaryAmount = (beneficiaryAmount: DbPaidItemBeneficiary): BeneficiaryAmount => ({
+  beneficiaryId: beneficiaryAmount.beneficiary_id,
+  amount: Number(beneficiaryAmount.amount),
 });
 
 export const mapDbAccount = (account: DbAccount): Account => ({
@@ -134,11 +141,12 @@ export const mapDbPaidItem = (item: DbPaidItem): PaidItemDetails => ({
   amount: Number(item.amount),
   paymentDate: item.payment_date,
   accountId: item.account_id,
-  beneficiaryId: item.beneficiary_id,
   label: item.label,
   category: item.category,
   subCategory: item.sub_category,
   type: item.type || "EXPENSE",
+  isRefund: !!item.is_refund,
+  isSalary: !!item.is_salary,
   isVariable: !!item.is_variable,
   isWaiting: !!item.is_waiting,
   isExtra: !!item.is_extra,
@@ -164,8 +172,8 @@ export const mapDbVariableTransaction = (transaction: DbPaidItem): VariableTrans
   category: transaction.category,
   subCategory: transaction.sub_category,
   accountId: transaction.account_id,
-  beneficiaryId: transaction.beneficiary_id,
   type: transaction.type || "EXPENSE",
+  isRefund: !!transaction.is_refund,
   isWaiting: !!transaction.is_waiting,
   isExtra: !!transaction.is_extra,
   comments: transaction.comments || undefined,
@@ -174,18 +182,18 @@ export const mapDbVariableTransaction = (transaction: DbPaidItem): VariableTrans
 export const mapDbSettings = (data: DbSettings | null): AppSettings => {
   if (!data)
     return {
-      monthly_envelope: 2000,
+      personal_budget_amount: 350,
+      family_variable_budget: 0,
       period_type: "FIXED_DAYS",
       period_value: 7,
-      carryover_strategy: "NEXT_PERIOD",
       operations_sorting: [],
       accounts_sorting: [],
     };
   return {
-    monthly_envelope: Number(data.monthly_envelope || 2000),
+    personal_budget_amount: Number(data.personal_budget_amount || 350),
+    family_variable_budget: Number(data.family_variable_budget || 0),
     period_type: (data.period_type || "FIXED_DAYS") as "FIXED_DAYS" | "CALENDAR_WEEKS" | "CUSTOM_SPLIT",
     period_value: Number(data.period_value || 7),
-    carryover_strategy: (data.carryover_strategy || "NEXT_PERIOD") as "NEXT_PERIOD" | "SPREAD_REMAINING",
     operations_sorting: data.operations_sorting || [],
     accounts_sorting: data.accounts_sorting || [],
   };

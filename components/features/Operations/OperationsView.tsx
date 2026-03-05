@@ -1,9 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { usePlannerUI } from "../../../hooks/usePlannerUI";
 import { usePlanner } from "../../../hooks/usePlanner";
 import { useError } from "../../../contexts/ErrorContext";
 import { useCsvExport } from "../../../hooks/useCsvExport";
 import { useOperationsFilters, useOperationsSorting, useOperationsData } from "../../../hooks/operations";
+import { usePeriodNav } from "../../../contexts/PeriodNavigationContext";
 import {
   ExpenseConfig,
   IncomeConfig,
@@ -18,14 +19,11 @@ import {
   CategoryDef,
   OperationFilters,
 } from "../../../types";
-import { logger } from "../../../services/logger";
 
 // Imports UI Atomic (Generic)
 import { Toast } from "../../ui/Toast";
-import { MonthNavigator } from "../../ui/molecules/MonthNavigator";
-import { ScopeSelector } from "../../ui/molecules/ScopeSelector";
+import { PeriodNavigationBar } from "../../ui/molecules/PeriodNavigationBar";
 import { FilterBar } from "../../ui/molecules/FilterBar";
-import { WeekSelector } from "../../ui/molecules/WeekSelector";
 import { QuickPeriodSummary } from "../../ui/molecules/QuickPeriodSummary";
 import { SearchBar } from "../../ui/atoms/SearchBar";
 
@@ -52,6 +50,7 @@ interface OperationsViewProps {
   onUpsertVariable: (t: VariableTransaction) => void;
   onDeleteVariable: (id: string) => void;
   onMoveItem?: (item: PlannedItem, newIndex: number) => void;
+  onVariableCreated?: (type: "EXPENSE" | "INCOME") => void;
 }
 
 export const OperationsView: React.FC<OperationsViewProps> = ({
@@ -72,22 +71,31 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
   onUpsertVariable,
   onDeleteVariable,
   onMoveItem,
+  onVariableCreated,
 }) => {
   const { showError } = useError();
   const { exportToCsv, escapeCsv, formatNumberFr } = useCsvExport();
 
-  // Hooks spécialisés (responsabilités déléguées)
-  const ui = usePlannerUI(initialDate, initialWeek);
+  // Navigation partagée (contexte global, persistante entre vues)
+  const { currentDate, scope, setScope, activeWeek, setActiveWeek, setCurrentDate } = usePeriodNav();
+
+  // Sync initialDate/initialWeek depuis navigations externes (ex: Dashboard → Operations)
+  useEffect(() => {
+    if (initialDate) {
+      setCurrentDate(initialDate);
+      if (initialWeek !== undefined) {
+        setActiveWeek(initialWeek);
+        setScope("PERIOD");
+      } else {
+        setScope("MONTH");
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // UI local : modales + recherche
+  const ui = usePlannerUI();
   const { filters, setFilters, resetFilters } = useOperationsFilters(initialFilters);
-  // Scope intelligent : PERIOD par défaut (ou si initialWeek fourni), MONTH si navigation sans période spécifique
-  const [scope, setScope] = useState<"MONTH" | "PERIOD">(() => {
-    // Si initialWeek === undefined ET initialDate === undefined, on arrive directement → PERIOD
-    // Si initialWeek fourni (navigation depuis AnnualIncomeAnalysis) → PERIOD
-    // Si initialDate fourni SANS initialWeek (GlobalMonthlyAnalysis) → MONTH
-    if (initialWeek !== undefined) return "PERIOD";
-    if (initialDate !== undefined) return "MONTH";
-    return "PERIOD";
-  });
 
   // Récupération des périodes pour le WeekSelector
   const _checkingAccounts = accounts.filter((a) => a.type === "COURANT");
@@ -96,7 +104,7 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
     incomeConfigs,
     paidItems,
     variableTransactions,
-    ui.currentDate,
+    currentDate,
     ui.searchQuery,
     settings,
     categories,
@@ -109,13 +117,13 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
     incomeConfigs,
     paidItems,
     variableTransactions,
-    currentDate: ui.currentDate,
+    currentDate,
     searchQuery: ui.searchQuery,
     settings,
     categories,
     filters,
     scope,
-    activeWeek: ui.activeWeek,
+    activeWeek,
   });
 
   // Hook de tri avec callback de persistance
@@ -148,6 +156,14 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
     }
   };
 
+  const handleUpsertVariable = async (transaction: VariableTransaction) => {
+    const isCreation = !editingVar;
+    await onUpsertVariable(transaction);
+    if (isCreation) {
+      onVariableCreated?.(transaction.type);
+    }
+  };
+
   const handleItemClick = (item: PlannedItem) => {
     if (item.source === "RECURRING") {
       if (item.isPaid) {
@@ -172,8 +188,17 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
     const rows = currentItems.map((item) => {
       const dateStr =
         item.paidDetails?.paymentDate ||
-        `${ui.currentDate.getFullYear()}-${String(ui.currentDate.getMonth() + 1).padStart(2, "0")}-${String(item.day).padStart(2, "0")}`;
-      const personName = people.find((p) => p.id === item.beneficiaryId)?.name || "";
+        `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, "0")}-${String(item.day).padStart(2, "0")}`;
+      const personName =
+        item.beneficiaryAmounts && item.beneficiaryAmounts.length > 0
+          ? item.beneficiaryAmounts
+              .map((beneficiaryAmount) => {
+                const person = people.find((p) => p.id === beneficiaryAmount.beneficiaryId);
+                return person ? `${person.name} (${beneficiaryAmount.amount.toFixed(2)}€)` : "";
+              })
+              .filter(Boolean)
+              .join(" | ")
+          : people.find((p) => p.id === item.beneficiaryId)?.name || "";
       const accountName = accounts.find((a) => a.id === item.accountId)?.name || "";
       const status = item.isPaid ? "Réel" : "En attente";
       const type = item.type === "INCOME" ? "Revenu" : "Dépense";
@@ -205,7 +230,7 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
 
   const defaultVarDate = (() => {
     const today = new Date();
-    if (today.getMonth() === ui.currentDate.getMonth() && today.getFullYear() === ui.currentDate.getFullYear()) return today.toISOString().split("T")[0];
+    if (today.getMonth() === currentDate.getMonth() && today.getFullYear() === currentDate.getFullYear()) return today.toISOString().split("T")[0];
     return new Date().toISOString().split("T")[0];
   })();
 
@@ -213,12 +238,6 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
   const handleReorder = (item: PlannedItem, oldIndex: number, newIndex: number) => {
     try {
       if (onMoveItem && sortKey === "manual") {
-        logger.debug("drag-drop", "Début handleReorder (Array)", {
-          item: item.label,
-          oldIndex,
-          newIndex,
-        });
-
         // Avec le nouveau système, on passe simplement l'item et le nouvel index global
         // Le hook useBudget s'occupera de mettre à jour l'array complet
         onMoveItem(item, newIndex);
@@ -229,20 +248,13 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
   };
 
   return (
-    <div className="space-y-1 animate-in fade-in duration-500">
+    <div className="flex flex-col gap-1.5 md:gap-2 m-2">
       {feedback && <Toast type={feedback.type} message={feedback.message} onClose={() => setFeedback(null)} />}
 
       {/* Navigation de période */}
-      <div className="flex flex-row gap-1.5 md:gap-2 items-center flex-wrap">
-        <MonthNavigator date={ui.currentDate} onPrev={ui.handlePrevMonth} onNext={ui.handleNextMonth} />
-        <ScopeSelector scope={scope} onScopeChange={setScope} />
-        {scope === "PERIOD" && (
-          <WeekSelector weeks={filteredPeriodBudgets} activeWeek={ui.activeWeek} onSelect={ui.setActiveWeek} searchQuery={ui.searchQuery} />
-        )}
-        <div className="ml-auto">
-          <SearchBar value={ui.searchQuery} onChange={ui.setSearchQuery} />
-        </div>
-      </div>
+      <PeriodNavigationBar filteredPeriodBudgets={filteredPeriodBudgets}>
+        <SearchBar value={ui.searchQuery} onChange={ui.setSearchQuery} />
+      </PeriodNavigationBar>
 
       <div className="bg-white p-2 rounded-xl border border-slate-200 shadow-sm">
         <FilterBar
@@ -269,7 +281,7 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
         people={people}
         accounts={accounts}
         tags={tags}
-        currentDate={ui.currentDate}
+        currentDate={currentDate}
         onItemClick={handleItemClick}
         onAddClick={() => {
           setEditingVar(null);
@@ -283,6 +295,7 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
         confirmModal={ui.confirmModal}
         uncheckModal={ui.uncheckModal}
         accounts={accounts}
+        people={people}
         tags={tags}
         onTogglePaid={onTogglePaid}
         onCloseConfirm={ui.closeConfirmModal}
@@ -297,7 +310,7 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
         categories={categories}
         people={people}
         tags={tags}
-        onAddTransaction={onUpsertVariable}
+        onAddTransaction={handleUpsertVariable}
         onDeleteTransaction={handleDeleteVariable}
         defaultDate={defaultVarDate}
         savedLabels={savedLabels}

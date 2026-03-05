@@ -1,13 +1,13 @@
 import React from "react";
 import { LayoutDashboard, ChevronLeft, ChevronRight } from "lucide-react";
 
-interface DashboardHeaderProps {
+interface MonthSelectorProps {
   currentDate: Date;
   year: number;
   onYearChange: (year: number) => void;
 }
 
-export const DashboardHeader: React.FC<DashboardHeaderProps> = ({ currentDate, year, onYearChange }) => {
+export const MonthSelector: React.FC<MonthSelectorProps> = ({ currentDate, year, onYearChange }) => {
   const monthLabel = new Intl.DateTimeFormat("fr-FR", { month: "long", year: "numeric" }).format(currentDate);
 
   return (

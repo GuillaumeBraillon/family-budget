@@ -65,7 +65,6 @@ describe("apiCrud - RPC upsert_paid_item_with_tags", () => {
         p_instance_id: "var_1",
         p_amount: 42.5,
         p_type: "INCOME",
-        p_beneficiary_id: null,
       })
     );
   });
@@ -129,7 +128,7 @@ describe("apiCrud - RPC upsert_paid_item_with_tags", () => {
       amount: -12.71,
       paymentDate: "2026-02-20",
       accountId: "3",
-      beneficiaryId: "p_nelly",
+      beneficiaryAmounts: [{ beneficiaryId: "p_nelly", amount: 12.71 }],
       label: "CB Utile",
       category: "Achats & Shopping",
       subCategory: "Restaurants",

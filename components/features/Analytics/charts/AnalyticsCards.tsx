@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { TrendingUp, TrendingDown, AlertTriangle, ArrowUpRight, Wallet, PieChart as PieIcon, Star } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "../../../../ui/Card";
+import { Card, CardContent, CardHeader, CardTitle } from "../../../ui/Card";
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, Tooltip } from "recharts";
 
 // --- TYPES ---

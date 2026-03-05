@@ -36,6 +36,14 @@ export interface DbPaidItemTag {
   created_at: string;
 }
 
+export interface DbPaidItemBeneficiary {
+  id: string;
+  paid_item_instance_id: string;
+  beneficiary_id: string;
+  amount: number;
+  created_at: string;
+}
+
 export interface DbAccount {
   id: string;
   name: string;
@@ -110,7 +118,6 @@ export interface DbPaidItem {
   amount: number;
   payment_date: string;
   account_id: string;
-  beneficiary_id: string;
   label: string;
   category: string;
   sub_category?: string;
@@ -118,6 +125,8 @@ export interface DbPaidItem {
   is_variable: boolean;
   is_waiting: boolean;
   is_extra: boolean;
+  is_refund?: boolean;
+  is_salary?: boolean;
   comments?: string;
   date?: string; // Alias de payment_date pour compatibilité
   tag_ids?: string[];
@@ -136,10 +145,10 @@ export interface DbTransfer {
 
 export interface DbSettings {
   id: string;
-  monthly_envelope: number;
+  personal_budget_amount?: number;
+  family_variable_budget?: number;
   period_type: string;
   period_value: number;
-  carryover_strategy?: string;
   operations_sorting?: string[];
   accounts_sorting?: string[];
 }

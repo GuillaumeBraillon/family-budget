@@ -120,7 +120,6 @@ export const useCategoryAutoSuggest = () => {
     }
 
     setIsLoading(true);
-    logger.debug("auto-suggest", `Recherche suggestion pour: "${labelName}"`);
 
     try {
       const { data, error, status } = await supabase.rpc("suggest_category_from_label", {
@@ -129,7 +128,6 @@ export const useCategoryAutoSuggest = () => {
 
       // Cas courant: aucune ligne trouvée sur une RPC attendue en objet -> 406
       if (error && status === 406) {
-        logger.debug("auto-suggest", `Aucune suggestion pour: "${labelName}"`);
         return null;
       }
 
@@ -139,17 +137,12 @@ export const useCategoryAutoSuggest = () => {
       const suggestion = Array.isArray(data) ? data[0] : data;
 
       if (isCategorySuggestion(suggestion)) {
-        logger.debug("auto-suggest", `Suggestion trouvée:`, {
-          category: suggestion.category_id,
-          subCategory: suggestion.sub_category_id,
-        });
         return {
           category_id: suggestion.category_id,
           sub_category_id: suggestion.sub_category_id ?? null,
         };
       }
 
-      logger.debug("auto-suggest", `Aucune suggestion pour: "${labelName}"`);
       return null;
     } catch (err) {
       const error = err as Error;

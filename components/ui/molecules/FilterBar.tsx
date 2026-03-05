@@ -84,16 +84,16 @@ interface FilterBarProps {
  * 3. Panneau repliable de filtres avancés (dropdowns)
  *
  * **Filtres Primaires :**
- * - Flux : Tous / Dépenses / Revenus
+ * - Bénéficiaires (multi-sélection)
  * - Source : Variable / Récurrent / Toutes
  * - Statut : Tous / Réel / En attente
  * - Nature : Tout / Standard / Extra
  *
  * **Filtres Secondaires (repliables) :**
+ * - Flux : Tous / Dépenses / Revenus
  * - Comptes (multi-sélection)
  * - Tags (tri-state avec mode présence)
  * - Salaires (binaire)
- * - Bénéficiaires (multi-sélection)
  * - Virements (binaire)
  *
  * **Optimisations :**
@@ -144,9 +144,9 @@ export const FilterBar: React.FC<FilterBarProps> = ({
     handleTransferChange,
     isTagsActive,
     isSalaryActive,
-    isBenActive,
     isTransferActive,
     isAccountActive,
+    isFluxActive,
     hasActiveSecondary,
     isDefaultFilters,
     clear,
@@ -159,8 +159,17 @@ export const FilterBar: React.FC<FilterBarProps> = ({
       <div className="flex flex-wrap items-center gap-2 justify-between">
         <div className="flex flex-wrap items-center gap-2">
           {/* FILTRES PRIMAIRES (Boutons Cycliques) */}
-          {!hiddenFilters.includes("flux") && <CyclicFilterButton {...fluxConfig} onClick={cycleFlux} />}
-
+          {/* BÉNÉFICIAIRES */}
+          {!hiddenFilters.includes("beneficiaries") && (
+            <FilterDropdown
+              label="Bénéficiaires"
+              icon={<Tag size={14} />}
+              options={benOptions}
+              selectedValues={visualBenIds}
+              onChange={handleBenChange}
+              onSelectAll={() => update("beneficiaryIds", [])}
+            />
+          )}
           {!hiddenFilters.includes("source") && <CyclicFilterButton {...sourceConfig} onClick={cycleSource} />}
 
           {!hiddenFilters.includes("status") && <CyclicFilterButton {...statusConfig} onClick={cycleStatus} />}
@@ -233,6 +242,8 @@ export const FilterBar: React.FC<FilterBarProps> = ({
           }`}
         >
           <span className="text-[9px] font-bold text-slate-500 uppercase mr-1">Avancé :</span>
+          {/* FLUX (Dépenses/Revenus) */}
+          {!hiddenFilters.includes("flux") && (showAllFilters || isFluxActive) && <CyclicFilterButton {...fluxConfig} onClick={cycleFlux} />}
 
           {/* COMPTES */}
           {!hiddenFilters.includes("accounts") && (showAllFilters || isAccountActive) && (
@@ -300,18 +311,6 @@ export const FilterBar: React.FC<FilterBarProps> = ({
               onChange={handleSalaryChange}
               onSelectAll={() => update("salary", "ALL")}
               color="emerald"
-            />
-          )}
-
-          {/* BÉNÉFICIAIRES */}
-          {!hiddenFilters.includes("beneficiaries") && (showAllFilters || isBenActive) && (
-            <FilterDropdown
-              label="Bénéficiaires"
-              icon={<Tag size={14} />}
-              options={benOptions}
-              selectedValues={visualBenIds}
-              onChange={handleBenChange}
-              onSelectAll={() => update("beneficiaryIds", [])}
             />
           )}
 

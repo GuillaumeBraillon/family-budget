@@ -6,7 +6,7 @@
  *
  * @architecture
  * **Responsabilités :**
- * - Calcul des reports budgétaires (carryover) selon stratégie (NEXT_PERIOD / SPREAD_REMAINING)
+ * - Calcul des reports budgétaires (carryover) en mode ALLOWANCE
  * - Calcul du budget de période ajusté
  * - Calcul de la consommation variable réelle (Standard uniquement)
  * - Génération des détails par compte (pending, recurring, debt, consumption)
@@ -22,33 +22,205 @@
  */
 import { useMemo } from "react";
 import { usePlanner } from "../usePlanner";
-import { Account, ExpenseConfig, IncomeConfig, PaidItemDetails, VariableTransaction, AppSettings, CategoryDef, PlannedItem } from "../../types";
+import { Account, ExpenseConfig, IncomeConfig, PaidItemDetails, VariableTransaction, AppSettings, CategoryDef, PlannedItem, Person } from "../../types";
+import {
+  resolveBeneficiaryAmounts,
+  getBeneficiaryStandardShare,
+  getBeneficiaryExtraShare,
+  isBudgetExcluded,
+  getFamilyBeneficiaryIds,
+} from "../../services/financeUtils";
 
-/**
- * Calcule le montant Standard d'une opération (hors Extra).
- * Helper partagé entre plusieurs calculs.
- *
- * @param {PlannedItem} item - Opération à analyser
- * @returns {number} Montant Standard en € (0 si 100% Extra)
- */
-const getStandardAmount = (item: PlannedItem): number => {
-  // Si toggle global Extra activé : tout est Extra, rien de Standard
-  if (item.isExtraGlobal) return 0;
+export interface FamilyVariableNetBreakdown {
+  nature: {
+    standard: number;
+    refunds: number;
+    extra: number;
+    total: number;
+  };
+  status: {
+    real: number;
+    waiting: number;
+    realStandard: number;
+    waitingStandard: number;
+    realExtra: number;
+    waitingExtra: number;
+  };
+}
 
-  // Pas de tags : tout le montant est Standard
-  if (!item.tagAmounts || item.tagAmounts.length === 0) {
-    return item.amount;
+export const calculateFamilyVariableNet = (items: PlannedItem[], familyBeneficiaryIds: string[]): number => {
+  if (!familyBeneficiaryIds.length) return 0;
+
+  const uniqueFamilyBeneficiaryIds = Array.from(new Set(familyBeneficiaryIds));
+
+  return items.reduce((total, item) => {
+    if (item.source !== "VARIABLE") return total;
+    if (isBudgetExcluded(item)) return total;
+
+    const standardFamilyShare = uniqueFamilyBeneficiaryIds.reduce((sum, beneficiaryId) => sum + getBeneficiaryStandardShare(item, beneficiaryId), 0);
+    const extraFamilyShare = uniqueFamilyBeneficiaryIds.reduce((sum, beneficiaryId) => sum + getBeneficiaryExtraShare(item, beneficiaryId), 0);
+    const totalFamilyShare = standardFamilyShare + extraFamilyShare;
+
+    if (item.type === "EXPENSE") return total + totalFamilyShare;
+    if (item.type === "INCOME") return total - totalFamilyShare;
+    return total;
+  }, 0);
+};
+
+export const calculateFamilyVariableNetBreakdown = (items: PlannedItem[], familyBeneficiaryIds: string[]): FamilyVariableNetBreakdown => {
+  if (!familyBeneficiaryIds.length) {
+    return {
+      nature: { standard: 0, refunds: 0, extra: 0, total: 0 },
+      status: { real: 0, waiting: 0, realStandard: 0, waitingStandard: 0, realExtra: 0, waitingExtra: 0 },
+    };
   }
 
-  // Avec tags : calculer la somme des montants Extra
-  const extraSum = item.tagAmounts.filter((ta) => ta.isExtra === true).reduce((sum, ta) => sum + ta.amount, 0);
+  const uniqueFamilyBeneficiaryIds = Array.from(new Set(familyBeneficiaryIds));
 
-  // Retourner le montant Standard (total - Extra)
-  return Math.max(0, item.amount - extraSum);
+  let standard = 0;
+  let extra = 0;
+  let refundsStandard = 0;
+  let refundsExtra = 0;
+  let real = 0;
+  let waiting = 0;
+  let realStandard = 0;
+  let waitingStandard = 0;
+  let realExtra = 0;
+  let waitingExtra = 0;
+
+  items.forEach((item) => {
+    if (item.source !== "VARIABLE") return;
+    if (isBudgetExcluded(item)) return;
+
+    const standardShare = uniqueFamilyBeneficiaryIds.reduce((sum, beneficiaryId) => sum + getBeneficiaryStandardShare(item, beneficiaryId), 0);
+    const extraShare = uniqueFamilyBeneficiaryIds.reduce((sum, beneficiaryId) => sum + getBeneficiaryExtraShare(item, beneficiaryId), 0);
+
+    if (item.type === "EXPENSE") {
+      const totalShare = standardShare + extraShare;
+      standard += standardShare;
+      extra += extraShare;
+
+      if (item.isPaid) {
+        real += totalShare;
+        realStandard += standardShare;
+        realExtra += extraShare;
+      } else {
+        waiting += totalShare;
+        waitingStandard += standardShare;
+        waitingExtra += extraShare;
+      }
+      return;
+    }
+
+    if (item.type === "INCOME") {
+      const totalShare = standardShare + extraShare;
+      standard -= standardShare;
+      extra -= extraShare;
+
+      if (item.isRefund) {
+        refundsStandard += standardShare;
+        refundsExtra += extraShare;
+      }
+
+      if (item.isPaid) {
+        real -= totalShare;
+        realStandard -= standardShare;
+        realExtra -= extraShare;
+      } else {
+        waiting -= totalShare;
+        waitingStandard -= standardShare;
+        waitingExtra -= extraShare;
+      }
+      return;
+    }
+  });
+
+  return {
+    nature: {
+      standard,
+      refunds: refundsStandard + refundsExtra,
+      extra,
+      total: standard + extra,
+    },
+    status: {
+      real,
+      waiting,
+      realStandard,
+      waitingStandard,
+      realExtra,
+      waitingExtra,
+    },
+  };
+};
+
+export const calculateFamilyVariableBudgetTotal = (monthlyBudget: number, totalPeriodsInMonth: number, periodsInScopeCount: number): number => {
+  if (monthlyBudget <= 0) return 0;
+  if (totalPeriodsInMonth <= 0) return 0;
+  if (periodsInScopeCount <= 0) return 0;
+
+  return (monthlyBudget / totalPeriodsInMonth) * periodsInScopeCount;
+};
+
+export const calculateFamilyVariableMonthlyCarryover = (monthlyBudget: number, previousMonthSpents: number[]): number => {
+  if (previousMonthSpents.length === 0) return 0;
+
+  return previousMonthSpents.reduce((carryover, spent) => carryover + (monthlyBudget - spent), 0);
+};
+
+export const calculateFamilyVariablePeriodCarryover = (
+  monthlyBudget: number,
+  openingCarryover: number,
+  periodSpents: number[]
+): {
+  periodBudgets: number[];
+  periodRemaining: number[];
+  monthBudget: number;
+  monthSpent: number;
+  monthRemaining: number;
+} => {
+  const totalPeriods = periodSpents.length;
+  if (totalPeriods <= 0) {
+    return {
+      periodBudgets: [],
+      periodRemaining: [],
+      monthBudget: monthlyBudget + openingCarryover,
+      monthSpent: 0,
+      monthRemaining: monthlyBudget + openingCarryover,
+    };
+  }
+
+  const periodBaseBudget = totalPeriods > 0 ? monthlyBudget / totalPeriods : 0;
+  let carryover = openingCarryover;
+
+  const periodBudgets: number[] = [];
+  const periodRemaining: number[] = [];
+
+  periodSpents.forEach((spent) => {
+    const periodBudget = periodBaseBudget + carryover;
+    const remaining = periodBudget - spent;
+
+    periodBudgets.push(periodBudget);
+    periodRemaining.push(remaining);
+
+    carryover = remaining;
+  });
+
+  const monthSpent = periodSpents.reduce((sum, spent) => sum + spent, 0);
+  const monthBudget = monthlyBudget + openingCarryover;
+  const monthRemaining = monthBudget - monthSpent;
+
+  return {
+    periodBudgets,
+    periodRemaining,
+    monthBudget,
+    monthSpent,
+    monthRemaining,
+  };
 };
 
 interface UseBalancesDataParams {
   accounts: Account[];
+  people: Person[];
   configs: ExpenseConfig[];
   incomeConfigs: IncomeConfig[];
   paidItems: Record<string, PaidItemDetails>;
@@ -70,7 +242,7 @@ interface UseBalancesDataParams {
  *
  * **Workflow de calcul :**
  * 1. **Génération du planner** : Instances mensuelles via usePlanner
- * 2. **Calcul des carryovers** : Reports selon stratégie (NEXT_PERIOD / SPREAD_REMAINING)
+ * 2. **Calcul des carryovers** : Reports mensuels en mode ALLOWANCE
  * 3. **Budget de période** : Ajusté avec reports
  * 4. **Consommation variable** : Filtrage Standard uniquement
  * 5. **Détails par compte** : Pending, recurring, debt, consumption
@@ -118,6 +290,7 @@ interface UseBalancesDataParams {
  */
 export const useBalancesData = ({
   accounts,
+  people,
   configs,
   incomeConfigs,
   paidItems,
@@ -128,6 +301,79 @@ export const useBalancesData = ({
   scope,
   activeWeek,
 }: UseBalancesDataParams) => {
+  const personalBeneficiaryIds = useMemo(() => {
+    const nonChildIds = new Set(people.filter((person) => !person.isChild).map((person) => person.id));
+    return Array.from(new Set(accounts.filter((account) => account.type === "COURANT" && !account.isJoint).map((account) => account.ownerId))).filter((id) =>
+      nonChildIds.has(id)
+    );
+  }, [accounts, people]);
+
+  const familyBeneficiaryIds = useMemo(() => getFamilyBeneficiaryIds(people), [people]);
+
+  const allowanceContext = useMemo(() => {
+    const allowancePerBeneficiary = Number(settings.personal_budget_amount || 350);
+    if (personalBeneficiaryIds.length === 0) {
+      return {
+        allowancePerBeneficiary,
+        previousCarryoverTotal: 0,
+        availableMonthlyAllowance: 0,
+        carryoverByBeneficiary: {} as Record<string, number>,
+      };
+    }
+
+    const currentMonthKey = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, "0")}`;
+    const monthKeys = new Set<string>();
+    const monthlySpentByBeneficiary: Record<string, Record<string, number>> = {};
+
+    Object.values(paidItems).forEach((details) => {
+      if (details.category === "Virement Interne" || details.subCategory === "Intérêts") return;
+      if (details.isSalary) return;
+      // EXPENSE consomme l'allowance ; INCOME non-salarial la réduit (remboursements, etc.)
+      if (details.type !== "EXPENSE" && details.type !== "INCOME") return;
+
+      const monthKey = details.paymentDate.slice(0, 7);
+      if (monthKey >= currentMonthKey) return;
+
+      monthKeys.add(monthKey);
+
+      resolveBeneficiaryAmounts(details)
+        .filter((ba) => personalBeneficiaryIds.includes(ba.beneficiaryId))
+        .forEach((ba) => {
+          const standardShare = getBeneficiaryStandardShare(details, ba.beneficiaryId);
+          if (!monthlySpentByBeneficiary[monthKey]) monthlySpentByBeneficiary[monthKey] = {};
+          const delta = details.type === "EXPENSE" ? standardShare : -standardShare;
+          monthlySpentByBeneficiary[monthKey][ba.beneficiaryId] = (monthlySpentByBeneficiary[monthKey][ba.beneficiaryId] || 0) + delta;
+        });
+    });
+
+    const sortedMonths = Array.from(monthKeys).sort();
+    const carryoverByBeneficiary: Record<string, number> = {};
+    personalBeneficiaryIds.forEach((beneficiaryId) => {
+      carryoverByBeneficiary[beneficiaryId] = 0;
+    });
+
+    sortedMonths.forEach((monthKey) => {
+      personalBeneficiaryIds.forEach((beneficiaryId) => {
+        const consumed = monthlySpentByBeneficiary[monthKey]?.[beneficiaryId] || 0;
+        const available = allowancePerBeneficiary + carryoverByBeneficiary[beneficiaryId];
+        carryoverByBeneficiary[beneficiaryId] = available - consumed;
+      });
+    });
+
+    const previousCarryoverTotal = personalBeneficiaryIds.reduce((sum, beneficiaryId) => sum + (carryoverByBeneficiary[beneficiaryId] || 0), 0);
+    const availableMonthlyAllowance = personalBeneficiaryIds.length * allowancePerBeneficiary + previousCarryoverTotal;
+
+    return {
+      allowancePerBeneficiary,
+      previousCarryoverTotal,
+      availableMonthlyAllowance,
+      carryoverByBeneficiary,
+    };
+  }, [currentDate, paidItems, personalBeneficiaryIds, settings.personal_budget_amount]);
+
+  // Retourne la somme des parts Standard pour tous les bénéficiaires personnels sur un item
+  const getPersonalStandardAmount = (item: PlannedItem) => personalBeneficiaryIds.reduce((sum, id) => sum + getBeneficiaryStandardShare(item, id), 0);
+
   // 1. Génération du planner (instances mensuelles + filtrage)
   const { calculatePeriodStatistics, filteredPeriodBudgets } = usePlanner(
     configs,
@@ -140,120 +386,88 @@ export const useBalancesData = ({
     categories
   );
 
-  const stats = calculatePeriodStatistics(activeWeek);
+  const statsWeekNumber = scope === "MONTH" ? filteredPeriodBudgets.reduce((maxWeek, period) => Math.max(maxWeek, period.weekNumber), 1) : activeWeek;
 
-  // 2. Calcul des reports budgétaires (carryover) selon stratégie
-  const periodCarryovers = useMemo(() => {
-    const carryovers: Record<number, { budgetBase: number; consumption: number; carryover: number; adjustedBudget: number }> = {};
-    const strategy = settings.carryover_strategy || "NEXT_PERIOD";
+  const stats = calculatePeriodStatistics(statsWeekNumber);
 
-    // ÉTAPE 1 : Calculer la consommation de chaque période
-    const periodConsumptions: Record<number, number> = {};
-    filteredPeriodBudgets.forEach((period) => {
-      const periodNumber = period.weekNumber;
-      const periodVariableItems = period.items.filter((i) => i.source === "VARIABLE" && i.category !== "Virement Interne" && i.subCategory !== "Intérêts");
+  const familyVariableBudgetMonthly = Number(settings.family_variable_budget || 0);
+  const familyOpeningCarryover = 0;
 
-      let periodExpenses = 0;
-      let periodIncome = 0;
+  const familyPeriodCarryover = useMemo(() => {
+    const sortedPeriods = [...filteredPeriodBudgets].sort((a, b) => a.weekNumber - b.weekNumber);
+    const periodNets = sortedPeriods.map((period) => calculateFamilyVariableNet(period.items, familyBeneficiaryIds));
+    return calculateFamilyVariablePeriodCarryover(familyVariableBudgetMonthly, familyOpeningCarryover, periodNets);
+  }, [filteredPeriodBudgets, familyBeneficiaryIds, familyVariableBudgetMonthly, familyOpeningCarryover]);
 
-      periodVariableItems.forEach((i) => {
-        const standardAmount = getStandardAmount(i);
+  const familyVariableValuesByPeriod = useMemo(() => {
+    const sortedPeriods = [...filteredPeriodBudgets].sort((a, b) => a.weekNumber - b.weekNumber);
+    const byPeriod: Record<number, { budget: number; net: number; remaining: number }> = {};
 
-        if (i.type === "EXPENSE") {
-          periodExpenses += standardAmount;
-        } else if (i.type === "INCOME") {
-          periodIncome += standardAmount;
-        }
-      });
-
-      periodConsumptions[periodNumber] = periodExpenses - periodIncome;
+    sortedPeriods.forEach((period, index) => {
+      const net = calculateFamilyVariableNet(period.items, familyBeneficiaryIds);
+      byPeriod[period.weekNumber] = {
+        budget: familyPeriodCarryover.periodBudgets[index] || 0,
+        net,
+        remaining: familyPeriodCarryover.periodRemaining[index] || 0,
+      };
     });
 
-    // ÉTAPE 2 : Calculer les reports selon la stratégie
-    if (strategy === "NEXT_PERIOD") {
-      // Stratégie 1 : Report cumulatif simple
-      let cumulativeCarryover = 0;
+    return byPeriod;
+  }, [filteredPeriodBudgets, familyBeneficiaryIds, familyPeriodCarryover.periodBudgets, familyPeriodCarryover.periodRemaining]);
 
-      filteredPeriodBudgets.forEach((period) => {
-        const periodNumber = period.weekNumber;
-        const periodBudget = period.periodLimit || 0;
-        const adjustedBudget = periodBudget + cumulativeCarryover;
-        const periodConsumption = periodConsumptions[periodNumber] || 0;
-        const remainingBalance = adjustedBudget - periodConsumption;
+  const familyVariableNetBreakdownByPeriod = useMemo(() => {
+    const sortedPeriods = [...filteredPeriodBudgets].sort((a, b) => a.weekNumber - b.weekNumber);
+    const byPeriod: Record<number, FamilyVariableNetBreakdown> = {};
 
-        carryovers[periodNumber] = {
-          budgetBase: periodBudget,
-          consumption: periodConsumption,
-          carryover: remainingBalance,
-          adjustedBudget: adjustedBudget,
+    sortedPeriods.forEach((period) => {
+      byPeriod[period.weekNumber] = calculateFamilyVariableNetBreakdown(period.items, familyBeneficiaryIds);
+    });
+
+    return byPeriod;
+  }, [filteredPeriodBudgets, familyBeneficiaryIds]);
+
+  const familyVariableMonthNetBreakdown = useMemo(
+    () =>
+      calculateFamilyVariableNetBreakdown(
+        filteredPeriodBudgets.flatMap((period) => period.items),
+        familyBeneficiaryIds
+      ),
+    [filteredPeriodBudgets, familyBeneficiaryIds]
+  );
+
+  const familyVariableNetBreakdown =
+    scope === "MONTH"
+      ? familyVariableMonthNetBreakdown
+      : familyVariableNetBreakdownByPeriod[activeWeek] || {
+          nature: { standard: 0, refunds: 0, extra: 0, total: 0 },
+          status: { real: 0, waiting: 0, realStandard: 0, waitingStandard: 0, realExtra: 0, waitingExtra: 0 },
         };
 
-        cumulativeCarryover = remainingBalance;
-      });
-    } else {
-      // Stratégie 2 : Étalement sur périodes restantes
-      filteredPeriodBudgets.forEach((period, index) => {
-        const periodNumber = period.weekNumber;
-        const periodBudget = period.periodLimit || 0;
+  const familyVariableBudgetTotal = scope === "MONTH" ? familyPeriodCarryover.monthBudget : familyVariableValuesByPeriod[activeWeek]?.budget || 0;
+  const familyVariableNet = familyVariableNetBreakdown.nature.total;
+  // Remaining = budget - dépenses réelles standard uniquement (sans extras, sans attente)
+  // Correspond à displayedFamilyNet = realStandard dans les composants
+  const familyVariableBudgetRemaining = familyVariableBudgetTotal - familyVariableNetBreakdown.status.realStandard;
 
-        let carryoverForThisPeriod = 0;
+  // 2. Calcul des reports budgétaires (carryover) en mode ALLOWANCE
+  const periodCarryovers = useMemo(() => {
+    const carryovers: Record<number, { budgetBase: number; consumption: number; carryover: number; adjustedBudget: number }> = {};
+    const monthlyBase = allowanceContext.availableMonthlyAllowance;
 
-        // Analyser toutes les périodes précédentes
-        for (let i = 0; i < index; i++) {
-          const prevPeriod = filteredPeriodBudgets[i];
-          const prevBudget = prevPeriod.periodLimit || 0;
-          const prevConsumption = periodConsumptions[prevPeriod.weekNumber] || 0;
-          let prevRawCarryover = prevBudget - prevConsumption;
-
-          // Soustraire les ajustements déjà appliqués par les périodes encore plus anciennes
-          for (let j = 0; j < i; j++) {
-            const veryPrevPeriod = filteredPeriodBudgets[j];
-            const veryPrevBudget = veryPrevPeriod.periodLimit || 0;
-            const veryPrevConsumption = periodConsumptions[veryPrevPeriod.weekNumber] || 0;
-            const veryPrevRawCarryover = veryPrevBudget - veryPrevConsumption;
-
-            const remainingPeriodsFromVeryPrev = filteredPeriodBudgets.length - j - 1;
-            if (remainingPeriodsFromVeryPrev > 0) {
-              if (veryPrevRawCarryover < 0) {
-                prevRawCarryover -= veryPrevRawCarryover / remainingPeriodsFromVeryPrev;
-              } else if (veryPrevRawCarryover > 0) {
-                prevRawCarryover -= veryPrevRawCarryover / remainingPeriodsFromVeryPrev;
-              }
-            }
-          }
-
-          // Étaler le report nettoyé sur les périodes restantes
-          const remainingPeriods = filteredPeriodBudgets.length - i - 1;
-          if (remainingPeriods > 0) {
-            if (prevRawCarryover < 0) {
-              carryoverForThisPeriod += prevRawCarryover / remainingPeriods;
-            } else if (prevRawCarryover > 0) {
-              carryoverForThisPeriod += prevRawCarryover / remainingPeriods;
-            }
-          }
-        }
-
-        const adjustedBudget = periodBudget + carryoverForThisPeriod;
-        const periodConsumption = periodConsumptions[periodNumber] || 0;
-        const remainingBalance = adjustedBudget - periodConsumption;
-
-        carryovers[periodNumber] = {
-          budgetBase: periodBudget,
-          consumption: periodConsumption,
-          carryover: remainingBalance,
-          adjustedBudget: adjustedBudget,
-        };
-      });
-    }
+    filteredPeriodBudgets.forEach((period) => {
+      carryovers[period.weekNumber] = {
+        budgetBase: monthlyBase,
+        consumption: 0,
+        carryover: 0,
+        adjustedBudget: monthlyBase,
+      };
+    });
 
     return carryovers;
-  }, [filteredPeriodBudgets, settings.carryover_strategy]);
+  }, [allowanceContext.availableMonthlyAllowance, filteredPeriodBudgets]);
 
-  // 3. Budget alloué pour la période (adapté selon le scope)
-  const budgetPeriodeGlobal =
-    scope === "MONTH"
-      ? filteredPeriodBudgets.reduce((sum, p) => sum + (p.periodLimit || 0), 0)
-      : periodCarryovers[activeWeek]?.adjustedBudget || stats.periodLimit;
+  // 3. Budget alloué pour la période (mode ALLOWANCE uniquement)
+  const budgetPeriodeGlobal = allowanceContext.availableMonthlyAllowance;
 
   // 4. Calcul des opérations récurrentes en attente
   const pendingRecurring = stats.fixedToPay + stats.fixedDelays;
@@ -268,34 +482,23 @@ export const useBalancesData = ({
 
   // 7. Récupération des données selon le scope
   const scopeItems = useMemo(() => {
-    if (scope === "MONTH") {
-      return filteredPeriodBudgets.flatMap((w) => w.items);
-    } else {
-      const currentWeekData = filteredPeriodBudgets.find(
-        (w) => w.weekNumber === (filteredPeriodBudgets.some((w) => w.weekNumber === activeWeek) ? activeWeek : 1)
-      );
-      return currentWeekData?.items || [];
-    }
-  }, [scope, filteredPeriodBudgets, activeWeek]);
+    return filteredPeriodBudgets.flatMap((w) => w.items);
+  }, [filteredPeriodBudgets]);
 
-  // 8. Calcul de la consommation variable totale
-  const variableItems = scopeItems.filter((i) => i.source === "VARIABLE" && i.category !== "Virement Interne" && i.subCategory !== "Intérêts");
+  // 8. Calcul de la consommation variable (dépenses Standard moins tous les revenus attribués)
+  const variableItems = scopeItems.filter((i) => !isBudgetExcluded(i));
 
-  let varExpenses = 0;
-  let varIncome = 0;
-
+  let realConsumption = 0;
   variableItems.forEach((i) => {
-    const standardAmount = getStandardAmount(i);
-
     if (i.type === "EXPENSE") {
-      varExpenses += standardAmount;
-    } else if (i.type === "INCOME") {
-      varIncome += standardAmount;
+      realConsumption += getPersonalStandardAmount(i);
+    } else if (i.type === "INCOME" && !i.isSalary) {
+      realConsumption -= getPersonalStandardAmount(i);
     }
   });
 
-  const realConsumption = varExpenses - varIncome;
-  const distributableBalance = Math.max(0, budgetPeriodeGlobal - realConsumption);
+  // Peut être négatif si dépassement (pas de Math.max pour l'afficher correctement)
+  const distributableBalance = budgetPeriodeGlobal - realConsumption;
 
   // 9. Détails par compte (pour tooltips/affichage)
   const pendingVariablesDetails = useMemo(() => {
@@ -308,7 +511,15 @@ export const useBalancesData = ({
       .map((acc) => {
         const totalPending = relevantPeriods
           .flatMap((w) => w.items)
-          .filter((i) => i.accountId === acc.id && i.source === "VARIABLE" && i.type === "EXPENSE" && !i.isPaid && i.subCategory !== "Intérêts")
+          .filter(
+            (i) =>
+              i.accountId === acc.id &&
+              i.source === "VARIABLE" &&
+              i.type === "EXPENSE" &&
+              !i.isPaid &&
+              i.category !== "Virement Interne" &&
+              i.subCategory !== "Intérêts"
+          )
           .reduce((sum, i) => sum + i.amount, 0);
 
         return { name: acc.name, amount: totalPending };
@@ -324,7 +535,7 @@ export const useBalancesData = ({
 
     const relevantItems = relevantPeriods
       .flatMap((w) => w.items)
-      .filter((i) => i.source === "RECURRING" && !i.isPaid && i.category !== "Virement Interne" && i.type === "EXPENSE");
+      .filter((i) => i.source === "RECURRING" && !i.isPaid && i.category !== "Virement Interne" && i.subCategory !== "Intérêts" && i.type === "EXPENSE");
 
     return checkingAccounts
       .map((acc) => {
@@ -344,31 +555,42 @@ export const useBalancesData = ({
   }, [checkingAccounts, stats]);
 
   const consumedDetails = useMemo(() => {
-    return checkingAccounts
-      .map((acc) => {
-        const items = variableItems.filter((i) => i.accountId === acc.id);
+    const relevantItems = filteredPeriodBudgets.flatMap((week) => week.items).filter((item) => !isBudgetExcluded(item));
 
-        let expense = 0;
-        let income = 0;
+    return personalBeneficiaryIds
+      .map((beneficiaryId) => {
+        const person = people.find((candidate) => candidate.id === beneficiaryId);
+        if (!person) return null;
 
-        items.forEach((i) => {
-          const standardAmount = getStandardAmount(i);
-
-          if (i.type === "EXPENSE") {
-            expense += standardAmount;
-          } else if (i.type === "INCOME") {
-            income += standardAmount;
+        let amount = 0;
+        relevantItems.forEach((item) => {
+          if (item.type === "EXPENSE") {
+            const share = getBeneficiaryStandardShare(item, beneficiaryId);
+            if (share > 0) amount += share;
+          } else if (item.type === "INCOME" && !item.isSalary) {
+            const share = getBeneficiaryStandardShare(item, beneficiaryId);
+            if (share > 0) amount -= share;
           }
         });
 
-        return { name: acc.name, amount: expense - income };
+        const available = allowanceContext.allowancePerBeneficiary + (allowanceContext.carryoverByBeneficiary[beneficiaryId] || 0);
+        const remaining = available - amount;
+
+        return { beneficiaryId, name: person.name, amount, available, remaining };
       })
-      .filter((x) => Math.abs(x.amount) > 0.01);
-  }, [checkingAccounts, variableItems]);
+      .filter((entry): entry is { beneficiaryId: string; name: string; amount: number; available: number; remaining: number } => !!entry);
+  }, [filteredPeriodBudgets, people, personalBeneficiaryIds, allowanceContext.allowancePerBeneficiary, allowanceContext.carryoverByBeneficiary]);
+
+  // Debug logs removed: ventilation mensuelle supprimée en production
 
   return {
     periodCarryovers,
     budgetPeriodeGlobal,
+    familyBeneficiaryIds,
+    familyVariableBudgetTotal,
+    familyVariableNet,
+    familyVariableNetBreakdown,
+    familyVariableBudgetRemaining,
     pendingRecurring,
     realConsumption,
     distributableBalance,
@@ -382,5 +604,6 @@ export const useBalancesData = ({
     consumedDetails,
     stats,
     filteredPeriodBudgets,
+    allowanceContext,
   };
 };

@@ -1,9 +1,9 @@
 import React from "react";
-import { Card } from "../../../../ui/Card";
+import { Card } from "../../../ui/Card";
 import { Landmark } from "lucide-react";
-import { ClickableAmount } from "../../../../ui/atoms/ClickableAmount";
-import { getGlobalAnalysisFilters } from "../../../../../hooks/dashboard";
-import { OperationFilters } from "../../../../../types";
+import { ClickableAmount } from "../../../ui/atoms/ClickableAmount";
+import { getGlobalAnalysisFilters } from "../../../../hooks/dashboard";
+import { OperationFilters } from "../../../../types";
 
 interface MonthlyGlobalData {
   monthName: string;

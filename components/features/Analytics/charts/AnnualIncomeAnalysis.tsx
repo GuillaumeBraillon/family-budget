@@ -1,11 +1,11 @@
 import React from "react";
-import { Card } from "../../../../ui/Card";
+import { Card } from "../../../ui/Card";
 import { CalendarClock, ShoppingBag, ArrowUpRight, ArrowDownLeft, Scale, Briefcase } from "lucide-react";
-import { ClickableAmount } from "../../../../ui/atoms/ClickableAmount";
-import { ExportCsvButton } from "../../../../ui/atoms/ExportCsvButton";
-import { OperationFilters } from "../../../../../types";
-import { getDetailedAnalysisFilters } from "../../../../../hooks/dashboard/useDashboardData";
-import { useCsvExport } from "../../../../../hooks/useCsvExport";
+import { ClickableAmount } from "../../../ui/atoms/ClickableAmount";
+import { ExportCsvButton } from "../../../ui/atoms/ExportCsvButton";
+import { OperationFilters } from "../../../../types";
+import { getDetailedAnalysisFilters } from "../../../../hooks/dashboard/useDashboardData";
+import { useCsvExport } from "../../../../hooks/useCsvExport";
 
 interface PeriodData {
   period: { id: number; label: string; start: number; end: number };

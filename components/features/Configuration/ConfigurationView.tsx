@@ -4,7 +4,6 @@ import { Settings, UserCircle, CreditCard, Sliders, Bookmark, Shield } from "luc
 import { ConfigTab } from "../../../hooks/useConfigurationUI";
 import { ExpenseConfig, IncomeConfig, CategoryDef, Person, Account, AppSettings, SavedLabel, Tag as TagType, AuthorizedUser } from "../../../types";
 import { InfoBox } from "../../ui/InfoBox";
-
 import { ConfigurationTabs } from "./components/molecules/ConfigurationTabs";
 import { CategoryManager } from "./components/organisms/CategoryManager";
 import { PeopleManager } from "./components/organisms/PeopleManager";
@@ -90,7 +89,7 @@ export const ConfigurationView: React.FC<ConfigurationViewProps> = ({
   onUpdateAccountsSorting,
 }) => {
   return (
-    <div className="space-y-1 animate-in fade-in duration-500">
+    <div className="flex flex-col gap-1.5 md:gap-2 m-2">
       <ConfigurationTabs activeTab={activeTab} onTabChange={setActiveTab} />
 
       {activeTab === "family" && (

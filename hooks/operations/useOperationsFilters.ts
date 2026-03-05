@@ -24,6 +24,7 @@
  */
 import { useState, useEffect } from "react";
 import { OperationFilters } from "../../types";
+import { buildOperationsFilters } from "../../services/financeUtils";
 
 /**
  * Valeurs par défaut des filtres d'opérations.
@@ -51,19 +52,11 @@ import { OperationFilters } from "../../types";
  * @constant
  * @type {OperationFilters}
  */
-const DEFAULT_FILTERS: OperationFilters = {
-  flux: "ALL",
+const DEFAULT_FILTERS: OperationFilters = buildOperationsFilters({
   source: "VARIABLE",
   status: "REAL",
   nature: "EXCLUDE",
-  transfer: "EXCLUDE",
-  salary: "EXCLUDE",
-  accountIds: [],
-  beneficiaryIds: [],
-  includedTagIds: [],
-  excludedTagIds: [],
-  tagPresence: "ALL",
-};
+}) as OperationFilters;
 
 /**
  * Hook de gestion des filtres d'opérations avec persistance localStorage.

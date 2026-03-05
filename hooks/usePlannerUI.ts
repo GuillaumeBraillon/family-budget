@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { PlannedItem } from "../types";
+import { BeneficiaryAmount, PlannedItem } from "../types";
 
 /**
  * Hook de gestion de l'état UI de l'échéancier (Planner).
@@ -81,6 +81,7 @@ export const usePlannerUI = (initialDate: Date = new Date(), initialWeek?: numbe
     accountId: string;
     label: string;
     comments: string;
+    beneficiaryAmounts: BeneficiaryAmount[];
   }>({
     isOpen: false,
     item: null,
@@ -89,6 +90,7 @@ export const usePlannerUI = (initialDate: Date = new Date(), initialWeek?: numbe
     accountId: "",
     label: "",
     comments: "",
+    beneficiaryAmounts: [],
   });
 
   const [uncheckModal, setUncheckModal] = useState<{
@@ -114,6 +116,9 @@ export const usePlannerUI = (initialDate: Date = new Date(), initialWeek?: numbe
   };
 
   const openConfirmModal = (item: PlannedItem, defaultAccountId: string) => {
+    const fallbackBeneficiaryAmounts =
+      item.beneficiaryId && item.beneficiaryId.trim().length > 0 ? [{ beneficiaryId: item.beneficiaryId, amount: item.amount }] : [];
+
     setConfirmModal({
       isOpen: true,
       item,
@@ -122,6 +127,7 @@ export const usePlannerUI = (initialDate: Date = new Date(), initialWeek?: numbe
       accountId: defaultAccountId,
       label: item.label,
       comments: item.comments || "",
+      beneficiaryAmounts: item.beneficiaryAmounts && item.beneficiaryAmounts.length > 0 ? item.beneficiaryAmounts : fallbackBeneficiaryAmounts,
     });
   };
 
