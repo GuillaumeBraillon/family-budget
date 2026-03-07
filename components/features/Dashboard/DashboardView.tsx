@@ -158,13 +158,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
       {/* SECTION SOLDES : Opérations en attente + Budget variable Famille */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5 md:gap-2">
-        {/* SECTION OPÉRATIONS EN ATTENTE */}
-        <PendingOperationsCard
-          remainingToPay={totalPending}
-          pendingRecurring={totalPendingRecurring}
-          totalPendingVariable={totalPendingVariables}
+        {/* SECTION BUDGET PERSONNEL */}
+        <PersonalBudgetSummary
+          totalPersonalBudget={budgetPeriodeGlobal}
+          spentPersonalBudget={realConsumption}
+          distributableBudget={distributableBalance}
+          beneficiariesDetails={consumedDetails}
           currentDate={currentDate}
-          onNavigate={handleNavigateToOperations}
+          onNavigateToOperations={handleNavigateToMonth}
         />
         {/* SECTION BUDGET FAMILLE */}
         <FamilyVariableBalanceCard
@@ -182,14 +183,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           currentDate={currentDate}
           onNavigate={handleNavigateToOperations}
         />
-        {/* SECTION BUDGET PERSONNEL */}
-        <PersonalBudgetSummary
-          totalPersonalBudget={budgetPeriodeGlobal}
-          spentPersonalBudget={realConsumption}
-          distributableBudget={distributableBalance}
-          beneficiariesDetails={consumedDetails}
+        {/* SECTION OPÉRATIONS EN ATTENTE */}
+        <PendingOperationsCard
+          remainingToPay={totalPending}
+          pendingRecurring={totalPendingRecurring}
+          totalPendingVariable={totalPendingVariables}
           currentDate={currentDate}
-          onNavigateToOperations={handleNavigateToMonth}
+          onNavigate={handleNavigateToOperations}
         />
       </div>
 

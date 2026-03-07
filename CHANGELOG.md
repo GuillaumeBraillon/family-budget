@@ -7,6 +7,18 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.9.1] - 2026-03-07
+
+### ✨ Améliorations UI
+
+- Ajout du composant `BudgetProgressBar` (Dashboard/components) : affiche le pourcentage, gère le dépassement visuel, propose des dégradés et un badge/animation pour montrer consommé vs budget.
+- `FamilyVariableBalanceCard` : import et intégration de `BudgetProgressBar` ; simplification de la logique d'arrondi ; mise à jour du layout, des espacements, de la typographie et du style des cartes ; affichages convertis en entiers arrondis avec suffixe € ; ajustement des styles de `ClickableAmount` et suppression des puces séparatrices.
+- `PendingOperationsCard` : ajustement des tailles, espacements et typographie ; passage du layout en grille ; ajout d'ombres subtiles et d'effets au survol pour les cartes enfants ; mise en valeur renforcée du montant restant.
+- `PersonalBudgetSummary` : renommage de l'en-tête pour inclure « (Mensuel) » ; restructuration en colonnes responsives pour Disponible et Dépensé ; ajout de lignes par bénéficiaire et des totaux ; réorganisation des styles pour une lecture claire.
+- `DashboardView` : réordonnancement des composants (PersonalBudgetSummary / FamilyVariableBalanceCard / PendingOperationsCard) et raccordement des handlers de navigation correspondants.
+
+Ces changements sont centrés sur l'expérience utilisateur et la visualisation claire du budget ; aucune logique d'API n'a été modifiée.
+
 ## [2.9.0] - 2026-03-05
 
 ### ✨ Fonctionnalités (Features)

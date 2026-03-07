@@ -40,8 +40,8 @@ export const PendingOperationsCard: React.FC<PendingOperationsCardProps> = ({
   );
 
   return (
-    <div className="rounded-3xl bg-white shadow-xl border border-slate-200 p-3 space-y-3">
-      <div className="flex items-center justify-between">
+    <div className="rounded-3xl bg-white shadow-lg border border-slate-200 p-4 space-y-4">
+      <div className="flex items-start justify-between">
         <div>
           <div className="flex items-center gap-1.5">
             <h2 className="text-sm uppercase tracking-widest text-slate-500 font-bold">Opérations en attente</h2>
@@ -53,18 +53,18 @@ export const PendingOperationsCard: React.FC<PendingOperationsCardProps> = ({
               filters={buildOperationsFilters({ status: "WAITING" })}
               onNavigate={onNavigate}
               as="button"
-              className="text-sm font-black text-indigo-400 hover:opacity-80"
+              className="text-2xl font-black text-indigo-500 hover:opacity-80"
             >
               {roundTo0(remainingToPay)} €
             </ClickableAmount>
           ) : (
-            <span className="text-sm font-black text-indigo-400">{roundTo0(remainingToPay)} €</span>
+            <span className="text-2xl font-black text-indigo-500">{roundTo0(remainingToPay)} €</span>
           )}
         </div>
       </div>
 
-      <div className="flex flex-col gap-6">
-        <div className="rounded-2xl bg-slate-50 p-4 border border-slate-200">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="rounded-2xl bg-slate-50 p-4 border border-slate-200 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between">
           <div className="flex items-center gap-1.5 mb-2">
             <div className="p-1.5 bg-slate-200 rounded text-slate-600">
               <CalendarClock size={14} />
@@ -86,7 +86,7 @@ export const PendingOperationsCard: React.FC<PendingOperationsCardProps> = ({
           )}
         </div>
 
-        <div className="rounded-2xl bg-indigo-50 p-4 border border-indigo-200">
+        <div className="rounded-2xl bg-indigo-50 p-4 border border-indigo-200 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between">
           <div className="flex items-center gap-1.5 mb-2">
             <div className="p-1.5 bg-indigo-100 rounded text-indigo-500">
               <ShoppingBag size={14} />

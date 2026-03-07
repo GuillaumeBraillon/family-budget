@@ -4,6 +4,7 @@ import { MobileTooltip } from "../../../ui/MobileTooltip";
 import { OperationFilters } from "../../../../types";
 import { ClickableAmount } from "../../../ui/atoms/ClickableAmount";
 import { buildOperationsFilters } from "../../../../services/financeUtils";
+import { BudgetProgressBar } from "../../Dashboard/components/BudgetProgressBar";
 
 interface FamilyVariableBalanceCardProps {
   familyVariableBudgetTotal: number;
@@ -38,11 +39,9 @@ export const FamilyVariableBalanceCard: React.FC<FamilyVariableBalanceCardProps>
 }) => {
   const roundTo0 = (amount: number) => Math.round(amount);
 
-  const renderRoundedAndExact = (amount: number) => (
-    <>
-      {roundTo0(amount)} €{Math.abs(amount - roundTo0(amount)) > 0.01 && <span className="ml-1 text-[10px] text-slate-400">({amount.toFixed(2)})</span>}
-    </>
-  );
+  // Affichage du montant arrondi avec indication du montant exact au survol
+
+  // Tooltip détaillé pour les dépenses famille
   const renderFamilySpentTooltip = () => (
     <div className="space-y-1">
       <p className="font-bold text-indigo-700 border-b border-slate-200 pb-1 mb-1">Dépenses Famille (incl. enfants)</p>
@@ -78,31 +77,33 @@ export const FamilyVariableBalanceCard: React.FC<FamilyVariableBalanceCardProps>
   }
 
   return (
-    <div className="rounded-3xl bg-white shadow-xl border border-slate-200 p-3 space-y-3">
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="flex items-center gap-1.5">
-            <h3 className="text-sm uppercase tracking-widest text-slate-500 font-bold">Budget Famille</h3>
-            <MobileTooltip text={renderFamilySpentTooltip()} icon={<Info size={16} />} widthClass="w-72" />
-          </div>
-          <p className="text-sm font-black text-indigo-400">{renderRoundedAndExact(familyVariableBudgetTotal)}</p>
+    <div className="rounded-3xl bg-white shadow-lg border border-slate-200 p-4 space-y-4">
+      <div>
+        <div className="flex items-center gap-1.5">
+          <h3 className="text-sm uppercase tracking-widest text-slate-500 font-bold">Budget Famille</h3>
+          <MobileTooltip text={renderFamilySpentTooltip()} icon={<Info size={16} />} widthClass="w-72" />
         </div>
+        <span className="text-2xl font-black text-indigo-500">{roundTo0(familyVariableBudgetTotal)} €</span>
+
+        {/* Barre de progression du budget famille */}
+        <BudgetProgressBar consumed={displayedFamilyNet} budget={familyVariableBudgetTotal} />
       </div>
 
-      <div className="flex flex-col gap-6">
-        <div className="rounded-2xl bg-rose-50 p-4 border border-rose-200">
-          <div className="text-xs uppercase text-rose-400 font-bold mb-2">Variables (Réel)</div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+        {/* Carte des dépenses variables famille (réel) */}
+        <div className="rounded-2xl bg-white p-4 border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col justify-start">
+          <div className="text-xs uppercase text-slate-400 font-bold mb-2 tracking-wide w-full text-left">Variables (Réel)</div>
           <ClickableAmount
             date={currentDate}
             filters={buildOperationsFilters({ source: "VARIABLE", status: "REAL", nature: "EXCLUDE", beneficiaryIds: familyBeneficiaryIds })}
             onNavigate={onNavigate}
             as="button"
-            className="text-3xl font-black text-rose-600 hover:opacity-80 transition-opacity"
+            className="mt-1 text-3xl font-black text-slate-900 hover:opacity-80 transition-opacity w-full text-center"
           >
-            {renderRoundedAndExact(displayedFamilyNet)}
+            {roundTo0(displayedFamilyNet)} €
           </ClickableAmount>
 
-          <div className="mt-3 text-xs flex flex-wrap items-center gap-2">
+          <div className="mt-3 text-xs flex flex-wrap items-center gap-2 justify-center w-full">
             <ClickableAmount
               date={currentDate}
               filters={buildOperationsFilters({ source: "VARIABLE", nature: "ONLY", beneficiaryIds: familyBeneficiaryIds })}
@@ -112,7 +113,6 @@ export const FamilyVariableBalanceCard: React.FC<FamilyVariableBalanceCardProps>
             >
               Extra : {roundTo0(extraNet)} €
             </ClickableAmount>
-            <span className="text-slate-300">•</span>
             <ClickableAmount
               date={currentDate}
               filters={buildOperationsFilters({ source: "VARIABLE", beneficiaryIds: familyBeneficiaryIds })}
@@ -122,7 +122,6 @@ export const FamilyVariableBalanceCard: React.FC<FamilyVariableBalanceCardProps>
             >
               Total : {roundTo0(totalNet)} €
             </ClickableAmount>
-            <span className="text-slate-300">•</span>
             <ClickableAmount
               date={currentDate}
               filters={buildOperationsFilters({ flux: "INCOME", source: "VARIABLE", beneficiaryIds: familyBeneficiaryIds })}
@@ -135,12 +134,17 @@ export const FamilyVariableBalanceCard: React.FC<FamilyVariableBalanceCardProps>
           </div>
         </div>
 
-        <div className={`rounded-2xl p-4 border ${familyVariableRemaining >= 0 ? "bg-emerald-50 border-emerald-200" : "bg-rose-50 border-rose-200"}`}>
-          <div className="text-xs uppercase font-bold mb-2 text-slate-400">Variables (Restant)</div>
-          <div className={`text-3xl font-black ${familyVariableRemaining >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
-            {renderRoundedAndExact(familyVariableRemaining)}
+        {/* Carte des dépenses variables famille (en attente) */}
+        <div
+          className={`rounded-2xl p-4 border shadow-sm hover:shadow-md transition-all flex flex-col justify-start ${
+            familyVariableRemaining >= 0 ? "bg-emerald-50 border-emerald-200" : "bg-rose-50 border-rose-200"
+          }`}
+        >
+          <div className="text-xs uppercase font-bold mb-2 text-slate-400 w-full text-left">Variables (Restant)</div>
+          <div className={`mt-1 text-3xl font-black w-full text-center ${familyVariableRemaining >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+            {roundTo0(familyVariableRemaining)} €
           </div>
-          <div className="mt-3 text-xs flex flex-wrap items-center gap-2">
+          <div className="pt-3 mt-auto text-xs flex flex-wrap items-center gap-2 justify-center w-full">
             <ClickableAmount
               date={currentDate}
               filters={buildOperationsFilters({ source: "VARIABLE", status: "WAITING", beneficiaryIds: familyBeneficiaryIds })}
