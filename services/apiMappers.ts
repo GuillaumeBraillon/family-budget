@@ -49,6 +49,7 @@ export const mapDbAuthorizedUser = (user: DbAuthorizedUser): AuthorizedUser => {
     addedAt: user.added_at,
     addedBy: user.added_by,
     lastLoginAt: user.last_login_at,
+    isAdmin: !!user.is_admin,
     notes: user.notes,
   };
 };

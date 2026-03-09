@@ -1,9 +1,10 @@
 import React from "react";
-import { Card } from "../../../ui/Card";
+import { Card, CardHeader, CardTitle, CardContent } from "../../../ui/Card";
 import { Landmark } from "lucide-react";
 import { ClickableAmount } from "../../../ui/atoms/ClickableAmount";
 import { getGlobalAnalysisFilters } from "../../../../hooks/dashboard";
 import { OperationFilters } from "../../../../types";
+import { MonthSelector } from "./MonthSelector";
 
 interface MonthlyGlobalData {
   monthName: string;
@@ -20,21 +21,21 @@ interface GlobalMonthlyAnalysisProps {
   data: MonthlyGlobalData[];
   year: number;
   onNavigateToPlanner: (date: Date, filters?: Partial<OperationFilters>, weekNumber?: number) => void;
+  onYearChange: (year: number) => void;
 }
 
-export const GlobalMonthlyAnalysis: React.FC<GlobalMonthlyAnalysisProps> = ({ data, year, onNavigateToPlanner }) => {
+export const GlobalMonthlyAnalysis: React.FC<GlobalMonthlyAnalysisProps> = ({ data, year, onNavigateToPlanner, onYearChange }) => {
   // Filtrer les mois vides (futur ou pas de données)
   const activeMonths = data.filter((m) => m.totalIncome > 0 || m.expenses > 0);
 
   return (
-    <Card className="border-slate-200 shadow-sm overflow-hidden mb-6">
-      <div className="flex items-center justify-between p-4 border-b border-slate-100 bg-white">
-        <h3 className="text-sm font-bold text-slate-700 uppercase tracking-widest flex items-center gap-2">
-          <Landmark size={16} className="text-indigo-600" /> Trésorerie Globale & Épargne ({year})
-        </h3>
-      </div>
+    <Card className="rounded-3xl">
+      <CardHeader className="p-4 pb-0 border-b-0">
+        <CardTitle className="text-sm font-bold text-slate-700 uppercase tracking-widest flex items-center gap-2">Trésorerie Globale & Épargne</CardTitle>
+        <MonthSelector year={year} onYearChange={onYearChange} />
+      </CardHeader>
 
-      <div className="overflow-x-auto">
+      <CardContent className="p-0 overflow-x-auto">
         <table className="w-full text-xs text-left">
           <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200 uppercase tracking-wider">
             <tr>
@@ -115,7 +116,7 @@ export const GlobalMonthlyAnalysis: React.FC<GlobalMonthlyAnalysisProps> = ({ da
             })}
           </tbody>
         </table>
-      </div>
+      </CardContent>
     </Card>
   );
 };

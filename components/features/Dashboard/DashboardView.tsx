@@ -17,7 +17,6 @@ import React, { useState, useMemo } from "react";
 import { useDashboardData } from "../../../hooks/dashboard";
 import { useBalancesData } from "../../../hooks/balances";
 import { usePeriodNav } from "../../../contexts/PeriodNavigationContext";
-import { MonthSelector } from "./components/MonthSelector";
 import { GlobalMonthlyAnalysis } from "./components/GlobalMonthlyAnalysis";
 import { PendingOperationsCard } from "../Balances/components/PendingOperationsCard";
 import { FamilyVariableBalanceCard } from "../Balances/components/FamilyVariableBalanceCard";
@@ -217,11 +216,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         />
       </div>
 
-      {/* SÉLECTEUR D'ANNÉE */}
-      <MonthSelector currentDate={new Date()} year={selectedYear} onYearChange={setSelectedYear} />
-
       {/* SECTION MACRO : Trésorerie Globale & Épargne */}
-      <GlobalMonthlyAnalysis data={globalMonthlyData} year={selectedYear} onNavigateToPlanner={onNavigateToPlanner} />
+      <GlobalMonthlyAnalysis data={globalMonthlyData} year={selectedYear} onNavigateToPlanner={onNavigateToPlanner} onYearChange={setSelectedYear} />
     </div>
   );
 };

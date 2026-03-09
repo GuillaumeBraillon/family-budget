@@ -15,7 +15,7 @@ export const SavingsSummaryCard: React.FC<SavingsSummaryCardProps> = ({ accounts
   });
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
+    <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
       {sortedAccounts.map((acc) => {
         const balance = acc.currentBalance;
         const isSavings = acc.type === AccountType.SAVINGS;

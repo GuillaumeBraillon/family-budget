@@ -65,10 +65,10 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
   return (
     <div className="flex flex-col gap-1.5 md:gap-2 m-2">
       {/* HEADER : Situation financière + Sélecteur d'année + navigation vers la config */}
-      <MonthSelector currentDate={new Date()} year={selectedYear} onYearChange={setSelectedYear} />
+      <MonthSelector year={selectedYear} onYearChange={setSelectedYear} />
 
       {/* SECTION MACRO : Trésorerie Globale & Épargne */}
-      <GlobalMonthlyAnalysis data={globalMonthlyData} year={selectedYear} onNavigateToPlanner={onNavigateToPlanner} />
+      <GlobalMonthlyAnalysis data={globalMonthlyData} year={selectedYear} onNavigateToPlanner={onNavigateToPlanner} onYearChange={setSelectedYear} />
 
       {/* SECTION MICRO : Analyse Complète (Réel) */}
       <AnnualIncomeAnalysis data={annualData} year={selectedYear} onYearChange={setSelectedYear} onNavigateToPlanner={onNavigateToPlanner} />

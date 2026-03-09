@@ -4,6 +4,7 @@ import { MobileTooltip } from "../../../ui/MobileTooltip";
 import { ClickableAmount } from "../../../ui/atoms/ClickableAmount";
 import { buildOperationsFilters } from "../../../../services/financeUtils";
 import { OperationFilters } from "../../../../types";
+import { Card, CardHeader, CardTitle, CardContent } from "../../../ui/Card";
 
 interface PendingOperationsCardProps {
   totalPendingAmount: number;
@@ -25,6 +26,10 @@ export const PendingOperationsCard: React.FC<PendingOperationsCardProps> = ({
   onNavigateToOperations,
 }) => {
   const roundTo0 = (amount: number) => Math.round(amount);
+  const subCardClass = "rounded-2xl p-4 border border-slate-200 bg-slate-50 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between";
+  const sectionLabelClass = "text-xs uppercase tracking-widest text-slate-400 font-bold";
+
+  // --- TOOLTIP DÉTAILÉ ---
   const renderPendingTotalTooltip = () => (
     <div className="space-y-1">
       <p className="font-bold text-indigo-700 border-b border-slate-200 pb-1 mb-1">Détail total compte joint :</p>
@@ -44,64 +49,68 @@ export const PendingOperationsCard: React.FC<PendingOperationsCardProps> = ({
   );
 
   return (
-    <div className="rounded-3xl bg-white shadow-lg border border-slate-200 p-4 space-y-4">
-      <div className="flex items-start justify-between">
-        <div>
-          <div className="flex items-center gap-1.5">
-            <h2 className="text-sm uppercase tracking-widest text-slate-500 font-bold">Opérations en attente</h2>
-            <MobileTooltip text={renderPendingTotalTooltip()} icon={<Info size={16} />} widthClass="w-72" />
-          </div>
-          <ClickableAmount
-            date={currentDate}
-            filters={buildOperationsFilters({ status: "WAITING" })}
-            onNavigate={onNavigateToOperations}
-            as="button"
-            className="text-2xl font-black text-indigo-500 hover:opacity-80"
-          >
-            {roundTo0(totalPendingAmount)} €
-          </ClickableAmount>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="rounded-2xl bg-slate-50 p-4 border border-slate-200 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between">
-          <div className="flex items-center gap-1.5 mb-2">
-            <div className="p-1.5 bg-slate-200 rounded text-slate-600">
-              <CalendarClock size={14} />
+    <Card className="rounded-3xl">
+      <CardHeader className="p-4 pb-0 border-b-0">
+        <div className="flex items-start justify-between">
+          <div>
+            <div className="flex items-center gap-1.5">
+              <CardTitle className="text-sm uppercase tracking-widest text-slate-500 font-bold">Opérations en attente</CardTitle>
+              <MobileTooltip text={renderPendingTotalTooltip()} icon={<Info size={16} />} widthClass="w-72" />
             </div>
-            <div className="text-xs uppercase text-slate-400 font-bold">Récurrentes</div>
+            <ClickableAmount
+              date={currentDate}
+              filters={buildOperationsFilters({ status: "WAITING" })}
+              onNavigate={onNavigateToOperations}
+              as="button"
+              className="text-2xl font-black text-indigo-500 hover:opacity-80"
+            >
+              {roundTo0(totalPendingAmount)} €
+            </ClickableAmount>
           </div>
-          <ClickableAmount
-            date={currentDate}
-            filters={buildOperationsFilters({ source: "RECURRING", status: "WAITING" })}
-            onNavigate={onNavigateToOperations}
-            as="button"
-            className="text-3xl font-black text-slate-700 hover:text-slate-600"
-          >
-            {roundTo0(totalPendingRecurringAmount)} €
-          </ClickableAmount>
-          <div className="mt-2 text-xs text-slate-400 text-center">En retard : {roundTo0(overduePendingRecurringAmount)} €</div>
         </div>
+      </CardHeader>
 
-        <div className="rounded-2xl bg-indigo-50 p-4 border border-indigo-200 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between">
-          <div className="flex items-center gap-1.5 mb-2">
-            <div className="p-1.5 bg-indigo-100 rounded text-indigo-500">
-              <ShoppingBag size={14} />
+      <CardContent className="p-4 pt-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className={subCardClass}>
+            <div className="flex items-center gap-1.5 mb-2">
+              <div className="p-1.5 bg-slate-200 rounded text-slate-600">
+                <CalendarClock size={14} />
+              </div>
+              <div className={sectionLabelClass}>Récurrentes</div>
             </div>
-            <div className="text-xs uppercase text-indigo-400 font-bold">Variables</div>
+            <ClickableAmount
+              date={currentDate}
+              filters={buildOperationsFilters({ source: "RECURRING", status: "WAITING" })}
+              onNavigate={onNavigateToOperations}
+              as="button"
+              className="text-3xl font-black text-slate-700 hover:text-slate-600"
+            >
+              {roundTo0(totalPendingRecurringAmount)} €
+            </ClickableAmount>
+            <div className="mt-2 text-xs text-slate-400 text-center">En retard : {roundTo0(overduePendingRecurringAmount)} €</div>
           </div>
-          <ClickableAmount
-            date={currentDate}
-            filters={buildOperationsFilters({ source: "VARIABLE", status: "WAITING" })}
-            onNavigate={onNavigateToOperations}
-            as="button"
-            className="text-3xl font-black text-indigo-600 hover:text-indigo-500"
-          >
-            {roundTo0(totalPendingVariableAmount)} €
-          </ClickableAmount>
-          <div className="mt-2 text-xs text-indigo-500 text-center">En retard : {roundTo0(overduePendingVariableAmount)} €</div>
+
+          <div className={subCardClass}>
+            <div className="flex items-center gap-1.5 mb-2">
+              <div className="p-1.5 bg-slate-200 rounded text-slate-600">
+                <ShoppingBag size={14} />
+              </div>
+              <div className={sectionLabelClass}>Variables</div>
+            </div>
+            <ClickableAmount
+              date={currentDate}
+              filters={buildOperationsFilters({ source: "VARIABLE", status: "WAITING" })}
+              onNavigate={onNavigateToOperations}
+              as="button"
+              className="text-3xl font-black text-indigo-600 hover:text-indigo-500"
+            >
+              {roundTo0(totalPendingVariableAmount)} €
+            </ClickableAmount>
+            <div className="mt-2 text-xs text-slate-400 text-center">En retard : {roundTo0(overduePendingVariableAmount)} €</div>
+          </div>
         </div>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 };

@@ -22,6 +22,7 @@ export const MobileTooltip: React.FC<MobileTooltipProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const [position, setPosition] = useState({ top: 0, left: 0 });
   const [adjustedLeft, setAdjustedLeft] = useState<number | null>(null);
+  const [placement, setPlacement] = useState<"top" | "bottom">("top");
   const tooltipRef = useRef<HTMLDivElement>(null);
 
   const toggle = (e: React.MouseEvent) => {
@@ -34,6 +35,7 @@ export const MobileTooltip: React.FC<MobileTooltipProps> = ({
         left: rect.left + rect.width / 2,
       });
       setAdjustedLeft(null);
+      setPlacement("top");
     }
     setIsOpen(!isOpen);
   };
@@ -42,6 +44,7 @@ export const MobileTooltip: React.FC<MobileTooltipProps> = ({
     if (isOpen && tooltipRef.current) {
       const rect = tooltipRef.current.getBoundingClientRect();
       const screenWidth = window.innerWidth;
+      const screenHeight = window.innerHeight;
       const margin = 10;
 
       // Calcul du débordement
@@ -58,8 +61,23 @@ export const MobileTooltip: React.FC<MobileTooltipProps> = ({
         const timer = setTimeout(() => setAdjustedLeft(newLeft), 0);
         return () => clearTimeout(timer);
       }
+
+      const wouldOverflowTop = position.top - rect.height - 12 < margin;
+      const nextPlacement: "top" | "bottom" = wouldOverflowTop ? "bottom" : "top";
+      if (nextPlacement !== placement) {
+        const timer = setTimeout(() => setPlacement(nextPlacement), 0);
+        return () => clearTimeout(timer);
+      }
+
+      if (nextPlacement === "bottom" && position.top + rect.height + 32 > screenHeight - margin) {
+        tooltipRef.current.style.maxHeight = `${Math.max(120, screenHeight - position.top - 36)}px`;
+        tooltipRef.current.style.overflowY = "auto";
+      } else {
+        tooltipRef.current.style.maxHeight = "";
+        tooltipRef.current.style.overflowY = "";
+      }
     }
-  }, [isOpen, position.left]);
+  }, [isOpen, placement, position.left, position.top]);
 
   const currentLeft = adjustedLeft ?? position.left;
   const arrowOffset = position.left - currentLeft;
@@ -89,9 +107,9 @@ export const MobileTooltip: React.FC<MobileTooltipProps> = ({
               ref={tooltipRef}
               className={`fixed ${widthClass} p-2 bg-white border border-slate-300 text-slate-800 text-[10px] rounded-lg shadow-xl animate-in zoom-in-95 fade-in duration-200 normal-case font-normal tracking-normal text-left`}
               style={{
-                top: position.top - 6,
+                top: placement === "top" ? position.top - 6 : position.top + 26,
                 left: currentLeft,
-                transform: "translate(-50%, -100%)",
+                transform: placement === "top" ? "translate(-50%, -100%)" : "translate(-50%, 0)",
               }}
               onClick={(e) => e.stopPropagation()}
             >
@@ -102,13 +120,23 @@ export const MobileTooltip: React.FC<MobileTooltipProps> = ({
                 </button>
               </div>
               {text}
-              <div
-                className="absolute top-full border-4 border-transparent border-t-white"
-                style={{
-                  left: "50%",
-                  transform: `translateX(calc(-50% + ${arrowOffset}px))`,
-                }}
-              ></div>
+              {placement === "top" ? (
+                <div
+                  className="absolute top-full border-4 border-transparent border-t-white"
+                  style={{
+                    left: "50%",
+                    transform: `translateX(calc(-50% + ${arrowOffset}px))`,
+                  }}
+                ></div>
+              ) : (
+                <div
+                  className="absolute bottom-full border-4 border-transparent border-b-white"
+                  style={{
+                    left: "50%",
+                    transform: `translateX(calc(-50% + ${arrowOffset}px))`,
+                  }}
+                ></div>
+              )}
             </div>
           </div>,
           document.body

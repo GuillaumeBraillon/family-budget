@@ -5,6 +5,7 @@ import { ClickableAmount } from "../../../ui/atoms/ClickableAmount";
 import { buildOperationsFilters } from "../../../../services/financeUtils";
 import { OperationFilters } from "../../../../types";
 import { BudgetProgressBar } from "../../Dashboard/components/BudgetProgressBar";
+import { Card, CardHeader, CardTitle, CardContent } from "../../../ui/Card";
 
 interface PersonalBudgetSummaryProps {
   totalPersonalBudgetAmount: number;
@@ -23,53 +24,49 @@ export const PersonalBudgetSummary: React.FC<PersonalBudgetSummaryProps> = ({
   currentDate,
   onNavigateToOperations,
 }) => {
+  const subCardClass = "rounded-2xl p-4 border border-slate-200 !bg-slate-50 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-start";
+  const sectionLabelClass = "text-xs uppercase tracking-widest text-slate-400 font-bold";
+
   return (
-    <div className="rounded-3xl bg-white shadow-xl border border-slate-200 p-3 space-y-3">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center">
-          <h2 className="text-sm uppercase tracking-widest text-slate-500 font-bold">Budget personnel (Mensuel)</h2>
+    <Card className="rounded-3xl">
+      <CardHeader className="p-4 pb-0 border-b-0">
+        <div className="flex items-center gap-1.5">
+          <CardTitle className="text-sm uppercase tracking-widest text-slate-500 font-bold">Budget personnel (Mensuel)</CardTitle>
           <MobileTooltip text="Vue d'ensemble du budget personnel : montant total, consommé, disponible." icon={<Info size={16} />} widthClass="w-72" />
         </div>
-      </div>
-      {/* Contenu de la carte : Budget personnel disponible, dépensé et reste */}
-      <div className="flex flex-col items-stretch justify-between gap-1.5 md:gap-2">
-        {/* Affichage du budget personnel par bénéficiaire */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-          {/* Progression du budget personnel par bénéficiaire */}
-          <div className="flex-1 flex flex-col gap-2">
-            <div className="rounded-2xl p-4 border bg-slate-50 border-slate-200">
-              <div className="space-y-3">
-                {beneficiariesDetails.length > 0 ? (
-                  beneficiariesDetails.map((d, i) => {
-                    const remaining = d.remaining ?? 0;
-                    const budget = d.amount + remaining;
+        <div className="space-y-3">
+          {beneficiariesDetails.length > 0 ? (
+            beneficiariesDetails.map((d, i) => {
+              const remaining = d.remaining ?? 0;
+              const budget = d.amount + remaining;
 
-                    return (
-                      <div key={i} className="space-y-1">
-                        <div className="flex items-center justify-between text-[11px]">
-                          <span className="font-bold text-slate-700 truncate">{d.name}</span>
-                          <span className="font-black text-slate-600 whitespace-nowrap">
-                            {d.amount.toFixed(0)} € / {budget.toFixed(0)} €
-                          </span>
-                        </div>
+              return (
+                <div key={i} className="space-y-1">
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="font-bold text-slate-700 truncate">{d.name}</span>
+                    <span className="font-black text-slate-600 whitespace-nowrap">
+                      {d.amount.toFixed(0)} € / {budget.toFixed(0)} €
+                    </span>
+                  </div>
 
-                        <BudgetProgressBar consumed={d.amount} budget={budget} />
-                      </div>
-                    );
-                  })
-                ) : (
-                  <div className="text-[11px] text-slate-400/80 italic">Aucun bénéficiaire.</div>
-                )}
-              </div>
-            </div>
-          </div>
+                  <BudgetProgressBar consumed={d.amount} budget={budget} />
+                </div>
+              );
+            })
+          ) : (
+            <div className="text-[11px] text-slate-400/80 italic">Aucun bénéficiaire.</div>
+          )}
+        </div>
+      </CardHeader>
 
-          {/* Budget personnel disponible */}
-          <div className="flex-1 flex flex-col gap-2">
-            <div className="rounded-2xl bg-slate-50 p-4 border border-slate-200">
+      <CardContent>
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-1">
+            {/* Budget personnel disponible */}
+            <Card className={subCardClass}>
               <div className="space-y-1.5">
                 <div className="flex items-center">
-                  <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Disponible</span>
+                  <span className={`${sectionLabelClass} mb-2 w-full text-left`}>Disponible</span>
                   <MobileTooltip
                     text="Détail du budget personnel disponible par bénéficiaire (reports inclus)."
                     icon={<Info size={14} className="text-slate-600 hover:text-slate-800" />}
@@ -95,15 +92,13 @@ export const PersonalBudgetSummary: React.FC<PersonalBudgetSummaryProps> = ({
                   <div className="text-[11px] text-slate-400 italic">Aucun bénéficiaire personnel configuré.</div>
                 )}
               </div>
-            </div>
-          </div>
+            </Card>
 
-          {/* Budget personnel dépensé */}
-          <div className="flex-1 flex flex-col gap-2">
-            <div className="rounded-2xl bg-rose-50 p-4 border border-rose-200">
+            {/* Budget personnel dépensé */}
+            <Card className={subCardClass}>
               <div className="space-y-1.5">
                 <div className="flex items-center">
-                  <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Dépensé</span>
+                  <span className={`${sectionLabelClass} mb-2 w-full text-left`}>Dépensé</span>
                   <MobileTooltip
                     text="Dépenses standard affectées aux bénéficiaires (hors Extra, hors virements internes)."
                     icon={<Info size={14} className="text-slate-600 hover:text-slate-800" />}
@@ -141,17 +136,13 @@ export const PersonalBudgetSummary: React.FC<PersonalBudgetSummaryProps> = ({
                   <div className="text-[11px] text-rose-300/80 italic">Aucune consommation.</div>
                 )}
               </div>
-            </div>
-          </div>
+            </Card>
 
-          {/* Reste budget personnel */}
-          <div className="flex-1 flex flex-col gap-2">
-            <div
-              className={`rounded-2xl p-4 border ${totalPersonalBudgetAmount - spentPersonalBudgetAmount >= 0 ? "bg-emerald-50 border-emerald-200" : "bg-rose-50 border-rose-200"}`}
-            >
+            {/* Reste budget personnel */}
+            <Card className={subCardClass}>
               <div className="space-y-1.5">
                 <div className="flex items-center">
-                  <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Reste</span>
+                  <span className={`${sectionLabelClass} mb-2 w-full text-left`}>Reste</span>
                   <MobileTooltip
                     text="Reste individuel par bénéficiaire (disponible - dépensé)."
                     icon={<Info size={14} className="text-slate-600 hover:text-slate-800" />}
@@ -187,10 +178,10 @@ export const PersonalBudgetSummary: React.FC<PersonalBudgetSummaryProps> = ({
                   <div className="text-[11px] text-slate-400/80 italic">Aucun reste à afficher.</div>
                 )}
               </div>
-            </div>
+            </Card>
           </div>
         </div>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 };

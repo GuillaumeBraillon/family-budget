@@ -91,7 +91,10 @@ export const fetchInitialData = async () => {
       .order("date", { ascending: false }),
     supabase.from("saved_labels").select("id, name, type, is_expense, category_id, sub_category_id, account_id, beneficiary_id"),
     supabase.from("tags").select("id, name, color"),
-    supabase.from("authorized_users").select("email, name, avatar_url, is_allowed, added_at, added_by").order("added_at", { ascending: false }),
+    supabase
+      .from("authorized_users")
+      .select("email, name, avatar_url, is_allowed, added_at, added_by, last_login_at, notes, is_admin")
+      .order("added_at", { ascending: false }),
   ]);
 
   const responses = [

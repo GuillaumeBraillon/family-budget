@@ -63,13 +63,21 @@ export const UsersManager: React.FC<UsersManagerProps> = ({ users, onToggleAutho
 
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return "Jamais";
-    return new Date(dateStr).toLocaleDateString("fr-FR", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    // Accepte soit une Date, soit une chaîne venant de la DB.
+    try {
+      const normalized = typeof dateStr === "string" && dateStr.indexOf(" ") > -1 ? dateStr.replace(" ", "T") : dateStr;
+      const d = typeof normalized === "string" ? new Date(normalized) : new Date(normalized as any);
+      if (isNaN(d.getTime())) return "Jamais";
+      return d.toLocaleDateString("fr-FR", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch (err) {
+      return "Jamais";
+    }
   };
 
   return (
@@ -114,7 +122,18 @@ export const UsersManager: React.FC<UsersManagerProps> = ({ users, onToggleAutho
                   )}
 
                   <div className="flex-1 min-w-0">
-                    <div className="font-medium text-slate-900 truncate">{user.name || user.email}</div>
+                    <div className="flex items-center gap-2">
+                      <div className="font-medium text-slate-900 truncate">{user.name || user.email}</div>
+                      {user.isAdmin && (
+                        <span
+                          className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-800"
+                          title="Administrateur"
+                          aria-label="Administrateur"
+                        >
+                          ADMIN
+                        </span>
+                      )}
+                    </div>
                     {user.name && <div className="text-xs text-slate-500 truncate">{user.email}</div>}
                     <div className="text-xs text-slate-400 mt-0.5">Demande le {formatDate(user.addedAt)}</div>
                   </div>
@@ -174,7 +193,18 @@ export const UsersManager: React.FC<UsersManagerProps> = ({ users, onToggleAutho
                   )}
 
                   <div className="flex-1 min-w-0">
-                    <div className="font-medium text-slate-900 truncate">{user.name || user.email}</div>
+                    <div className="flex items-center gap-2">
+                      <div className="font-medium text-slate-900 truncate">{user.name || user.email}</div>
+                      {user.isAdmin && (
+                        <span
+                          className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-800"
+                          title="Administrateur"
+                          aria-label="Administrateur"
+                        >
+                          ADMIN
+                        </span>
+                      )}
+                    </div>
                     {user.name && <div className="text-sm text-slate-600 truncate">{user.email}</div>}
 
                     <div className="flex items-center gap-4 mt-2 text-xs text-slate-500">

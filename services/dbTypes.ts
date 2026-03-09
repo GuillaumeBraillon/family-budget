@@ -18,6 +18,7 @@ export interface DbAuthorizedUser {
   added_at?: string;
   added_by?: string;
   last_login_at?: string;
+  is_admin?: boolean;
   notes?: string;
 }
 

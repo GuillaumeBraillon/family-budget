@@ -36,6 +36,7 @@ export interface AuthorizedUser {
   addedAt?: string;
   addedBy?: string;
   lastLoginAt?: string;
+  isAdmin?: boolean;
   notes?: string;
 }
 

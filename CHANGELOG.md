@@ -7,6 +7,26 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.9.4] - 2026-03-09
+
+### ✅ Corrections
+
+- `authorized_users` : ajout des champs `last_login_at`, `notes` et `is_admin` dans le chargement initial (`fetchInitialData`) pour corriger les affichages manquants côté UI.
+- `UsersManager` : correction de l'affichage de "Dernière connexion" (parsing date robuste) et affichage fiable des notes.
+- `MobileTooltip` : correction du découpage hors écran (positionnement intelligent haut/bas + gestion du débordement vertical).
+
+### ✨ Améliorations
+
+- Gestion Admin : ajout du mapping `is_admin` → `isAdmin`, badge `ADMIN` dans la liste utilisateurs, et restriction des vues `Soldes`, `Comptes`, `Analytics`, `Réglages` pour les non-admins.
+- Navigation Header : recentrage cohérent du menu (desktop/mobile), avec alignement toujours centré demandé.
+- `MonthSelector` : affichage année seule, suppression de prop inutile (`currentDate`), optimisation du composant (`React.memo`, callbacks memoïsés, accessibilité boutons).
+
+### ♻️ Refactor UI
+
+- Harmonisation des cartes Balances (`PersonalBudgetSummary`, `FamilyVariableBalanceCard`, `PendingOperationsCard`) avec usage de `Card`, `CardHeader`, `CardTitle`, `CardContent`.
+- Uniformisation styles/espacements/ombres/typo des sous-cartes pour une cohérence visuelle complète.
+- Clarification du tooltip "Budget Famille" avec libellés explicites et métriques mieux alignées avec les valeurs affichées.
+
 ## [2.9.3] - 2026-03-09
 
 ### ✨ Améliorations

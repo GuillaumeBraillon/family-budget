@@ -59,6 +59,16 @@ const AppContent: React.FC = () => {
     actions,
   } = useBudget();
 
+  const currentUserIsAdmin = React.useMemo(() => {
+    try {
+      const email = session?.user?.email;
+      if (!email) return false;
+      return !!authorizedUsers.find((u) => u.email === email && !!u.isAdmin);
+    } catch {
+      return false;
+    }
+  }, [authorizedUsers, session]);
+
   const { activeTab, setActiveTab } = useConfigurationUI();
 
   // --- LOGIQUE SWIPE ---
@@ -248,7 +258,14 @@ const AppContent: React.FC = () => {
   if (isDbEmpty && currentView !== "config") {
     return (
       <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
-        <Header currentView={currentView} onViewChange={setCurrentView} onLogout={signOut} userEmail={session.user.email} session={session} />
+        <Header
+          currentView={currentView}
+          onViewChange={setCurrentView}
+          onLogout={signOut}
+          userEmail={session.user.email}
+          session={session}
+          isAdmin={currentUserIsAdmin}
+        />
         <main className="max-w-9xl mx-auto animate-in fade-in duration-500 flex flex-col gap-1.5 md:gap-2">
           <WelcomeEmptyState onStartConfig={() => navigateToConfig("family")} />
         </main>
@@ -258,7 +275,14 @@ const AppContent: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900" onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
-      <Header currentView={currentView} onViewChange={setCurrentView} onLogout={signOut} userEmail={session.user.email} session={session} />
+      <Header
+        currentView={currentView}
+        onViewChange={setCurrentView}
+        onLogout={signOut}
+        userEmail={session.user.email}
+        session={session}
+        isAdmin={currentUserIsAdmin}
+      />
 
       <main className="max-w-9xl mx-auto animate-in fade-in duration-500 flex flex-col gap-1.5 md:gap-2">
         {currentView === "dashboard" && (

@@ -11,16 +11,22 @@ interface HeaderProps {
   onLogout: () => void;
   userEmail?: string;
   session?: Session | null;
+  isAdmin?: boolean;
 }
 
-export const Header: React.FC<HeaderProps> = ({ currentView, onViewChange, onLogout, userEmail, session }) => {
+export const Header: React.FC<HeaderProps> = ({ currentView, onViewChange, onLogout, userEmail, session, isAdmin }) => {
   const { isInstallable, install } = usePWAInstall();
+
+  const visibleNavItems = NAV_ITEMS.filter((item) => {
+    if (!isAdmin && ["balances", "transfers", "analytics", "config"].includes(item.id)) return false;
+    return true;
+  });
 
   return (
     <>
       {/* HEADER DESKTOP & MOBILE TITLE */}
       <header className="bg-white border-b sticky top-0 z-30 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 h-16 flex justify-between items-center">
+        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center">
           <div className="flex items-center gap-2 cursor-pointer group" onClick={() => onViewChange("dashboard")}>
             <div className="bg-indigo-600 p-2 rounded-lg group-hover:scale-110 transition-transform">
               <WalletCards className="text-white h-5 w-5" />
@@ -30,7 +36,22 @@ export const Header: React.FC<HeaderProps> = ({ currentView, onViewChange, onLog
             </h1>
           </div>
 
-          <div className="flex items-center gap-3">
+          {/* DESKTOP NAV */}
+          <div className={`hidden md:flex flex-1 px-4 justify-center`}>
+            <nav className="flex bg-slate-100 p-1 rounded-xl">
+              {visibleNavItems.map((item) => (
+                <NavBtn
+                  key={item.id}
+                  active={currentView === item.id}
+                  onClick={() => onViewChange(item.id)}
+                  icon={<item.icon size={16} />}
+                  label={item.label}
+                />
+              ))}
+            </nav>
+          </div>
+
+          <div className="ml-auto flex items-center gap-3">
             {/* BOUTON PWA INSTALL */}
             {isInstallable && (
               <button
@@ -42,19 +63,6 @@ export const Header: React.FC<HeaderProps> = ({ currentView, onViewChange, onLog
               </button>
             )}
 
-            {/* DESKTOP NAV */}
-            <nav className="hidden md:flex bg-slate-100 p-1 rounded-xl">
-              {NAV_ITEMS.map((item) => (
-                <NavBtn
-                  key={item.id}
-                  active={currentView === item.id}
-                  onClick={() => onViewChange(item.id)}
-                  icon={<item.icon size={16} />}
-                  label={item.label}
-                />
-              ))}
-            </nav>
-
             {/* USER & LOGOUT */}
             <UserMenu userEmail={userEmail} onLogout={onLogout} session={session} />
           </div>
@@ -63,10 +71,11 @@ export const Header: React.FC<HeaderProps> = ({ currentView, onViewChange, onLog
 
       {/* MOBILE BOTTOM NAV */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-40 pb-[env(safe-area-inset-bottom)] shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
-        <div className="flex justify-between items-center h-16 px-1">
-          {NAV_ITEMS.map((item) => (
+        <div className={`justify-center flex items-center h-16 px-1 "gap-6"`}>
+          {visibleNavItems.map((item) => (
             <MobileNavBtn
               key={item.id}
+              compact={true}
               active={currentView === item.id}
               onClick={() => onViewChange(item.id)}
               icon={<item.icon size={20} />}
@@ -91,10 +100,16 @@ const NavBtn: React.FC<{ active: boolean; onClick: () => void; icon: React.React
   </button>
 );
 
-const MobileNavBtn: React.FC<{ active: boolean; onClick: () => void; icon: React.ReactNode; label: string }> = ({ active, onClick, icon, label }) => (
+const MobileNavBtn: React.FC<{ active: boolean; onClick: () => void; icon: React.ReactNode; label: string; compact?: boolean }> = ({
+  active,
+  onClick,
+  icon,
+  label,
+  compact,
+}) => (
   <button
     onClick={onClick}
-    className={`flex-1 flex flex-col items-center justify-center gap-1 h-full transition-all active:scale-95 ${
+    className={`${compact ? "flex-none px-3" : "flex-1"} flex flex-col items-center justify-center gap-1 h-full transition-all active:scale-95 ${
       active ? "text-indigo-600" : "text-slate-400 hover:text-slate-600"
     }`}
   >
