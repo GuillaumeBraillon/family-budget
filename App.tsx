@@ -20,10 +20,9 @@ import { WelcomeEmptyState } from "./components/features/Dashboard/components/We
 import { isSupabaseConfigured } from "./services/supabase";
 import { OperationFilters } from "./types";
 import { AnalyticsView } from "./components/features/Analytics/AnalyticsView";
+import { ViewState, VIEW_ORDER } from "./constants/navigation";
 
-type ViewState = "dashboard" | "balances" | "planner" | "transfers" | "config" | "analytics";
-
-const VIEWS: ViewState[] = ["dashboard", "balances", "planner", "transfers", "config", "analytics"];
+const VIEWS: ViewState[] = VIEW_ORDER;
 
 const AppContent: React.FC = () => {
   const { currentError, clearError } = useError();

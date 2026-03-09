@@ -31,6 +31,7 @@
 import React, { useState } from "react";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
+import { usePlanner } from "../../../hooks/usePlanner";
 import { usePeriodNav } from "../../../contexts/PeriodNavigationContext";
 import { useError } from "../../../contexts/ErrorContext";
 import { useTransfersFilters, useTransfersData, useTransfersSorting, isTransfer, type TransfersHistoryEntry } from "../../../hooks/transfers";
@@ -129,7 +130,7 @@ export const TransfersView: React.FC<TransfersViewProps> = ({
   accounts,
   people: _people,
   settings,
-  categories: _categories,
+  categories,
   savedLabels,
   onUpsertTransfer,
   onUpsertTransaction: _onUpsertTransaction,
@@ -140,7 +141,10 @@ export const TransfersView: React.FC<TransfersViewProps> = ({
   // --- HOOKS SPÉCIALISÉS (LOGIQUE DÉLÉGUÉE) ---
 
   // Navigation partagée (contexte global, persistante entre vues)
-  const { currentDate } = usePeriodNav();
+  const { currentDate, scope, activeWeek } = usePeriodNav();
+
+  // Périodes du mois (pour afficher le sélecteur en mode PERIOD)
+  const { filteredPeriodBudgets } = usePlanner([], [], {}, [], currentDate, "", settings, categories);
 
   // Recherche locale (spécifique à la vue Transfers)
   const [searchQuery, setSearchQuery] = useState<string>(() => "");
@@ -155,6 +159,9 @@ export const TransfersView: React.FC<TransfersViewProps> = ({
     variableTransactions,
     accounts,
     currentDate,
+    scope,
+    activeWeek,
+    periodBudgets: filteredPeriodBudgets,
     searchQuery,
     selectedMotif: filters.selectedMotif,
     accountTypeFilter: filters.accountTypeFilter,
@@ -224,7 +231,7 @@ export const TransfersView: React.FC<TransfersViewProps> = ({
   return (
     <div className="flex flex-col gap-1.5 md:gap-2 m-2">
       {/* Navigation de période */}
-      <PeriodNavigationBar filteredPeriodBudgets={[]}>
+      <PeriodNavigationBar filteredPeriodBudgets={filteredPeriodBudgets}>
         <SearchBar value={searchQuery} onChange={setSearchQuery} />
       </PeriodNavigationBar>
 

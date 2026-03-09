@@ -24,7 +24,7 @@
  * - types : Transfer, VariableTransaction, Account, AccountType
  */
 import { useMemo } from "react";
-import { Transfer, VariableTransaction, Account, AccountType } from "../../types";
+import { Transfer, VariableTransaction, Account, AccountType, WeeklyBudget } from "../../types";
 
 /**
  * Type guard pour différencier Transfer et VariableTransaction.
@@ -137,6 +137,9 @@ export const useTransfersData = ({
   variableTransactions,
   accounts,
   currentDate,
+  scope,
+  activeWeek,
+  periodBudgets,
   searchQuery,
   selectedMotif,
   accountTypeFilter,
@@ -147,6 +150,9 @@ export const useTransfersData = ({
   variableTransactions: VariableTransaction[];
   accounts: Account[];
   currentDate: Date;
+  scope: "MONTH" | "PERIOD";
+  activeWeek: number;
+  periodBudgets: WeeklyBudget[];
   searchQuery: string;
   selectedMotif: string | null;
   accountTypeFilter: "ALL" | "CHECKING" | "SAVINGS";
@@ -220,19 +226,28 @@ export const useTransfersData = ({
     const currentMonth = currentDate.getMonth();
     const currentYear = currentDate.getFullYear();
     const foundMotifs = new Set<string>();
+    const selectedPeriod = periodBudgets.find((period) => period.weekNumber === activeWeek);
+
+    const isInSelectedScope = (dateString: string): boolean => {
+      const date = new Date(dateString);
+      const inCurrentMonth = date.getMonth() === currentMonth && date.getFullYear() === currentYear;
+      if (!inCurrentMonth) return false;
+
+      if (scope === "MONTH") return true;
+      if (!selectedPeriod) return false;
+
+      const day = date.getDate();
+      return day >= selectedPeriod.startDate && day <= selectedPeriod.endDate;
+    };
 
     // 1. Filtrage temporel des virements
-    let filteredTransfers = transfers.filter((t) => {
-      const d = new Date(t.date);
-      return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
-    });
+    let filteredTransfers = transfers.filter((t) => isInSelectedScope(t.date));
 
     // 2. Filtrage temporel des opérations directes selon interestFilter
     let filteredDirectOps: VariableTransaction[] = [];
     if (interestFilter !== "EXCLUDE") {
       filteredDirectOps = variableTransactions.filter((tx) => {
-        const d = new Date(tx.date);
-        if (d.getMonth() !== currentMonth || d.getFullYear() !== currentYear) return false;
+        if (!isInSelectedScope(tx.date)) return false;
 
         // IMPORTANT : Ne garder QUE les opérations sur comptes d'épargne
         const txAccount = accounts.find((a) => a.id === tx.accountId);
@@ -336,7 +351,20 @@ export const useTransfersData = ({
       motifs: Array.from(foundMotifs).sort(),
       historyWithBalances: history,
     };
-  }, [transfers, variableTransactions, currentDate, searchQuery, selectedMotif, accountTypeFilter, specificAccountId, interestFilter, accounts]);
+  }, [
+    transfers,
+    variableTransactions,
+    currentDate,
+    scope,
+    activeWeek,
+    periodBudgets,
+    searchQuery,
+    selectedMotif,
+    accountTypeFilter,
+    specificAccountId,
+    interestFilter,
+    accounts,
+  ]);
 
   /**
    * Calcul des statistiques de mouvements.

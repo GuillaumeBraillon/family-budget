@@ -116,8 +116,6 @@ const formatSupabaseError = (error: unknown) => {
  * Opérations sur les Utilisateurs Autorisés
  */
 export const apiToggleUserAuthorization = async (email: string, isAllowed: boolean) => {
-  logger.log("📡 API: Mise à jour autorisation", { email, isAllowed });
-
   // Si on autorise quelqu'un, on enregistre qui l'a autorisé
   if (isAllowed) {
     const {
@@ -130,13 +128,11 @@ export const apiToggleUserAuthorization = async (email: string, isAllowed: boole
         added_by: user?.email || null,
       })
       .eq("email", email);
-    logger.log("📡 API: Résultat", result);
     return result;
   }
 
   // Si on révoque, on met juste à jour is_allowed
   const result = await supabase.from("authorized_users").update({ is_allowed: isAllowed }).eq("email", email);
-  logger.log("📡 API: Résultat", result);
   return result;
 };
 

@@ -123,18 +123,15 @@ export const useBudgetActions = (
 
   const wrapCrudWithReload = <T extends (...args: unknown[]) => Promise<ApiResult>>(apiFunction: T, operationName: string, reloadOnSuccess = true) => {
     return (async (...args: Parameters<T>): Promise<{ data: unknown; error: unknown }> => {
-      logger.log(`📡 API: Début ${operationName}`, args);
       try {
         const result = await apiFunction(...args);
         if (result.error) {
           const rawMessage =
             typeof result.error === "string" ? result.error : ((result.error as { message?: string } | null | undefined)?.message ?? "Erreur base de données");
           const formattedError = formatDatabaseError(rawMessage);
-          logger.error(`❌ API: Erreur ${operationName}`, formattedError);
           setErrorMessage(formattedError);
           return { data: null, error: new Error(formattedError) };
         }
-        logger.log(`✅ API: Succès ${operationName}`, "data" in result ? (result as ApiResult).data : null);
         if (reloadOnSuccess) {
           await loadData(true);
         }
@@ -150,7 +147,6 @@ export const useBudgetActions = (
       } catch (err) {
         const error = err as Error;
         const formattedError = `Erreur inconnue lors de l'opération ${operationName}: ${error.message}`;
-        logger.error(`❌ API: Exception ${operationName}`, formattedError, error);
         setErrorMessage(formattedError);
         return { data: null, error };
       }

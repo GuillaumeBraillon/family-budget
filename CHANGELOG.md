@@ -7,6 +7,40 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.9.2] - 2026-03-09
+
+### ✅ Corrections
+
+- Correction du calcul de report (carryover) : le report utilise désormais uniquement les montants Standard réellement pointés (`realStandard`), excluant les montants Extra et les montants en attente. Ceci corrige des budgets de période négatifs inattendus.
+- Suppression des logs de débogage temporaires introduits lors de l'enquête (cleanup de la sortie console).
+
+### ✨ Améliorations & Fonctionnalités
+
+- UI : intégration et utilisation du composant `BudgetProgressBar` dans `FamilyVariableBalanceCard` et `PersonalBudgetSummary` (affichage du pourcentage, gestion visuelle du dépassement, label positionné dynamiquement).
+- `PersonalBudgetSummary` : restructuration responsive et affichage par bénéficiaire (disponible / dépensé / reste) avec barre de progression par bénéficiaire.
+- `FamilyVariableBalanceCard` : alignements et layout améliorés (titres à gauche, montants centrés et alignés en haut, bloc "En attente" collé en bas).
+
+### 🧠 Logique métier
+
+- `useOperationsData` : correction du comptage par bénéficiaire quand un filtre `beneficiaryIds` est actif — les `quickStats` prennent désormais en compte la ventilation `beneficiaryAmounts` (proportionnalisation) au lieu d'attribuer le montant total à chaque bénéficiaire.
+
+### 🔧 Transfers / Périodes
+
+- `TransfersView` : branchement sur `usePlanner` pour alimenter `PeriodNavigationBar` et affichage du sélecteur de périodes (ex. `1-7 | 8-14 | 15-21 | 22-28`).
+- `useTransfersData` : ajout du support `scope`/`activeWeek`/`periodBudgets` et filtrage temporel (`MONTH` vs `PERIOD`) pour que la `DataList` n'affiche que les mouvements de la période active.
+
+### ♻️ Refactor
+
+- Centralisation de la navigation : création de `constants/navigation.ts` regroupant `NAV_ITEMS`, `ViewState` et l'ordre des vues ; `Header.tsx` et `App.tsx` consomment désormais cette source unique (icônes centralisées aussi).
+
+### 🧪 Tests
+
+- Ajout d'un test unitaire dédié `tests/useOperationsData.test.ts` pour verrouiller la ventilation bénéficiaires (ex: opération 12,10€ ventilée 8€ / 4,10€ → `quickStats` renvoie bien 8€ pour Guillaume et 4,10€ pour Nelly quand filtré).
+
+### 🧰 Divers
+
+- `index.html` : suppression du log `console.log("SW registered")` lors de l'enregistrement du service worker (réduction du bruit console).
+
 ## [2.9.1] - 2026-03-07
 
 ### ✨ Améliorations UI

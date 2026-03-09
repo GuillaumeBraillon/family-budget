@@ -354,16 +354,6 @@ export const useTransactionForm = ({
    * @param {() => void} onSuccess - Callback appelé après validation réussie
    * @returns {VariableTransaction | null} Transaction construite ou null si erreur
    *
-   * @example
-   * ```tsx
-   * const transaction = form.handleSubmit(false, () => {
-   *   console.log("Transaction validée !");
-   *   onClose();
-   * });
-   * if (transaction) {
-   *   onAddTransaction(transaction as VariableTransaction);
-   * }
-   * ```
    */
   const handleSubmit = (targetIsWaiting: boolean, onSuccess: () => void): VariableTransaction | null => {
     const errors: string[] = [];

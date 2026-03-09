@@ -1,10 +1,9 @@
 import React from "react";
-import { WalletCards, LayoutDashboard, CalendarCheck, Settings, Calculator, ArrowRightLeft, Download } from "lucide-react";
+import { WalletCards, Download } from "lucide-react";
 import { Session } from "@supabase/supabase-js";
 import { usePWAInstall } from "../../hooks/usePWAInstall";
 import { UserMenu } from "./UserMenu";
-
-type ViewState = "dashboard" | "balances" | "planner" | "transfers" | "config" | "analytics";
+import { NAV_ITEMS, ViewState } from "../../constants/navigation";
 
 interface HeaderProps {
   currentView: ViewState;
@@ -16,15 +15,6 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({ currentView, onViewChange, onLogout, userEmail, session }) => {
   const { isInstallable, install } = usePWAInstall();
-
-  const navItems = [
-    { id: "dashboard", label: "Dashboard", icon: <LayoutDashboard /> },
-    { id: "balances", label: "Soldes", icon: <Calculator /> },
-    { id: "planner", label: "Opérations", icon: <CalendarCheck /> },
-    { id: "transfers", label: "Comptes", icon: <ArrowRightLeft /> },
-    { id: "config", label: "Réglages", icon: <Settings /> },
-    { id: "analytics", label: "Analytics", icon: <Calculator /> },
-  ] as const;
 
   return (
     <>
@@ -54,12 +44,12 @@ export const Header: React.FC<HeaderProps> = ({ currentView, onViewChange, onLog
 
             {/* DESKTOP NAV */}
             <nav className="hidden md:flex bg-slate-100 p-1 rounded-xl">
-              {navItems.map((item) => (
+              {NAV_ITEMS.map((item) => (
                 <NavBtn
                   key={item.id}
                   active={currentView === item.id}
                   onClick={() => onViewChange(item.id)}
-                  icon={React.cloneElement(item.icon as React.ReactElement<{ size?: number }>, { size: 16 })}
+                  icon={<item.icon size={16} />}
                   label={item.label}
                 />
               ))}
@@ -74,12 +64,12 @@ export const Header: React.FC<HeaderProps> = ({ currentView, onViewChange, onLog
       {/* MOBILE BOTTOM NAV */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-40 pb-[env(safe-area-inset-bottom)] shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
         <div className="flex justify-between items-center h-16 px-1">
-          {navItems.map((item) => (
+          {NAV_ITEMS.map((item) => (
             <MobileNavBtn
               key={item.id}
               active={currentView === item.id}
               onClick={() => onViewChange(item.id)}
-              icon={React.cloneElement(item.icon as React.ReactElement<{ size?: number }>, { size: 20 })}
+              icon={<item.icon size={20} />}
               label={item.label}
             />
           ))}

@@ -576,14 +576,6 @@ export const usePlanner = (
    * @returns {Record<string, Object>} expByBeneficiary - Dépenses par bénéficiaire (paid, planned)
    * @returns {Record<string, Object>} incByBeneficiary - Revenus par bénéficiaire (paid, planned)
    *
-   * @example
-   * ```tsx
-   * const stats = calculatePeriodStatistics(1);
-   *
-   * console.log(stats.fixedPaid); // Dépenses fixes payées
-   * console.log(stats.varRemaining); // Reste disponible
-   * console.log(stats.byAccount['acc_1'].paid); // Solde payé du compte 1
-   * ```
    */
   const calculatePeriodStatistics = (activeWeek: number) => {
     const safeActiveWeek = periodBudgets.some((w) => w.weekNumber === activeWeek) ? activeWeek : 1;

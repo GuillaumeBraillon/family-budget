@@ -33,7 +33,6 @@ export const clearAuthSession = () => {
   if (projectId) {
     const authTokenKey = `sb-${projectId}-auth-token`;
     localStorage.removeItem(authTokenKey);
-    logger.log("[Supabase] Session auth cleared:", authTokenKey);
   }
 };
 

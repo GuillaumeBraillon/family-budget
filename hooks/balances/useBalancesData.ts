@@ -395,7 +395,13 @@ export const useBalancesData = ({
 
   const familyPeriodCarryover = useMemo(() => {
     const sortedPeriods = [...filteredPeriodBudgets].sort((a, b) => a.weekNumber - b.weekNumber);
-    const periodNets = sortedPeriods.map((period) => calculateFamilyVariableNet(period.items, familyBeneficiaryIds));
+    // Use only the REAL Standard part for carryover (exclude Extra AND waiting amounts)
+    // nature.standard includes waiting items — we want only what has been actually spent (isPaid)
+    const periodNets = sortedPeriods.map((period) => {
+      const breakdown = calculateFamilyVariableNetBreakdown(period.items, familyBeneficiaryIds);
+      return breakdown.status.realStandard;
+    });
+
     return calculateFamilyVariablePeriodCarryover(familyVariableBudgetMonthly, familyOpeningCarryover, periodNets);
   }, [filteredPeriodBudgets, familyBeneficiaryIds, familyVariableBudgetMonthly, familyOpeningCarryover]);
 

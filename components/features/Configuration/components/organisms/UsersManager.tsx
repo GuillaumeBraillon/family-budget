@@ -38,10 +38,8 @@ export const UsersManager: React.FC<UsersManagerProps> = ({ users, onToggleAutho
   };
 
   const handleAuthorize = async (email: string) => {
-    logger.log("🔐 Tentative d'autorisation:", email);
     try {
       await onToggleAuthorization(email, true);
-      logger.log("✅ Autorisation réussie");
       setFeedback({ type: "success", message: "Utilisateur autorisé avec succès" });
       setTimeout(() => setFeedback(null), 3000);
     } catch (err) {
@@ -52,10 +50,8 @@ export const UsersManager: React.FC<UsersManagerProps> = ({ users, onToggleAutho
   };
 
   const handleRevoke = async (email: string) => {
-    logger.log("🚫 Tentative de révocation:", email);
     try {
       await onToggleAuthorization(email, false);
-      logger.log("✅ Révocation réussie");
       setFeedback({ type: "success", message: "Accès révoqué" });
       setTimeout(() => setFeedback(null), 3000);
     } catch (err) {
@@ -136,7 +132,6 @@ export const UsersManager: React.FC<UsersManagerProps> = ({ users, onToggleAutho
 
                   <button
                     onClick={() => {
-                      logger.log("🗑️ Suppression de:", user.email);
                       onDeleteUser(user.email);
                     }}
                     className="p-2 text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
@@ -248,7 +243,6 @@ export const UsersManager: React.FC<UsersManagerProps> = ({ users, onToggleAutho
 
                   <button
                     onClick={() => {
-                      logger.log("🗑️ Suppression (autorisé):", user.email);
                       onDeleteUser(user.email);
                     }}
                     className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"

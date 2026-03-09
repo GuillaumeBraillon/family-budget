@@ -39,6 +39,7 @@ import {
   PlannedItem,
   AccountType,
 } from "../../types";
+import { resolveBeneficiaryAmounts } from "../../services/financeUtils";
 
 /**
  * Interface des statistiques rapides d'une période.
@@ -349,6 +350,23 @@ export const useOperationsData = ({
       return item.amount;
     };
 
+    const applyBeneficiaryFilterShare = (item: PlannedItem, effectiveAmount: number): number => {
+      if (!filters.beneficiaryIds || filters.beneficiaryIds.length === 0) return effectiveAmount;
+
+      const absoluteTotal = Math.abs(item.amount);
+      if (absoluteTotal <= 0) return 0;
+
+      const selectedBeneficiaries = new Set(filters.beneficiaryIds);
+      const selectedShare = resolveBeneficiaryAmounts(item)
+        .filter((beneficiaryAmount) => selectedBeneficiaries.has(beneficiaryAmount.beneficiaryId))
+        .reduce((sum, beneficiaryAmount) => sum + Math.abs(beneficiaryAmount.amount), 0);
+
+      if (selectedShare <= 0) return 0;
+
+      const ratio = Math.min(1, selectedShare / absoluteTotal);
+      return effectiveAmount * ratio;
+    };
+
     // Initialisation des accumulateurs
     const stats: QuickStats = {
       expenses: { real: 0, planned: 0, pending: 0, extra: 0, delays: 0 },
@@ -378,7 +396,7 @@ export const useOperationsData = ({
         (item.category === "Dépenses" || item.category === "Remboursement" || categories.find((c) => c.name === item.category)?.type === "EXPENSE");
 
       let target;
-      let amount = getEffectiveAmount(item); // Montant effectif basé sur filtres
+      let amount = applyBeneficiaryFilterShare(item, getEffectiveAmount(item)); // Montant effectif basé sur filtres + ventilation bénéficiaire
 
       // Sélection de la cible (dépenses ou revenus)
       if (item.type === "EXPENSE") {
@@ -430,7 +448,7 @@ export const useOperationsData = ({
           (item.category === "Dépenses" || item.category === "Remboursement" || categories.find((c) => c.name === item.category)?.type === "EXPENSE");
 
         let target;
-        let amount = getEffectiveAmount(item);
+        let amount = applyBeneficiaryFilterShare(item, getEffectiveAmount(item));
 
         // Sélection de la cible (dépenses ou revenus)
         if (item.type === "EXPENSE") {
@@ -448,7 +466,7 @@ export const useOperationsData = ({
     }
 
     return stats;
-  }, [unsortedItems, categories, filters.includedTagIds, filters.nature, scope, activeWeek, filteredPeriodBudgets]);
+  }, [unsortedItems, categories, filters.includedTagIds, filters.nature, filters.beneficiaryIds, scope, activeWeek, filteredPeriodBudgets]);
 
   // 6. Formatage du mois court (ex: "jan.", "déc.")
   const monthShort = new Intl.DateTimeFormat("fr-FR", { month: "short" }).format(currentDate);

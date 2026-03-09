@@ -266,15 +266,6 @@ export const useTransferForm = ({ editingTransfer, accounts, savedLabels = [], d
    * @param {() => void} onSuccess - Callback appelé après validation réussie
    * @returns {Transfer | null} Transfer construit ou null si erreur
    *
-   * @example
-   * ```tsx
-   * const transfer = form.handleSubmit(() => {
-   *   console.log("Virement validé !");
-   *   onClose();
-   * });
-   * if (transfer) {
-   *   onUpsertTransfer(transfer);
-   * }
    * ```
    */
   const handleSubmit = (onSuccess: () => void): Transfer | null => {
