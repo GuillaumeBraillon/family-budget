@@ -250,15 +250,15 @@ interface UseBalancesDataParams {
  * @param {UseBalancesDataParams} params - Paramètres de calcul
  * @returns {Object} Données calculées
  * @returns {Object} periodCarryovers - Reports par période
- * @returns {number} budgetPeriodeGlobal - Budget ajusté de la période
- * @returns {number} pendingRecurring - Opérations récurrentes en attente
- * @returns {number} realConsumption - Consommation variable réelle
- * @returns {number} distributableBalance - Reste disponible
+ * @returns {number} totalPersonalBudgetAmount - Budget ajusté de la période
+ * @returns {number} totalPendingRecurringAmount - Opérations récurrentes en attente
+ * @returns {number} personalBudgetConsumedAmount - Consommation variable réelle
+ * @returns {number} distributableBudgetAmount - Reste disponible
  * @returns {Array} checkingAccounts - Comptes courants filtrés
  * @returns {Account | undefined} jointAccount - Compte joint (si existe)
  * @returns {Array} personalAccounts - Comptes personnels
  * @returns {number} totalPersonalBalance - Total des soldes persos
- * @returns {Array} pendingVariablesDetails - Détails variables en attente
+ * @returns {Array} pendingVariableDetails - Détails variables en attente
  * @returns {Array} pendingRecurringDetails - Détails récurrents en attente
  * @returns {Array} totalDebtDetails - Détails dettes par compte
  * @returns {Array} consumedDetails - Détails consommation par compte
@@ -268,9 +268,9 @@ interface UseBalancesDataParams {
  * @example
  * ```tsx
  * const {
- *   budgetPeriodeGlobal,
- *   realConsumption,
- *   distributableBalance,
+ *   totalPersonalBudgetAmount,
+ *   personalBudgetConsumedAmount,
+ *   distributableBudgetAmount,
  *   checkingAccounts,
  *   personalAccounts,
  *   stats
@@ -449,11 +449,11 @@ export const useBalancesData = ({
           status: { real: 0, waiting: 0, realStandard: 0, waitingStandard: 0, realExtra: 0, waitingExtra: 0 },
         };
 
-  const familyVariableBudgetTotal = scope === "MONTH" ? familyPeriodCarryover.monthBudget : familyVariableValuesByPeriod[activeWeek]?.budget || 0;
-  const familyVariableNet = familyVariableNetBreakdown.nature.total;
+  const familyVariableBudgetTotalAmount = scope === "MONTH" ? familyPeriodCarryover.monthBudget : familyVariableValuesByPeriod[activeWeek]?.budget || 0;
+  const familyVariableNetAmount = familyVariableNetBreakdown.nature.total;
   // Remaining = budget - dépenses réelles standard uniquement (sans extras, sans attente)
   // Correspond à displayedFamilyNet = realStandard dans les composants
-  const familyVariableBudgetRemaining = familyVariableBudgetTotal - familyVariableNetBreakdown.status.realStandard;
+  const familyVariableBudgetRemainingAmount = familyVariableBudgetTotalAmount - familyVariableNetBreakdown.status.realStandard;
 
   // 2. Calcul des reports budgétaires (carryover) en mode ALLOWANCE
   const periodCarryovers = useMemo(() => {
@@ -473,10 +473,10 @@ export const useBalancesData = ({
   }, [allowanceContext.availableMonthlyAllowance, filteredPeriodBudgets]);
 
   // 3. Budget alloué pour la période (mode ALLOWANCE uniquement)
-  const budgetPeriodeGlobal = allowanceContext.availableMonthlyAllowance;
+  const totalPersonalBudgetAmount = allowanceContext.availableMonthlyAllowance;
 
   // 4. Calcul des opérations récurrentes en attente
-  const pendingRecurring = stats.fixedToPay + stats.fixedDelays;
+  const totalPendingRecurringAmount = stats.fixedToPay + stats.fixedDelays;
 
   // 5. Identification des comptes
   const checkingAccounts = useMemo(() => accounts.filter((a) => a.type === "COURANT"), [accounts]);
@@ -484,7 +484,7 @@ export const useBalancesData = ({
   const personalAccounts = checkingAccounts.filter((a) => !a.isJoint);
 
   // 6. Calcul du total des soldes personnels actuels
-  const totalPersonalBalance = personalAccounts.reduce((sum, acc) => sum + acc.currentBalance, 0);
+  const totalPersonalBalanceAmount = personalAccounts.reduce((sum, acc) => sum + acc.currentBalance, 0);
 
   // 7. Récupération des données selon le scope
   const scopeItems = useMemo(() => {
@@ -494,20 +494,20 @@ export const useBalancesData = ({
   // 8. Calcul de la consommation variable (dépenses Standard moins tous les revenus attribués)
   const variableItems = scopeItems.filter((i) => !isBudgetExcluded(i));
 
-  let realConsumption = 0;
+  let personalBudgetConsumedAmount = 0;
   variableItems.forEach((i) => {
     if (i.type === "EXPENSE") {
-      realConsumption += getPersonalStandardAmount(i);
+      personalBudgetConsumedAmount += getPersonalStandardAmount(i);
     } else if (i.type === "INCOME" && !i.isSalary) {
-      realConsumption -= getPersonalStandardAmount(i);
+      personalBudgetConsumedAmount -= getPersonalStandardAmount(i);
     }
   });
 
   // Peut être négatif si dépassement (pas de Math.max pour l'afficher correctement)
-  const distributableBalance = budgetPeriodeGlobal - realConsumption;
+  const distributableBudgetAmount = totalPersonalBudgetAmount - personalBudgetConsumedAmount;
 
   // 9. Détails par compte (pour tooltips/affichage)
-  const pendingVariablesDetails = useMemo(() => {
+  const pendingVariableDetails = useMemo(() => {
     // Filtrer les périodes selon le scope
     // MONTH : toutes les périodes
     // PERIOD : cumul des périodes 1 à activeWeek (cohérence avec récurrentes)
@@ -591,20 +591,20 @@ export const useBalancesData = ({
 
   return {
     periodCarryovers,
-    budgetPeriodeGlobal,
+    totalPersonalBudgetAmount,
     familyBeneficiaryIds,
-    familyVariableBudgetTotal,
-    familyVariableNet,
+    familyVariableBudgetTotalAmount,
+    familyVariableNetAmount,
     familyVariableNetBreakdown,
-    familyVariableBudgetRemaining,
-    pendingRecurring,
-    realConsumption,
-    distributableBalance,
+    familyVariableBudgetRemainingAmount,
+    totalPendingRecurringAmount,
+    personalBudgetConsumedAmount,
+    distributableBudgetAmount,
     checkingAccounts,
     jointAccount,
     personalAccounts,
-    totalPersonalBalance,
-    pendingVariablesDetails,
+    totalPersonalBalanceAmount,
+    pendingVariableDetails,
     pendingRecurringDetails,
     totalDebtDetails,
     consumedDetails,

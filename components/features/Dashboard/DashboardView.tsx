@@ -85,16 +85,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   const {
     familyBeneficiaryIds,
-    familyVariableBudgetTotal,
-    familyVariableNet,
+    familyVariableBudgetTotalAmount,
+    familyVariableNetAmount,
     familyVariableNetBreakdown,
-    familyVariableBudgetRemaining,
-    pendingVariablesDetails,
+    familyVariableBudgetRemainingAmount,
+    pendingVariableDetails,
     pendingRecurringDetails,
     filteredPeriodBudgets,
-    budgetPeriodeGlobal,
-    realConsumption,
-    distributableBalance,
+    totalPersonalBudgetAmount,
+    personalBudgetConsumedAmount,
+    distributableBudgetAmount,
     consumedDetails,
   } = useBalancesData({
     accounts,
@@ -110,7 +110,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     activeWeek,
   });
 
-  const totalPendingRecurring = useMemo(() => pendingRecurringDetails.reduce((sum, d) => sum + d.amount, 0), [pendingRecurringDetails]);
+  const totalPendingRecurringAmount = useMemo(() => pendingRecurringDetails.reduce((sum, d) => sum + d.amount, 0), [pendingRecurringDetails]);
 
   // --- SOLDES AJUSTÉS À LA PÉRIODE SÉLECTIONNÉE ---
   // En mode MONTH : coupure = dernier jour du mois
@@ -127,17 +127,39 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   }, [scope, activeWeek, filteredPeriodBudgets, currentDate]);
 
   const accountsAtDate = useAccountBalancesAtDate(accounts, paidItemsFromBudget, variableTransactions, transfers, cutoffDate);
-  const totalPendingVariables = useMemo(() => pendingVariablesDetails.reduce((sum, d) => sum + d.amount, 0), [pendingVariablesDetails]);
-  const totalPending = totalPendingRecurring + totalPendingVariables;
+  const totalPendingVariableAmount = useMemo(() => pendingVariableDetails.reduce((sum, d) => sum + d.amount, 0), [pendingVariableDetails]);
+  const totalPendingAmount = totalPendingRecurringAmount + totalPendingVariableAmount;
 
-  const standardNet = familyVariableNetBreakdown?.nature.standard || 0;
+  const overduePendingRecurringAmount = useMemo(() => {
+    return filteredPeriodBudgets
+      .filter((period) => period.weekNumber < activeWeek)
+      .flatMap((period) => period.items)
+      .filter(
+        (item) =>
+          item.source === "RECURRING" && item.type === "EXPENSE" && !item.isPaid && item.category !== "Virement Interne" && item.subCategory !== "Intérêts"
+      )
+      .reduce((sum, item) => sum + item.amount, 0);
+  }, [filteredPeriodBudgets, activeWeek]);
+
+  const overduePendingVariableAmount = useMemo(() => {
+    return filteredPeriodBudgets
+      .filter((period) => period.weekNumber < activeWeek)
+      .flatMap((period) => period.items)
+      .filter(
+        (item) =>
+          item.source === "VARIABLE" && item.type === "EXPENSE" && !item.isPaid && item.category !== "Virement Interne" && item.subCategory !== "Intérêts"
+      )
+      .reduce((sum, item) => sum + item.amount, 0);
+  }, [filteredPeriodBudgets, activeWeek]);
+
+  const standardAmount = familyVariableNetBreakdown?.nature.standard || 0;
   const refundsAmount = familyVariableNetBreakdown?.nature.refunds || 0;
-  const extraNet = familyVariableNetBreakdown?.nature.extra || 0;
-  const realNet = familyVariableNetBreakdown?.status.real ?? 0;
-  const waitingNet = familyVariableNetBreakdown?.status.waiting || 0;
-  const waitingStandardNet = familyVariableNetBreakdown?.status.waitingStandard ?? 0;
-  const totalNet = familyVariableNetBreakdown?.status.real ?? familyVariableNet;
-  const displayedFamilyNet = standardNet - waitingStandardNet;
+  const extraAmount = familyVariableNetBreakdown?.nature.extra || 0;
+  const realAmount = familyVariableNetBreakdown?.status.real ?? 0;
+  const waitingAmount = familyVariableNetBreakdown?.status.waiting || 0;
+  const waitingStandardAmount = familyVariableNetBreakdown?.status.waitingStandard ?? 0;
+  const totalAmount = familyVariableNetBreakdown?.status.real ?? familyVariableNetAmount;
+  const displayedFamilyAmount = standardAmount - waitingStandardAmount;
 
   const handleNavigateToOperations = (date: Date, filters: Partial<OperationFilters>) => {
     onNavigateToPlanner(date, filters, scope === "PERIOD" ? activeWeek : undefined);
@@ -160,36 +182,38 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5 md:gap-2">
         {/* SECTION BUDGET PERSONNEL */}
         <PersonalBudgetSummary
-          totalPersonalBudget={budgetPeriodeGlobal}
-          spentPersonalBudget={realConsumption}
-          distributableBudget={distributableBalance}
+          totalPersonalBudgetAmount={totalPersonalBudgetAmount}
+          spentPersonalBudgetAmount={personalBudgetConsumedAmount}
+          distributableBudgetAmount={distributableBudgetAmount}
           beneficiariesDetails={consumedDetails}
           currentDate={currentDate}
           onNavigateToOperations={handleNavigateToMonth}
         />
         {/* SECTION BUDGET FAMILLE */}
         <FamilyVariableBalanceCard
-          familyVariableBudgetTotal={familyVariableBudgetTotal}
-          familyVariableNet={familyVariableNet}
-          familyVariableRemaining={familyVariableBudgetRemaining}
-          standardNet={standardNet}
+          familyVariableBudgetTotalAmount={familyVariableBudgetTotalAmount}
+          familyVariableNetAmount={familyVariableNetAmount}
+          familyVariableRemainingAmount={familyVariableBudgetRemainingAmount}
+          standardAmount={standardAmount}
           refundsAmount={refundsAmount}
-          extraNet={extraNet}
-          totalNet={totalNet}
-          realNet={realNet}
-          waitingNet={waitingNet}
-          displayedFamilyNet={displayedFamilyNet}
+          extraAmount={extraAmount}
+          totalAmount={totalAmount}
+          realAmount={realAmount}
+          waitingAmount={waitingAmount}
+          displayedFamilyAmount={displayedFamilyAmount}
           familyBeneficiaryIds={familyBeneficiaryIds}
           currentDate={currentDate}
-          onNavigate={handleNavigateToOperations}
+          onNavigateToOperations={handleNavigateToOperations}
         />
         {/* SECTION OPÉRATIONS EN ATTENTE */}
         <PendingOperationsCard
-          remainingToPay={totalPending}
-          pendingRecurring={totalPendingRecurring}
-          totalPendingVariable={totalPendingVariables}
+          totalPendingAmount={totalPendingAmount}
+          totalPendingRecurringAmount={totalPendingRecurringAmount}
+          totalPendingVariableAmount={totalPendingVariableAmount}
+          overduePendingRecurringAmount={overduePendingRecurringAmount}
+          overduePendingVariableAmount={overduePendingVariableAmount}
           currentDate={currentDate}
-          onNavigate={handleNavigateToOperations}
+          onNavigateToOperations={handleNavigateToOperations}
         />
       </div>
 

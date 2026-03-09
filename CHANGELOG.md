@@ -7,6 +7,24 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.9.3] - 2026-03-09
+
+### ✨ Améliorations
+
+- `PendingOperationsCard` : ajout de l'affichage explicite des montants **en retard** (récurrentes et variables), séparés des montants totaux en attente.
+- `DashboardView` : calcul dédié des retards basé sur les périodes précédentes non pointées (`weekNumber < activeWeek`) pour les dépenses `RECURRING` et `VARIABLE`.
+
+### ♻️ Refactor
+
+- Harmonisation globale du naming des montants avec suffixe `Amount` sur le flux `useBalancesData` → `DashboardView` → cartes Balances/Dashboard.
+- Standardisation des callbacks métier de navigation des cartes : `onNavigateToOperations` (au lieu d'un mix `onNavigate`/`onNavigateToOperations`).
+- `ClickableAmount` rendu plus robuste : props de navigation optionnelles avec fallback non cliquable sans branche conditionnelle côté parent.
+
+### 🧹 Nettoyage
+
+- Mise à jour des JSDoc et exemples pour refléter la nouvelle convention de nommage.
+- Suppression des alias/variables obsolètes après renommage (cohérence et maintenabilité).
+
 ## [2.9.2] - 2026-03-09
 
 ### ✅ Corrections

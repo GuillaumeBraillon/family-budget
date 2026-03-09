@@ -22,14 +22,14 @@ import { buildOperationsFilters } from "../../../services/financeUtils";
 interface ClickableAmountProps {
   /** Contenu à afficher (montant, texte, badge, etc.) */
   children: React.ReactNode;
-  /** Date du mois à afficher dans Operations */
-  date: Date;
+  /** Date du mois à afficher dans Operations (optionnel) */
+  date?: Date;
   /** Filtres à appliquer dans Operations */
   filters: Partial<OperationFilters>;
   /** Numéro de semaine/période (optionnel) */
   weekNumber?: number;
-  /** Callback de navigation */
-  onNavigate: (date: Date, filters: Partial<OperationFilters>, weekNumber?: number) => void;
+  /** Callback de navigation (optionnel) */
+  onNavigate?: (date: Date, filters: Partial<OperationFilters>, weekNumber?: number) => void;
   /** Classes CSS additionnelles */
   className?: string;
   /** Titre au survol (tooltip natif) */
@@ -76,18 +76,38 @@ export const ClickableAmount: React.FC<ClickableAmountProps> = ({ children, date
   // Utilise buildOperationsFilters (source de vérité unique) pour merger les defaults
   const mergedFilters = buildOperationsFilters(filters);
 
+  const isClickable = typeof onNavigate === "function" && !!date;
+
   const handleClick = (e: React.MouseEvent) => {
+    if (!isClickable) return;
     e.stopPropagation();
-    onNavigate(date, mergedFilters, weekNumber);
+    onNavigate?.(date as Date, mergedFilters, weekNumber);
   };
 
-  const baseClasses = "cursor-pointer transition-colors";
-  const combinedClasses = `${baseClasses} ${className}`;
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (!isClickable) return;
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      // Reuse handleClick semantics
+      (handleClick as unknown as (ev: React.MouseEvent) => void)(e as unknown as React.MouseEvent);
+    }
+  };
+
+  const baseClasses = `${isClickable ? "cursor-pointer transition-colors" : ""}`;
+  const combinedClasses = `${baseClasses} ${className}`.trim();
 
   const Element = as;
 
   return (
-    <Element onClick={handleClick} className={combinedClasses} title={title} type={as === "button" ? "button" : undefined}>
+    <Element
+      onClick={isClickable ? handleClick : undefined}
+      onKeyDown={isClickable ? handleKeyDown : undefined}
+      role={isClickable ? "button" : undefined}
+      tabIndex={isClickable ? 0 : undefined}
+      className={combinedClasses}
+      title={title}
+      type={as === "button" ? "button" : undefined}
+    >
       {children}
     </Element>
   );

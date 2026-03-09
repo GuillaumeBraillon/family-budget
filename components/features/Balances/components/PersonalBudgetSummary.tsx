@@ -7,18 +7,18 @@ import { OperationFilters } from "../../../../types";
 import { BudgetProgressBar } from "../../Dashboard/components/BudgetProgressBar";
 
 interface PersonalBudgetSummaryProps {
-  totalPersonalBudget: number;
-  spentPersonalBudget: number;
-  distributableBudget: number;
+  totalPersonalBudgetAmount: number;
+  spentPersonalBudgetAmount: number;
+  distributableBudgetAmount: number;
   beneficiariesDetails?: { beneficiaryId?: string; name: string; amount: number; available?: number; remaining?: number }[];
   currentDate?: Date;
   onNavigateToOperations?: (date: Date, filters: Partial<OperationFilters>) => void;
 }
 
 export const PersonalBudgetSummary: React.FC<PersonalBudgetSummaryProps> = ({
-  totalPersonalBudget,
-  spentPersonalBudget,
-  distributableBudget: _distributable,
+  totalPersonalBudgetAmount,
+  spentPersonalBudgetAmount,
+  distributableBudgetAmount: _distributableAmount,
   beneficiariesDetails = [],
   currentDate,
   onNavigateToOperations,
@@ -115,25 +115,21 @@ export const PersonalBudgetSummary: React.FC<PersonalBudgetSummaryProps> = ({
                     {beneficiariesDetails.map((d, i) => (
                       <div key={i} className="flex items-baseline justify-between gap-3 text-[11px]">
                         <span className="font-bold text-rose-700 truncate">{d.name}</span>
-                        {d.beneficiaryId && onNavigateToOperations && currentDate ? (
-                          <ClickableAmount
-                            date={currentDate}
-                            filters={buildOperationsFilters({
-                              flux: "ALL",
-                              source: "ALL",
-                              status: "ALL",
-                              nature: "EXCLUDE",
-                              beneficiaryIds: [d.beneficiaryId],
-                            })}
-                            onNavigate={onNavigateToOperations}
-                            as="button"
-                            className="font-black text-rose-700 whitespace-nowrap hover:underline hover:text-rose-500"
-                          >
-                            {d.amount.toFixed(2)} €
-                          </ClickableAmount>
-                        ) : (
-                          <span className="font-black text-rose-700 whitespace-nowrap">{d.amount.toFixed(2)} €</span>
-                        )}
+                        <ClickableAmount
+                          date={currentDate}
+                          filters={buildOperationsFilters({
+                            flux: "ALL",
+                            source: "ALL",
+                            status: "ALL",
+                            nature: "EXCLUDE",
+                            beneficiaryIds: d.beneficiaryId ? [d.beneficiaryId] : [],
+                          })}
+                          onNavigate={onNavigateToOperations}
+                          as="button"
+                          className="font-black text-rose-700 whitespace-nowrap hover:underline hover:text-rose-500"
+                        >
+                          {d.amount.toFixed(2)} €
+                        </ClickableAmount>
                       </div>
                     ))}
                     <div className="flex items-baseline justify-between gap-3 text-[11px] border-t border-rose-200 pt-1 mt-1">
@@ -151,7 +147,7 @@ export const PersonalBudgetSummary: React.FC<PersonalBudgetSummaryProps> = ({
           {/* Reste budget personnel */}
           <div className="flex-1 flex flex-col gap-2">
             <div
-              className={`rounded-2xl p-4 border ${totalPersonalBudget - spentPersonalBudget >= 0 ? "bg-emerald-50 border-emerald-200" : "bg-rose-50 border-rose-200"}`}
+              className={`rounded-2xl p-4 border ${totalPersonalBudgetAmount - spentPersonalBudgetAmount >= 0 ? "bg-emerald-50 border-emerald-200" : "bg-rose-50 border-rose-200"}`}
             >
               <div className="space-y-1.5">
                 <div className="flex items-center">

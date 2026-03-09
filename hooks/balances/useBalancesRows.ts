@@ -95,9 +95,9 @@ interface UseBalancesRowsParams {
  * const { jointRows, personalRows, totalPersonalRow, virLddsTotal } = useBalancesRows({
  *   accounts,
  *   people,
- *   budgetPeriodeGlobal,
- *   totalPersonalBalance,
- *   distributableBalance,
+ *   totalPersonalBudgetAmount,
+ *   totalPersonalBalanceAmount,
+ *   distributableBudgetAmount,
  *   jointAccount,
  *   personalAccounts,
  *   stats

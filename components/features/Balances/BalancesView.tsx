@@ -71,15 +71,7 @@ export const BalancesView: React.FC<BalancesViewProps> = ({
   // --- HOOKS SPÉCIALISÉS (Logique métier déléguée) ---
 
   // Hook 1 : Calculs de données (carryovers, budget, consommation, détails)
-  const {
-    pendingRecurring: _pendingRecurring,
-    distributableBalance,
-    jointAccount,
-    personalAccounts,
-    consumedDetails,
-    stats,
-    filteredPeriodBudgets,
-  } = useBalancesData({
+  const { distributableBudgetAmount, jointAccount, personalAccounts, consumedDetails, stats, filteredPeriodBudgets } = useBalancesData({
     accounts: sortedAccounts,
     people,
     configs,
@@ -141,7 +133,7 @@ export const BalancesView: React.FC<BalancesViewProps> = ({
         onNavigateToPlanner={onNavigateToPlanner}
         currentDate={currentDate}
         activeWeek={scope === "PERIOD" ? activeWeek : undefined}
-        distributableAmount={distributableBalance}
+        distributableAmount={distributableBudgetAmount}
         onMove={handleAccountMove}
         isManualSort={sortKey === "manual"}
       />
