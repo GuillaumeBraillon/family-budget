@@ -37,18 +37,18 @@ export const OperationsList: React.FC<OperationsListProps> = ({
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
-
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     if (active.id !== over?.id && onReorder) {
       const oldIndex = items.findIndex((i) => i.instanceId === active.id);
       const newIndex = items.findIndex((i) => i.instanceId === over?.id);
-
       if (oldIndex !== -1 && newIndex !== -1) {
         const itemToMove = items[oldIndex];
         // On passe simplement les index, le parent calculera la position mathématique
         onReorder(itemToMove, oldIndex, newIndex);
       }
+    } else {
+      // no-op
     }
   };
 

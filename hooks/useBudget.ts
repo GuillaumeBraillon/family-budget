@@ -374,26 +374,60 @@ export const useBudget = () => {
   };
 
   /**
-   * Déplace une opération dans l'ordre d'affichage manuel.
+   * Retire le suffixe mensuel (c_noveo-2026-03 → c_noveo).
+   * Utilisé pour écrire des IDs stables cross-mois dans operations_sorting.
    */
-  const moveItem = async (item: PlannedItem, newIndex: number) => {
-    // Le système utilise maintenant operations_sorting dans app_settings
-    // On ne touche plus à paidItems.position
+  const toStableId = (id: string) => id.replace(/-\d{4}-\d{2}$/, "");
 
+  /**
+   * Déplace une opération dans l'ordre d'affichage manuel.
+   * Normalise et déduplique l'array à chaque écriture pour auto-réparer
+   * les données corrompues (doublons, IDs mensuels mélangés).
+   */
+  const moveItem = async (item: PlannedItem, targetId: string) => {
     const currentSorting = budgetDataRef.current.settings.operations_sorting || [];
-    const newSorting = [...currentSorting];
 
-    // Si l'item n'est pas dans la liste, on l'ajoute
-    if (!newSorting.includes(item.instanceId)) {
-      newSorting.push(item.instanceId);
+    // Normaliser + dédupliquer (auto-réparation de l'array corrompu)
+    const seen = new Set<string>();
+    const newSorting = currentSorting.map(toStableId).filter((id) => {
+      if (seen.has(id)) return false;
+      seen.add(id);
+      return true;
+    });
+
+    const stableItemId = toStableId(item.instanceId);
+    const stableTargetId = toStableId(targetId);
+
+    if (!newSorting.includes(stableItemId)) {
+      newSorting.push(stableItemId);
+    }
+    if (!newSorting.includes(stableTargetId)) {
+      newSorting.push(stableTargetId);
     }
 
-    // Calcul du déplacement
-    const oldIndex = newSorting.indexOf(item.instanceId);
-    if (oldIndex !== -1) {
-      newSorting.splice(oldIndex, 1);
-      newSorting.splice(newIndex, 0, item.instanceId);
+    const oldIndex = newSorting.indexOf(stableItemId);
+    if (oldIndex === -1) return;
+
+    // Capturer l'index original du target AVANT suppression pour détecter la direction
+    const originalTargetIndex = newSorting.indexOf(stableTargetId);
+    const movingDown = originalTargetIndex > oldIndex;
+
+    newSorting.splice(oldIndex, 1);
+
+    // Re-chercher le target dans le tableau modifié (l'index a peut-être décalé)
+    const targetIndex = newSorting.indexOf(stableTargetId);
+    if (targetIndex === -1) {
+      newSorting.push(stableItemId);
+    } else if (movingDown) {
+      // Déplacement vers le bas : insérer APRÈS le target
+      // (dnd-kit sémantique : l'item prend la place juste après l'item survolé)
+      newSorting.splice(targetIndex + 1, 0, stableItemId);
+    } else {
+      // Déplacement vers le haut : insérer AVANT le target
+      newSorting.splice(targetIndex, 0, stableItemId);
     }
+
+    // moveItem: updateOperationsSorting called with normalized, deduped array
 
     await updateOperationsSorting(newSorting);
   };
@@ -408,8 +442,15 @@ export const useBudget = () => {
     // Si c'est une nouvelle transaction, on l'ajoute au tri manuel
     if (isNew) {
       const currentSorting = budgetDataRef.current.settings.operations_sorting || [];
-      if (!currentSorting.includes(tx.id)) {
-        const newSorting = [tx.id, ...currentSorting];
+      // Normaliser + dédupliquer au passage
+      const seen = new Set<string>();
+      const stableSorting = currentSorting.map(toStableId).filter((id) => {
+        if (seen.has(id)) return false;
+        seen.add(id);
+        return true;
+      });
+      if (!stableSorting.includes(tx.id)) {
+        const newSorting = [tx.id, ...stableSorting];
         await apiUpdateSettings({ ...budgetDataRef.current.settings, operations_sorting: newSorting });
       }
     }

@@ -49,7 +49,7 @@ interface OperationsViewProps {
   onTogglePaid: (details: PaidItemDetails | null, instanceId: string) => void;
   onUpsertVariable: (t: VariableTransaction) => void;
   onDeleteVariable: (id: string) => void;
-  onMoveItem?: (item: PlannedItem, newIndex: number) => void;
+  onMoveItem?: (item: PlannedItem, targetId: string) => void;
   onVariableCreated?: (type: "EXPENSE" | "INCOME") => void;
 }
 
@@ -238,9 +238,13 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
   const handleReorder = (item: PlannedItem, oldIndex: number, newIndex: number) => {
     try {
       if (onMoveItem && sortKey === "manual") {
-        // Avec le nouveau système, on passe simplement l'item et le nouvel index global
-        // Le hook useBudget s'occupera de mettre à jour l'array complet
-        onMoveItem(item, newIndex);
+        // On passe l'instanceId du drop target (et non un index d'affichage)
+        // pour que moveItem trouve la bonne position dans l'array global operations_sorting
+        const targetId = currentItems[newIndex]?.instanceId;
+        // reorder:start
+        if (targetId) {
+          onMoveItem(item, targetId);
+        }
       }
     } catch (err) {
       showError(err as Error, "Drag & drop d'opération");

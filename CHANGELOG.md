@@ -7,6 +7,18 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.9.5] - 2026-03-10
+
+### ✅ Corrections
+
+- Correction du comportement de réorganisation (drag & drop) : l'insertion se fait désormais correctement avant/after la cible selon la direction du déplacement.
+- Normalisation et déduplication automatique de `operations_sorting` pour réparer les entrées mixtes (ex: `c_noveo-2026-03` vs `c_noveo`) et garantir un tri stable cross-mois.
+
+### 🔧 Notes techniques
+
+- `moveItem` (hook `useBudget`) : normalise et déduplique l'array `operations_sorting` avant d'écrire pour auto-réparer les données corrompues.
+- `usePlanner` et `useOperationsSorting` : lecture plus robuste du tableau `operations_sorting` via format stable pour éviter les comportements inconsistants.
+
 ## [2.9.4] - 2026-03-09
 
 ### ✅ Corrections
