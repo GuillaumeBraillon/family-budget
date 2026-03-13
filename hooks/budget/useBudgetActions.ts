@@ -23,7 +23,6 @@
  * - services/logger : Traçage des opérations
  * - services/errorFormatter : Formatage des erreurs DB
  */
-import { logger } from "../../services/logger";
 import { formatDatabaseError } from "../../services/errorFormatter";
 import type { Account } from "../../types";
 import {

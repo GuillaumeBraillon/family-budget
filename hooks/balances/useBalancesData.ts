@@ -450,6 +450,9 @@ export const useBalancesData = ({
         };
 
   const familyVariableBudgetTotalAmount = scope === "MONTH" ? familyPeriodCarryover.monthBudget : familyVariableValuesByPeriod[activeWeek]?.budget || 0;
+  const familyVariableMonthBudgetAmount = familyPeriodCarryover.monthBudget;
+  const familyVariablePeriodsCount = filteredPeriodBudgets.length;
+  const familyVariablePeriodValue = settings.period_value;
   const familyVariableNetAmount = familyVariableNetBreakdown.nature.total;
   // Remaining = budget - dépenses réelles standard uniquement (sans extras, sans attente)
   // Correspond à displayedFamilyNet = realStandard dans les composants
@@ -519,18 +522,13 @@ export const useBalancesData = ({
           .flatMap((w) => w.items)
           .filter(
             (i) =>
-              i.accountId === acc.id &&
-              i.source === "VARIABLE" &&
-              i.type === "EXPENSE" &&
-              !i.isPaid &&
-              i.category !== "Virement Interne" &&
-              i.subCategory !== "Intérêts"
+              i.accountId === acc.id && i.source === "VARIABLE" && !i.isPaid && i.category !== "Virement Interne" && i.subCategory !== "Intérêts" && !i.isSalary
           )
-          .reduce((sum, i) => sum + i.amount, 0);
+          .reduce((sum, i) => sum + (i.type === "INCOME" ? -i.amount : i.amount), 0);
 
         return { name: acc.name, amount: totalPending };
       })
-      .filter((x) => x.amount > 0);
+      .filter((x) => x.amount !== 0);
   }, [filteredPeriodBudgets, checkingAccounts, scope, activeWeek]);
 
   const pendingRecurringDetails = useMemo(() => {
@@ -541,14 +539,14 @@ export const useBalancesData = ({
 
     const relevantItems = relevantPeriods
       .flatMap((w) => w.items)
-      .filter((i) => i.source === "RECURRING" && !i.isPaid && i.category !== "Virement Interne" && i.subCategory !== "Intérêts" && i.type === "EXPENSE");
+      .filter((i) => i.source === "RECURRING" && !i.isPaid && i.category !== "Virement Interne" && i.subCategory !== "Intérêts" && !i.isSalary);
 
     return checkingAccounts
       .map((acc) => {
-        const amount = relevantItems.filter((i) => i.accountId === acc.id).reduce((sum, i) => sum + i.amount, 0);
+        const amount = relevantItems.filter((i) => i.accountId === acc.id).reduce((sum, i) => sum + (i.type === "INCOME" ? -i.amount : i.amount), 0);
         return { name: acc.name, amount };
       })
-      .filter((x) => x.amount > 0);
+      .filter((x) => x.amount !== 0);
   }, [filteredPeriodBudgets, activeWeek, checkingAccounts, scope]);
 
   const totalDebtDetails = useMemo(() => {
@@ -594,6 +592,9 @@ export const useBalancesData = ({
     totalPersonalBudgetAmount,
     familyBeneficiaryIds,
     familyVariableBudgetTotalAmount,
+    familyVariableMonthBudgetAmount,
+    familyVariablePeriodsCount,
+    familyVariablePeriodValue,
     familyVariableNetAmount,
     familyVariableNetBreakdown,
     familyVariableBudgetRemainingAmount,

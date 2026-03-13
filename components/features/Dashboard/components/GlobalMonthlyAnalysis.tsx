@@ -1,6 +1,5 @@
 import React from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "../../../ui/Card";
-import { Landmark } from "lucide-react";
 import { ClickableAmount } from "../../../ui/atoms/ClickableAmount";
 import { getGlobalAnalysisFilters } from "../../../../hooks/dashboard";
 import { OperationFilters } from "../../../../types";

@@ -85,6 +85,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const {
     familyBeneficiaryIds,
     familyVariableBudgetTotalAmount,
+    familyVariableMonthBudgetAmount,
+    familyVariablePeriodsCount,
+    familyVariablePeriodValue,
     familyVariableNetAmount,
     familyVariableNetBreakdown,
     familyVariableBudgetRemainingAmount,
@@ -129,26 +132,24 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const totalPendingVariableAmount = useMemo(() => pendingVariableDetails.reduce((sum, d) => sum + d.amount, 0), [pendingVariableDetails]);
   const totalPendingAmount = totalPendingRecurringAmount + totalPendingVariableAmount;
 
+  // --- CALCUL DES RETARDS (OPÉRATIONS EN ATTENTE AVANT LA COUPURE) ---
   const overduePendingRecurringAmount = useMemo(() => {
     return filteredPeriodBudgets
       .filter((period) => period.weekNumber < activeWeek)
       .flatMap((period) => period.items)
       .filter(
-        (item) =>
-          item.source === "RECURRING" && item.type === "EXPENSE" && !item.isPaid && item.category !== "Virement Interne" && item.subCategory !== "Intérêts"
+        (item) => item.source === "RECURRING" && !item.isPaid && item.category !== "Virement Interne" && item.subCategory !== "Intérêts" && !item.isSalary
       )
-      .reduce((sum, item) => sum + item.amount, 0);
+      .reduce((sum, item) => sum + (item.type === "INCOME" ? -item.amount : item.amount), 0);
   }, [filteredPeriodBudgets, activeWeek]);
 
+  // Même logique pour les variables
   const overduePendingVariableAmount = useMemo(() => {
     return filteredPeriodBudgets
       .filter((period) => period.weekNumber < activeWeek)
       .flatMap((period) => period.items)
-      .filter(
-        (item) =>
-          item.source === "VARIABLE" && item.type === "EXPENSE" && !item.isPaid && item.category !== "Virement Interne" && item.subCategory !== "Intérêts"
-      )
-      .reduce((sum, item) => sum + item.amount, 0);
+      .filter((item) => item.source === "VARIABLE" && !item.isPaid && item.category !== "Virement Interne" && item.subCategory !== "Intérêts" && !item.isSalary)
+      .reduce((sum, item) => sum + (item.type === "INCOME" ? -item.amount : item.amount), 0);
   }, [filteredPeriodBudgets, activeWeek]);
 
   const standardAmount = familyVariableNetBreakdown?.nature.standard || 0;
@@ -191,6 +192,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         {/* SECTION BUDGET FAMILLE */}
         <FamilyVariableBalanceCard
           familyVariableBudgetTotalAmount={familyVariableBudgetTotalAmount}
+          familyVariableMonthBudgetAmount={familyVariableMonthBudgetAmount}
+          familyVariablePeriodsCount={familyVariablePeriodsCount}
+          familyVariablePeriodValue={familyVariablePeriodValue}
           familyVariableNetAmount={familyVariableNetAmount}
           familyVariableRemainingAmount={familyVariableBudgetRemainingAmount}
           standardAmount={standardAmount}

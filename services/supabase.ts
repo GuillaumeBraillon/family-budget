@@ -1,5 +1,4 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
-import { logger } from "./logger";
 
 /**
  * Récupère la configuration Supabase.

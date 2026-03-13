@@ -7,6 +7,25 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.9.6] - 2026-03-13
+
+### ✅ Corrections
+
+- Inclusion des revenus (`INCOME`) dans les calculs des montants en attente : les totaux `Récurrentes` / `Variables` et les montants `En retard` prennent désormais en compte les revenus non-salariaux (somme dépenses - revenus).
+- Correction du calcul des détails par compte : les montants nets négatifs sont conservés (ne sont plus filtrés) et contribuent correctement au total.
+- Exclusion explicite des salaires (`isSalary`) des totaux en attente.
+
+### 🔧 UI / Améliorations
+
+- `PendingOperationsCard` : affichage des signes inversé pour une lecture claire « à payer » (total, sous-totaux, tooltip et retards).
+- `FamilyVariableBalanceCard` : harmonisation des signes, enrichissement du tooltip avec le détail du calcul du solde de période (budget du mois, report, base budget / période, nombre de périodes et valeur `period_value`).
+- Transmission de `monthBudget`, `periodsCount` et `period_value` depuis `useBalancesData` → `DashboardView` → `FamilyVariableBalanceCard` pour un affichage exact et cohérent.
+
+### 🧰 Maintenance
+
+- Correction d'avertissements ESLint dans `UsersManager.tsx` (suppression du `any` implicite et du paramètre `catch` inutilisé).
+- Passe `eslint --fix` appliquée sur les fichiers modifiés.
+
 ## [2.9.5] - 2026-03-10
 
 ### ✅ Corrections

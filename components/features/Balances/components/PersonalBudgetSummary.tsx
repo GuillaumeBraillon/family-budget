@@ -17,8 +17,6 @@ interface PersonalBudgetSummaryProps {
 }
 
 export const PersonalBudgetSummary: React.FC<PersonalBudgetSummaryProps> = ({
-  totalPersonalBudgetAmount,
-  spentPersonalBudgetAmount,
   distributableBudgetAmount: _distributableAmount,
   beneficiariesDetails = [],
   currentDate,

@@ -66,7 +66,7 @@ export const UsersManager: React.FC<UsersManagerProps> = ({ users, onToggleAutho
     // Accepte soit une Date, soit une chaîne venant de la DB.
     try {
       const normalized = typeof dateStr === "string" && dateStr.indexOf(" ") > -1 ? dateStr.replace(" ", "T") : dateStr;
-      const d = typeof normalized === "string" ? new Date(normalized) : new Date(normalized as any);
+      const d = new Date(normalized);
       if (isNaN(d.getTime())) return "Jamais";
       return d.toLocaleDateString("fr-FR", {
         day: "numeric",
@@ -75,7 +75,7 @@ export const UsersManager: React.FC<UsersManagerProps> = ({ users, onToggleAutho
         hour: "2-digit",
         minute: "2-digit",
       });
-    } catch (err) {
+    } catch {
       return "Jamais";
     }
   };

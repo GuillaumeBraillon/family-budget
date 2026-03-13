@@ -26,6 +26,7 @@ export const PendingOperationsCard: React.FC<PendingOperationsCardProps> = ({
   onNavigateToOperations,
 }) => {
   const roundTo0 = (amount: number) => Math.round(amount);
+  const invert = (amount: number) => -amount;
   const subCardClass = "rounded-2xl p-4 border border-slate-200 bg-slate-50 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between";
   const sectionLabelClass = "text-xs uppercase tracking-widest text-slate-400 font-bold";
 
@@ -35,15 +36,15 @@ export const PendingOperationsCard: React.FC<PendingOperationsCardProps> = ({
       <p className="font-bold text-indigo-700 border-b border-slate-200 pb-1 mb-1">Détail total compte joint :</p>
       <div className="flex justify-between gap-4">
         <span>Récurrentes</span>
-        <span className="font-mono font-bold">{totalPendingRecurringAmount.toFixed(2)}€</span>
+        <span className="font-mono font-bold">{invert(totalPendingRecurringAmount).toFixed(2)}€</span>
       </div>
       <div className="flex justify-between gap-4">
         <span>Variables</span>
-        <span className="font-mono font-bold">{totalPendingVariableAmount.toFixed(2)}€</span>
+        <span className="font-mono font-bold">{invert(totalPendingVariableAmount).toFixed(2)}€</span>
       </div>
       <div className="flex justify-between gap-4 border-t border-slate-200 pt-1 mt-1">
         <span>Total</span>
-        <span className="font-mono font-bold">{totalPendingAmount.toFixed(2)}€</span>
+        <span className="font-mono font-bold">{invert(totalPendingAmount).toFixed(2)}€</span>
       </div>
     </div>
   );
@@ -64,7 +65,7 @@ export const PendingOperationsCard: React.FC<PendingOperationsCardProps> = ({
               as="button"
               className="text-2xl font-black text-indigo-500 hover:opacity-80"
             >
-              {roundTo0(totalPendingAmount)} €
+              {roundTo0(invert(totalPendingAmount))} €
             </ClickableAmount>
           </div>
         </div>
@@ -86,9 +87,9 @@ export const PendingOperationsCard: React.FC<PendingOperationsCardProps> = ({
               as="button"
               className="text-3xl font-black text-slate-700 hover:text-slate-600"
             >
-              {roundTo0(totalPendingRecurringAmount)} €
+              {roundTo0(invert(totalPendingRecurringAmount))} €
             </ClickableAmount>
-            <div className="mt-2 text-xs text-slate-400 text-center">En retard : {roundTo0(overduePendingRecurringAmount)} €</div>
+            <div className="mt-2 text-xs text-slate-400 text-center">En retard : {roundTo0(invert(overduePendingRecurringAmount))} €</div>
           </div>
 
           <div className={subCardClass}>
@@ -105,9 +106,9 @@ export const PendingOperationsCard: React.FC<PendingOperationsCardProps> = ({
               as="button"
               className="text-3xl font-black text-indigo-600 hover:text-indigo-500"
             >
-              {roundTo0(totalPendingVariableAmount)} €
+              {roundTo0(invert(totalPendingVariableAmount))} €
             </ClickableAmount>
-            <div className="mt-2 text-xs text-slate-400 text-center">En retard : {roundTo0(overduePendingVariableAmount)} €</div>
+            <div className="mt-2 text-xs text-slate-400 text-center">En retard : {roundTo0(invert(overduePendingVariableAmount))} €</div>
           </div>
         </div>
       </CardContent>

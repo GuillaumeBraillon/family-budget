@@ -9,6 +9,9 @@ import { Card, CardHeader, CardTitle, CardContent } from "../../../ui/Card";
 
 interface FamilyVariableBalanceCardProps {
   familyVariableBudgetTotalAmount: number;
+  familyVariableMonthBudgetAmount: number;
+  familyVariablePeriodsCount: number;
+  familyVariablePeriodValue: number;
   familyVariableNetAmount: number;
   familyVariableRemainingAmount: number;
   standardAmount: number;
@@ -25,9 +28,10 @@ interface FamilyVariableBalanceCardProps {
 
 export const FamilyVariableBalanceCard: React.FC<FamilyVariableBalanceCardProps> = ({
   familyVariableBudgetTotalAmount,
+  familyVariableMonthBudgetAmount,
+  familyVariablePeriodsCount,
   familyVariableNetAmount,
   familyVariableRemainingAmount,
-  standardAmount,
   refundsAmount,
   extraAmount,
   totalAmount,
@@ -39,38 +43,83 @@ export const FamilyVariableBalanceCard: React.FC<FamilyVariableBalanceCardProps>
   onNavigateToOperations,
 }) => {
   const roundTo0 = (amount: number) => Math.round(amount);
+  const invert = (amount: number) => -amount;
   const operationsTotalAmount = realAmount + waitingAmount;
+  const periodCount = Math.max(1, familyVariablePeriodsCount);
+  const baseBudgetPerPeriod = familyVariableMonthBudgetAmount / periodCount;
+  // Report de la période précédente (dépassement)
+  const previousPeriodOverrun = baseBudgetPerPeriod - familyVariableBudgetTotalAmount;
   const subCardClass = "rounded-2xl p-4 border border-slate-200 bg-slate-50 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-start";
   const sectionLabelClass = "text-xs uppercase tracking-widest text-slate-400 font-bold";
 
   // Tooltip détaillé pour les dépenses famille
   const renderFamilySpentTooltip = () => (
-    <div className="space-y-1">
-      <p className="font-bold text-indigo-700 border-b border-slate-200 pb-1 mb-1">Dépenses Famille (incl. enfants)</p>
+    <div className="space-y-2 text-[11px]">
+      <p className="font-bold text-indigo-700 border-b border-slate-200 pb-1">Détails</p>
 
-      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mt-2">Lecture de la carte</p>
-      <div className="flex justify-between gap-4">
-        <span>Variables (Réel)</span>
-        <span className="font-mono font-bold text-slate-900">{displayedFamilyAmount.toFixed(2)}€</span>
-      </div>
-      <div className="flex justify-between gap-4">
-        <span>Extra (hors budget)</span>
-        <span className="font-mono font-bold text-amber-700">{extraAmount.toFixed(2)}€</span>
-      </div>
-      <div className="flex justify-between gap-4">
-        <span>Remboursements</span>
-        <span className="font-mono font-bold text-emerald-700">-{refundsAmount.toFixed(2)}€</span>
-      </div>
-      <div className="flex justify-between gap-4">
-        <span>En attente</span>
-        <span className="font-mono font-bold">{waitingAmount.toFixed(2)}€</span>
-      </div>
-      <div className="flex justify-between gap-4 border-t border-slate-200 pt-1 mt-1">
-        <span>Total réel des opérations</span>
-        <span className="font-mono font-bold">{operationsTotalAmount.toFixed(2)}€</span>
+      {/* Calcul du solde restant */}
+      <div>
+        <p className="font-bold uppercase tracking-wider text-slate-500 mb-1">Calcul du solde restant</p>
+        <div className="flex justify-between gap-4">
+          <span>Budget par période</span>
+          <span className="font-mono font-bold">{baseBudgetPerPeriod.toFixed(2)}€</span>
+        </div>
+        {previousPeriodOverrun !== 0 && (
+          <div className="flex justify-between gap-4">
+            <span>Report période précédente</span>
+            <span className="font-mono font-bold text-amber-700">- {previousPeriodOverrun.toFixed(2)}€</span>
+          </div>
+        )}
+        <div className="flex justify-between gap-4 border-t border-slate-200 pt-1 mt-1">
+          <span>Budget période ajusté</span>
+          <span className="font-mono font-bold text-indigo-700">{familyVariableBudgetTotalAmount.toFixed(2)}€</span>
+        </div>
       </div>
 
-      <p className="text-[10px] text-slate-500">Le total réel inclut toutes les opérations (standard + extra + attente).</p>
+      {/* Détails des opérations */}
+      <div>
+        <p className="font-bold uppercase tracking-wider text-slate-500 mb-1">Détails des opérations</p>
+
+        <div className="flex justify-between gap-4">
+          <span>Variables (réel)</span>
+          <span className="font-mono font-bold text-slate-900">{invert(displayedFamilyAmount).toFixed(2)}€</span>
+        </div>
+
+        <div className="flex justify-between gap-4">
+          <span>Dont remboursements</span>
+          <span className="font-mono font-bold text-emerald-700">{refundsAmount.toFixed(2)}€</span>
+        </div>
+
+        <div className="flex justify-between gap-4">
+          <span>Extras</span>
+          <span className="font-mono font-bold text-amber-700">{-extraAmount.toFixed(2)}€</span>
+        </div>
+
+        <div className="flex justify-between gap-4 border-t border-slate-200 pt-1 mt-1">
+          <span>Total des opérations avec Extras</span>
+          <span className="font-mono font-bold">{-totalAmount.toFixed(2)}€</span>
+        </div>
+
+        {/* Report sur la période suivante */}
+        <div className="flex justify-between gap-4 border-t border-slate-200 pt-1 mt-1">
+          <span>Report sur période suivante</span>
+          <span className="font-mono font-bold text-rose-600">{familyVariableRemainingAmount.toFixed(2)}€</span>
+        </div>
+      </div>
+      {/* Détail des opérations en attente */}
+      <div>
+        <p className="font-bold uppercase tracking-wider text-slate-500 mb-1">Opérations en attente</p>
+
+        <div className="flex justify-between gap-4">
+          <span>Variables (en attente)</span>
+          <span className="font-mono font-bold text-sky-700">{invert(waitingAmount).toFixed(2)}€</span>
+        </div>
+
+        <div className="flex justify-between gap-4 border-t border-slate-200 pt-1 mt-1">
+          <span>Total avec en attente</span>
+          <span className="font-mono font-bold">{invert(operationsTotalAmount).toFixed(2)}€</span>
+        </div>
+      </div>
     </div>
   );
 
@@ -103,10 +152,19 @@ export const FamilyVariableBalanceCard: React.FC<FamilyVariableBalanceCardProps>
               as="button"
               className="mt-1 text-3xl font-black text-slate-900 hover:opacity-80 transition-opacity w-full text-center"
             >
-              {roundTo0(displayedFamilyAmount)} €
+              {roundTo0(invert(displayedFamilyAmount))} €
             </ClickableAmount>
 
             <div className="mt-3 text-xs flex flex-wrap items-center gap-2 justify-center w-full">
+              <ClickableAmount
+                date={currentDate}
+                filters={buildOperationsFilters({ flux: "INCOME", source: "VARIABLE", nature: "EXCLUDE", beneficiaryIds: familyBeneficiaryIds })}
+                onNavigate={onNavigateToOperations}
+                as="button"
+                className="text-sky-700 bg-white border border-slate-200 rounded px-2 py-0.5 hover:bg-slate-100 transition-colors"
+              >
+                Remboursements : {roundTo0(refundsAmount)} €
+              </ClickableAmount>
               <ClickableAmount
                 date={currentDate}
                 filters={buildOperationsFilters({ source: "VARIABLE", nature: "ONLY", beneficiaryIds: familyBeneficiaryIds })}
@@ -114,7 +172,7 @@ export const FamilyVariableBalanceCard: React.FC<FamilyVariableBalanceCardProps>
                 as="button"
                 className="text-amber-700 bg-white border border-slate-200 rounded px-2 py-0.5 hover:bg-slate-100 transition-colors"
               >
-                Extra : {roundTo0(extraAmount)} €
+                Extra : {roundTo0(invert(extraAmount))} €
               </ClickableAmount>
               <ClickableAmount
                 date={currentDate}
@@ -123,16 +181,7 @@ export const FamilyVariableBalanceCard: React.FC<FamilyVariableBalanceCardProps>
                 as="button"
                 className="text-slate-700 bg-white border border-slate-200 rounded px-2 py-0.5 hover:bg-slate-100 transition-colors"
               >
-                Total réel : {roundTo0(totalAmount)} €
-              </ClickableAmount>
-              <ClickableAmount
-                date={currentDate}
-                filters={buildOperationsFilters({ flux: "INCOME", source: "VARIABLE", beneficiaryIds: familyBeneficiaryIds })}
-                onNavigate={onNavigateToOperations}
-                as="button"
-                className="text-sky-700 bg-white border border-slate-200 rounded px-2 py-0.5 hover:bg-slate-100 transition-colors"
-              >
-                Remboursements : {roundTo0(refundsAmount)} €
+                Total réel : {roundTo0(invert(totalAmount))} €
               </ClickableAmount>
             </div>
           </div>
@@ -151,7 +200,7 @@ export const FamilyVariableBalanceCard: React.FC<FamilyVariableBalanceCardProps>
                 as="button"
                 className="text-sky-700 bg-white border border-slate-200 rounded px-2 py-0.5 hover:bg-slate-100 transition-colors"
               >
-                En attente : {roundTo0(waitingAmount)} €
+                En attente : {roundTo0(invert(waitingAmount))} €
               </ClickableAmount>
             </div>
           </div>
