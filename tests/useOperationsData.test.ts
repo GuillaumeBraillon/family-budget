@@ -52,7 +52,7 @@ const createItem = (): PlannedItem => ({
   beneficiaryId: "p-guillaume",
   beneficiaryAmounts: [
     { beneficiaryId: "p-guillaume", amount: 8 },
-    { beneficiaryId: "p-nelly", amount: 4.1 },
+    { beneficiaryId: "p_persona", amount: 4.1 },
   ],
   isExtra: false,
   isExtraGlobal: false,
@@ -93,7 +93,7 @@ describe("useOperationsData - ventilation bénéficiaires", () => {
       })
     );
 
-    const { result: nellyResult } = renderHook(() =>
+    const { result: personaResult } = renderHook(() =>
       useOperationsData({
         accounts,
         configs: [],
@@ -104,13 +104,13 @@ describe("useOperationsData - ventilation bénéficiaires", () => {
         searchQuery: "",
         settings: {} as AppSettings,
         categories,
-        filters: { ...defaultFilters, beneficiaryIds: ["p-nelly"] },
+        filters: { ...defaultFilters, beneficiaryIds: ["p_persona"] },
         scope: "MONTH",
         activeWeek: 1,
       })
     );
 
     expect(guillaumeResult.current.quickStats.expenses.real).toBeCloseTo(8, 5);
-    expect(nellyResult.current.quickStats.expenses.real).toBeCloseTo(4.1, 5);
+    expect(personaResult.current.quickStats.expenses.real).toBeCloseTo(4.1, 5);
   });
 });

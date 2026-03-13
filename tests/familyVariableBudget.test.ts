@@ -170,20 +170,20 @@ describe("getFamilyBeneficiaryIds", () => {
     const people: Person[] = [
       { id: "p_guillaume", name: "Guillaume", isChild: false, displayOrder: 3 },
       { id: "p_joint", name: "Famille", isChild: false, displayOrder: 1 },
-      { id: "p_nelly", name: "Nelly", isChild: false, displayOrder: 2 },
-      { id: "p_oscar", name: "Oscar", isChild: true, displayOrder: 4 },
-      { id: "p_eliott", name: "Eliott", isChild: true, displayOrder: 5 },
+      { id: "p_persona", name: "Person A", isChild: false, displayOrder: 2 },
+      { id: "p_personb", name: "Person B", isChild: true, displayOrder: 4 },
+      { id: "p_personc", name: "Person C", isChild: true, displayOrder: 5 },
     ];
 
-    expect(getFamilyBeneficiaryIds(people)).toEqual(["p_joint", "p_oscar", "p_eliott"]);
+    expect(getFamilyBeneficiaryIds(people)).toEqual(["p_joint", "p_personb", "p_personc"]);
   });
 
   it("fallback sur premier adulte si pas de Famille ni enfants", () => {
     const people: Person[] = [
       { id: "p_guillaume", name: "Guillaume", isChild: false, displayOrder: 3 },
-      { id: "p_nelly", name: "Nelly", isChild: false, displayOrder: 2 },
+      { id: "p_persona", name: "Person A", isChild: false, displayOrder: 2 },
     ];
 
-    expect(getFamilyBeneficiaryIds(people)).toEqual(["p_nelly"]);
+    expect(getFamilyBeneficiaryIds(people)).toEqual(["p_persona"]);
   });
 });

@@ -104,7 +104,7 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 
 ### 🧪 Tests
 
-- Ajout d'un test unitaire dédié `tests/useOperationsData.test.ts` pour verrouiller la ventilation bénéficiaires (ex: opération 12,10€ ventilée 8€ / 4,10€ → `quickStats` renvoie bien 8€ pour Guillaume et 4,10€ pour Nelly quand filtré).
+- Ajout d'un test unitaire dédié `tests/useOperationsData.test.ts` pour verrouiller la ventilation bénéficiaires (ex: opération 12,10€ ventilée 8€ / 4,10€ → `quickStats` renvoie bien 8€ pour Guillaume et 4,10€ pour Person A quand filtré).
 
 ### 🧰 Divers
 
