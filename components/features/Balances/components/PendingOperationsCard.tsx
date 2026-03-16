@@ -131,6 +131,10 @@ export const PendingOperationsCard: React.FC<PendingOperationsCardProps> = ({
   const subCardClass = "rounded-2xl p-4 border border-slate-200 bg-slate-50 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between";
   const sectionLabelClass = "text-xs uppercase tracking-widest text-slate-400 font-bold";
 
+  // Ensure progress bar values are not negative
+  const consumedForBar = Math.abs(Math.round(paidRecurringNetAmount));
+  const budgetForBar = Math.max(1, Math.abs(Math.round(totalRecurringNetAmount)));
+
   // --- TOOLTIP DÉTAILÉ ---
   const renderPendingTotalTooltip = () => (
     <div className="space-y-1">
@@ -191,10 +195,10 @@ export const PendingOperationsCard: React.FC<PendingOperationsCardProps> = ({
             className="inline-flex items-center justify-between rounded-lg border border-indigo-200 bg-indigo-50 px-2.5 py-1.5 text-xs font-semibold text-indigo-700 hover:bg-indigo-100"
           >
             <span>Total</span>
-            <span className="font-black">{roundTo0(totalRecurringNetAmount)} €</span>
+            <span className="font-black">{roundTo0(budgetForBar)} €</span>
           </ClickableAmount>
         </div>
-        <BudgetProgressBar consumed={paidRecurringNetAmount} budget={totalRecurringNetAmount} />
+        <BudgetProgressBar consumed={consumedForBar} budget={budgetForBar} />
       </CardHeader>
 
       <CardContent className="p-4 pt-4">
