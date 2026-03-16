@@ -6,3 +6,4 @@
 export { useBalancesData } from "./useBalancesData";
 export { useBalancesRows } from "./useBalancesRows";
 export type { BalanceRow } from "./useBalancesRows";
+export type { TransferSummary } from "./useBalancesRowsBuilders";

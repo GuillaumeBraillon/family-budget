@@ -15,10 +15,6 @@ export const formatDatabaseError = (errorMessage: string): string => {
     return "Le montant ne peut pas être nul (0€).";
   }
 
-  if (errorMessage.includes('check constraint "check_target_ratio_valid"')) {
-    return "Le ratio de répartition doit être entre 0 et 100%.";
-  }
-
   if (errorMessage.includes('check constraint "check_no_self_transfer"')) {
     return "Impossible de faire un virement vers le même compte.";
   }

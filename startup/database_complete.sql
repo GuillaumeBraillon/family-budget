@@ -31,8 +31,6 @@ CREATE TABLE IF NOT EXISTS accounts (
   owner_id text NOT NULL REFERENCES people(id) ON DELETE CASCADE,
   current_balance numeric DEFAULT 0 NOT NULL,
   bank_name text,
-  target_ratio numeric CHECK (target_ratio IS NULL OR (target_ratio >= 0 AND target_ratio <= 100)),
-  target_cap numeric CHECK (target_cap IS NULL OR target_cap > 0),
   is_joint boolean DEFAULT false NOT NULL,
   type text NOT NULL CHECK (type IN ('COURANT', 'EPARGNE', 'VIREMENT'))
 );
@@ -501,9 +499,6 @@ COMMENT ON COLUMN paid_item_tags.amount IS 'Montant affecté à ce tag pour cett
 COMMENT ON COLUMN paid_item_tags.is_extra IS 'Indique si ce montant de tag est hors budget (Extra au niveau tag)';
 COMMENT ON COLUMN people.is_child IS 'Les enfants sont exclus des calculs d''équité';
 COMMENT ON COLUMN income_configs.is_salary IS 'Identifie les revenus structurels (salaires) pour les calculs';
-COMMENT ON COLUMN accounts.target_ratio IS 'Ratio cible du budget mensuel (0-100%) pour ce compte';
-COMMENT ON COLUMN accounts.target_cap IS 'Plafond maximal du solde pour l''épargne automatique';
-
 -- =====================================
 -- 5. ANALYSE DES TABLES
 -- =====================================

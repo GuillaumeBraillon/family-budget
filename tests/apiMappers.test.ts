@@ -60,8 +60,6 @@ describe("apiMappers - Conversions DB vers App", () => {
         current_balance: 1500.5,
         bank_name: "BNP Paribas",
         is_joint: false,
-        target_ratio: null,
-        target_cap: null,
       };
 
       const result = mapDbAccount(dbAccount);
@@ -74,12 +72,10 @@ describe("apiMappers - Conversions DB vers App", () => {
         currentBalance: 1500.5,
         bankName: "BNP Paribas",
         isJoint: false,
-        targetRatio: undefined,
-        targetCap: undefined,
       });
     });
 
-    it("convertit correctement un compte épargne avec ratio et cap", () => {
+    it("convertit correctement un compte épargne", () => {
       const dbAccount: DbAccount = {
         id: "acc-2",
         name: "Livret A",
@@ -88,16 +84,12 @@ describe("apiMappers - Conversions DB vers App", () => {
         current_balance: 5000,
         bank_name: null,
         is_joint: true,
-        target_ratio: 0.15,
-        target_cap: 10000,
       };
 
       const result = mapDbAccount(dbAccount);
 
       expect(result.type).toBe("SAVINGS");
       expect(result.isJoint).toBe(true);
-      expect(result.targetRatio).toBe(0.15);
-      expect(result.targetCap).toBe(10000);
     });
 
     it("gère current_balance null comme 0", () => {
@@ -109,8 +101,6 @@ describe("apiMappers - Conversions DB vers App", () => {
         current_balance: null,
         bank_name: null,
         is_joint: false,
-        target_ratio: null,
-        target_cap: null,
       };
 
       const result = mapDbAccount(dbAccount);

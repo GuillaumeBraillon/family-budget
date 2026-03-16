@@ -19,6 +19,7 @@ interface OperationsListProps {
   onAddClick: () => void;
   onExport?: () => void;
   onReorder?: (item: PlannedItem, oldIndex: number, newIndex: number) => void;
+  isAdmin?: boolean;
 }
 
 export const OperationsList: React.FC<OperationsListProps> = ({
@@ -32,6 +33,7 @@ export const OperationsList: React.FC<OperationsListProps> = ({
   onAddClick,
   onExport,
   onReorder,
+  isAdmin,
 }) => {
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -64,6 +66,75 @@ export const OperationsList: React.FC<OperationsListProps> = ({
 
   const headerActions = onExport && items.length > 0 ? <ExportCsvButton onClick={onExport} disabled={items.length === 0} /> : null;
 
+  const renderRow = (item: PlannedItem) => {
+    const progress = getExtraProgress(item);
+    const person = people.find((p) => p.id === item.beneficiaryId);
+    const beneficiaryLabel =
+      item.beneficiaryAmounts && item.beneficiaryAmounts.length > 0
+        ? item.beneficiaryAmounts
+            .map((ba) => {
+              const p = people.find((p) => p.id === ba.beneficiaryId);
+              return p ? `${p.name} (${ba.amount.toFixed(2)}€)` : null;
+            })
+            .filter(Boolean)
+            .join(" • ")
+        : person?.name;
+    const account = accounts.find((a) => a.id === item.accountId);
+    const isVariable = item.source === "VARIABLE";
+    const itemTags = item.tagAmounts ? tags.filter((t) => item.tagAmounts?.some((ta) => ta.tagId === t.id)) : [];
+
+    return (
+      <DataListRow
+        date={{ day: item.day, month: monthShort }}
+        label={item.label}
+        amount={item.amount}
+        originalAmount={isVariable ? undefined : item.originalAmount}
+        isIncome={item.type === "INCOME"}
+        isRefund={!!item.isRefund}
+        category={item.category}
+        subCategory={item.subCategory}
+        beneficiary={beneficiaryLabel}
+        isChild={person?.isChild}
+        accountName={account?.name}
+        isPaid={!!item.isPaid}
+        onClick={isAdmin ? () => onItemClick(item) : undefined}
+        comments={item.comments}
+        tags={itemTags}
+        tagAmounts={item.tagAmounts}
+        badge={
+          <div className="flex gap-1 items-center">
+            {isVariable ? (
+              <span className="text-[9px] bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded font-bold uppercase flex items-center gap-1">
+                <ShoppingBag size={10} /> Variable
+              </span>
+            ) : (
+              <span className="text-[9px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded font-bold uppercase flex items-center gap-1">
+                <CalendarClock size={10} /> Récurrent
+              </span>
+            )}
+            {item.isSalary && (
+              <span className="text-[9px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded font-bold uppercase flex items-center gap-1">
+                <Briefcase size={10} /> Salaire
+              </span>
+            )}
+            {item.isExtra &&
+              (progress ? (
+                <span
+                  className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase ${
+                    progress.isLast ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"
+                  }`}
+                >
+                  Temp {progress.text}
+                </span>
+              ) : (
+                <span className="text-[9px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-bold uppercase">EXTRA</span>
+              ))}
+          </div>
+        }
+      />
+    );
+  };
+
   return (
     <div className="space-y-4">
       <DataList
@@ -74,93 +145,25 @@ export const OperationsList: React.FC<OperationsListProps> = ({
         emptyMessage="Aucune opération ne correspond à vos filtres pour cette période."
         headerActions={headerActions}
       >
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-          <SortableContext items={items.map((i) => i.instanceId)} strategy={verticalListSortingStrategy}>
-            {items.map((item) => {
-              const progress = getExtraProgress(item);
-              const person = people.find((p) => p.id === item.beneficiaryId);
-              const beneficiaryLabel =
-                item.beneficiaryAmounts && item.beneficiaryAmounts.length > 0
-                  ? item.beneficiaryAmounts
-                      .map((beneficiaryAmount) => {
-                        const currentPerson = people.find((p) => p.id === beneficiaryAmount.beneficiaryId);
-                        if (!currentPerson) return null;
-                        return `${currentPerson.name} (${beneficiaryAmount.amount.toFixed(2)}€)`;
-                      })
-                      .filter(Boolean)
-                      .join(" • ")
-                  : person?.name;
-              const account = accounts.find((a) => a.id === item.accountId);
-              const isVariable = item.source === "VARIABLE";
-              const itemTags = item.tagAmounts ? tags.filter((t) => item.tagAmounts?.some((ta) => ta.tagId === t.id)) : [];
-
-              const content = (
-                <DataListRow
-                  key={item.instanceId} // Key technique
-                  date={{ day: item.day, month: monthShort }}
-                  label={item.label}
-                  amount={item.amount}
-                  originalAmount={isVariable ? undefined : item.originalAmount}
-                  isIncome={item.type === "INCOME"}
-                  isRefund={!!item.isRefund}
-                  category={item.category}
-                  subCategory={item.subCategory}
-                  beneficiary={beneficiaryLabel}
-                  isChild={person?.isChild}
-                  accountName={account?.name}
-                  isPaid={!!item.isPaid}
-                  onClick={() => onItemClick(item)}
-                  comments={item.comments}
-                  tags={itemTags}
-                  tagAmounts={item.tagAmounts}
-                  badge={
-                    <div className="flex gap-1 items-center">
-                      {isVariable ? (
-                        <span className="text-[9px] bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded font-bold uppercase flex items-center gap-1">
-                          <ShoppingBag size={10} /> Variable
-                        </span>
-                      ) : (
-                        <span className="text-[9px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded font-bold uppercase flex items-center gap-1">
-                          <CalendarClock size={10} /> Récurrent
-                        </span>
-                      )}
-
-                      {item.isSalary && (
-                        <span className="text-[9px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded font-bold uppercase flex items-center gap-1">
-                          <Briefcase size={10} /> Salaire
-                        </span>
-                      )}
-
-                      {item.isExtra &&
-                        (progress ? (
-                          <span
-                            className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase ${
-                              progress.isLast ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"
-                            }`}
-                          >
-                            Temp {progress.text}
-                          </span>
-                        ) : (
-                          <span className="text-[9px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-bold uppercase">EXTRA</span>
-                        ))}
-                    </div>
-                  }
-                />
-              );
-
-              if (onReorder) {
-                return (
-                  <SortableRow key={item.instanceId} id={item.instanceId}>
-                    {content}
-                  </SortableRow>
-                );
-              }
-              return <div key={item.instanceId}>{content}</div>;
-            })}
-          </SortableContext>
-        </DndContext>
+        {onReorder && isAdmin ? (
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <SortableContext items={items.map((i) => i.instanceId)} strategy={verticalListSortingStrategy}>
+              {items.map((item) => (
+                <SortableRow key={item.instanceId} id={item.instanceId}>
+                  {renderRow(item)}
+                </SortableRow>
+              ))}
+            </SortableContext>
+          </DndContext>
+        ) : (
+          <div>
+            {items.map((item) => (
+              <div key={item.instanceId}>{renderRow(item)}</div>
+            ))}
+          </div>
+        )}
       </DataList>
-      {items.length > 0 && (
+      {items.length > 0 && isAdmin && (
         <button
           onClick={onAddClick}
           className="w-full py-4 border-2 border-dashed border-slate-200 rounded-2xl text-slate-400 font-bold text-sm flex items-center justify-center gap-2 hover:border-indigo-300 hover:text-indigo-600 hover:bg-indigo-50 transition-all active:scale-95"

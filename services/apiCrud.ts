@@ -167,8 +167,6 @@ export const apiUpsertAccount = async (account: Account) =>
     current_balance: account.currentBalance,
     bank_name: account.bankName || null,
     is_joint: !!account.isJoint,
-    target_ratio: account.targetRatio !== undefined ? account.targetRatio : null,
-    target_cap: account.targetCap !== undefined ? account.targetCap : null,
   });
 
 export const apiDeleteAccount = async (id: string) => supabase.from("accounts").delete().eq("id", id);

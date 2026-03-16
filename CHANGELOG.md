@@ -7,6 +7,36 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.9.7] - 2026-03-16
+
+### Removed
+
+- Remove legacy analytics cards.
+- Remove manual drag-and-drop account sorting and all related `@dnd-kit` sensors and wrappers.
+
+### Changed
+
+- Refactor **Balances** feature:
+  - `BalancesView` now uses the new hooks signatures (`useBalancesData`, `useBalancesRows`).
+  - Pass transfer summary and account variance data to the view.
+- Rewrite `BalancesTable`:
+  - Remove `@dnd-kit` dependency.
+  - Simplify row rendering.
+  - Improve balance editing UX.
+  - Add excess/deficit badges.
+  - Improve financial tooltips.
+- Adjust **Header navigation** visibility for non-admin users.
+
+### Added
+
+- New balance-related hooks.
+- Database migration SQL for balances feature.
+
+### Updated
+
+- Update related services and tests.
+- Update `README` and `CHANGELOG` to reflect the refactor.
+
 ## [2.9.6] - 2026-03-13
 
 ### ✅ Corrections

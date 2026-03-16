@@ -1,44 +1,60 @@
 import React from "react";
 import { Card, CardContent } from "../../../ui/Card";
 import { ArrowRightLeft, PiggyBank } from "lucide-react";
+import { TransferSummary } from "../../../../hooks/balances";
 
 interface TransferSummaryCardProps {
-  amount: number;
-  toJoint?: number;
-  toPersonals?: number;
+  transferSummary: TransferSummary;
 }
 
-export const TransferSummaryCard: React.FC<TransferSummaryCardProps> = ({ amount, toJoint, toPersonals }) => {
-  // Arrondi au multiple de 5 SUPERIEUR pour sécurité (Exception)
-  const roundedAmount = Math.ceil(amount / 5) * 5;
+export const TransferSummaryCard: React.FC<TransferSummaryCardProps> = ({ transferSummary }) => {
+  const { exactLddsToPivot, roundedLddsToPivot, jointPendingNeed, netPersonalNeed, hasNeedToPivot, hasReturnToLdds } = transferSummary;
+  const hasPersonalDeficit = netPersonalNeed > 0.01;
+  const hasPersonalExcess = netPersonalNeed < -0.01;
 
   return (
     <div className="mt-8">
-      <Card className={`border-l-4 shadow-md transition-all ${roundedAmount > 0 ? "border-l-indigo-600 bg-white" : "border-l-emerald-500 bg-emerald-50/50"}`}>
+      <Card
+        className={`border-l-4 shadow-md transition-all ${
+          hasNeedToPivot ? "border-l-indigo-600 bg-white" : hasReturnToLdds ? "border-l-amber-500 bg-amber-50/50" : "border-l-emerald-500 bg-emerald-50/50"
+        }`}
+      >
         <CardContent className="p-6 flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-4">
-            <div className={`p-4 rounded-full shadow-sm ${roundedAmount > 0 ? "bg-indigo-100 text-indigo-600" : "bg-emerald-100 text-emerald-600"}`}>
-              {roundedAmount > 0 ? <ArrowRightLeft size={32} /> : <PiggyBank size={32} />}
+            <div
+              className={`p-4 rounded-full shadow-sm ${
+                hasNeedToPivot ? "bg-indigo-100 text-indigo-600" : hasReturnToLdds ? "bg-amber-100 text-amber-600" : "bg-emerald-100 text-emerald-600"
+              }`}
+            >
+              {hasNeedToPivot ? <ArrowRightLeft size={32} /> : <PiggyBank size={32} />}
             </div>
             <div>
               <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">Vir LDDS vers Joint</h3>
               <p className="text-sm text-slate-500 mt-1 max-w-md">
-                {roundedAmount > 0
-                  ? "Montant total à transférer de votre Livret d'Épargne vers le Compte Joint pour couvrir les factures globales ET les besoins de trésorerie des comptes personnels."
-                  : "Aucun virement nécessaire depuis le LDDS. Le Compte Joint dispose d'assez de provision."}
+                {hasNeedToPivot
+                  ? "Montant à transférer vers le compte joint (pivot) pour couvrir les dépenses en attente du joint et les besoins nets des comptes perso."
+                  : hasReturnToLdds
+                    ? "Le compte joint est provisionné au-delà du seuil de sécurité (10%). Montant à remettre sur le LDDS."
+                    : "Aucun virement nécessaire entre LDDS et compte joint."}
               </p>
-              {roundedAmount > 0 && toJoint !== undefined && toPersonals !== undefined && (toJoint > 0.01 || toPersonals > 0.01) && (
+              {hasNeedToPivot && (jointPendingNeed > 0.01 || hasPersonalDeficit || hasPersonalExcess) && (
                 <div className="mt-3 flex flex-wrap gap-2">
-                  {toJoint > 0.01 && (
+                  {jointPendingNeed > 0.01 && (
                     <div className="flex items-center gap-2 bg-indigo-50 border border-indigo-200 rounded-lg px-3 py-1.5">
-                      <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-wide">Factures Joint</span>
-                      <span className="text-sm font-black text-indigo-700">{toJoint.toFixed(2)} €</span>
+                      <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-wide">En attente Joint</span>
+                      <span className="text-sm font-black text-indigo-700">{jointPendingNeed.toFixed(2)} €</span>
                     </div>
                   )}
-                  {toPersonals > 0.01 && (
-                    <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-lg px-3 py-1.5">
-                      <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wide">Comptes Courants (via Joint)</span>
-                      <span className="text-sm font-black text-blue-700">{toPersonals.toFixed(2)} €</span>
+                  {hasPersonalDeficit && (
+                    <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5">
+                      <span className="text-[10px] font-bold text-amber-700 uppercase tracking-wide">Besoins Perso (Net)</span>
+                      <span className="text-sm font-black text-amber-700">{netPersonalNeed.toFixed(2)} €</span>
+                    </div>
+                  )}
+                  {hasPersonalExcess && (
+                    <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-1.5">
+                      <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wide">Excédents Perso (Net)</span>
+                      <span className="text-sm font-black text-emerald-700">-{Math.abs(netPersonalNeed).toFixed(2)} €</span>
                     </div>
                   )}
                 </div>
@@ -46,15 +62,17 @@ export const TransferSummaryCard: React.FC<TransferSummaryCardProps> = ({ amount
             </div>
           </div>
           <div className="text-right">
-            <div className={`text-4xl font-black tracking-tighter ${roundedAmount > 0 ? "text-indigo-600" : "text-emerald-600"}`}>
-              {roundedAmount > 0 ? roundedAmount : "0"} €
+            <div
+              className={`text-4xl font-black tracking-tighter ${hasNeedToPivot ? "text-indigo-600" : hasReturnToLdds ? "text-amber-600" : "text-emerald-600"}`}
+            >
+              {hasNeedToPivot ? roundedLddsToPivot : hasReturnToLdds ? Math.abs(roundedLddsToPivot) : "0"} €
             </div>
-            {roundedAmount > 0 && Math.abs(roundedAmount - amount) > 0.01 && (
-              <div className="text-xs font-bold text-slate-400 mt-1">Exact : {amount.toFixed(2)} €</div>
+            {Math.abs(roundedLddsToPivot - exactLddsToPivot) > 0.01 && (
+              <div className="text-xs font-bold text-slate-400 mt-1">Exact : {exactLddsToPivot.toFixed(2)} €</div>
             )}
-            {roundedAmount < 0 && (
-              <p className="text-xs font-bold text-emerald-700 mt-1 uppercase bg-emerald-100 px-2 py-1 rounded inline-block">
-                Excédent Joint : {Math.abs(roundedAmount)} €
+            {hasReturnToLdds && (
+              <p className="text-xs font-bold text-amber-700 mt-1 uppercase bg-amber-100 px-2 py-1 rounded inline-block">
+                Reversement LDDS : {Math.abs(roundedLddsToPivot)} €
               </p>
             )}
           </div>

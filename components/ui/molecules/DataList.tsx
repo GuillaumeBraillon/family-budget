@@ -1,5 +1,7 @@
 import React from "react";
 import { Plus, Calendar } from "lucide-react";
+import { useAuth } from "../../../hooks/useAuth";
+import { useBudget } from "../../../hooks/useBudget";
 
 interface DataListProps {
   title: string;
@@ -22,6 +24,11 @@ export const DataList: React.FC<DataListProps> = ({
   className = "",
   headerActions,
 }) => {
+  const { user } = useAuth();
+  const { authorizedUsers } = useBudget();
+  const currentEmail = user?.email;
+  const isAdmin = !!authorizedUsers.find((u) => u.email === currentEmail && !!u.isAdmin);
+
   return (
     <div className={`bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden flex flex-col ${className}`}>
       <div className="px-6 py-4 border-b border-slate-100 bg-slate-50 flex flex-wrap gap-2 justify-between items-center flex-shrink-0">
@@ -31,7 +38,7 @@ export const DataList: React.FC<DataListProps> = ({
         </h2>
         <div className="flex items-center gap-2">
           {headerActions}
-          {onAdd && (
+          {onAdd && isAdmin && (
             <button
               onClick={onAdd}
               className="flex items-center gap-2 bg-indigo-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-indigo-700 transition-colors shadow-sm"

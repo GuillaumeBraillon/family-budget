@@ -5,6 +5,8 @@ import { useError } from "../../../contexts/ErrorContext";
 import { useCsvExport } from "../../../hooks/useCsvExport";
 import { useOperationsFilters, useOperationsSorting, useOperationsData } from "../../../hooks/operations";
 import { usePeriodNav } from "../../../contexts/PeriodNavigationContext";
+import { useAuth } from "../../../hooks/useAuth";
+import { useBudget } from "../../../hooks/useBudget";
 import {
   ExpenseConfig,
   IncomeConfig,
@@ -164,7 +166,15 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
     }
   };
 
+  const { user } = useAuth();
+  const { authorizedUsers } = useBudget();
+  const currentEmail = user?.email;
+  const isAdmin = !!authorizedUsers.find((u) => u.email === currentEmail && !!u.isAdmin);
+
   const handleItemClick = (item: PlannedItem) => {
+    // Édition réservée aux admins (silent no-op pour non-admins)
+    if (!isAdmin) return;
+
     if (item.source === "RECURRING") {
       if (item.isPaid) {
         ui.openUncheckModal(item);
@@ -288,9 +298,11 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
         currentDate={currentDate}
         onItemClick={handleItemClick}
         onAddClick={() => {
+          if (!isAdmin) return;
           setEditingVar(null);
           setIsVarFormOpen(true);
         }}
+        isAdmin={isAdmin}
         onExport={handleExport}
         onReorder={isManualSort ? handleReorder : undefined}
       />

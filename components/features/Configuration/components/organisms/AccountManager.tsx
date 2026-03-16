@@ -33,8 +33,6 @@ export const AccountManager: React.FC<AccountManagerProps> = ({ accounts, people
   const [type, setType] = useState<AccountType>(AccountType.CHECKING);
   const [ownerId, setOwnerId] = useState("");
   const [isJoint, setIsJoint] = useState(false);
-  const [targetRatio, setTargetRatio] = useState<string>("");
-  const [targetCap, setTargetCap] = useState<string>("");
 
   // Tri alphabétique des comptes
   const { sortKey, sortOrder, setSorting, sortAccounts, isManualSort, sortOptions, canToggleOrder } = useAccountsSorting(settings.accounts_sorting || []);
@@ -51,8 +49,6 @@ export const AccountManager: React.FC<AccountManagerProps> = ({ accounts, people
     setType(AccountType.CHECKING);
     setOwnerId(people.filter((p) => !p.isChild)[0]?.id || "");
     setIsJoint(false);
-    setTargetRatio("");
-    setTargetCap("");
     setEditingAccount(null);
     setIsModalOpen(false);
     setDeleteConfirm(null);
@@ -66,8 +62,6 @@ export const AccountManager: React.FC<AccountManagerProps> = ({ accounts, people
     setType(AccountType.CHECKING);
     setOwnerId(people.filter((p) => !p.isChild)[0]?.id || "");
     setIsJoint(false);
-    setTargetRatio("");
-    setTargetCap("");
 
     setIsModalOpen(true);
   };
@@ -79,8 +73,6 @@ export const AccountManager: React.FC<AccountManagerProps> = ({ accounts, people
     setType(acc.type);
     setOwnerId(acc.ownerId);
     setIsJoint(!!acc.isJoint);
-    setTargetRatio(acc.targetRatio !== undefined ? acc.targetRatio.toString() : "");
-    setTargetCap(acc.targetCap !== undefined ? acc.targetCap.toString() : "");
 
     setIsModalOpen(true);
   };
@@ -96,8 +88,6 @@ export const AccountManager: React.FC<AccountManagerProps> = ({ accounts, people
       ownerId,
       isJoint,
       currentBalance: editingAccount ? editingAccount.currentBalance : 0,
-      targetRatio: targetRatio ? parseFloat(targetRatio) : undefined,
-      targetCap: targetCap ? parseFloat(targetCap) : undefined,
     };
 
     onUpsertAccount(account);
@@ -173,18 +163,6 @@ export const AccountManager: React.FC<AccountManagerProps> = ({ accounts, people
               <MobileTooltip text="Ce compte devient le point central : il reçoit l'argent du LDDS pour payer les charges et alimente les comptes persos si besoin." />
             </label>
           </div>
-
-          {/* Règles de Trésorerie (Uniquement pour comptes courants non joints) */}
-          {type === AccountType.CHECKING && !isJoint && (
-            <div className="bg-indigo-50 p-3 rounded-lg border border-indigo-100">
-              <h4 className="text-[10px] font-bold text-indigo-900 uppercase mb-2">Règles de Trésorerie</h4>
-              <div className="grid grid-cols-2 gap-4">
-                <TextInput label="Ratio Cible (%)" type="number" value={targetRatio} onChange={(e) => setTargetRatio(e.target.value)} placeholder="Ex: 30" />
-                <TextInput label="Plafond Max (€)" type="number" value={targetCap} onChange={(e) => setTargetCap(e.target.value)} placeholder="Ex: 50" />
-              </div>
-              <p className="text-[10px] text-indigo-500 mt-2 italic">Définit le montant que ce compte doit recevoir depuis le compte joint.</p>
-            </div>
-          )}
 
           <div className="flex gap-3 pt-2">
             {editingAccount && (

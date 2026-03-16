@@ -236,8 +236,6 @@ Réorganisez l'ordre d'affichage des virements pour prioriser visuellement.
   - Nom, banque
   - Propriétaire (membre du foyer)
   - Solde initial
-  - Ratio cible budgétaire (%)
-  - Cap de sécurité épargne
   - Mode joint (partagé)
 
 #### 📁 Catégories

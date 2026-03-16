@@ -17,12 +17,10 @@
 import React, { useMemo } from "react";
 import { Account, Person, ExpenseConfig, IncomeConfig, PaidItemDetails, AppSettings, VariableTransaction, CategoryDef, OperationFilters } from "../../../types";
 import { useBalancesData, useBalancesRows } from "../../../hooks/balances";
-import { useAccountsSorting } from "../../../hooks/accounts/useAccountsSorting";
 import { usePeriodNav } from "../../../contexts/PeriodNavigationContext";
 import { PeriodNavigationBar } from "../../ui/molecules/PeriodNavigationBar";
 import { BalancesTable } from "./components/BalancesTable";
 import { TransferSummaryCard } from "./components/TransferSummaryCard";
-import { arrayMove } from "@dnd-kit/sortable";
 
 interface BalancesViewProps {
   accounts: Account[];
@@ -34,7 +32,6 @@ interface BalancesViewProps {
   settings: AppSettings;
   categories: CategoryDef[];
   onUpdateAccount: (account: Account) => void;
-  onUpdateAccountsSorting: (newSorting: string[]) => void;
   onNavigateToPlanner: (date: Date, filters?: Partial<OperationFilters>, weekNumber?: number) => void;
 }
 
@@ -48,31 +45,16 @@ export const BalancesView: React.FC<BalancesViewProps> = ({
   settings,
   categories,
   onUpdateAccount,
-  onUpdateAccountsSorting,
   onNavigateToPlanner,
 }) => {
   // --- NAVIGATION DE PÉRIODE (partagée via context) ---
   const { currentDate, scope, activeWeek } = usePeriodNav();
 
-  // --- TRI MANUEL ---
-  const { sortAccounts, sortKey } = useAccountsSorting(settings.accounts_sorting || []);
-  const sortedAccounts = useMemo(() => sortAccounts(accounts), [accounts, sortAccounts]);
-
-  const handleAccountMove = (id: string, newIndex: number) => {
-    const currentList = sortedAccounts;
-    const oldIndex = currentList.findIndex((a) => a.id === id);
-    if (oldIndex === -1) return;
-
-    const reordered = arrayMove<Account>(currentList, oldIndex, newIndex);
-    const newSortingIds = reordered.map((a) => a.id);
-    onUpdateAccountsSorting(newSortingIds);
-  };
-
   // --- HOOKS SPÉCIALISÉS (Logique métier déléguée) ---
 
   // Hook 1 : Calculs de données (carryovers, budget, consommation, détails)
-  const { distributableBudgetAmount, jointAccount, personalAccounts, consumedDetails, stats, filteredPeriodBudgets } = useBalancesData({
-    accounts: sortedAccounts,
+  const { totalPersonalRemainingAmount, jointAccount, personalAccounts, consumedDetails, stats, filteredPeriodBudgets } = useBalancesData({
+    accounts,
     people,
     configs,
     incomeConfigs,
@@ -86,7 +68,7 @@ export const BalancesView: React.FC<BalancesViewProps> = ({
   });
 
   // Hook 2 : Génération des lignes avec redistribution 2-pass
-  const { jointRows, personalRows, totalPersonalRow, virLddsTotal, lddsToJoint, lddsToPersonals } = useBalancesRows({
+  const { jointRows, personalRows, totalPersonalRow, transferSummary } = useBalancesRows({
     people,
     jointAccount,
     personalAccounts,
@@ -103,10 +85,37 @@ export const BalancesView: React.FC<BalancesViewProps> = ({
     }
   };
 
-  // Récupération de la dette totale pour l'affichage header
+  const excessAccounts = useMemo(() => {
+    return personalAccounts
+      .map((account) => {
+        const ownerDetails = consumedDetails.find((detail) => detail.beneficiaryId === account.ownerId);
+        const ownerRemaining = ownerDetails?.remaining ?? 0;
+        const excessAmount = account.currentBalance - ownerRemaining;
 
-  // Détection du surplus des comptes courants (pour labels intelligents)
-  const hasCurrentAccountsSurplus = personalRows.some((r) => r.transfer < -10);
+        return {
+          accountName: account.name,
+          excessAmount,
+        };
+      })
+      .filter((entry) => entry.excessAmount > 0.01)
+      .sort((a, b) => b.excessAmount - a.excessAmount);
+  }, [personalAccounts, consumedDetails]);
+
+  const deficitAccounts = useMemo(() => {
+    return personalAccounts
+      .map((account) => {
+        const ownerDetails = consumedDetails.find((detail) => detail.beneficiaryId === account.ownerId);
+        const ownerRemaining = ownerDetails?.remaining ?? 0;
+        const deficitAmount = ownerRemaining - account.currentBalance;
+
+        return {
+          accountName: account.name,
+          deficitAmount,
+        };
+      })
+      .filter((entry) => entry.deficitAmount > 0.01)
+      .sort((a, b) => b.deficitAmount - a.deficitAmount);
+  }, [personalAccounts, consumedDetails]);
 
   return (
     <div className="flex flex-col gap-1.5 md:gap-2 m-2">
@@ -118,7 +127,6 @@ export const BalancesView: React.FC<BalancesViewProps> = ({
           title="Compte Pivot"
           rows={jointRows}
           onUpdateBalance={handleUpdateBalance}
-          hasCurrentAccountsSurplus={hasCurrentAccountsSurplus}
           onNavigateToPlanner={onNavigateToPlanner}
           currentDate={currentDate}
           activeWeek={scope === "PERIOD" ? activeWeek : undefined}
@@ -133,12 +141,12 @@ export const BalancesView: React.FC<BalancesViewProps> = ({
         onNavigateToPlanner={onNavigateToPlanner}
         currentDate={currentDate}
         activeWeek={scope === "PERIOD" ? activeWeek : undefined}
-        distributableAmount={distributableBudgetAmount}
-        onMove={handleAccountMove}
-        isManualSort={sortKey === "manual"}
+        totalPersonalRemainingAmount={totalPersonalRemainingAmount}
+        excessAccounts={excessAccounts}
+        deficitAccounts={deficitAccounts}
       />
 
-      <TransferSummaryCard amount={virLddsTotal} toJoint={lddsToJoint} toPersonals={lddsToPersonals} />
+      <TransferSummaryCard transferSummary={transferSummary} />
     </div>
   );
 };

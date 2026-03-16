@@ -17,8 +17,10 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({ currentView, onViewChange, onLogout, userEmail, session, isAdmin }) => {
   const { isInstallable, install } = usePWAInstall();
 
+  // Filtrer les éléments de navigation en fonction des droits d'accès
   const visibleNavItems = NAV_ITEMS.filter((item) => {
-    if (!isAdmin && ["balances", "transfers", "analytics", "config"].includes(item.id)) return false;
+    // Si l'item est réservé aux admins, vérifier le rôle de l'utilisateur
+    if (!isAdmin && ["transfers", "analytics", "config"].includes(item.id)) return false;
     return true;
   });
 

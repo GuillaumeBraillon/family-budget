@@ -48,8 +48,6 @@ export interface Account {
   currentBalance: number;
   bankName?: string;
   isJoint?: boolean;
-  targetRatio?: number;
-  targetCap?: number;
 }
 
 export interface SubCategory {
@@ -220,6 +218,93 @@ export interface WeeklyBudget {
   startDate: number;
   endDate: number;
   periodLimit?: number;
+}
+
+export interface NameAmountDetail {
+  name: string;
+  amount: number;
+}
+
+export interface ConsumedDetail {
+  beneficiaryId: string;
+  name: string;
+  amount: number;
+  available: number;
+  remaining: number;
+}
+
+export interface AllowanceContext {
+  allowancePerBeneficiary: number;
+  previousCarryoverTotal: number;
+  availableMonthlyAllowance: number;
+  carryoverByBeneficiary: Record<string, number>;
+}
+
+export interface FamilyVariableNetBreakdown {
+  nature: {
+    standard: number;
+    refunds: number;
+    extra: number;
+    total: number;
+  };
+  status: {
+    real: number;
+    waiting: number;
+    realStandard: number;
+    waitingStandard: number;
+    realExtra: number;
+    waitingExtra: number;
+  };
+}
+
+export interface FamilyVariablePeriodCarryovers {
+  periodBudgets: number[];
+  periodRemaining: number[];
+  monthBudget: number;
+  monthSpent: number;
+  monthRemaining: number;
+}
+
+export interface AccountBalanceStats {
+  paid: number;
+  remaining: number;
+  remainingStandard: number;
+  paidStandard: number;
+  planned?: number;
+  pendingCount?: number;
+}
+
+export interface BalancesStats {
+  fixedToPay: number;
+  fixedDelays: number;
+  byAccount: Record<string, AccountBalanceStats>;
+}
+
+export interface BalanceRowCalculation {
+  sharePercent?: number;
+  theoreticalAmount?: number;
+  isContributor?: boolean;
+  jointDebts?: number;
+  jointGap?: number;
+  fromPersonals?: number;
+  fromLdds?: number;
+}
+
+export interface BalanceRow {
+  id: string;
+  name: string;
+  owner: string;
+  balance: number;
+  target: number;
+  transfer: number;
+  isJoint: boolean;
+  pendingAmount?: number;
+  pendingStandard?: number;
+  pendingExtra?: number;
+  paidAmount?: number;
+  paidStandard?: number;
+  paidExtra?: number;
+  calculation?: BalanceRowCalculation;
 }
 
 export interface OperationFilters {

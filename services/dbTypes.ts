@@ -53,8 +53,6 @@ export interface DbAccount {
   current_balance: number;
   bank_name?: string;
   is_joint: boolean;
-  target_ratio?: number;
-  target_cap?: number;
 }
 
 export interface DbCategory {

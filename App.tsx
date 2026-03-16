@@ -312,7 +312,6 @@ const AppContent: React.FC = () => {
             settings={settings}
             categories={categories}
             onUpdateAccount={actions.upsertAccount}
-            onUpdateAccountsSorting={actions.updateAccountsSorting}
             onNavigateToPlanner={navigateToPlannerWithContext}
           />
         )}

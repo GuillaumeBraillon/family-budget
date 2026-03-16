@@ -67,7 +67,7 @@ export const fetchInitialData = async () => {
     authUsersRes,
   ] = await Promise.all([
     supabase.from("people").select("id, name, is_child, display_order"),
-    supabase.from("accounts").select("id, name, type, owner_id, current_balance, bank_name, is_joint, target_ratio, target_cap"),
+    supabase.from("accounts").select("id, name, type, owner_id, current_balance, bank_name, is_joint"),
     supabase.from("categories").select("id, name, type"),
     supabase.from("sub_categories").select("id, name, category_id, created_at"),
     supabase

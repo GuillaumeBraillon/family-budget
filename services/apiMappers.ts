@@ -79,8 +79,6 @@ export const mapDbAccount = (account: DbAccount): Account => ({
   currentBalance: account.current_balance ?? 0,
   bankName: account.bank_name,
   isJoint: !!account.is_joint,
-  targetRatio: account.target_ratio !== null && account.target_ratio !== undefined ? Number(account.target_ratio) : undefined,
-  targetCap: account.target_cap !== null && account.target_cap !== undefined ? Number(account.target_cap) : undefined,
 });
 
 export const mapDbSubCategory = (subCategory: DbSubCategory): SubCategory => ({

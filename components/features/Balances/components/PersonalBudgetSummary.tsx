@@ -10,14 +10,14 @@ import { Card, CardHeader, CardTitle, CardContent } from "../../../ui/Card";
 interface PersonalBudgetSummaryProps {
   totalPersonalBudgetAmount: number;
   spentPersonalBudgetAmount: number;
-  distributableBudgetAmount: number;
+  totalPersonalRemainingAmount: number;
   beneficiariesDetails?: { beneficiaryId?: string; name: string; amount: number; available?: number; remaining?: number }[];
   currentDate?: Date;
   onNavigateToOperations?: (date: Date, filters: Partial<OperationFilters>) => void;
 }
 
 export const PersonalBudgetSummary: React.FC<PersonalBudgetSummaryProps> = ({
-  distributableBudgetAmount: _distributableAmount,
+  totalPersonalRemainingAmount,
   beneficiariesDetails = [],
   currentDate,
   onNavigateToOperations,
@@ -161,7 +161,7 @@ export const PersonalBudgetSummary: React.FC<PersonalBudgetSummaryProps> = ({
                       );
                     })}
                     {(() => {
-                      const totalRemaining = beneficiariesDetails.reduce((s, d) => s + (d.remaining ?? 0), 0);
+                      const totalRemaining = totalPersonalRemainingAmount;
                       return (
                         <div className="flex items-baseline justify-between gap-3 text-[11px] border-t border-slate-200 pt-1 mt-1">
                           <span className="font-bold text-slate-500 truncate">Total</span>

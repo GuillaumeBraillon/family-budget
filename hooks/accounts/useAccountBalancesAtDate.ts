@@ -31,18 +31,20 @@ export const useAccountBalancesAtDate = (
       if (deltas[id] === undefined) deltas[id] = 0;
     };
 
-    // 1. PaidItems (opérations récurrentes pointées) postérieures à la date de coupure
+    // 1. PaidItems pointés (hors en attente) postérieurs à la date de coupure
     Object.values(paidItems).forEach((item) => {
       // paymentDate est "YYYY-MM-DD"
       if (item.paymentDate <= cutoffKey) return;
+      if (item.isWaiting) return;
       ensure(item.accountId);
       if (item.type === "EXPENSE") deltas[item.accountId] += item.amount;
       if (item.type === "INCOME") deltas[item.accountId] -= item.amount;
     });
 
-    // 2. VariableTransactions postérieures (hors virements internes)
+    // 2. VariableTransactions pointées (hors en attente et hors virements internes) postérieures
     variableTransactions.forEach((tx) => {
       if (tx.date <= cutoffKey) return;
+      if (tx.isWaiting) return;
       if (tx.category === "Virement Interne") return;
       ensure(tx.accountId);
       if (tx.type === "EXPENSE") deltas[tx.accountId] += tx.amount;

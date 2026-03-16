@@ -91,12 +91,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     familyVariableNetAmount,
     familyVariableNetBreakdown,
     familyVariableBudgetRemainingAmount,
+    paidRecurringAmount,
+    paidRecurringNetAmount,
+    totalRecurringAmount,
     pendingVariableDetails,
     pendingRecurringDetails,
     filteredPeriodBudgets,
     totalPersonalBudgetAmount,
     personalBudgetConsumedAmount,
-    distributableBudgetAmount,
+    totalPersonalRemainingAmount,
     consumedDetails,
   } = useBalancesData({
     accounts,
@@ -184,7 +187,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         <PersonalBudgetSummary
           totalPersonalBudgetAmount={totalPersonalBudgetAmount}
           spentPersonalBudgetAmount={personalBudgetConsumedAmount}
-          distributableBudgetAmount={distributableBudgetAmount}
+          totalPersonalRemainingAmount={totalPersonalRemainingAmount}
           beneficiariesDetails={consumedDetails}
           currentDate={currentDate}
           onNavigateToOperations={handleNavigateToMonth}
@@ -213,6 +216,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           totalPendingAmount={totalPendingAmount}
           totalPendingRecurringAmount={totalPendingRecurringAmount}
           totalPendingVariableAmount={totalPendingVariableAmount}
+          paidRecurringAmount={paidRecurringAmount}
+          paidRecurringNetAmount={paidRecurringNetAmount}
+          totalRecurringAmount={totalRecurringAmount}
           overduePendingRecurringAmount={overduePendingRecurringAmount}
           overduePendingVariableAmount={overduePendingVariableAmount}
           currentDate={currentDate}
