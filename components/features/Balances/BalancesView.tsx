@@ -18,6 +18,7 @@ import React, { useMemo } from "react";
 import { Account, Person, ExpenseConfig, IncomeConfig, PaidItemDetails, AppSettings, VariableTransaction, CategoryDef, OperationFilters } from "../../../types";
 import { useBalancesData, useBalancesRows } from "../../../hooks/balances";
 import { usePeriodNav } from "../../../contexts/PeriodNavigationContext";
+import { getBeneficiaryStandardShare, isBudgetExcluded } from "../../../services/financeUtils";
 import { PeriodNavigationBar } from "../../ui/molecules/PeriodNavigationBar";
 import { BalancesTable } from "./components/BalancesTable";
 import { TransferSummaryCard } from "./components/TransferSummaryCard";
@@ -85,37 +86,50 @@ export const BalancesView: React.FC<BalancesViewProps> = ({
     }
   };
 
-  const excessAccounts = useMemo(() => {
-    return personalAccounts
-      .map((account) => {
-        const ownerDetails = consumedDetails.find((detail) => detail.beneficiaryId === account.ownerId);
-        const ownerRemaining = ownerDetails?.remaining ?? 0;
-        const excessAmount = account.currentBalance - ownerRemaining;
+  const relevantPendingItems = useMemo(() => {
+    const relevantPeriods = scope === "MONTH" ? filteredPeriodBudgets : filteredPeriodBudgets.filter((period) => period.weekNumber <= activeWeek);
 
-        return {
-          accountName: account.name,
-          excessAmount,
-        };
-      })
+    return relevantPeriods.flatMap((period) => period.items).filter((item) => !item.isPaid && !item.isSalary && !isBudgetExcluded(item));
+  }, [filteredPeriodBudgets, scope, activeWeek]);
+
+  const personalPendingByAccountId = useMemo(() => {
+    return personalAccounts.reduce<Record<string, number>>((acc, account) => {
+      const personalPendingAmount = relevantPendingItems
+        .filter((item) => item.accountId === account.id)
+        .reduce((sum, item) => {
+          const ownerShare = getBeneficiaryStandardShare(item, account.ownerId);
+          if (ownerShare <= 0) return sum;
+          return sum + (item.type === "EXPENSE" ? -ownerShare : ownerShare);
+        }, 0);
+
+      acc[account.id] = personalPendingAmount;
+      return acc;
+    }, {});
+  }, [personalAccounts, relevantPendingItems]);
+
+  const excessAccounts = useMemo(() => {
+    return personalRows
+      .map((row) => ({
+        accountId: row.id,
+        accountName: row.name,
+        excessAmount: row.balance + (personalPendingByAccountId[row.id] ?? 0) - row.target,
+        countedPendingAmount: personalPendingByAccountId[row.id] ?? 0,
+      }))
       .filter((entry) => entry.excessAmount > 0.01)
       .sort((a, b) => b.excessAmount - a.excessAmount);
-  }, [personalAccounts, consumedDetails]);
+  }, [personalRows, personalPendingByAccountId]);
 
   const deficitAccounts = useMemo(() => {
-    return personalAccounts
-      .map((account) => {
-        const ownerDetails = consumedDetails.find((detail) => detail.beneficiaryId === account.ownerId);
-        const ownerRemaining = ownerDetails?.remaining ?? 0;
-        const deficitAmount = ownerRemaining - account.currentBalance;
-
-        return {
-          accountName: account.name,
-          deficitAmount,
-        };
-      })
+    return personalRows
+      .map((row) => ({
+        accountId: row.id,
+        accountName: row.name,
+        deficitAmount: row.target - (row.balance + (personalPendingByAccountId[row.id] ?? 0)),
+        countedPendingAmount: personalPendingByAccountId[row.id] ?? 0,
+      }))
       .filter((entry) => entry.deficitAmount > 0.01)
       .sort((a, b) => b.deficitAmount - a.deficitAmount);
-  }, [personalAccounts, consumedDetails]);
+  }, [personalRows, personalPendingByAccountId]);
 
   return (
     <div className="flex flex-col gap-1.5 md:gap-2 m-2">

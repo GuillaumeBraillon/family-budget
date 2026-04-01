@@ -14,8 +14,8 @@ interface BalancesTableProps {
   currentDate?: Date;
   activeWeek?: number;
   totalPersonalRemainingAmount?: number;
-  excessAccounts?: { accountName: string; excessAmount: number }[];
-  deficitAccounts?: { accountName: string; deficitAmount: number }[];
+  excessAccounts?: { accountId: string; accountName: string; excessAmount: number; countedPendingAmount: number }[];
+  deficitAccounts?: { accountId: string; accountName: string; deficitAmount: number; countedPendingAmount: number }[];
 }
 
 /**
@@ -79,15 +79,23 @@ export const BalancesTable: React.FC<BalancesTableProps> = ({
   const sortedRows = [...rows].sort((a, b) => b.name.localeCompare(a.name, "fr", { sensitivity: "base" }));
   const accountVarianceDisplayThreshold = 10;
 
-  const excessByAccountName = excessAccounts.reduce<Record<string, number>>((acc, entry) => {
-    acc[entry.accountName] = entry.excessAmount;
+  const excessByAccountId = excessAccounts.reduce<Record<string, { excessAmount: number; countedPendingAmount: number }>>((acc, entry) => {
+    acc[entry.accountId] = {
+      excessAmount: entry.excessAmount,
+      countedPendingAmount: entry.countedPendingAmount,
+    };
     return acc;
   }, {});
 
-  const deficitByAccountName = deficitAccounts.reduce<Record<string, number>>((acc, entry) => {
-    acc[entry.accountName] = entry.deficitAmount;
+  const deficitByAccountId = deficitAccounts.reduce<Record<string, { deficitAmount: number; countedPendingAmount: number }>>((acc, entry) => {
+    acc[entry.accountId] = {
+      deficitAmount: entry.deficitAmount,
+      countedPendingAmount: entry.countedPendingAmount,
+    };
     return acc;
   }, {});
+
+  const formatAmount = (amount: number) => `${amount.toFixed(2)}€`;
 
   const startEdit = (id: string, balance: number, e: React.MouseEvent, mode: "WITH_PENDING" | "WITHOUT_PENDING" = "WITH_PENDING") => {
     e.stopPropagation();
@@ -167,14 +175,49 @@ export const BalancesTable: React.FC<BalancesTableProps> = ({
                         <div className="flex items-center gap-2">
                           <p className="font-bold text-slate-900 text-xs sm:text-sm">{row.name}</p>
                           {row.isJoint && <span className="text-[9px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded uppercase tracking-wide">PIVOT</span>}
-                          {!row.isJoint && (excessByAccountName[row.name] ?? 0) > accountVarianceDisplayThreshold && (
-                            <span className="text-[9px] bg-rose-100 text-rose-700 px-1.5 py-0.5 rounded uppercase tracking-wide font-bold">
-                              Excédent +{(excessByAccountName[row.name] ?? 0).toFixed(2)}€
+                          {!row.isJoint && (excessByAccountId[row.id]?.excessAmount ?? 0) > accountVarianceDisplayThreshold && (
+                            <span className="inline-flex items-center">
+                              <span className="text-[9px] bg-rose-100 text-rose-700 px-1.5 py-0.5 rounded uppercase tracking-wide font-bold">
+                                Excédent +{(excessByAccountId[row.id]?.excessAmount ?? 0).toFixed(2)}€
+                              </span>
+                              <MobileTooltip
+                                ariaLabel="Voir le détail du calcul de l'excédent"
+                                widthClass="w-64"
+                                text={
+                                  <div className="space-y-1 text-[10px]">
+                                    <div className="flex justify-between gap-4">
+                                      <span className="text-slate-700">Solde réel</span>
+                                      <span className="font-mono font-bold text-slate-900">{formatAmount(row.balance)}</span>
+                                    </div>
+                                    <div className="flex justify-between gap-4">
+                                      <span className="text-slate-700">En attente du compte</span>
+                                      <span className="font-mono font-bold text-amber-700">{formatAmount(row.pendingAmount ?? 0)}</span>
+                                    </div>
+                                    <div className="flex justify-between gap-4">
+                                      <span className="text-slate-700">En attente retenu</span>
+                                      <span className="font-mono font-bold text-orange-700">
+                                        {formatAmount(excessByAccountId[row.id]?.countedPendingAmount ?? 0)}
+                                      </span>
+                                    </div>
+                                    <div className="flex justify-between gap-4 border-b border-slate-200 pb-1">
+                                      <span className="text-slate-700">Reste perso cible</span>
+                                      <span className="font-mono font-bold text-indigo-700">{formatAmount(row.target ?? 0)}</span>
+                                    </div>
+                                    <div className="text-slate-600">Calcul: solde réel + attente retenue - reste perso</div>
+                                    <div className="flex justify-between gap-4">
+                                      <span className="text-slate-900 font-bold">Excédent</span>
+                                      <span className="font-mono font-bold text-rose-700">
+                                        {formatAmount(row.balance + (excessByAccountId[row.id]?.countedPendingAmount ?? 0) - (row.target ?? 0))}
+                                      </span>
+                                    </div>
+                                  </div>
+                                }
+                              />
                             </span>
                           )}
-                          {!row.isJoint && (deficitByAccountName[row.name] ?? 0) > accountVarianceDisplayThreshold && (
+                          {!row.isJoint && (deficitByAccountId[row.id]?.deficitAmount ?? 0) > accountVarianceDisplayThreshold && (
                             <span className="text-[9px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded uppercase tracking-wide font-bold">
-                              Déficit -{(deficitByAccountName[row.name] ?? 0).toFixed(2)}€
+                              Déficit -{(deficitByAccountId[row.id]?.deficitAmount ?? 0).toFixed(2)}€
                             </span>
                           )}
                           <span className="text-[10px] text-slate-500">({row.owner})</span>

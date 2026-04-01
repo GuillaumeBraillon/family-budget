@@ -7,6 +7,18 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.9.8] - 2026-04-01
+
+### ✅ Corrections
+
+- `BalancesView` : correction du calcul des badges `Excédent` / `Déficit` des comptes personnels. Les montants en attente ne sont plus pris globalement au niveau du compte, mais uniquement sur la part `Standard` rattachée au bénéficiaire propriétaire du compte.
+- Correction d'un faux `Excédent` sur les comptes personnels quand des opérations en attente du compte concernaient en réalité le bénéficiaire `Famille`.
+
+### 🔧 UI / Améliorations
+
+- `BalancesTable` : ajout d'un tooltip explicatif sur le badge `Excédent` avec le détail du calcul (`solde réel`, `en attente du compte`, `en attente retenu`, `reste perso cible`, montant final).
+- Clarification du diagnostic des écarts entre solde du compte et enveloppe personnelle, pour faciliter l'analyse des cas où le `pending` du compte ne doit pas être imputé au bénéficiaire personnel.
+
 ## [2.9.7] - 2026-03-16
 
 ### Removed
