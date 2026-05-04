@@ -92,44 +92,120 @@ export const BalancesView: React.FC<BalancesViewProps> = ({
     return relevantPeriods.flatMap((period) => period.items).filter((item) => !item.isPaid && !item.isSalary && !isBudgetExcluded(item));
   }, [filteredPeriodBudgets, scope, activeWeek]);
 
-  const personalPendingByAccountId = useMemo(() => {
-    return personalAccounts.reduce<Record<string, number>>((acc, account) => {
-      const personalPendingAmount = relevantPendingItems
-        .filter((item) => item.accountId === account.id)
-        .reduce((sum, item) => {
-          const ownerShare = getBeneficiaryStandardShare(item, account.ownerId);
-          if (ownerShare <= 0) return sum;
-          return sum + (item.type === "EXPENSE" ? -ownerShare : ownerShare);
-        }, 0);
+  const relevantPaidItems = useMemo(() => {
+    const relevantPeriods = scope === "MONTH" ? filteredPeriodBudgets : filteredPeriodBudgets.filter((period) => period.weekNumber <= activeWeek);
 
-      acc[account.id] = personalPendingAmount;
+    return relevantPeriods.flatMap((period) => period.items).filter((item) => item.isPaid && !item.isSalary && !isBudgetExcluded(item));
+  }, [filteredPeriodBudgets, scope, activeWeek]);
+
+  const accountOwnerIdByAccountId = useMemo(() => {
+    return personalAccounts.reduce<Record<string, string>>((acc, account) => {
+      acc[account.id] = account.ownerId;
+      return acc;
+    }, {});
+  }, [personalAccounts]);
+
+  const personalPendingByBeneficiaryId = useMemo(() => {
+    const ownerIds = Array.from(new Set(personalAccounts.map((account) => account.ownerId)));
+
+    return ownerIds.reduce<Record<string, number>>((acc, ownerId) => {
+      const pendingAmount = relevantPendingItems.reduce((sum, item) => {
+        const ownerShare = getBeneficiaryStandardShare(item, ownerId);
+        if (ownerShare <= 0) return sum;
+        return sum + (item.type === "EXPENSE" ? -ownerShare : ownerShare);
+      }, 0);
+
+      acc[ownerId] = pendingAmount;
       return acc;
     }, {});
   }, [personalAccounts, relevantPendingItems]);
 
+  const personalPaidConsumedByBeneficiaryId = useMemo(() => {
+    const ownerIds = Array.from(new Set(personalAccounts.map((account) => account.ownerId)));
+
+    return ownerIds.reduce<Record<string, number>>((acc, ownerId) => {
+      const paidConsumedAmount = relevantPaidItems.reduce((sum, item) => {
+        const ownerShare = getBeneficiaryStandardShare(item, ownerId);
+        if (ownerShare <= 0) return sum;
+        return sum + (item.type === "EXPENSE" ? ownerShare : -ownerShare);
+      }, 0);
+
+      acc[ownerId] = paidConsumedAmount;
+      return acc;
+    }, {});
+  }, [personalAccounts, relevantPaidItems]);
+
   const excessAccounts = useMemo(() => {
     return personalRows
-      .map((row) => ({
-        accountId: row.id,
-        accountName: row.name,
-        excessAmount: row.balance + (personalPendingByAccountId[row.id] ?? 0) - row.target,
-        countedPendingAmount: personalPendingByAccountId[row.id] ?? 0,
-      }))
+      .map((row) => {
+        const ownerId = accountOwnerIdByAccountId[row.id];
+        const countedPendingAmount = ownerId ? (personalPendingByBeneficiaryId[ownerId] ?? 0) : 0;
+        const paidConsumedAmount = ownerId ? (personalPaidConsumedByBeneficiaryId[ownerId] ?? 0) : 0;
+        const availableTarget = (row.target ?? 0) - countedPendingAmount;
+        const accountPendingAmount = row.pendingAmount ?? 0;
+        const pendingCreditAmount = Math.max(accountPendingAmount, 0);
+        const hasPendingCredit = pendingCreditAmount > 0.01;
+        const availableTotal = availableTarget + paidConsumedAmount;
+        const immediateAmount = row.balance - availableTarget;
+        const projectedAmount = immediateAmount + pendingCreditAmount;
+        const personalProjectedAmount = availableTarget + countedPendingAmount;
+        const hasSamePendingAmount = Math.abs(accountPendingAmount - countedPendingAmount) < 0.01;
+
+        return {
+          accountId: row.id,
+          accountName: row.name,
+          excessAmount: hasPendingCredit ? projectedAmount : immediateAmount,
+          countedPendingAmount,
+          paidConsumedAmount,
+          accountPendingAmount,
+          pendingCreditAmount,
+          hasPendingCredit,
+          availableTarget,
+          availableTotal,
+          immediateAmount,
+          projectedAmount,
+          personalProjectedAmount,
+          hasSamePendingAmount,
+        };
+      })
       .filter((entry) => entry.excessAmount > 0.01)
       .sort((a, b) => b.excessAmount - a.excessAmount);
-  }, [personalRows, personalPendingByAccountId]);
+  }, [personalRows, accountOwnerIdByAccountId, personalPendingByBeneficiaryId, personalPaidConsumedByBeneficiaryId]);
 
   const deficitAccounts = useMemo(() => {
     return personalRows
-      .map((row) => ({
-        accountId: row.id,
-        accountName: row.name,
-        deficitAmount: row.target - (row.balance + (personalPendingByAccountId[row.id] ?? 0)),
-        countedPendingAmount: personalPendingByAccountId[row.id] ?? 0,
-      }))
+      .map((row) => {
+        const ownerId = accountOwnerIdByAccountId[row.id];
+        const countedPendingAmount = ownerId ? (personalPendingByBeneficiaryId[ownerId] ?? 0) : 0;
+        const paidConsumedAmount = ownerId ? (personalPaidConsumedByBeneficiaryId[ownerId] ?? 0) : 0;
+        const availableTarget = (row.target ?? 0) - countedPendingAmount;
+        const accountPendingAmount = row.pendingAmount ?? 0;
+        const pendingCreditAmount = Math.max(accountPendingAmount, 0);
+        const hasPendingCredit = pendingCreditAmount > 0.01;
+        const availableTotal = availableTarget + paidConsumedAmount;
+        const immediateAmount = availableTarget - row.balance;
+        const projectedAmount = immediateAmount - pendingCreditAmount;
+        const personalProjectedAmount = availableTarget + countedPendingAmount;
+
+        return {
+          accountId: row.id,
+          accountName: row.name,
+          deficitAmount: hasPendingCredit ? projectedAmount : immediateAmount,
+          countedPendingAmount,
+          paidConsumedAmount,
+          accountPendingAmount,
+          pendingCreditAmount,
+          hasPendingCredit,
+          availableTarget,
+          availableTotal,
+          immediateAmount,
+          projectedAmount,
+          personalProjectedAmount,
+        };
+      })
       .filter((entry) => entry.deficitAmount > 0.01)
       .sort((a, b) => b.deficitAmount - a.deficitAmount);
-  }, [personalRows, personalPendingByAccountId]);
+  }, [personalRows, accountOwnerIdByAccountId, personalPendingByBeneficiaryId, personalPaidConsumedByBeneficiaryId]);
 
   return (
     <div className="flex flex-col gap-1.5 md:gap-2 m-2">

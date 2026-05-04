@@ -96,9 +96,9 @@ export const PersonalBudgetSummary: React.FC<PersonalBudgetSummaryProps> = ({
             <Card className={subCardClass}>
               <div className="space-y-1.5">
                 <div className="flex items-center">
-                  <span className={`${sectionLabelClass} mb-2 w-full text-left`}>Dépensé</span>
+                  <span className={`${sectionLabelClass} mb-2 w-full text-left`}>Dépenses</span>
                   <MobileTooltip
-                    text="Dépenses standard affectées aux bénéficiaires (hors Extra, hors virements internes)."
+                    text="Dépenses standard (Réél + en attente) affectées aux bénéficiaires (hors Extra, hors virements internes)."
                     icon={<Info size={14} className="text-slate-600 hover:text-slate-800" />}
                     widthClass="w-60"
                   />

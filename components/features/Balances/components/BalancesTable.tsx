@@ -14,8 +14,37 @@ interface BalancesTableProps {
   currentDate?: Date;
   activeWeek?: number;
   totalPersonalRemainingAmount?: number;
-  excessAccounts?: { accountId: string; accountName: string; excessAmount: number; countedPendingAmount: number }[];
-  deficitAccounts?: { accountId: string; accountName: string; deficitAmount: number; countedPendingAmount: number }[];
+  excessAccounts?: {
+    accountId: string;
+    accountName: string;
+    excessAmount: number;
+    countedPendingAmount: number;
+    paidConsumedAmount: number;
+    accountPendingAmount: number;
+    pendingCreditAmount: number;
+    hasPendingCredit: boolean;
+    availableTarget: number;
+    availableTotal: number;
+    immediateAmount: number;
+    projectedAmount: number;
+    personalProjectedAmount: number;
+    hasSamePendingAmount: boolean;
+  }[];
+  deficitAccounts?: {
+    accountId: string;
+    accountName: string;
+    deficitAmount: number;
+    countedPendingAmount: number;
+    paidConsumedAmount: number;
+    accountPendingAmount: number;
+    pendingCreditAmount: number;
+    hasPendingCredit: boolean;
+    availableTarget: number;
+    availableTotal: number;
+    immediateAmount: number;
+    projectedAmount: number;
+    personalProjectedAmount: number;
+  }[];
 }
 
 /**
@@ -79,18 +108,72 @@ export const BalancesTable: React.FC<BalancesTableProps> = ({
   const sortedRows = [...rows].sort((a, b) => b.name.localeCompare(a.name, "fr", { sensitivity: "base" }));
   const accountVarianceDisplayThreshold = 10;
 
-  const excessByAccountId = excessAccounts.reduce<Record<string, { excessAmount: number; countedPendingAmount: number }>>((acc, entry) => {
+  const excessByAccountId = excessAccounts.reduce<
+    Record<
+      string,
+      {
+        excessAmount: number;
+        countedPendingAmount: number;
+        paidConsumedAmount: number;
+        accountPendingAmount: number;
+        pendingCreditAmount: number;
+        hasPendingCredit: boolean;
+        availableTarget: number;
+        availableTotal: number;
+        immediateAmount: number;
+        projectedAmount: number;
+        personalProjectedAmount: number;
+        hasSamePendingAmount: boolean;
+      }
+    >
+  >((acc, entry) => {
     acc[entry.accountId] = {
       excessAmount: entry.excessAmount,
       countedPendingAmount: entry.countedPendingAmount,
+      paidConsumedAmount: entry.paidConsumedAmount,
+      accountPendingAmount: entry.accountPendingAmount,
+      pendingCreditAmount: entry.pendingCreditAmount,
+      hasPendingCredit: entry.hasPendingCredit,
+      availableTarget: entry.availableTarget,
+      availableTotal: entry.availableTotal,
+      immediateAmount: entry.immediateAmount,
+      projectedAmount: entry.projectedAmount,
+      personalProjectedAmount: entry.personalProjectedAmount,
+      hasSamePendingAmount: entry.hasSamePendingAmount,
     };
     return acc;
   }, {});
 
-  const deficitByAccountId = deficitAccounts.reduce<Record<string, { deficitAmount: number; countedPendingAmount: number }>>((acc, entry) => {
+  const deficitByAccountId = deficitAccounts.reduce<
+    Record<
+      string,
+      {
+        deficitAmount: number;
+        countedPendingAmount: number;
+        paidConsumedAmount: number;
+        accountPendingAmount: number;
+        pendingCreditAmount: number;
+        hasPendingCredit: boolean;
+        availableTarget: number;
+        availableTotal: number;
+        immediateAmount: number;
+        projectedAmount: number;
+        personalProjectedAmount: number;
+      }
+    >
+  >((acc, entry) => {
     acc[entry.accountId] = {
       deficitAmount: entry.deficitAmount,
       countedPendingAmount: entry.countedPendingAmount,
+      paidConsumedAmount: entry.paidConsumedAmount,
+      accountPendingAmount: entry.accountPendingAmount,
+      pendingCreditAmount: entry.pendingCreditAmount,
+      hasPendingCredit: entry.hasPendingCredit,
+      availableTarget: entry.availableTarget,
+      availableTotal: entry.availableTotal,
+      immediateAmount: entry.immediateAmount,
+      projectedAmount: entry.projectedAmount,
+      personalProjectedAmount: entry.personalProjectedAmount,
     };
     return acc;
   }, {});
@@ -164,6 +247,12 @@ export const BalancesTable: React.FC<BalancesTableProps> = ({
           </thead>
           <tbody className="divide-y divide-slate-100">
             {sortedRows.map((row) => {
+              const excessData = excessByAccountId[row.id];
+              const excessAmount = excessData?.excessAmount ?? 0;
+
+              const deficitData = deficitByAccountId[row.id];
+              const deficitAmount = deficitData?.deficitAmount ?? 0;
+
               return (
                 <tr key={row.id} className={`hover:bg-slate-50 transition-colors ${row.isJoint ? "bg-purple-50/30" : ""}`}>
                   <td className="px-4 py-2.5">
@@ -175,10 +264,10 @@ export const BalancesTable: React.FC<BalancesTableProps> = ({
                         <div className="flex items-center gap-2">
                           <p className="font-bold text-slate-900 text-xs sm:text-sm">{row.name}</p>
                           {row.isJoint && <span className="text-[9px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded uppercase tracking-wide">PIVOT</span>}
-                          {!row.isJoint && (excessByAccountId[row.id]?.excessAmount ?? 0) > accountVarianceDisplayThreshold && (
+                          {!row.isJoint && excessAmount > accountVarianceDisplayThreshold && (
                             <span className="inline-flex items-center">
                               <span className="text-[9px] bg-rose-100 text-rose-700 px-1.5 py-0.5 rounded uppercase tracking-wide font-bold">
-                                Excédent +{(excessByAccountId[row.id]?.excessAmount ?? 0).toFixed(2)}€
+                                Excédent +{excessAmount.toFixed(2)}€
                               </span>
                               <MobileTooltip
                                 ariaLabel="Voir le détail du calcul de l'excédent"
@@ -186,38 +275,110 @@ export const BalancesTable: React.FC<BalancesTableProps> = ({
                                 text={
                                   <div className="space-y-1 text-[10px]">
                                     <div className="flex justify-between gap-4">
-                                      <span className="text-slate-700">Solde réel</span>
-                                      <span className="font-mono font-bold text-slate-900">{formatAmount(row.balance)}</span>
+                                      <span className="text-slate-700">Perso disponible pour la période</span>
+                                      <span className="font-mono font-bold text-indigo-700">{formatAmount(excessData?.availableTotal ?? 0)}</span>
                                     </div>
                                     <div className="flex justify-between gap-4">
-                                      <span className="text-slate-700">En attente du compte</span>
-                                      <span className="font-mono font-bold text-amber-700">{formatAmount(row.pendingAmount ?? 0)}</span>
+                                      <span className="text-slate-700">Opérations déja enregistrées</span>
+                                      <span className="font-mono font-bold text-rose-700">{formatAmount(excessData?.paidConsumedAmount ?? 0)}</span>
                                     </div>
                                     <div className="flex justify-between gap-4">
-                                      <span className="text-slate-700">En attente retenu</span>
-                                      <span className="font-mono font-bold text-orange-700">
-                                        {formatAmount(excessByAccountId[row.id]?.countedPendingAmount ?? 0)}
+                                      <span className="text-slate-700">Perso disponible restant</span>
+                                      <span className="font-mono font-bold text-indigo-700">{formatAmount(excessData?.availableTarget ?? 0)}</span>
+                                    </div>
+                                    <div className="flex justify-between gap-4">
+                                      <span className="text-slate-700">Solde du compte perso</span>
+                                      <span className="font-mono text-rose-700">{formatAmount(row.balance)}</span>
+                                    </div>
+                                    {excessData?.hasPendingCredit && (
+                                      <div className="flex justify-between gap-4">
+                                        <span className="text-slate-700">Crédit en attente</span>
+                                        <span className="font-mono font-bold text-amber-700">{formatAmount(excessData?.pendingCreditAmount ?? 0)}</span>
+                                      </div>
+                                    )}
+                                    <div className="flex justify-between gap-4">
+                                      <span className="text-slate-900 font-bold">
+                                        {excessData?.hasPendingCredit ? "Excédent (Solde - Restant + Crédit)" : "Excédent (Solde - Restant)"}
                                       </span>
+                                      <span className="font-mono font-bold text-rose-700">{formatAmount(excessAmount)}</span>
                                     </div>
-                                    <div className="flex justify-between gap-4 border-b border-slate-200 pb-1">
-                                      <span className="text-slate-700">Reste perso cible</span>
-                                      <span className="font-mono font-bold text-indigo-700">{formatAmount(row.target ?? 0)}</span>
-                                    </div>
-                                    <div className="text-slate-600">Calcul: solde réel + attente retenue - reste perso</div>
+                                    <hr></hr>
+                                    {excessData?.hasSamePendingAmount ? (
+                                      <div className="flex justify-between gap-4">
+                                        <span className="text-slate-700">Opérations en attente</span>
+                                        <span className="font-mono font-bold text-amber-700">{formatAmount(excessData?.countedPendingAmount ?? 0)}</span>
+                                      </div>
+                                    ) : (
+                                      <>
+                                        <div className="flex justify-between gap-4">
+                                          <span className="text-slate-700">Opérations en attente du compte</span>
+                                          <span className="font-mono font-bold text-amber-700">{formatAmount(excessData?.accountPendingAmount ?? 0)}</span>
+                                        </div>
+                                        <div className="flex justify-between gap-4">
+                                          <span className="text-slate-700">Opérations en attente perso</span>
+                                          <span className="font-mono font-bold text-amber-700">{formatAmount(excessData?.countedPendingAmount ?? 0)}</span>
+                                        </div>
+                                      </>
+                                    )}
                                     <div className="flex justify-between gap-4">
-                                      <span className="text-slate-900 font-bold">Excédent</span>
-                                      <span className="font-mono font-bold text-rose-700">
-                                        {formatAmount(row.balance + (excessByAccountId[row.id]?.countedPendingAmount ?? 0) - (row.target ?? 0))}
-                                      </span>
+                                      <span className="text-slate-900 font-bold">Perso projeté</span>
+                                      <span className="font-mono font-bold text-indigo-700">{formatAmount(excessData?.personalProjectedAmount ?? 0)}</span>
                                     </div>
                                   </div>
                                 }
                               />
                             </span>
                           )}
-                          {!row.isJoint && (deficitByAccountId[row.id]?.deficitAmount ?? 0) > accountVarianceDisplayThreshold && (
-                            <span className="text-[9px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded uppercase tracking-wide font-bold">
-                              Déficit -{(deficitByAccountId[row.id]?.deficitAmount ?? 0).toFixed(2)}€
+                          {!row.isJoint && deficitAmount > accountVarianceDisplayThreshold && (
+                            <span className="inline-flex items-center">
+                              <span className="text-[9px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded uppercase tracking-wide font-bold">
+                                Déficit -{deficitAmount.toFixed(2)}€
+                              </span>
+                              <MobileTooltip
+                                ariaLabel="Voir le détail du calcul du déficit"
+                                widthClass="w-64"
+                                text={
+                                  <div className="space-y-1 text-[10px]">
+                                    <div className="flex justify-between gap-4">
+                                      <span className="text-slate-700">Perso disponible pour la période</span>
+                                      <span className="font-mono font-bold text-indigo-700">{formatAmount(deficitData?.availableTotal ?? 0)}</span>
+                                    </div>
+                                    <div className="flex justify-between gap-4">
+                                      <span className="text-slate-700">Opérations déja enregistrées</span>
+                                      <span className="font-mono font-bold text-rose-700">{formatAmount(deficitData?.paidConsumedAmount ?? 0)}</span>
+                                    </div>
+                                    <div className="flex justify-between gap-4">
+                                      <span className="text-slate-700">Perso disponible restant</span>
+                                      <span className="font-mono font-bold text-indigo-700">{formatAmount(deficitData?.availableTarget ?? 0)}</span>
+                                    </div>
+                                    <div className="flex justify-between gap-4">
+                                      <span className="text-slate-700">Solde du compte perso</span>
+                                      <span className="font-mono font-bold text-slate-900">{formatAmount(row.balance)}</span>
+                                    </div>
+                                    {deficitData?.hasPendingCredit && (
+                                      <div className="flex justify-between gap-4">
+                                        <span className="text-slate-700">Crédit en attente</span>
+                                        <span className="font-mono font-bold text-amber-700">{formatAmount(deficitData?.pendingCreditAmount ?? 0)}</span>
+                                      </div>
+                                    )}
+                                    <div className="flex justify-between gap-4">
+                                      <span className="text-slate-900 font-bold">
+                                        {deficitData?.hasPendingCredit ? "Déficit (Solde - Restant + Crédit)" : "Déficit (Solde - Restant)"}
+                                      </span>
+                                      <span className="font-mono font-bold text-amber-700">{formatAmount(deficitAmount)}</span>
+                                    </div>
+                                    <hr></hr>
+                                    <div className="flex justify-between gap-4">
+                                      <span className="text-slate-700">Opérations en attente</span>
+                                      <span className="font-mono font-bold text-amber-700">{formatAmount(deficitData?.countedPendingAmount ?? 0)}</span>
+                                    </div>
+                                    <div className="flex justify-between gap-4">
+                                      <span className="text-slate-900 font-bold">Perso projeté</span>
+                                      <span className="font-mono font-bold text-indigo-700">{formatAmount(deficitData?.personalProjectedAmount ?? 0)}</span>
+                                    </div>
+                                  </div>
+                                }
+                              />
                             </span>
                           )}
                           <span className="text-[10px] text-slate-500">({row.owner})</span>
@@ -291,7 +452,7 @@ export const BalancesTable: React.FC<BalancesTableProps> = ({
                               >
                                 <div className="flex justify-between gap-4">
                                   <span className="text-slate-800 hover:text-slate-900">Dépenses standards</span>
-                                  <span className="font-mono font-bold text-blue-700 hover:text-blue-800">{row.paidStandard.toFixed(2)}€</span>
+                                  <span className="font-mono font-bold text-blue-700 hover:text-blue-800">{(row.paidStandard ?? 0).toFixed(2)}€</span>
                                 </div>
                               </ClickableAmount>
                               <ClickableAmount
@@ -304,7 +465,7 @@ export const BalancesTable: React.FC<BalancesTableProps> = ({
                               >
                                 <div className="flex justify-between gap-4">
                                   <span className="text-slate-800 hover:text-slate-900">Dépenses Extra</span>
-                                  <span className="font-mono font-bold text-purple-700 hover:text-purple-800">{row.paidExtra.toFixed(2)}€</span>
+                                  <span className="font-mono font-bold text-purple-700 hover:text-purple-800">{(row.paidExtra ?? 0).toFixed(2)}€</span>
                                 </div>
                               </ClickableAmount>
                               <ClickableAmount
@@ -317,7 +478,7 @@ export const BalancesTable: React.FC<BalancesTableProps> = ({
                               >
                                 <div className="flex justify-between gap-4 border-t border-slate-200 pt-1">
                                   <span className="text-slate-900 hover:text-slate-950 font-bold">Dépenses réelles</span>
-                                  <span className="font-mono font-bold text-emerald-700 hover:text-emerald-800">{row.paidAmount.toFixed(2)}€</span>
+                                  <span className="font-mono font-bold text-emerald-700 hover:text-emerald-800">{(row.paidAmount ?? 0).toFixed(2)}€</span>
                                 </div>
                               </ClickableAmount>
                             </div>
@@ -331,7 +492,7 @@ export const BalancesTable: React.FC<BalancesTableProps> = ({
                             amount={row.balance + row.pendingAmount}
                             onClick={(e) => {
                               e.stopPropagation();
-                              startEdit(row.id, row.balance + row.pendingAmount, e, "WITHOUT_PENDING");
+                              startEdit(row.id, row.balance + (row.pendingAmount ?? 0), e, "WITHOUT_PENDING");
                             }}
                             tooltipContent={
                               <div className="space-y-1 text-[10px]">

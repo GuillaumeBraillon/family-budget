@@ -7,6 +7,29 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.9.9] - 2026-05-04
+
+### ✅ Corrections
+
+- `BalancesTable` : correction du badge `Déficit` qui affichait un double symbole `€€`.
+- `BalancesTable` : correction de la condition d'affichage du badge `Excédent` / `Déficit` pour s'aligner sur la valeur effectivement affichée.
+- `BalancesView` / `BalancesTable` : correction du calcul `Excédent` / `Déficit` pour éviter le double comptage des opérations en attente — seuls les crédits en attente (montants positifs) impactent l'excédent/déficit, les débits en attente ne sont comptabilisés que dans le « Perso projeté ».
+
+### 🔧 UI / Améliorations
+
+- `BalancesView` : centralisation de **tous** les calculs des tooltips / badges avant transmission à `BalancesTable` (source de vérité unique).
+- `BalancesTable` : harmonisation des tooltips `Excédent` et `Déficit` avec une structure identique :
+  1. Perso disponible pour la période
+  2. Opérations déjà enregistrées
+  3. Perso disponible restant
+  4. Solde du compte perso
+  5. Crédit en attente _(affiché uniquement si crédit positif)_
+  6. Excédent / Déficit (Solde − Restant [+ Crédit])
+  7. Séparateur HR
+  8. Opérations en attente (une ligne si compte = perso, deux lignes sinon)
+  9. Perso projeté
+- `BalancesTable` : suppression de toute recalcul local de logique métier — le composant consomme uniquement les valeurs pré-calculées reçues en props.
+
 ## [2.9.8] - 2026-04-01
 
 ### ✅ Corrections
