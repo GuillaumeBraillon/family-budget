@@ -8,11 +8,6 @@
  * - Logique de calcul → useBalancesData (carryovers, consommations, détails)
  * - Génération des lignes → useBalancesRows (personal/joint avec redistribution)
  * - Composant → Orchestration pure (~150L au lieu de 788L)
- *
- * **Réduction de complexité :**
- * - Avant : 788 lignes, logique mélangée avec UI
- * - Après : ~150 lignes, séparation claire des responsabilités
- * - Gain : -80% de code dans le composant, +testabilité
  */
 import React, { useMemo } from "react";
 import { Account, Person, ExpenseConfig, IncomeConfig, PaidItemDetails, AppSettings, VariableTransaction, CategoryDef, OperationFilters } from "../../../types";
@@ -20,8 +15,8 @@ import { useBalancesData, useBalancesRows } from "../../../hooks/balances";
 import { usePeriodNav } from "../../../contexts/PeriodNavigationContext";
 import { getBeneficiaryStandardShare, isBudgetExcluded } from "../../../services/financeUtils";
 import { PeriodNavigationBar } from "../../ui/molecules/PeriodNavigationBar";
-import { BalancesTable } from "./components/BalancesTable";
 import { TransferSummaryCard } from "./components/TransferSummaryCard";
+import { BalancesTable } from "./components/BalancesTable";
 
 interface BalancesViewProps {
   accounts: Account[];
@@ -135,83 +130,54 @@ export const BalancesView: React.FC<BalancesViewProps> = ({
     }, {});
   }, [personalAccounts, relevantPaidItems]);
 
-  const excessAccounts = useMemo(() => {
-    return personalRows
-      .map((row) => {
-        const ownerId = accountOwnerIdByAccountId[row.id];
-        const countedPendingAmount = ownerId ? (personalPendingByBeneficiaryId[ownerId] ?? 0) : 0;
-        const paidConsumedAmount = ownerId ? (personalPaidConsumedByBeneficiaryId[ownerId] ?? 0) : 0;
-        const availableTarget = row.target ?? 0;
-        const accountPendingAmount = row.pendingAmount ?? 0;
-        const pendingCreditAmount = Math.max(accountPendingAmount, 0);
-        const hasPendingCredit = pendingCreditAmount > 0.01;
-        const availableTotal = availableTarget + paidConsumedAmount - countedPendingAmount;
-        const availableRemaining = availableTarget - countedPendingAmount;
-        const immediateAmount = row.balance - availableRemaining;
-        const personalProjectedAmount = availableTarget;
-        const projectedAmount = row.balance + accountPendingAmount - personalProjectedAmount;
-        const hasSamePendingAmount = Math.abs(accountPendingAmount - countedPendingAmount) < 0.01;
+  const personalVarianceAccounts = useMemo(() => {
+    return personalRows.map((row) => {
+      const ownerId = accountOwnerIdByAccountId[row.id];
+      const countedPendingAmount = ownerId ? (personalPendingByBeneficiaryId[ownerId] ?? 0) : 0;
+      const paidConsumedAmount = ownerId ? (personalPaidConsumedByBeneficiaryId[ownerId] ?? 0) : 0;
+      const availableTarget = row.target ?? 0;
+      const accountPendingAmount = row.pendingAmount ?? 0;
+      const pendingCreditAmount = Math.max(accountPendingAmount, 0);
+      const hasPendingCredit = pendingCreditAmount > 0.01;
+      const availableTotal = availableTarget + paidConsumedAmount - countedPendingAmount;
+      const availableRemaining = availableTarget - countedPendingAmount;
+      const immediateAmount = row.balance - availableRemaining;
+      const personalProjectedAmount = availableTarget;
+      const projectedAmount = row.balance + accountPendingAmount - personalProjectedAmount;
+      const hasSamePendingAmount = Math.abs(accountPendingAmount - countedPendingAmount) < 0.01;
 
-        return {
-          accountId: row.id,
-          beneficiaryId: ownerId,
-          accountName: row.name,
-          excessAmount: immediateAmount,
-          countedPendingAmount,
-          paidConsumedAmount,
-          accountPendingAmount,
-          pendingCreditAmount,
-          hasPendingCredit,
-          availableTarget,
-          availableTotal,
-          immediateAmount,
-          projectedAmount,
-          personalProjectedAmount,
-          hasSamePendingAmount,
-        };
-      })
+      return {
+        accountId: row.id,
+        beneficiaryId: ownerId,
+        accountName: row.name,
+        countedPendingAmount,
+        paidConsumedAmount,
+        accountPendingAmount,
+        pendingCreditAmount,
+        hasPendingCredit,
+        availableTarget,
+        availableTotal,
+        immediateAmount,
+        projectedAmount,
+        personalProjectedAmount,
+        hasSamePendingAmount,
+      };
+    });
+  }, [personalRows, accountOwnerIdByAccountId, personalPendingByBeneficiaryId, personalPaidConsumedByBeneficiaryId]);
+
+  const excessAccounts = useMemo(() => {
+    return personalVarianceAccounts
+      .map((entry) => ({ ...entry, excessAmount: entry.immediateAmount }))
       .filter((entry) => entry.excessAmount > 0.01)
       .sort((a, b) => b.excessAmount - a.excessAmount);
-  }, [personalRows, accountOwnerIdByAccountId, personalPendingByBeneficiaryId, personalPaidConsumedByBeneficiaryId]);
+  }, [personalVarianceAccounts]);
 
   const deficitAccounts = useMemo(() => {
-    return personalRows
-      .map((row) => {
-        const ownerId = accountOwnerIdByAccountId[row.id];
-        const countedPendingAmount = ownerId ? (personalPendingByBeneficiaryId[ownerId] ?? 0) : 0;
-        const paidConsumedAmount = ownerId ? (personalPaidConsumedByBeneficiaryId[ownerId] ?? 0) : 0;
-        const availableTarget = row.target ?? 0;
-        const accountPendingAmount = row.pendingAmount ?? 0;
-        const pendingCreditAmount = Math.max(accountPendingAmount, 0);
-        const hasPendingCredit = pendingCreditAmount > 0.01;
-        const availableTotal = availableTarget + paidConsumedAmount - countedPendingAmount;
-        const availableRemaining = availableTarget - countedPendingAmount;
-        const immediateAmount = availableRemaining - row.balance;
-        const personalProjectedAmount = availableTarget;
-        const projectedAmount = personalProjectedAmount - (row.balance + accountPendingAmount);
-        const hasSamePendingAmount = Math.abs(accountPendingAmount - countedPendingAmount) < 0.01;
-
-        return {
-          accountId: row.id,
-          beneficiaryId: ownerId,
-          accountName: row.name,
-          deficitAmount: immediateAmount,
-          countedPendingAmount,
-          paidConsumedAmount,
-          accountPendingAmount,
-          pendingCreditAmount,
-          hasPendingCredit,
-          availableTarget,
-          availableTotal,
-          immediateAmount,
-          projectedAmount,
-          personalProjectedAmount,
-          hasSamePendingAmount,
-        };
-      })
+    return personalVarianceAccounts
+      .map((entry) => ({ ...entry, deficitAmount: -entry.immediateAmount }))
       .filter((entry) => entry.deficitAmount > 0.01)
       .sort((a, b) => b.deficitAmount - a.deficitAmount);
-  }, [personalRows, accountOwnerIdByAccountId, personalPendingByBeneficiaryId, personalPaidConsumedByBeneficiaryId]);
+  }, [personalVarianceAccounts]);
 
   return (
     <div className="flex flex-col gap-1.5 md:gap-2 m-2">
@@ -238,6 +204,7 @@ export const BalancesView: React.FC<BalancesViewProps> = ({
         currentDate={currentDate}
         activeWeek={scope === "PERIOD" ? activeWeek : undefined}
         totalPersonalRemainingAmount={totalPersonalRemainingAmount}
+        varianceAccounts={personalVarianceAccounts}
         excessAccounts={excessAccounts}
         deficitAccounts={deficitAccounts}
       />

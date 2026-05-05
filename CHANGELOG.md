@@ -7,6 +7,20 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.10.1] - 2026-05-05
+
+### ✅ Corrections
+
+- `BalancesTable` : la ligne **"Opérations en attente du compte"** dans le tooltip de variance s'affiche désormais uniquement si le montant est positif, pour éviter une double lecture avec **"Opérations en attente perso"**.
+- `BalancesView` : correction d'import de `BalancesTable` avec extension explicite (`.tsx`) pour supprimer l'erreur TypeScript de résolution de module.
+
+### 🔧 UI / Améliorations
+
+- `BalancesView` / `BalancesTable` : ajout des données de variance pour **tous** les comptes personnels (même hors seuil de badge).
+- `BalancesTable` : affichage d'une icône d'information avec tooltip de détail même sans badge `Excédent` / `Déficit`, tout en conservant les badges seulement au-dessus du seuil.
+
+---
+
 ## [2.10.0] - 2026-05-05
 
 ### ✅ Corrections

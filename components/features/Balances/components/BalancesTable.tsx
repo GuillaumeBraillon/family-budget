@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Card, CardHeader, CardTitle } from "../../../ui/Card";
-import { Wallet, Pencil, Check, X, Users, Calculator, AlertTriangle } from "lucide-react";
+import { Wallet, Pencil, Check, X, Users, Calculator, AlertTriangle, Info } from "lucide-react";
 import { MobileTooltip } from "../../../ui/MobileTooltip";
 import { ClickableAmount } from "../../../ui/atoms/ClickableAmount";
 import { BalanceRow } from "../../../../hooks/balances";
@@ -36,6 +36,14 @@ interface DeficitAccountData extends VarianceData {
   projectedAmount: number;
 }
 
+interface AccountVarianceData extends VarianceData {
+  accountId: string;
+  beneficiaryId?: string;
+  accountName: string;
+  immediateAmount: number;
+  projectedAmount: number;
+}
+
 interface VarianceLookupEntry extends VarianceData {
   beneficiaryId?: string;
   accountName: string;
@@ -53,6 +61,7 @@ interface BalancesTableProps {
   currentDate?: Date;
   activeWeek?: number;
   totalPersonalRemainingAmount?: number;
+  varianceAccounts?: AccountVarianceData[];
   excessAccounts?: ExcessAccountData[];
   deficitAccounts?: DeficitAccountData[];
 }
@@ -73,7 +82,7 @@ interface VarianceNavProps {
 }
 
 interface VarianceTooltipContentProps extends VarianceNavProps {
-  type: "EXCESS" | "DEFICIT";
+  type: "EXCESS" | "DEFICIT" | "NEUTRAL";
   data?: VarianceData;
   accountBalance: number;
   displayedAmount: number;
@@ -133,8 +142,8 @@ const VarianceTooltipContent: React.FC<VarianceTooltipContentProps> = ({
   currentDate,
   activeWeek,
 }) => {
-  const projectedLabel = type === "EXCESS" ? "Excédent (Solde - Restant)" : "Déficit projeté (Solde - Restant)";
-  const projectedValueClass = type === "EXCESS" ? tooltipValueExcessClass : tooltipValueDeficitClass;
+  const projectedLabel = type === "EXCESS" ? "Excédent (Solde - Restant)" : type === "DEFICIT" ? "Déficit (Solde - Restant)" : "Ecart (Solde - Restant)";
+  const projectedValueClass = type === "EXCESS" ? tooltipValueExcessClass : type === "DEFICIT" ? tooltipValueDeficitClass : tooltipValueNeutralClass;
   const accountIds = accountId ? [accountId] : [];
   const beneficiaryIds = beneficiaryId ? [beneficiaryId] : [];
 
@@ -169,7 +178,7 @@ const VarianceTooltipContent: React.FC<VarianceTooltipContentProps> = ({
           <span className={tooltipValuePendingClass}>{formatAmount(data?.pendingCreditAmount ?? 0)}</span>
         </div>
       )}
-      {!data?.hasSamePendingAmount && (
+      {!data?.hasSamePendingAmount && (data?.accountPendingAmount ?? 0) > 0.01 && (
         <ClickableAmount
           date={currentDate}
           filters={{ status: "WAITING", nature: "ALL", accountIds, beneficiaryIds }}
@@ -306,6 +315,7 @@ export const BalancesTable: React.FC<BalancesTableProps> = ({
   currentDate,
   activeWeek,
   totalPersonalRemainingAmount,
+  varianceAccounts = [],
   excessAccounts = [],
   deficitAccounts = [],
 }) => {
@@ -318,6 +328,10 @@ export const BalancesTable: React.FC<BalancesTableProps> = ({
 
   const excessByAccountId = buildVarianceLookup(excessAccounts, (entry) => entry.excessAmount);
   const deficitByAccountId = buildVarianceLookup(deficitAccounts, (entry) => entry.deficitAmount);
+  const varianceByAccountId = varianceAccounts.reduce<Record<string, AccountVarianceData>>((acc, entry) => {
+    acc[entry.accountId] = entry;
+    return acc;
+  }, {});
 
   const startEdit = (id: string, balance: number, e: React.MouseEvent, mode: "WITH_PENDING" | "WITHOUT_PENDING" = "WITH_PENDING") => {
     e.stopPropagation();
@@ -389,6 +403,10 @@ export const BalancesTable: React.FC<BalancesTableProps> = ({
 
               const deficitData = deficitByAccountId[row.id];
               const deficitAmount = deficitData?.varianceAmount ?? 0;
+              const varianceData = varianceByAccountId[row.id];
+              const hasVarianceBadge = excessAmount > accountVarianceDisplayThreshold || deficitAmount > accountVarianceDisplayThreshold;
+              const neutralVarianceType = (varianceData?.immediateAmount ?? 0) >= 0 ? "EXCESS" : "DEFICIT";
+              const neutralVarianceAmount = Math.abs(varianceData?.immediateAmount ?? 0);
 
               return (
                 <tr key={row.id} className={`hover:bg-slate-50 transition-colors ${row.isJoint ? "bg-purple-50/30" : ""}`}>
@@ -427,6 +445,26 @@ export const BalancesTable: React.FC<BalancesTableProps> = ({
                               onNavigate={onNavigateToPlanner}
                               currentDate={currentDate}
                               activeWeek={activeWeek}
+                            />
+                          )}
+                          {!row.isJoint && !hasVarianceBadge && varianceData && (
+                            <MobileTooltip
+                              ariaLabel="Voir le détail du calcul"
+                              widthClass="w-64"
+                              icon={<Info size={12} className="text-slate-400 hover:text-slate-600" />}
+                              text={
+                                <VarianceTooltipContent
+                                  type={neutralVarianceType}
+                                  data={varianceData}
+                                  accountBalance={row.balance}
+                                  displayedAmount={neutralVarianceAmount}
+                                  accountId={row.id}
+                                  beneficiaryId={varianceData.beneficiaryId}
+                                  onNavigate={onNavigateToPlanner}
+                                  currentDate={currentDate}
+                                  activeWeek={activeWeek}
+                                />
+                              }
                             />
                           )}
                           <span className="text-[10px] text-slate-500">({row.owner})</span>
