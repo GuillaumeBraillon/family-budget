@@ -384,6 +384,7 @@ export const usePlanner = (
           isPaid: !vt.isWaiting,
           isWaiting: !!vt.isWaiting,
           isRefund: !!vt.isRefund,
+          isSalary: !!vt.isSalary,
           isExtra: hasExtraAmounts(!!vt.isExtra, vt.tagAmounts),
           isExtraGlobal: !!vt.isExtra, // Toggle brut de la variable
           comments: vt.comments || "",

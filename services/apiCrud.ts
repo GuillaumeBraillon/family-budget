@@ -677,7 +677,7 @@ export const apiUpsertVariableTransaction = async (transaction: VariableTransact
     p_is_waiting: !!transaction.isWaiting,
     p_is_extra: !!transaction.isExtra,
     p_is_refund: !!transaction.isRefund,
-    p_is_salary: false,
+    p_is_salary: !!transaction.isSalary,
     p_comments: transaction.comments || null,
     p_tag_amounts: normalizedTagAmounts,
     p_beneficiary_amounts: normalizedBeneficiaryAmounts,

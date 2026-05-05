@@ -207,6 +207,7 @@ export const fetchInitialData = async () => {
         beneficiaryAmounts: mapped.beneficiaryAmounts,
         type: mapped.type,
         isRefund: !!mapped.isRefund,
+        isSalary: !!mapped.isSalary,
         isWaiting: mapped.isWaiting,
         isExtra: mapped.isExtra,
         comments: mapped.comments,

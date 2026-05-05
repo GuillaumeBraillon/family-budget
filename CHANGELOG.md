@@ -7,6 +7,33 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.10.2] - 2026-05-05
+
+### ✨ Nouvelles Fonctionnalités
+
+- **`isSalary` sur les transactions variables** : il est désormais possible de cocher "C'est un salaire / revenu structurel" dans le formulaire de transaction variable pour marquer un revenu ponctuel comme salaire (ex : salaire reçu en plusieurs fois, solde de tout compte).
+  - `VariableTransactionForm` : nouveau toggle visible uniquement sur les revenus, dans l'accordéon Options Avancées.
+  - `useTransactionForm` : état `isSalary` + getter/setter, reset, initialisation depuis `editingTransaction`, inclus dans la transaction construite.
+  - `OperationsList` : le badge 💼 **Salaire** s'affiche sur les transactions variables marquées.
+  - Le filtre **"Nature : Salaire"** fonctionne désormais sur les transactions variables.
+
+### ✅ Corrections
+
+- `apiMappers.ts` (`mapDbVariableTransaction`) : `is_salary` n'était pas mappé vers `isSalary` lors du chargement depuis la base de données — les transactions variables marquées comme salaire perdaient ce flag au rechargement.
+- `api.ts` : construction inline du tableau `variableTransactions` — `isSalary` n'était pas propagé depuis `PaidItemDetails` vers `VariableTransaction`.
+- `apiCrud.ts` (`apiUpsertVariableTransaction`) : `p_is_salary` était hardcodé à `false` au lieu d'utiliser `!!transaction.isSalary`.
+- `usePlanner.ts` : `isSalary` n'était pas propagé dans le `PlannedItem` généré depuis une transaction variable.
+- `useDashboardData.ts` : les transactions variables `isSalary = true` étaient comptabilisées dans `income_variable` au lieu de `income_salary`, faussant la ligne **Salaires** du tableau d'analyse annuelle et le taux d'épargne du graphique global.
+- `AnnualIncomeAnalysis.tsx` : les colonnes de périodes de la ligne **Salaires** affichaient toujours un tiret fixe (`-`) au lieu du montant réel.
+
+### 🔧 Qualité / Tests
+
+- Suppression des fichiers de tests `helpers.test.ts`, `periodCalculations.test.ts` et `tagAmounts.test.ts` dont les fonctions testées étaient des ré-implémentations locales sans lien avec le vrai codebase.
+- Correction du helper `compute` dans `varianceCalculations.test.ts` (propriété `overrides` parasite dans le spread).
+- Correction du helper `makeItem` dans `financeUtils.test.ts` (`isExtraGlobal: false` hardcodé empêchait les overrides `isExtra: true` de fonctionner via `??`).
+
+---
+
 ## [2.10.1] - 2026-05-05
 
 ### ✅ Corrections

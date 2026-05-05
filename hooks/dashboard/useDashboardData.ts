@@ -406,6 +406,8 @@ export const useDashboardData = ({
             if (isRefundCategory(tx.category)) {
               // Remboursement : on diminue les dépenses au lieu d'augmenter les revenus
               expenseTotal -= tx.amount;
+            } else if (tx.isSalary) {
+              salaryTotal += tx.amount;
             } else {
               otherIncomeTotal += tx.amount;
             }
@@ -637,6 +639,9 @@ export const useDashboardData = ({
               // Remboursement variable -> Réduit les dépenses variables
               // Note: Les remboursements ne sont pas concernés par Extra/Standard
               addToPeriod(d, -tx.amount, "expense_variable", false);
+            } else if (tx.isSalary) {
+              // Salaire variable -> Agrégé dans les salaires (comme les salaires récurrents)
+              addToPeriod(d, tx.amount, "income_salary");
             } else {
               addToPeriod(d, tx.amount, "income_variable", false);
             }

@@ -111,6 +111,7 @@ export interface VariableTransaction {
   beneficiaryAmounts?: BeneficiaryAmount[];
   type: "EXPENSE" | "INCOME";
   isRefund?: boolean;
+  isSalary?: boolean; // Revenu structurel (salaire, prime, etc.)
   isWaiting: boolean; // True = En attente, False = Pointé
   isExtra: boolean; // True = Hors budget
   comments?: string;

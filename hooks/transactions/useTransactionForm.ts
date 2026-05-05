@@ -96,6 +96,8 @@ interface UseTransactionFormReturn {
 
   isExtra: boolean;
   setIsExtra: (isExtra: boolean) => void;
+  isSalary: boolean;
+  setIsSalary: (isSalary: boolean) => void;
   comments: string;
   setComments: (comments: string) => void;
   selectedTagAmounts: TagAmount[];
@@ -187,6 +189,7 @@ export const useTransactionForm = ({
   const [label, setLabel] = useState("");
   const [amount, setAmount] = useState<string>("");
   const [isExtra, setIsExtra] = useState<boolean>(false);
+  const [isSalary, setIsSalary] = useState<boolean>(false);
   const [comments, setComments] = useState<string>("");
   const [selectedTagAmounts, setSelectedTagAmounts] = useState<TagAmount[]>([]);
 
@@ -272,6 +275,7 @@ export const useTransactionForm = ({
     setType("EXPENSE");
     setIsRefund(false);
     setIsExtra(false);
+    setIsSalary(false);
     setComments("");
     setSelectedTagAmounts([]);
     setAccountId(defaultAccountId);
@@ -322,6 +326,7 @@ export const useTransactionForm = ({
                 : []
           );
           setIsExtra(!!editingTransaction.isExtra);
+          setIsSalary(!!editingTransaction.isSalary);
         } else {
           resetForm();
         }
@@ -425,6 +430,7 @@ export const useTransactionForm = ({
       beneficiaryAmounts: normalizedBeneficiaryAmounts,
       type: finalType,
       isRefund: isRefundTransaction,
+      isSalary: !isRefundTransaction && isSalary ? true : undefined,
       isWaiting: targetIsWaiting,
       isExtra, // Toggle global au niveau opération
       comments: comments.trim() || undefined,
@@ -562,6 +568,8 @@ export const useTransactionForm = ({
 
     isExtra,
     setIsExtra,
+    isSalary,
+    setIsSalary,
     comments,
     setComments,
     selectedTagAmounts,

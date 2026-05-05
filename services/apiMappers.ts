@@ -173,6 +173,7 @@ export const mapDbVariableTransaction = (transaction: DbPaidItem): VariableTrans
   accountId: transaction.account_id,
   type: transaction.type || "EXPENSE",
   isRefund: !!transaction.is_refund,
+  isSalary: !!transaction.is_salary,
   isWaiting: !!transaction.is_waiting,
   isExtra: !!transaction.is_extra,
   comments: transaction.comments || undefined,

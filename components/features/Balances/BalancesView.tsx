@@ -14,6 +14,7 @@ import { Account, Person, ExpenseConfig, IncomeConfig, PaidItemDetails, AppSetti
 import { useBalancesData, useBalancesRows } from "../../../hooks/balances";
 import { usePeriodNav } from "../../../contexts/PeriodNavigationContext";
 import { getBeneficiaryStandardShare, isBudgetExcluded } from "../../../services/financeUtils";
+import { computePersonalVariance } from "../../../hooks/balances/varianceUtils";
 import { PeriodNavigationBar } from "../../ui/molecules/PeriodNavigationBar";
 import { TransferSummaryCard } from "./components/TransferSummaryCard";
 import { BalancesTable } from "./components/BalancesTable";
@@ -137,14 +138,14 @@ export const BalancesView: React.FC<BalancesViewProps> = ({
       const paidConsumedAmount = ownerId ? (personalPaidConsumedByBeneficiaryId[ownerId] ?? 0) : 0;
       const availableTarget = row.target ?? 0;
       const accountPendingAmount = row.pendingAmount ?? 0;
-      const pendingCreditAmount = Math.max(accountPendingAmount, 0);
-      const hasPendingCredit = pendingCreditAmount > 0.01;
-      const availableTotal = availableTarget + paidConsumedAmount - countedPendingAmount;
-      const availableRemaining = availableTarget - countedPendingAmount;
-      const immediateAmount = row.balance - availableRemaining;
-      const personalProjectedAmount = availableTarget;
-      const projectedAmount = row.balance + accountPendingAmount - personalProjectedAmount;
-      const hasSamePendingAmount = Math.abs(accountPendingAmount - countedPendingAmount) < 0.01;
+
+      const variance = computePersonalVariance({
+        balance: row.balance,
+        availableTarget,
+        paidConsumedAmount,
+        countedPendingAmount,
+        accountPendingAmount,
+      });
 
       return {
         accountId: row.id,
@@ -153,14 +154,8 @@ export const BalancesView: React.FC<BalancesViewProps> = ({
         countedPendingAmount,
         paidConsumedAmount,
         accountPendingAmount,
-        pendingCreditAmount,
-        hasPendingCredit,
         availableTarget,
-        availableTotal,
-        immediateAmount,
-        projectedAmount,
-        personalProjectedAmount,
-        hasSamePendingAmount,
+        ...variance,
       };
     });
   }, [personalRows, accountOwnerIdByAccountId, personalPendingByBeneficiaryId, personalPaidConsumedByBeneficiaryId]);

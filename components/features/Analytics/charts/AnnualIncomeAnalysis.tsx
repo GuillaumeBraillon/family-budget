@@ -240,8 +240,18 @@ export const AnnualIncomeAnalysis: React.FC<AnnualIncomeAnalysisProps> = ({ data
                       </span>
                     </td>
                     {periodsHeader.map((p, idx) => (
-                      <td key={idx} className="px-3 py-1.5 text-center">
-                        <span className="text-slate-300 font-light text-[9px]">-</span>
+                      <td key={idx} className="px-3 py-1.5 text-right text-blue-700">
+                        {renderCell(
+                          month.periods[idx]?.income.salaries,
+                          month.dateObj,
+                          month.periods[idx]?.period.id,
+                          "INCOME",
+                          "ALL",
+                          onNavigateToPlanner,
+                          "text-blue-700",
+                          undefined,
+                          { salary: "ONLY" }
+                        )}
                       </td>
                     ))}
                     <td className="px-4 py-1.5 text-right bg-blue-50/30 text-blue-700 font-bold border-l border-slate-100">
@@ -488,7 +498,8 @@ const renderCell = (
   source: "RECURRING" | "VARIABLE" | "ALL",
   onNavigate: (date: Date, filters: Partial<OperationFilters>, weekNumber?: number) => void,
   colorClass?: string,
-  nature?: "ALL" | "ONLY" | "EXCLUDE" // Nouveau paramètre pour la nature (Standard/Extra)
+  nature?: "ALL" | "ONLY" | "EXCLUDE",
+  extraFilters?: Partial<OperationFilters>
 ) => {
   if (!value || value === 0) return <span className="text-slate-200 font-light">-</span>;
 
@@ -496,6 +507,9 @@ const renderCell = (
   const filters = getDetailedAnalysisFilters(flux, source);
   if (nature) {
     filters.nature = nature;
+  }
+  if (extraFilters) {
+    Object.assign(filters, extraFilters);
   }
 
   return (

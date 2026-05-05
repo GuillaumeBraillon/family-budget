@@ -18,7 +18,7 @@
  */
 import React, { useState, useRef } from "react";
 import { useError } from "../../../../contexts/ErrorContext";
-import { TrendingUp, TrendingDown, Calendar, Trash2, Clock, CheckCircle2, Star, MessageSquare, RefreshCcw } from "lucide-react";
+import { TrendingUp, TrendingDown, Calendar, Trash2, Clock, CheckCircle2, Star, MessageSquare, RefreshCcw, Banknote } from "lucide-react";
 import { VariableTransaction, Account, CategoryDef, Person, SavedLabel, Tag, AccountType } from "../../../../types";
 import { CategorySelector } from "../../../ui/molecules/CategorySelector";
 import { TextInput, AmountInput, SearchableTextInput } from "../../../ui/molecules/FormInputs";
@@ -254,6 +254,28 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
                 )}
               </div>
               <input type="checkbox" checked={form.isRefund} onChange={() => {}} className="pointer-events-none" />
+            </div>
+          )}
+
+          {!form.isExpense && (
+            <div
+              onClick={() => form.setIsSalary(!form.isSalary)}
+              className={`cursor-pointer px-3 py-2.5 rounded-lg border transition-all flex items-center gap-3 ${
+                form.isSalary ? "bg-emerald-50 border-emerald-200" : "bg-white border-transparent hover:border-slate-200"
+              }`}
+            >
+              <div className={`p-1 rounded ${form.isSalary ? "bg-emerald-200 text-emerald-700" : "bg-slate-200 text-slate-500"}`}>
+                <Banknote size={14} />
+              </div>
+              <div className="flex-1">
+                <span className={`text-xs font-bold block ${form.isSalary ? "text-emerald-800" : "text-slate-600"}`}>C'est un salaire / revenu structurel</span>
+                {form.isSalary && (
+                  <span className="text-[10px] text-emerald-600 leading-none">
+                    Ce revenu sera exclu du budget variable et comptabilisé comme revenu structurel.
+                  </span>
+                )}
+              </div>
+              <input type="checkbox" checked={form.isSalary} onChange={() => {}} className="pointer-events-none" />
             </div>
           )}
         </AdvancedOptionsAccordion>
