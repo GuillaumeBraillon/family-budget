@@ -141,20 +141,22 @@ export const BalancesView: React.FC<BalancesViewProps> = ({
         const ownerId = accountOwnerIdByAccountId[row.id];
         const countedPendingAmount = ownerId ? (personalPendingByBeneficiaryId[ownerId] ?? 0) : 0;
         const paidConsumedAmount = ownerId ? (personalPaidConsumedByBeneficiaryId[ownerId] ?? 0) : 0;
-        const availableTarget = (row.target ?? 0) - countedPendingAmount;
+        const availableTarget = row.target ?? 0;
         const accountPendingAmount = row.pendingAmount ?? 0;
         const pendingCreditAmount = Math.max(accountPendingAmount, 0);
         const hasPendingCredit = pendingCreditAmount > 0.01;
-        const availableTotal = availableTarget + paidConsumedAmount;
-        const immediateAmount = row.balance - availableTarget;
-        const projectedAmount = immediateAmount + pendingCreditAmount;
-        const personalProjectedAmount = availableTarget + countedPendingAmount;
+        const availableTotal = availableTarget + paidConsumedAmount - countedPendingAmount;
+        const availableRemaining = availableTarget - countedPendingAmount;
+        const immediateAmount = row.balance - availableRemaining;
+        const personalProjectedAmount = availableTarget;
+        const projectedAmount = row.balance + accountPendingAmount - personalProjectedAmount;
         const hasSamePendingAmount = Math.abs(accountPendingAmount - countedPendingAmount) < 0.01;
 
         return {
           accountId: row.id,
+          beneficiaryId: ownerId,
           accountName: row.name,
-          excessAmount: hasPendingCredit ? projectedAmount : immediateAmount,
+          excessAmount: immediateAmount,
           countedPendingAmount,
           paidConsumedAmount,
           accountPendingAmount,
@@ -178,19 +180,22 @@ export const BalancesView: React.FC<BalancesViewProps> = ({
         const ownerId = accountOwnerIdByAccountId[row.id];
         const countedPendingAmount = ownerId ? (personalPendingByBeneficiaryId[ownerId] ?? 0) : 0;
         const paidConsumedAmount = ownerId ? (personalPaidConsumedByBeneficiaryId[ownerId] ?? 0) : 0;
-        const availableTarget = (row.target ?? 0) - countedPendingAmount;
+        const availableTarget = row.target ?? 0;
         const accountPendingAmount = row.pendingAmount ?? 0;
         const pendingCreditAmount = Math.max(accountPendingAmount, 0);
         const hasPendingCredit = pendingCreditAmount > 0.01;
-        const availableTotal = availableTarget + paidConsumedAmount;
-        const immediateAmount = availableTarget - row.balance;
-        const projectedAmount = immediateAmount - pendingCreditAmount;
-        const personalProjectedAmount = availableTarget + countedPendingAmount;
+        const availableTotal = availableTarget + paidConsumedAmount - countedPendingAmount;
+        const availableRemaining = availableTarget - countedPendingAmount;
+        const immediateAmount = availableRemaining - row.balance;
+        const personalProjectedAmount = availableTarget;
+        const projectedAmount = personalProjectedAmount - (row.balance + accountPendingAmount);
+        const hasSamePendingAmount = Math.abs(accountPendingAmount - countedPendingAmount) < 0.01;
 
         return {
           accountId: row.id,
+          beneficiaryId: ownerId,
           accountName: row.name,
-          deficitAmount: hasPendingCredit ? projectedAmount : immediateAmount,
+          deficitAmount: immediateAmount,
           countedPendingAmount,
           paidConsumedAmount,
           accountPendingAmount,
@@ -201,6 +206,7 @@ export const BalancesView: React.FC<BalancesViewProps> = ({
           immediateAmount,
           projectedAmount,
           personalProjectedAmount,
+          hasSamePendingAmount,
         };
       })
       .filter((entry) => entry.deficitAmount > 0.01)

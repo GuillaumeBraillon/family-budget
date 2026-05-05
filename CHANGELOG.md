@@ -7,6 +7,17 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.10.0] - 2026-05-05
+
+### ✅ Corrections
+
+- `BalancesView` / `BalancesTable` : correction du montant **"Perso disponible pour la période"** dans le tooltip excédent/déficit — affiche désormais le budget brut de la période (= `allowancePerBeneficiary + carryover`, identique à la carte "Disponible" de `PersonalBudgetSummary`), sans déduire les opérations en attente.
+- `BalancesTable` : correction du montant **"Perso disponible restant"** — calculé comme `availableTotal − paidConsumedAmount` au lieu d'`availableTarget` brut.
+- `BalancesView` : correction du montant **"Excédent (Solde − Restant)"** — basé sur `row.balance − availableRemaining` (= solde − restant réel) au lieu d'inclure les opérations en attente du compte.
+- `BalancesView` : correction du montant **"Perso projeté"** — ramené à `availableTarget` (budget cible) ; l'impact des opérations en attente est visible séparément via la ligne "Opérations en attente".
+
+---
+
 ## [2.9.9] - 2026-05-04
 
 ### ✅ Corrections
