@@ -79,8 +79,8 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
         onSelectSuggestion={onSubCategoryChange}
         onClear={() => onSubCategoryChange("")}
         suggestions={activeSubCats}
-        placeholder={activeSubCats.length === 0 ? "Aucune sous-catégorie" : "Sélectionner ou saisir"}
-        disabled={activeSubCats.length === 0}
+        placeholder="Saisir librement"
+        disabled={!selectedCategory}
         className="w-full bg-slate-100"
       />
     </>

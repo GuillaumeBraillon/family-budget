@@ -21,7 +21,7 @@
  * - types.ts : Interfaces VariableTransaction, Transfer, Account, etc.
  * - useState, useEffect, useMemo : Hooks React pour l'état et la memoization
  */
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { VariableTransaction, Account, AccountType, Person, SavedLabel, TagAmount, CategoryDef, BeneficiaryAmount } from "../../types";
 import { useCategoryAutoSuggest } from "../useCategoryAutoSuggest";
 import { getDefaultAccountId } from "../accounts/getDefaultAccountId";
@@ -177,6 +177,9 @@ export const useTransactionForm = ({
 }: UseTransactionFormProps): UseTransactionFormReturn => {
   // --- HOOKS SPÉCIALISÉS ---
   const { suggestFromLabel, isLoading: isSuggesting } = useCategoryAutoSuggest();
+  // Ref pour tracker si le bénéficiaire courant a été auto-rempli via libellé connu
+  // (permet de synchroniser son montant avec le total sans bloquer les modifications manuelles)
+  const autoSuggestedBeneficiaryIdRef = useRef<string | null>(null);
 
   // --- ÉTAT FORMULAIRE ---
 
@@ -273,6 +276,7 @@ export const useTransactionForm = ({
     setBeneficiaryId(defaultBeneficiary);
     setSelectedBeneficiaryAmounts([]);
     setType("EXPENSE");
+    autoSuggestedBeneficiaryIdRef.current = null;
     setIsRefund(false);
     setIsExtra(false);
     setIsSalary(false);
@@ -505,6 +509,10 @@ export const useTransactionForm = ({
           // Auto-suggestion bénéficiaire (v2.6.6)
           if (matchingLabel.beneficiaryId) {
             setBeneficiaryId(matchingLabel.beneficiaryId);
+            // Pré-remplir la ventilation bénéficiaire pour l'affichage dans BeneficiaryAmountSelector
+            const currentAmount = Math.abs(parseFloat(amount) || 0);
+            setSelectedBeneficiaryAmounts([{ beneficiaryId: matchingLabel.beneficiaryId, amount: currentAmount }]);
+            autoSuggestedBeneficiaryIdRef.current = matchingLabel.beneficiaryId;
           }
         } else if (categories.length > 0) {
           // FALLBACK : Utiliser RPC (seulement pour catégorie/sous-catégorie)
@@ -533,7 +541,7 @@ export const useTransactionForm = ({
         }
       }
     },
-    [categories, suggestFromLabel, savedLabels, isExpense]
+    [categories, suggestFromLabel, savedLabels, isExpense, amount]
   );
 
   // --- RETOUR PUBLIC ---
@@ -552,7 +560,19 @@ export const useTransactionForm = ({
     label,
     setLabel,
     amount,
-    setAmount,
+    setAmount: (newAmount: string) => {
+      setAmount(newAmount);
+      // Si le bénéficiaire a été auto-suggéré via libellé connu, synchroniser son montant avec le total
+      if (autoSuggestedBeneficiaryIdRef.current) {
+        const parsed = Math.abs(parseFloat(newAmount) || 0);
+        setSelectedBeneficiaryAmounts((prev) => {
+          if (prev.length === 1 && prev[0].beneficiaryId === autoSuggestedBeneficiaryIdRef.current) {
+            return [{ ...prev[0], amount: parsed }];
+          }
+          return prev;
+        });
+      }
+    },
 
     accountId,
     setAccountId,
@@ -564,7 +584,11 @@ export const useTransactionForm = ({
     beneficiaryId,
     setBeneficiaryId,
     selectedBeneficiaryAmounts,
-    setSelectedBeneficiaryAmounts,
+    setSelectedBeneficiaryAmounts: (amounts: BeneficiaryAmount[]) => {
+      // Toute modification manuelle désactive la synchronisation automatique
+      autoSuggestedBeneficiaryIdRef.current = null;
+      setSelectedBeneficiaryAmounts(amounts);
+    },
 
     isExtra,
     setIsExtra,

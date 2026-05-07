@@ -7,6 +7,23 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.10.4] - 2026-05-07
+
+### ✅ Corrections
+
+- **`CategorySelector`** : le champ **Sous-catégorie** n'est plus bloqué quand aucune suggestion n'existe en base. La saisie libre est désormais autorisée dès qu'une catégorie est renseignée, ce qui permet de continuer la saisie même avec une table de sous-catégories incomplète.
+- **`useTransactionForm`** : correction du pré-remplissage bénéficiaire depuis un libellé connu.
+  - Le bénéficiaire auto-suggéré est maintenant visible immédiatement dans l'UI de ventilation.
+  - Le montant de ventilation suit correctement la saisie du montant total (ex: `55` reste `55`, ne retombe plus à `5`).
+  - La synchronisation automatique est désactivée dès qu'une modification manuelle de la ventilation est faite.
+  - Le reset du formulaire nettoie explicitement l'état de pré-remplissage pour éviter les effets résiduels à la réouverture de la modale.
+- **`tests/apiMappers.test.ts`** : alignement de l'assertion sur le mapping `null -> undefined` pour `subCategory` dans `mapDbExpenseConfig`.
+
+### 🔧 Qualité / Tooling
+
+- **`useTransactionForm`** : correction des dépendances de `useCallback` (`handleLabelChange`) pour satisfaire `react-hooks/exhaustive-deps` et `react-hooks/preserve-manual-memoization`.
+- **`npm run check commit`** : validation complète réussie après corrections (format, lint, typecheck, tests).
+
 ## [2.10.3] - 2026-05-07
 
 ### ✨ Nouvelles Fonctionnalités

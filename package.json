@@ -1,12 +1,13 @@
 {
   "name": "budget-familiale",
   "private": true,
-  "version": "2.10.3",
+  "version": "2.10.4",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "check commit": "npm run fix && npm run test",
     "fix": "npm run format && npm run lint:fix && npm run tsc",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "lint:fix": "eslint . --ext ts,tsx --fix",
