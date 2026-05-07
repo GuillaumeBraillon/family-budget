@@ -48,6 +48,11 @@ export const ExpenseRulesEditor: React.FC<ExpenseRulesEditorProps> = ({
 
   const defaultAccount = accounts[0]?.id || "";
 
+  const currentMonthKey = useMemo(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  }, []);
+
   // Déterminer le bénéficiaire par défaut : priorité au displayOrder
   const defaultBeneficiary = useMemo(() => {
     const sortedByOrder = [...people].sort((a, b) => (a.displayOrder ?? Infinity) - (b.displayOrder ?? Infinity));
@@ -130,7 +135,7 @@ export const ExpenseRulesEditor: React.FC<ExpenseRulesEditorProps> = ({
       category: "",
       subCategory: "",
       isExtra: false,
-      startMonth: "",
+      startMonth: currentMonthKey,
       endMonth: "",
     });
     setIsFormOpen(true);
@@ -142,7 +147,7 @@ export const ExpenseRulesEditor: React.FC<ExpenseRulesEditorProps> = ({
 
     if (!formData.label?.trim()) errors.push("Le libellé est obligatoire");
     if (!amountVal || amountVal <= 0) errors.push("Le montant est obligatoire et doit être positif");
-    if (!formData.dayOfMonth || formData.dayOfMonth < 1 || formData.dayOfMonth > 31) errors.push("Le jour du mois doit être entre 1 et 31");
+    if (!formData.startMonth || !formData.dayOfMonth) errors.push("La première occurrence est obligatoire");
     if (!formData.category) errors.push("La catégorie est obligatoire");
     if (!formData.accountId) errors.push("Le compte est obligatoire");
     if (!formData.beneficiaryId) errors.push("Le bénéficiaire est obligatoire");
@@ -155,13 +160,13 @@ export const ExpenseRulesEditor: React.FC<ExpenseRulesEditorProps> = ({
     setValidationErrors([]);
     const finalConfig: ExpenseConfig = {
       id: editingId || Date.now().toString(),
-      label: formData.label,
+      label: formData.label ?? "",
       amount: amountVal || 0,
-      category: formData.category,
+      category: formData.category ?? "",
       subCategory: formData.subCategory,
-      beneficiaryId: formData.beneficiaryId,
-      accountId: formData.accountId,
-      dayOfMonth: formData.dayOfMonth,
+      beneficiaryId: formData.beneficiaryId ?? "",
+      accountId: formData.accountId ?? "",
+      dayOfMonth: formData.dayOfMonth ?? 1,
       startMonth: formData.startMonth,
       endMonth: formData.endMonth,
       isExtra: formData.isExtra,
@@ -183,7 +188,8 @@ export const ExpenseRulesEditor: React.FC<ExpenseRulesEditorProps> = ({
 
   const sortedConfigs = useMemo(() => {
     return [...configs].sort((a, b) => {
-      const res = sortKey === "label" ? a.label.localeCompare(b.label) : (a[sortKey] as number) - (b[sortKey] as number);
+      const key = sortKey as keyof ExpenseConfig;
+      const res = key === "label" ? a.label.localeCompare(b.label) : (a[key] as number) - (b[key] as number);
       return sortOrder === "asc" ? res : -res;
     });
   }, [configs, sortKey, sortOrder]);
@@ -226,18 +232,29 @@ export const ExpenseRulesEditor: React.FC<ExpenseRulesEditorProps> = ({
             required
           />
 
-          <TextInput
-            label="Jour du mois"
-            type="number"
-            min={1}
-            max={31}
-            value={formData.dayOfMonth}
-            onChange={(e) => {
-              const val = parseInt(e.target.value);
-              setFormData((prev) => ({ ...prev, dayOfMonth: isNaN(val) ? 1 : val }));
-            }}
-            required
-          />
+          <div>
+            <label className="text-xs font-medium text-slate-500 uppercase block mb-1">
+              Première occurrence <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="date"
+              value={formData.startMonth && formData.dayOfMonth ? `${formData.startMonth}-${String(formData.dayOfMonth).padStart(2, "0")}` : ""}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val) {
+                  const [y, m, d] = val.split("-");
+                  setFormData((prev) => ({
+                    ...prev,
+                    dayOfMonth: parseInt(d, 10),
+                    startMonth: `${y}-${m}`,
+                  }));
+                }
+              }}
+              className="w-full p-2 rounded-lg border border-slate-300 bg-white text-slate-900 text-sm"
+              required
+            />
+            <p className="text-xs text-slate-400 mt-1">La dépense se répétera chaque mois à ce jour à partir de ce mois.</p>
+          </div>
 
           <AccountSelector
             accounts={accounts}
@@ -287,17 +304,6 @@ export const ExpenseRulesEditor: React.FC<ExpenseRulesEditorProps> = ({
 
               {formData.isExtra && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 animate-in fade-in slide-in-from-top-2">
-                  <TextInput
-                    label="Mois de début"
-                    type="month"
-                    value={formData.startMonth}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      setFormData((prev) => ({ ...prev, startMonth: val }));
-                    }}
-                    required={formData.isExtra}
-                  />
-
                   <div className="flex flex-col gap-2">
                     <div className="flex gap-2 text-xs mb-1">
                       <button

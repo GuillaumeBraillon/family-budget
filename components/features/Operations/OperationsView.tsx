@@ -282,7 +282,7 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
           sortOptions={sortOptions}
           sortKey={sortKey}
           sortOrder={sortOrder}
-          onSortChange={setSorting}
+          onSortChange={(key, order) => setSorting(key as Parameters<typeof setSorting>[0], order)}
           canToggleOrder={canToggleOrder}
         />
       </div>

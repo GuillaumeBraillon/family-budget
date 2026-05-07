@@ -186,7 +186,13 @@ export const AccountManager: React.FC<AccountManagerProps> = ({ accounts, people
 
       <DataList title="Vos Comptes" count={sortedAndFilteredAccounts.length} onAdd={handleAddClick} addButtonLabel="Ajouter un compte">
         <div className="bg-white p-2 rounded-xl border border-slate-200 shadow-sm mb-4">
-          <ListSorter options={sortOptions} currentSort={sortKey} currentOrder={sortOrder} onSortChange={setSorting} canToggleOrder={canToggleOrder} />
+          <ListSorter
+            options={sortOptions}
+            currentSort={sortKey}
+            currentOrder={sortOrder}
+            onSortChange={(key, order) => setSorting(key as Parameters<typeof setSorting>[0], order)}
+            canToggleOrder={canToggleOrder}
+          />
         </div>
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleReorder}>
           <SortableContext items={sortedAndFilteredAccounts.map((acc) => acc.id)} strategy={verticalListSortingStrategy}>

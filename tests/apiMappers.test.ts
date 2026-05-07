@@ -227,7 +227,7 @@ describe("apiMappers - Conversions DB vers App", () => {
       const result = mapDbExpenseConfig(dbConfig);
 
       expect(result.amount).toBe(0);
-      expect(result.subCategory).toBeNull();
+      expect(result.subCategory).toBeUndefined();
       expect(result.startMonth).toBeUndefined();
       expect(result.endMonth).toBeUndefined();
     });

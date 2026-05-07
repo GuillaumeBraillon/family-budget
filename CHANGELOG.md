@@ -7,6 +7,25 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.10.3] - 2026-05-07
+
+### ✨ Nouvelles Fonctionnalités
+
+- **`ExpenseRulesEditor` — Champ "Première occurrence"** : les deux champs distincts "Jour du mois" et "Mois de début" ont été fusionnés en un seul champ `date`. La saisie d'une date complète extrait automatiquement le jour (`dayOfMonth`) et le mois de début (`startMonth`). Lors de la création, le champ est pré-rempli avec la date actuelle (jour 1 du mois courant).
+
+### 🔧 Qualité / Corrections TypeScript
+
+- **`tsconfig.json`** : activation de `"strict": true` — le mode strict TypeScript était décrit comme requis dans les instructions du projet mais n'était pas configuré dans `tsconfig.json`.
+- **`useValidationScroll`** : signature du hook corrigée pour accepter `RefObject<HTMLElement | null>` (React 19 infère `RefObject<T | null>` depuis `useRef<T>(null)`), supprimant les erreurs dans `ExpenseRulesEditor`, `IncomeEditor`, `VariableTransactionForm` et `TransferForm`.
+- **`IncomeEditor`** : mêmes corrections que `ExpenseRulesEditor` — fallbacks `?? ""` / `?? 1` dans `handleFormSubmit`, cast `keyof IncomeConfig` pour le tri.
+- **`useBudgetActions`** : type `wrapAction` rendu générique pour accepter les vraies signatures typées des fonctions API.
+- **`useBudget`** : correction `authorizedUsers` (`undefined` → `[]`) et type `BudgetData` aligné avec l'état local.
+- **`AccountManager` / `OperationsView`** : propagation des types `AccountSortKey` / `SortKey` dans les props `onSortChange`.
+- **`DashboardView`** / **`UserMenu`** : corrections de types simples (`number | undefined`, `Session | null | undefined`).
+- **`tests/apiMappers.test.ts`** : remplacement des `null` par `undefined` pour respecter les types `DbExpenseConfig` / `DbIncomeConfig`.
+
+---
+
 ## [2.10.2] - 2026-05-05
 
 ### ✨ Nouvelles Fonctionnalités

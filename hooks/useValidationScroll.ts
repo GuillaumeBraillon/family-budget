@@ -69,7 +69,7 @@ import { useEffect, RefObject } from "react";
  * };
  * ```
  */
-export const useValidationScroll = (errors: string[], elementRef: RefObject<HTMLElement>) => {
+export const useValidationScroll = (errors: string[], elementRef: RefObject<HTMLElement | null>) => {
   useEffect(() => {
     if (errors.length > 0 && elementRef.current) {
       elementRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" });

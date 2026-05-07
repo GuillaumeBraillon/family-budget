@@ -158,12 +158,12 @@ export const IncomeEditor: React.FC<IncomeEditorProps> = ({
     setValidationErrors([]);
     const final: IncomeConfig = {
       id: editingId || Date.now().toString(),
-      label: formData.label,
+      label: formData.label ?? "",
       amount: amountVal || 0,
-      accountId: formData.accountId,
-      beneficiaryId: formData.beneficiaryId,
-      dayOfMonth: formData.dayOfMonth,
-      category: formData.category,
+      accountId: formData.accountId ?? "",
+      beneficiaryId: formData.beneficiaryId ?? "",
+      dayOfMonth: formData.dayOfMonth ?? 1,
+      category: formData.category ?? "",
       subCategory: formData.subCategory,
       isExtra: formData.isExtra,
       isSalary: formData.isSalary,
@@ -187,7 +187,8 @@ export const IncomeEditor: React.FC<IncomeEditorProps> = ({
 
   const sortedIncomes = useMemo(() => {
     return [...incomeConfigs].sort((a, b) => {
-      const res = sortKey === "label" ? a.label.localeCompare(b.label) : (a[sortKey] as number) - (b[sortKey] as number);
+      const key = sortKey as keyof IncomeConfig;
+      const res = key === "label" ? a.label.localeCompare(b.label) : (a[key] as number) - (b[key] as number);
       return sortOrder === "asc" ? res : -res;
     });
   }, [incomeConfigs, sortKey, sortOrder]);

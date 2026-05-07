@@ -120,7 +120,8 @@ export const useBudgetActions = (
    */
   type ApiResult = { data?: unknown; error?: unknown };
 
-  const wrapCrudWithReload = <T extends (...args: unknown[]) => Promise<ApiResult>>(apiFunction: T, operationName: string, reloadOnSuccess = true) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const wrapCrudWithReload = <T extends (...args: any[]) => Promise<any>>(apiFunction: T, operationName: string, reloadOnSuccess = true) => {
     return (async (...args: Parameters<T>): Promise<{ data: unknown; error: unknown }> => {
       try {
         const result = await apiFunction(...args);

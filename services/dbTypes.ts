@@ -50,8 +50,8 @@ export interface DbAccount {
   name: string;
   type: string;
   owner_id: string;
-  current_balance: number;
-  bank_name?: string;
+  current_balance: number | null;
+  bank_name?: string | null;
   is_joint: boolean;
 }
 
@@ -83,14 +83,14 @@ export interface DbSavedLabel {
 export interface DbExpenseConfig {
   id: string;
   label: string;
-  amount: number;
+  amount: number | null;
   category: string;
-  sub_category?: string;
+  sub_category?: string | null;
   beneficiary_id: string;
   account_id: string;
   day_of_month: number;
-  start_month?: string;
-  end_month?: string;
+  start_month?: string | null;
+  end_month?: string | null;
   is_extra: boolean;
   tag_ids?: string[];
 }
@@ -98,16 +98,16 @@ export interface DbExpenseConfig {
 export interface DbIncomeConfig {
   id: string;
   label: string;
-  amount: number;
+  amount: number | null;
   account_id: string;
   beneficiary_id: string;
   day_of_month: number;
   category: string;
-  sub_category?: string;
+  sub_category?: string | null;
   is_extra: boolean;
   is_salary: boolean;
-  start_month?: string;
-  end_month?: string;
+  start_month?: string | null;
+  end_month?: string | null;
   tag_ids?: string[];
 }
 
@@ -119,14 +119,14 @@ export interface DbPaidItem {
   account_id: string;
   label: string;
   category: string;
-  sub_category?: string;
-  type: "EXPENSE" | "INCOME";
+  sub_category?: string | null;
+  type: "EXPENSE" | "INCOME" | null;
   is_variable: boolean;
   is_waiting: boolean;
   is_extra: boolean;
   is_refund?: boolean;
   is_salary?: boolean;
-  comments?: string;
+  comments?: string | null;
   date?: string; // Alias de payment_date pour compatibilité
   tag_ids?: string[];
 }
@@ -136,7 +136,7 @@ export interface DbTransfer {
   date: string;
   label: string;
   amount: number;
-  source_account_id: string;
+  source_account_id: string | null;
   destination_account_id: string;
   created_at?: string;
   is_interest?: boolean;

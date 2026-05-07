@@ -18,8 +18,8 @@ interface AccountLabelManagerProps {
   people: Person[];
   onUpsertLabel: (l: SavedLabel) => void;
   onDeleteLabel: (id: string) => void;
-  onImportLabels?: () => Promise<{ count?: number; error?: Error }> | void;
-  onImportVirLabels?: () => Promise<{ count?: number; error?: Error }> | void;
+  onImportLabels?: () => Promise<{ count?: number; error?: unknown }> | void;
+  onImportVirLabels?: () => Promise<{ count?: number; error?: unknown }> | void;
 }
 
 // Utilisation directe des types pour les onglets
@@ -169,7 +169,7 @@ export const AccountLabelManager: React.FC<AccountLabelManagerProps> = ({
     }
   };
 
-  const runImport = async (importFn: () => Promise<{ count?: number; error?: Error }> | void, sourceName: string) => {
+  const runImport = async (importFn: () => Promise<{ count?: number; error?: unknown }> | void, sourceName: string) => {
     const result = await importFn();
 
     if (result && typeof result.count === "number") {

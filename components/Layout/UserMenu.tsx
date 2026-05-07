@@ -81,7 +81,7 @@ export const UserMenu: React.FC<UserMenuProps> = ({ userEmail, onLogout, session
       {/* DROPDOWN AVEC INFOS UTILISATEUR */}
       {isOpen && (
         <div className="absolute top-full right-0 mt-2 w-80 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
-          <UserInfoCard session={session} />
+          <UserInfoCard session={session ?? null} />
         </div>
       )}
     </div>

@@ -43,13 +43,13 @@ interface ConfigurationViewProps {
   onAddIncome: (i: IncomeConfig) => void;
   onUpdateIncome: (i: IncomeConfig) => void;
   onDeleteIncome: (id: string) => void;
-  onImportLabels: () => Promise<{ count?: number; error?: Error }> | void;
-  onImportVirLabels: () => Promise<{ count?: number; error?: Error }> | void;
+  onImportLabels: () => Promise<{ count?: number; error?: unknown }> | void;
+  onImportVirLabels: () => Promise<{ count?: number; error?: unknown }> | void;
   onUpsertTag?: (t: TagType) => void;
   onDeleteTag?: (id: string) => void;
-  onToggleUserAuthorization?: (email: string, isAllowed: boolean) => Promise<{ data?: unknown; error?: Error }> | void;
-  onUpdateUserNotes?: (email: string, notes: string) => Promise<{ data?: unknown; error?: Error }> | void;
-  onDeleteUser?: (email: string) => Promise<{ data?: unknown; error?: Error }> | void;
+  onToggleUserAuthorization?: (email: string, isAllowed: boolean) => Promise<{ data?: unknown; error?: unknown }> | void;
+  onUpdateUserNotes?: (email: string, notes: string) => Promise<{ data?: unknown; error?: unknown }> | void;
+  onDeleteUser?: (email: string) => Promise<{ data?: unknown; error?: unknown }> | void;
 }
 
 export const ConfigurationView: React.FC<ConfigurationViewProps> = ({

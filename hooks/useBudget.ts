@@ -214,7 +214,7 @@ export const useBudget = () => {
         variableTransactions: res.variableTransactions,
         savedLabels: res.savedLabels,
         tags: res.tags,
-        authorizedUsers: res.authorizedUsers,
+        authorizedUsers: res.authorizedUsers ?? [],
       });
     } catch (err) {
       const error = err as Error;

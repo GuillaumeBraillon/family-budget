@@ -21,7 +21,20 @@
  * - types : Account pour le typage
  */
 import type { Dispatch, MutableRefObject, SetStateAction } from "react";
-import { Account, VariableTransaction, Transfer, PaidItemDetails } from "../../types";
+import {
+  Account,
+  ExpenseConfig,
+  IncomeConfig,
+  CategoryDef,
+  Person,
+  Tag,
+  SavedLabel,
+  VariableTransaction,
+  Transfer,
+  PaidItemDetails,
+  AuthorizedUser,
+  AppSettings,
+} from "../../types";
 import { apiUpsertAccount } from "../../services/api";
 
 /**
@@ -64,17 +77,17 @@ import { apiUpsertAccount } from "../../services/api";
  */
 type BudgetData = {
   accounts: Account[];
-  configs: unknown[];
-  incomeConfigs: unknown[];
-  categories: unknown[];
-  people: unknown[];
-  paidItems: Record<string, unknown>;
-  settings: unknown;
-  transfers: unknown[];
-  variableTransactions: unknown[];
-  savedLabels: unknown[];
-  tags: unknown[];
-  authorizedUsers: unknown[];
+  configs: ExpenseConfig[];
+  incomeConfigs: IncomeConfig[];
+  categories: CategoryDef[];
+  people: Person[];
+  paidItems: Record<string, PaidItemDetails>;
+  settings: AppSettings;
+  transfers: Transfer[];
+  variableTransactions: VariableTransaction[];
+  savedLabels: SavedLabel[];
+  tags: Tag[];
+  authorizedUsers: AuthorizedUser[];
 };
 
 export const useBudgetBalances = (budgetDataRef: MutableRefObject<BudgetData>, setBudgetData: Dispatch<SetStateAction<BudgetData>>) => {
