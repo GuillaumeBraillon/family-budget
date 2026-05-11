@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { ChevronDown, CheckSquare, Square, PlusCircle, MinusCircle, Circle } from "lucide-react";
+import { ChevronDown, CheckSquare, Square } from "lucide-react";
 
 export interface FilterOption {
   id: string;
@@ -13,15 +13,8 @@ interface FilterDropdownProps {
   label: string;
   icon: React.ReactNode;
   options: FilterOption[];
-  selectedValues: string[]; // IDs sélectionnés (Utilisé pour le mode standard)
-  onChange: (newValues: string[]) => void; // Standard change
-
-  // Tri-State Props
-  triStateMode?: boolean;
-  includedValues?: string[];
-  excludedValues?: string[];
-  onTriStateChange?: (id: string, state: "INCLUDE" | "EXCLUDE" | null) => void;
-
+  selectedValues: string[];
+  onChange: (newValues: string[]) => void;
   onClear?: () => void;
   onSelectAll?: () => void;
   color?: "indigo" | "emerald" | "amber" | "slate";
@@ -35,10 +28,6 @@ export const FilterDropdown: React.FC<FilterDropdownProps> = ({
   options,
   selectedValues,
   onChange,
-  triStateMode = false,
-  includedValues = [],
-  excludedValues = [],
-  onTriStateChange,
   onClear,
   onSelectAll,
   color = "indigo",
@@ -52,7 +41,7 @@ export const FilterDropdown: React.FC<FilterDropdownProps> = ({
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        // La fermeture est gérée principalement par le backdrop transparent du portal
+        // La fermeture est gérée par le backdrop du portal.
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -83,42 +72,17 @@ export const FilterDropdown: React.FC<FilterDropdownProps> = ({
   };
 
   const handleOptionClick = (id: string) => {
-    if (triStateMode && onTriStateChange) {
-      // Cycle : Neutral -> Include -> Exclude -> Neutral
-      const isIncluded = includedValues.includes(id);
-      const isExcluded = excludedValues.includes(id);
-
-      if (!isIncluded && !isExcluded) {
-        onTriStateChange(id, "INCLUDE");
-      } else if (isIncluded) {
-        onTriStateChange(id, "EXCLUDE");
-      } else {
-        onTriStateChange(id, null);
-      }
-    } else {
-      // Mode Standard
-      if (singleSelect) {
-        onChange([id]);
-        setIsOpen(false);
-      } else {
-        const newValues = selectedValues.includes(id) ? selectedValues.filter((v) => v !== id) : [...selectedValues, id];
-        onChange(newValues);
-      }
+    if (singleSelect) {
+      onChange([id]);
+      setIsOpen(false);
+      return;
     }
+
+    const newValues = selectedValues.includes(id) ? selectedValues.filter((v) => v !== id) : [...selectedValues, id];
+    onChange(newValues);
   };
 
-  // Calcul du label affiché sur le bouton
   const getButtonLabel = () => {
-    if (triStateMode) {
-      const count = includedValues.length + excludedValues.length;
-      if (count === 0) return label;
-      if (count === 1 && includedValues.length === 1) {
-        const opt = options.find((o) => o.id === includedValues[0]);
-        return opt ? opt.label : label;
-      }
-      return `${label} (${count})`;
-    }
-
     if (selectedValues.length === 0) return label;
 
     if (singleSelect) {
@@ -136,7 +100,7 @@ export const FilterDropdown: React.FC<FilterDropdownProps> = ({
     return `${label} (${selectedValues.length})`;
   };
 
-  const isActive = triStateMode ? includedValues.length > 0 || excludedValues.length > 0 : selectedValues.length > 0;
+  const isActive = selectedValues.length > 0;
 
   const { activeBtnClass, activeTextClass } = (() => {
     switch (color) {
@@ -228,20 +192,8 @@ export const FilterDropdown: React.FC<FilterDropdownProps> = ({
 
               <div className="overflow-y-auto p-1 custom-scrollbar bg-white">
                 {options.map((opt) => {
-                  let isSelected = false;
-                  let state: "NEUTRAL" | "INCLUDE" | "EXCLUDE" = "NEUTRAL";
-
-                  if (triStateMode) {
-                    if (includedValues.includes(opt.id)) state = "INCLUDE";
-                    else if (excludedValues.includes(opt.id)) state = "EXCLUDE";
-                  } else {
-                    isSelected = selectedValues.includes(opt.id);
-                  }
-
-                  let rowBg = "hover:bg-slate-50";
-                  if (state === "INCLUDE") rowBg = "bg-emerald-50 hover:bg-emerald-100";
-                  if (state === "EXCLUDE") rowBg = "bg-rose-50 hover:bg-rose-100";
-                  if (!triStateMode && isSelected) rowBg = "bg-slate-50";
+                  const isSelected = selectedValues.includes(opt.id);
+                  const rowBg = isSelected ? "bg-slate-50" : "hover:bg-slate-50";
 
                   return (
                     <div
@@ -251,39 +203,11 @@ export const FilterDropdown: React.FC<FilterDropdownProps> = ({
                     >
                       <div className="flex items-center gap-2.5 overflow-hidden">
                         <div className="flex-shrink-0">
-                          {triStateMode ? (
-                            state === "INCLUDE" ? (
-                              <PlusCircle size={16} className="text-emerald-600 fill-emerald-100" />
-                            ) : state === "EXCLUDE" ? (
-                              <MinusCircle size={16} className="text-rose-600 fill-rose-100" />
-                            ) : (
-                              <Circle size={16} className="text-slate-300" />
-                            )
-                          ) : singleSelect ? (
-                            isSelected ? (
-                              <CheckCircleRadio />
-                            ) : (
-                              <CircleRadio />
-                            )
-                          ) : isSelected ? (
-                            <CheckSquare size={16} className={activeTextClass} />
-                          ) : (
-                            <Square size={16} className="text-slate-300" />
-                          )}
+                          {isSelected ? <CheckSquare size={16} className={activeTextClass} /> : <Square size={16} className="text-slate-300" />}
                         </div>
-                        <span className={`truncate font-medium ${state !== "NEUTRAL" || isSelected ? "text-slate-900" : "text-slate-600"}`}>{opt.label}</span>
+                        <span className={`truncate font-medium ${isSelected ? "text-slate-900" : "text-slate-600"}`}>{opt.label}</span>
                       </div>
                       {opt.icon && <span className="text-slate-400 scale-75">{opt.icon}</span>}
-
-                      {triStateMode && state !== "NEUTRAL" && (
-                        <span
-                          className={`text-[9px] font-bold px-1.5 py-0.5 rounded uppercase ml-2 ${
-                            state === "INCLUDE" ? "bg-emerald-200 text-emerald-800" : "bg-rose-200 text-rose-800"
-                          }`}
-                        >
-                          {state === "INCLUDE" ? "Inclu" : "Exclu"}
-                        </span>
-                      )}
                     </div>
                   );
                 })}
@@ -296,35 +220,3 @@ export const FilterDropdown: React.FC<FilterDropdownProps> = ({
     </>
   );
 };
-
-const CheckCircleRadio = () => (
-  <svg
-    width="16"
-    height="16"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="3"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    className="text-indigo-600"
-  >
-    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-    <polyline points="22 4 12 14.01 9 11.01"></polyline>
-  </svg>
-);
-const CircleRadio = () => (
-  <svg
-    width="16"
-    height="16"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    className="text-slate-300"
-  >
-    <circle cx="12" cy="12" r="10"></circle>
-  </svg>
-);

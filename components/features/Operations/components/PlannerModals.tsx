@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { X, Check, MessageSquare } from "lucide-react";
 import { Modal } from "../../../ui/Modal";
 import { FormField } from "../../../ui/atoms/FormField";
-import { Account, PaidItemDetails, Tag, PlannedItem, Person, BeneficiaryAmount } from "../../../../types";
+import { Account, PaidItemDetails, PlannedItem, Person, BeneficiaryAmount } from "../../../../types";
 import { useError } from "../../../../contexts/ErrorContext";
 import { AdvancedOptionsAccordion } from "../../../ui/molecules/AdvancedOptionsAccordion";
 import { BeneficiaryAmountSelector } from "../../../ui/molecules/BeneficiaryAmountSelector";
@@ -28,7 +28,6 @@ interface PlannerModalsProps {
   uncheckModal: UncheckModalState;
   accounts: Account[];
   people: Person[];
-  tags?: Tag[];
   onTogglePaid: (details: PaidItemDetails | null, instanceId: string) => void;
   onCloseConfirm: () => void;
   onCloseUncheck: () => void;
@@ -40,7 +39,6 @@ export const PlannerModals: React.FC<PlannerModalsProps> = ({
   uncheckModal,
   accounts,
   people,
-  tags: _tags = [],
   onTogglePaid,
   onCloseConfirm,
   onCloseUncheck,

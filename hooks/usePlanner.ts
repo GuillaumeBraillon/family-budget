@@ -14,8 +14,6 @@
  *
  * **Système Extra à deux niveaux :**
  * 1. Niveau opération : Toggle global `isExtra`
- * 2. Niveau tag : Chaque `TagAmount` peut être marqué individuellement
- * → Une opération est "Extra" si toggle OU au moins un tag Extra
  *
  * @dependencies
  * - date-fns : Manipulation des dates et calcul des périodes
@@ -34,7 +32,6 @@ import {
   VariableTransaction,
   OperationFilters,
   CategoryDef,
-  TagAmount,
   BeneficiaryAmount,
 } from "../types";
 
@@ -57,91 +54,6 @@ const getValidBeneficiaryAmounts = (
 };
 
 /**
- * Détermine si une opération contient des montants "Extra" (hors budget).
- *
- * @description
- * Vérifie à deux niveaux indépendants si une opération doit être considérée comme
- * "hors budget" (Extra) pour les calculs et filtres.
- *
- * **Niveaux de vérification :**
- * 1. **Niveau global** : Flag `isExtra` sur l'opération entière
- * 2. **Niveau granulaire** : Au moins un tag marqué `isExtra` dans `tagAmounts`
- *
- * **Logique OR :** Une seule condition suffit pour marquer l'opération Extra.
- *
- * @param {boolean} isExtraGlobal - Flag Extra au niveau de l'opération
- * @param {TagAmount[]} [tagAmounts] - Ventilation optionnelle des montants par tag
- * @returns {boolean} True si l'opération contient des montants Extra
- *
- * @example
- * ```tsx
- * // Scénario 1 : Toggle global activé
- * hasExtraAmounts(true, []) // true
- *
- * // Scénario 2 : Tag individuel Extra
- * hasExtraAmounts(false, [{ tagId: 't1', amount: 50, isExtra: true }]) // true
- *
- * // Scénario 3 : Rien d'Extra
- * hasExtraAmounts(false, [{ tagId: 't1', amount: 50 }]) // false
- * ```
- */
-export const hasExtraAmounts = (isExtraGlobal: boolean, tagAmounts?: TagAmount[]): boolean => {
-  // Niveau 1 : Si l'opération entière est Extra
-  if (isExtraGlobal) return true;
-
-  // Niveau 2 : Si au moins un tag est marqué Extra
-  if (tagAmounts && tagAmounts.length > 0) {
-    return tagAmounts.some((ta) => ta.isExtra === true);
-  }
-
-  return false;
-};
-
-/**
- * Détermine si une opération contient des montants "Standard" (dans le budget).
- *
- * @description
- * Vérifie si une opération a au moins une partie qui n'est PAS Extra.
- * Une opération mixte (70€ Extra + 45€ Standard) retournera true.
- *
- * **Logique :**
- * - Si toggle global Extra activé : false (tout est Extra)
- * - Sinon, vérifie s'il y a des montants non-Extra :
- *   * Pas de tags : true (tout le montant est Standard)
- *   * Tags présents : true si au moins un tag Standard OU si montant total > somme tags
- *
- * @param {boolean} isExtraGlobal - Flag Extra au niveau de l'opération
- * @param {number} totalAmount - Montant total de l'opération
- * @param {TagAmount[]} [tagAmounts] - Ventilation optionnelle des montants par tag
- * @returns {boolean} True si l'opération contient des montants Standard
- *
- * @example
- * ```tsx
- * // Opération 100% Extra (toggle global)
- * hasStandardAmounts(true, 100, []) // false
- *
- * // Opération mixte (70€ Extra + 45€ non taggé)
- * hasStandardAmounts(false, 115, [{ tagId: 't1', amount: 70, isExtra: true }]) // true
- *
- * // Opération 100% Standard
- * hasStandardAmounts(false, 100, [{ tagId: 't1', amount: 50 }]) // true
- * ```
- */
-export const hasStandardAmounts = (isExtraGlobal: boolean, totalAmount: number, tagAmounts?: TagAmount[]): boolean => {
-  // Si toggle global Extra : tout est Extra, rien de Standard
-  if (isExtraGlobal) return false;
-
-  // Pas de tags : tout le montant est Standard
-  if (!tagAmounts || tagAmounts.length === 0) return true;
-
-  // Calculer la somme des montants Extra
-  const extraSum = tagAmounts.filter((ta) => ta.isExtra === true).reduce((sum, ta) => sum + ta.amount, 0);
-
-  // S'il reste un montant non-Extra (total - extraSum > 0.01), c'est Standard
-  return totalAmount - extraSum > 0.01;
-};
-
-/**
  * Hook de planification des périodes budgétaires mensuelles.
  *
  * @description
@@ -158,10 +70,9 @@ export const hasStandardAmounts = (isExtraGlobal: boolean, totalAmount: number, 
  * 2. Création des instances mensuelles :
  *    - Vérification des dates de validité (startMonth/endMonth)
  *    - Application des pointages si existants (montant/date ajustés)
- *    - Détection du statut Extra via `hasExtraAmounts`
  * 3. Affectation aux périodes selon le jour du mois
  * 4. Tri intelligent avec système de scores (position manuelle prioritaire)
- * 5. Application des filtres (flux, source, statut, tags, etc.)
+ * 5. Application des filtres (flux, source, statut, etc.)
  *
  * **Système de tri robuste :**
  * - Position manuelle (`item.position`) prioritaire si définie
@@ -176,7 +87,7 @@ export const hasStandardAmounts = (isExtraGlobal: boolean, totalAmount: number, 
  * @param {string} searchQuery - Requête de recherche textuelle (filtre label/catégorie/montant)
  * @param {AppSettings} settings - Paramètres globaux (enveloppe, type de périodes)
  * @param {CategoryDef[]} categories - Définitions des catégories (pour détecter remboursements)
- * @param {OperationFilters} [filters] - Filtres optionnels (flux, source, statut, tags, etc.)
+ * @param {OperationFilters} [filters] - Filtres optionnels (flux, source, statut, etc.)
  *
  * @returns {Object} Résultats de la planification
  * @returns {WeeklyBudget[]} filteredPeriodBudgets - Périodes avec items filtrés
@@ -304,8 +215,7 @@ export const usePlanner = (
         const isActuallyPaid = paid ? !paid.isWaiting : false;
         const day = paid ? getDayFromDateStr(paid.paymentDate, conf.dayOfMonth) : conf.dayOfMonth;
 
-        const baseIsExtra = !!(paid ? paid.isExtra : conf.isExtra);
-        const tagAmounts = paid?.tagAmounts;
+        const baseIsExtra = !!(paid?.isExtra ?? conf.isExtra);
         const beneficiaryAmounts = getValidBeneficiaryAmounts(paid?.beneficiaryAmounts, conf.beneficiaryId, paid ? paid.amount : conf.amount);
 
         assignToPeriod({
@@ -324,13 +234,12 @@ export const usePlanner = (
           beneficiaryId: conf.beneficiaryId,
           beneficiaryAmounts,
           accountId: conf.accountId,
-          isExtra: hasExtraAmounts(baseIsExtra, tagAmounts),
+          isExtra: baseIsExtra,
           isExtraGlobal: baseIsExtra, // Toggle brut
           isPaid: isActuallyPaid,
           isWaiting: !isActuallyPaid,
           paidDetails: paid,
           comments: paid?.comments || "",
-          tagAmounts,
         });
       });
 
@@ -340,8 +249,7 @@ export const usePlanner = (
       const isActuallyPaid = paid ? !paid.isWaiting : false;
       const day = paid ? getDayFromDateStr(paid.paymentDate, inc.dayOfMonth) : inc.dayOfMonth;
 
-      const baseIsExtra = !!(paid ? paid.isExtra : inc.isExtra);
-      const tagAmounts = paid?.tagAmounts;
+      const baseIsExtra = !!(paid?.isExtra ?? inc.isExtra);
       const beneficiaryAmounts = getValidBeneficiaryAmounts(paid?.beneficiaryAmounts, inc.beneficiaryId, paid ? paid.amount : inc.amount);
 
       assignToPeriod({
@@ -364,11 +272,10 @@ export const usePlanner = (
         isWaiting: !isActuallyPaid,
         paidDetails: paid,
         isRefund: paid?.isRefund || false,
-        isExtra: hasExtraAmounts(baseIsExtra, tagAmounts),
+        isExtra: baseIsExtra,
         isExtraGlobal: baseIsExtra, // Toggle brut
         isSalary: !!inc.isSalary,
         comments: paid?.comments || "",
-        tagAmounts,
       });
     });
 
@@ -404,10 +311,9 @@ export const usePlanner = (
           isWaiting: !!vt.isWaiting,
           isRefund: !!vt.isRefund,
           isSalary: !!vt.isSalary,
-          isExtra: hasExtraAmounts(!!vt.isExtra, vt.tagAmounts),
+          isExtra: !!vt.isExtra,
           isExtraGlobal: !!vt.isExtra, // Toggle brut de la variable
           comments: vt.comments || "",
-          tagAmounts: vt.tagAmounts,
         });
       });
 
@@ -464,66 +370,10 @@ export const usePlanner = (
           items = items.filter((i) => i.isWaiting === wantWaiting);
         }
 
-        /**
-         * Filtre Extra/Standard : Logique à deux niveaux
-         *
-         * CONCEPT CLÉ : Séparation entre affichage et calculs
-         * - Filtrage (ici) : Détermine QUELLES opérations afficher
-         * - Calculs (useOperationsData) : Détermine COMBIEN afficher de chaque opération
-         *
-         * ARCHITECTURE À DEUX NIVEAUX :
-         * 1. Toggle global (isExtraGlobal) : Affecte TOUTE l'opération
-         * 2. Tags individuels (tagAmounts[].isExtra) : Affectent des PARTIES de l'opération
-         *
-         * RÈGLE DE PRIORITÉ : Le toggle global a TOUJOURS la priorité absolue
-         * - Si isExtraGlobal = true → Toute l'opération est Extra (même si tags = false)
-         * - Si isExtraGlobal = false → Seuls les tags Extra sont Extra
-         *
-         * EXEMPLES DE SCÉNARIOS :
-         *
-         * Scénario 1 : Opération 100% Extra (toggle activé, pas de tags)
-         * - isExtraGlobal: true, tagAmounts: []
-         * - Filtre Extra → AFFICHÉE (montant: 100€)
-         * - Filtre Standard → MASQUÉE
-         *
-         * Scénario 2 : Opération 100% Standard (toggle désactivé, pas de tags)
-         * - isExtraGlobal: false, tagAmounts: []
-         * - Filtre Extra → MASQUÉE
-         * - Filtre Standard → AFFICHÉE (montant: 100€)
-         *
-         * Scénario 3 : Opération mixte (toggle désactivé, tags variés)
-         * - isExtraGlobal: false, tagAmounts: [{tagId: 't1', amount: 70, isExtra: true}, {tagId: 't2', amount: 30}]
-         * - Filtre Extra → AFFICHÉE (montant: 70€ calculé)
-         * - Filtre Standard → AFFICHÉE (montant: 30€ calculé)
-         *
-         * Scénario 4 : Toggle global prioritaire (toggle activé + tags Standard)
-         * - isExtraGlobal: true, tagAmounts: [{tagId: 't1', amount: 50, isExtra: false}]
-         * - Filtre Extra → AFFICHÉE (montant: 100€, toggle prioritaire)
-         * - Filtre Standard → MASQUÉE (toggle Extra a la priorité)
-         *
-         * Cette séparation permet :
-         * - Des opérations mixtes affichées dans les deux filtres avec des montants différents
-         * - Un toggle global simple qui écrase tout pour les dépenses exceptionnelles
-         * - Une ventilation granulaire par tag pour les opérations complexes
-         */
         if (filters.nature === "ONLY") {
-          // Afficher les opérations qui ont des montants Extra (même partiellement)
           items = items.filter((i) => i.isExtra === true);
         } else if (filters.nature === "EXCLUDE") {
-          // Afficher les opérations qui ont des montants Standard (même partiellement)
-          // Une opération mixte (70€ Extra + 45€ Standard) doit apparaître ici
-          items = items.filter((i) => {
-            // RÈGLE 1 : Si toggle global Extra activé → Tout est Extra, rien de Standard
-            if (i.isExtraGlobal) return false;
-
-            // RÈGLE 2 : Pas de toggle global → Analyser les tags individuels
-            const tagAmounts = i.tagAmounts;
-            if (!tagAmounts || tagAmounts.length === 0) return true; // Tout Standard
-
-            // RÈGLE 3 : Avec tags → Vérifier s'il reste du montant Standard
-            const extraSum = tagAmounts.filter((ta) => ta.isExtra === true).reduce((sum, ta) => sum + ta.amount, 0);
-            return i.amount - extraSum > 0.01; // Garder si au moins une partie est Standard
-          });
+          items = items.filter((i) => !i.isExtraGlobal);
         }
 
         if (filters.salary === "ONLY") items = items.filter((i) => i.isSalary === true);
@@ -543,26 +393,6 @@ export const usePlanner = (
         }
         if (filters.isBeneficiaryFilterActive || filters.beneficiaryIds.length > 0) {
           items = items.filter((i) => resolveBeneficiaryAmounts(i).some((ba) => filters.beneficiaryIds.includes(ba.beneficiaryId)));
-        }
-
-        if (filters.tagPresence === "WITH_TAGS") {
-          items = items.filter((i) => i.tagAmounts && i.tagAmounts.length > 0);
-        } else if (filters.tagPresence === "WITHOUT_TAGS") {
-          items = items.filter((i) => !i.tagAmounts || i.tagAmounts.length === 0);
-        }
-
-        if (filters.excludedTagIds && filters.excludedTagIds.length > 0) {
-          items = items.filter((i) => {
-            if (!i.tagAmounts || i.tagAmounts.length === 0) return true;
-            return !i.tagAmounts.some((ta) => filters.excludedTagIds.includes(ta.tagId));
-          });
-        }
-
-        if (filters.includedTagIds && filters.includedTagIds.length > 0) {
-          items = items.filter((i) => {
-            if (!i.tagAmounts || i.tagAmounts.length === 0) return false;
-            return i.tagAmounts.some((ta) => filters.includedTagIds.includes(ta.tagId));
-          });
         }
       }
 

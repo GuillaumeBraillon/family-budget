@@ -1,6 +1,6 @@
 /**
  * @file Accordéon pour options avancées des formulaires
- * @description Section repliable pour les champs optionnels/avancés (tags, extra, remboursement, etc.)
+ * @description Section repliable pour les champs optionnels/avancés (extra, remboursement, etc.)
  * Améliore la hiérarchie visuelle en mettant en avant les champs essentiels.
  *
  * @architecture
@@ -14,7 +14,6 @@
  * const [showAdvanced, setShowAdvanced] = useState(false);
  *
  * <AdvancedOptionsAccordion isOpen={showAdvanced} onToggle={setShowAdvanced}>
- *   <TagAmountSelector ... />
  *   <Toggle Extra />
  *   <Toggle Remboursement />
  * </AdvancedOptionsAccordion>
@@ -49,7 +48,6 @@ interface AdvancedOptionsAccordionProps {
  * - Badge indicateur d'état (Masquées/Affichées)
  *
  * **Contenu typique :**
- * - Ventilation par tags (TagAmountSelector)
  * - Toggles Extra/Remboursement/Intérêts/Salaire
  * - Champs rares/avancés
  *
@@ -64,7 +62,6 @@ interface AdvancedOptionsAccordionProps {
  * const [showAdvanced, setShowAdvanced] = useState(false);
  *
  * <AdvancedOptionsAccordion isOpen={showAdvanced} onToggle={setShowAdvanced}>
- *   <TagAmountSelector tags={tags} ... />
  *   <ToggleExtra isExtra={isExtra} onChange={setIsExtra} />
  *   <ToggleRefund isRefund={isRefund} onChange={setIsRefund} />
  * </AdvancedOptionsAccordion>

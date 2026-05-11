@@ -72,111 +72,37 @@ Toutes les fonctions CRUD dans [services/apiCrud.ts](../services/apiCrud.ts) doi
 
 La gestion des opérations récurrentes se fait dans la vue Configuration > Opérations, séparée du pointage mensuel dans Operations View.
 
-## Système de Tags avec Montants (Tag Amounts)
+## Système Extra
 
-**Concept clé :** Ventilation granulaire des opérations avec montants spécifiques par tag.
-
-### Architecture
-
-- **Table `paid_item_tags`** : Relations avec foreign keys CASCADE (automatic cleanup)
-- **Type `TagAmount`** : `{ tagId: string, amount: number, isExtra?: boolean }`
-- **Ancien système `tagIds`** : COMPLÈTEMENT SUPPRIMÉ - utiliser uniquement `tagAmounts`
-
-### Règles de Ventilation
-
-- **Partielle autorisée** : La somme des montants tags peut être < montant total (reste non taggé)
-- **Validation** : Erreur UNIQUEMENT si somme > montant total
-- **Calculs contextuels** : Les totaux s'adaptent aux filtres de tags actifs
-
-```typescript
-// ✅ Correct : Ventilation partielle valide
-operation: 150€
-  tag1: 50€
-  tag2: 30€
-  reste: 70€ (non taggé)
-
-// ❌ Invalide : Dépassement du total
-operation: 100€
-  tag1: 60€
-  tag2: 50€
-  ERREUR: 110€ > 100€
-```
-
-### Composants Clés
-
-- **[TagAmountSelector](../components/ui/molecules/TagAmountSelector.tsx)** : Interface de ventilation avec bouton ⭐ Extra par tag
-- **getEffectiveAmount()** : Fonction helper pour calculer les montants basés sur les filtres actifs (définie dans useOperationsData)
-
-## Système Extra à Deux Niveaux
-
-**Concept clé :** Gestion flexible des dépenses "hors budget" à deux niveaux complémentaires.
+**Concept clé :** Gestion simple des opérations "hors budget" via un toggle global.
 
 ### Niveaux
 
 1. **Niveau Opération (Global)** : Toggle dans le formulaire → marque toute l'opération
-2. **Niveau Tag (Granulaire)** : Bouton ⭐ par tag → marque individuellement certains montants
-
-### Logique de Détection
-
-Fonction `hasExtraAmounts()` dans [hooks/usePlanner.ts](../hooks/usePlanner.ts) :
-
-```typescript
-// Une opération est Extra si :
-// 1. Le toggle global est activé OU
-// 2. Au moins un de ses tags est marqué Extra
-const hasExtraAmounts = (isExtraGlobal: boolean, tagAmounts?: TagAmount[]): boolean => {
-  if (isExtraGlobal) return true;
-  if (tagAmounts) return tagAmounts.some((ta) => ta.isExtra === true);
-  return false;
-};
-```
 
 ### Comportement UI
 
-- **Badge "EXTRA"** : Affiché si `item.isExtra === true` (calculé via `hasExtraAmounts`)
-- **Filtre "Nature: Extra"** : Inclut toutes les opérations détectées comme Extra
+- **Badge "EXTRA"** : Affiché si `item.isExtra === true`
+- **Filtre "Nature: Extra"** : Inclut les opérations marquées Extra
 - **Icône ⭐** : Amber quand actif (Extra), gris sinon (Standard)
 
 ### Cas d'Usage
 
 ```typescript
-// Scénario 1 : Tout Extra (toggle global)
+// Scénario : Tout Extra (toggle global)
 operation: 120€, isExtra: true
 → Toute l'opération hors budget
-
-// Scénario 2 : Ventilation mixte (tags individuels)
-operation: 200€, isExtra: false
-  tag1: 150€ (standard)
-  tag2: 50€ ⭐ (Extra)
-→ 150€ dans budget, 50€ hors budget
-
-// Scénario 3 : Priorité globale
-operation: 300€, isExtra: true
-  tag1: 150€
-  tag2: 100€ ⭐
-→ Toute l'opération hors budget (priorité au toggle global)
 ```
 
 ## Calculs Intelligents et Filtres
 
 ### Montants Effectifs
 
-Quand des filtres de tags sont actifs, utiliser `getEffectiveAmount(item)` au lieu de `item.amount` :
-
-```typescript
-// Dans useOperationsData (hooks/operations/useOperationsData.ts)
-const getEffectiveAmount = (item: PlannedItem): number => {
-  // Pas de filtre → montant total
-  if (!filters.includedTagIds?.length) return item.amount;
-
-  // Filtre actif → somme des montants des tags filtrés
-  return item.tagAmounts?.filter((ta) => filters.includedTagIds.includes(ta.tagId)).reduce((sum, ta) => sum + ta.amount, 0) || 0;
-};
-```
+Les montants effectifs s'appuient sur le filtre de nature (`ALL`, `ONLY`, `EXCLUDE`) et le flag `isExtraGlobal`.
 
 ### Impacts sur les Calculs
 
-- **QuickPeriodSummary** : Totaux basés sur montants filtrés
+- **QuickPeriodSummary** : Totaux alignés sur les filtres actifs
 - **Soldes par compte** : Ajustés selon les filtres actifs
 - **Graphiques** : Données filtrées contextuellement
 
@@ -230,15 +156,15 @@ Voir [default.env.txt](../default.env.txt) pour le template. Les variables doive
 
 ### Planification et Opérations
 
-- [hooks/usePlanner.ts](../hooks/usePlanner.ts) : Génération des instances mensuelles + fonction `hasExtraAmounts`
+- [hooks/usePlanner.ts](../hooks/usePlanner.ts) : Génération des instances mensuelles
 - [hooks/operations/useOperationsData.ts](../hooks/operations/useOperationsData.ts) : Logique métier opérations (inclut `getEffectiveAmount`)
 - [hooks/operations/useOperationsFilters.ts](../hooks/operations/useOperationsFilters.ts) : État des filtres
 
 ### API et Base de Données
 
 - [services/api.ts](../services/api.ts) : Chargement initial des données (READ)
-- [services/apiCrud.ts](../services/apiCrud.ts) : Opérations CRUD avec gestion des `paid_item_tags`
-- [services/apiMappers.ts](../services/apiMappers.ts) : Conversion DB ↔ App (inclut `mapDbTagAmount`)
+- [services/apiCrud.ts](../services/apiCrud.ts) : Opérations CRUD transactionnelles
+- [services/apiMappers.ts](../services/apiMappers.ts) : Conversion DB ↔ App
 - [services/dbTypes.ts](../services/dbTypes.ts) : Types PostgreSQL (snake_case)
 
 ### Composants UI
@@ -247,7 +173,6 @@ Voir [default.env.txt](../default.env.txt) pour le template. Les variables doive
 - [components/features/Operations/OperationsView.tsx](../components/features/Operations/OperationsView.tsx) : Vue échéancier avec filtres
 - [components/features/Operations/components/PlannerModals.tsx](../components/features/Operations/components/PlannerModals.tsx) : Modales de pointage
 - [components/features/Operations/components/VariableTransactionForm.tsx](../components/features/Operations/components/VariableTransactionForm.tsx) : Formulaire transactions variables
-- [components/ui/molecules/TagAmountSelector.tsx](../components/ui/molecules/TagAmountSelector.tsx) : Interface de ventilation des tags
 
 ### Gestion Budgétaire et Soldes
 
@@ -268,9 +193,6 @@ Voir [default.env.txt](../default.env.txt) pour le template. Les variables doive
 - ❌ Utiliser `snake_case` dans le code TypeScript
 - ❌ Oublier de vérifier `isChild` dans les calculs financiers
 - ❌ Ignorer les états `loading`/`error` dans l'UI
-- ❌ Utiliser `tagIds` au lieu de `tagAmounts` (système obsolète)
-- ❌ Oublier `getEffectiveAmount()` dans les calculs avec filtres de tags
-- ❌ Utiliser `item.amount` directement quand des filtres de tags sont actifs
 - ❌ Utiliser `alert()` ou `console.error()` - utiliser le système global d'erreurs
 - ❌ Appeler Supabase dans un handler sans try/catch
 
@@ -463,15 +385,9 @@ L'application a subi plusieurs refactorings majeurs :
    - `useBudgetActions` : Actions CRUD wrappées avec reload
    - Application des principes SOLID (SRP, DRY, Composition)
 
-2. **Système de Tags (v2.0.0)** : Migration complète de `tagIds` (JSONB simple) vers `tagAmounts` (table relationnelle avec montants)
-   - Support de la ventilation partielle et des calculs contextuels
-   - Table `paid_item_tags` avec foreign keys CASCADE
-   - Component `TagAmountSelector` pour interface de ventilation
+2. **Système Extra (v2.0.0)** : Gestion des opérations hors budget via toggle global
 
-3. **Système Extra (v2.0.0)** : Évolution d'un simple flag booléen à un système à deux niveaux
-   - Niveau opération : Toggle global
-   - Niveau tag : Marquage individuel par tag
-   - Fonction `hasExtraAmounts()` pour détection
+- Niveau opération : Toggle global
 
 4. **Gestion d'Erreurs Globale (v2.2.3)** : Architecture unifiée avec design élégant
    - `ErrorContext` : State management global
@@ -509,16 +425,15 @@ L'application a subi plusieurs refactorings majeurs :
 - Hook générique `useManualSorting` pour éviter la duplication
 - Hook `useTransfersSorting` dédié avec même UX que `useOperationsSorting`
 
-10. **Atomicité transactionnelle des Tags (v2.7.0)** : Écritures robustes `paid_items` + `paid_item_tags`
+9. **Atomicité transactionnelle (v2.7.0)** : Écritures robustes `paid_items` + `paid_item_beneficiaries`
 
-- RPC PostgreSQL `upsert_paid_item_with_tags` (transaction unique)
-- Validation SQL : somme tags ≤ montant total, montants tags strictement positifs
-- Refactor `apiCrud.ts` pour appeler la RPC au lieu du pattern `DELETE + INSERT` côté client
+- RPC PostgreSQL `upsert_paid_item_atomic` (transaction unique)
+- Validation SQL : somme des bénéficiaires ≤ montant total, montants strictement positifs
+- Refactor `apiCrud.ts` pour appeler la RPC côté client
 
-11. **Optimisation chargement initial (v2.7.0)** : Réduction du payload des tags
+10. **Optimisation chargement initial (v2.7.0)** : Réduction du payload au strict nécessaire
 
-- `fetchInitialData` charge uniquement les `paid_item_tags` liés aux `paid_items` récupérés
-- Évite le scan complet de la table `paid_item_tags`
+- `fetchInitialData` charge uniquement les données liées aux `paid_items` récupérés
 
 **Version actuelle :** 2.7.0 (19 février 2026)
 **Qualité code :** 0 erreurs ESLint, 0 warnings, TypeScript strict
@@ -527,6 +442,6 @@ L'application a subi plusieurs refactorings majeurs :
 
 - Tri manuel unifié Operations/Transfers avec persistance Supabase (`operations_sorting` / `accounts_sorting`)
 - Hook générique `useManualSorting` + hook spécialisé `useTransfersSorting`
-- RPC transactionnelle `upsert_paid_item_with_tags` pour garantir l'atomicité des écritures tags
-- Optimisation `fetchInitialData` : chargement scoppé des `paid_item_tags`
+- RPC transactionnelle `upsert_paid_item_atomic` pour garantir l'atomicité des écritures
+- Optimisation `fetchInitialData` : chargement scoppé des données relationnelles utiles
 - Nettoyage dépendances Vite (versions unifiées, doublons supprimés)

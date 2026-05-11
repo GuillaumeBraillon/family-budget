@@ -1,7 +1,7 @@
 import { supabase, isSupabaseConfigured } from "./supabase";
 import * as mappers from "./apiMappers";
-import { AppSettings, VariableTransaction, TagAmount, PaidItemDetails, BeneficiaryAmount } from "../types";
-import { DbPaidItem, DbPaidItemTag, DbPaidItemBeneficiary } from "./dbTypes";
+import { AppSettings, VariableTransaction, PaidItemDetails, BeneficiaryAmount } from "../types";
+import { DbPaidItem, DbPaidItemBeneficiary } from "./dbTypes";
 import {
   apiToggleUserAuthorization,
   apiUpdateUserNotes,
@@ -26,8 +26,6 @@ import {
   apiDeleteLabel,
   apiImportLabels,
   apiImportVirLabels,
-  apiUpsertTag,
-  apiDeleteTag,
 } from "./apiCrud";
 
 /**
@@ -48,7 +46,6 @@ export const fetchInitialData = async () => {
       transfers: [],
       variableTransactions: [],
       savedLabels: [],
-      tags: [],
     };
   }
 
@@ -63,7 +60,6 @@ export const fetchInitialData = async () => {
     settingsRes,
     transfersRes,
     savedLabelsRes,
-    tagsRes,
     authUsersRes,
   ] = await Promise.all([
     supabase.from("people").select("id, name, is_child, display_order"),
@@ -90,7 +86,6 @@ export const fetchInitialData = async () => {
       .select("id, date, label, amount, source_account_id, destination_account_id, created_at, is_interest")
       .order("date", { ascending: false }),
     supabase.from("saved_labels").select("id, name, type, is_expense, category_id, sub_category_id, account_id, beneficiary_id"),
-    supabase.from("tags").select("id, name, color"),
     supabase
       .from("authorized_users")
       .select("email, name, avatar_url, is_allowed, added_at, added_by, last_login_at, notes, is_admin")
@@ -108,7 +103,6 @@ export const fetchInitialData = async () => {
     settingsRes,
     transfersRes,
     savedLabelsRes,
-    tagsRes,
     authUsersRes,
   ];
   const errors = responses.map((r) => r.error).filter((e) => e !== null);
@@ -126,50 +120,22 @@ export const fetchInitialData = async () => {
   const settings = mappers.mapDbSettings(settingsRes.data);
   const transfers = (transfersRes.data || []).map(mappers.mapDbTransfer);
   const savedLabels = (savedLabelsRes.data || []).map(mappers.mapDbSavedLabel);
-  const tags = (tagsRes.data || []).map(mappers.mapDbTag);
   const authorizedUsers = (authUsersRes.data || []).map(mappers.mapDbAuthorizedUser);
 
-  // Optimisation payload: charger uniquement les tags des paid_items réellement récupérés
   const paidItemInstanceIds = Array.from(new Set((paidItemsRes.data || []).map((item: DbPaidItem) => item.instance_id)));
-  let paidItemTagsData: DbPaidItemTag[] = [];
   let paidItemBeneficiariesData: DbPaidItemBeneficiary[] = [];
   if (paidItemInstanceIds.length > 0) {
-    const [tagRes, beneficiaryRes] = await Promise.all([
-      supabase
-        .from("paid_item_tags")
-        .select("id, paid_item_instance_id, tag_id, amount, is_extra, created_at")
-        .in("paid_item_instance_id", paidItemInstanceIds),
-      supabase
-        .from("paid_item_beneficiaries")
-        .select("id, paid_item_instance_id, beneficiary_id, amount, created_at")
-        .in("paid_item_instance_id", paidItemInstanceIds),
-    ]);
-
-    const tagData = tagRes.data;
-    const tagError = tagRes.error;
-    const beneficiaryData = beneficiaryRes.data;
-    const beneficiaryError = beneficiaryRes.error;
-
-    if (tagError) {
-      throw new Error(tagError.message || "Erreur lors du chargement des tags des opérations");
-    }
+    const { data: beneficiaryData, error: beneficiaryError } = await supabase
+      .from("paid_item_beneficiaries")
+      .select("id, paid_item_instance_id, beneficiary_id, amount, created_at")
+      .in("paid_item_instance_id", paidItemInstanceIds);
 
     if (beneficiaryError) {
       throw new Error(beneficiaryError.message || "Erreur lors du chargement de la ventilation des bénéficiaires");
     }
 
-    paidItemTagsData = tagData || [];
     paidItemBeneficiariesData = beneficiaryData || [];
   }
-
-  // Grouper les tag amounts par instance_id
-  const tagAmountsByInstance: Record<string, TagAmount[]> = {};
-  paidItemTagsData.forEach((ta: DbPaidItemTag) => {
-    if (!tagAmountsByInstance[ta.paid_item_instance_id]) {
-      tagAmountsByInstance[ta.paid_item_instance_id] = [];
-    }
-    tagAmountsByInstance[ta.paid_item_instance_id].push(mappers.mapDbTagAmount(ta));
-  });
 
   const beneficiaryAmountsByInstance: Record<string, BeneficiaryAmount[]> = {};
   paidItemBeneficiariesData.forEach((beneficiaryAmount: DbPaidItemBeneficiary) => {
@@ -184,10 +150,6 @@ export const fetchInitialData = async () => {
 
   (paidItemsRes.data || []).forEach((item: DbPaidItem) => {
     const mapped = mappers.mapDbPaidItem(item);
-    // Ajouter les tagAmounts s'ils existent
-    if (tagAmountsByInstance[item.instance_id]) {
-      mapped.tagAmounts = tagAmountsByInstance[item.instance_id];
-    }
     if (beneficiaryAmountsByInstance[item.instance_id]) {
       mapped.beneficiaryAmounts = beneficiaryAmountsByInstance[item.instance_id];
     }
@@ -211,12 +173,11 @@ export const fetchInitialData = async () => {
         isWaiting: mapped.isWaiting,
         isExtra: mapped.isExtra,
         comments: mapped.comments,
-        tagAmounts: mapped.tagAmounts,
       });
     }
   });
 
-  return { people, accounts, categories, configs, incomeConfigs, paidItems, settings, transfers, variableTransactions, savedLabels, tags, authorizedUsers };
+  return { people, accounts, categories, configs, incomeConfigs, paidItems, settings, transfers, variableTransactions, savedLabels, authorizedUsers };
 };
 
 // Ré-exports explicites
@@ -244,6 +205,4 @@ export {
   apiDeleteLabel,
   apiImportLabels,
   apiImportVirLabels,
-  apiUpsertTag,
-  apiDeleteTag,
 };

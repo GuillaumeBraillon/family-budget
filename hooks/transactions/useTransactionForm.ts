@@ -14,15 +14,14 @@
  * **Règles métier :**
  * - **Remboursement** : Dépense avec montant négatif (isRefund toggle)
  * - **Compte pivot** : Seul compte autorisé pour virements vers/depuis épargne
- * - **Validation partielle tags** : La somme peut être < montant total (reste non taggé)
- * - **Toggle Extra** : Compatible avec tags individuels Extra
+ * - **Toggle Extra** : Marque l'opération hors budget
  *
  * @dependencies
  * - types.ts : Interfaces VariableTransaction, Transfer, Account, etc.
  * - useState, useEffect, useMemo : Hooks React pour l'état et la memoization
  */
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { VariableTransaction, Account, AccountType, Person, SavedLabel, TagAmount, CategoryDef, BeneficiaryAmount } from "../../types";
+import { VariableTransaction, Account, AccountType, Person, SavedLabel, CategoryDef, BeneficiaryAmount } from "../../types";
 import { useCategoryAutoSuggest } from "../useCategoryAutoSuggest";
 import { getDefaultAccountId } from "../accounts/getDefaultAccountId";
 
@@ -100,8 +99,6 @@ interface UseTransactionFormReturn {
   setIsSalary: (isSalary: boolean) => void;
   comments: string;
   setComments: (comments: string) => void;
-  selectedTagAmounts: TagAmount[];
-  setSelectedTagAmounts: (tagAmounts: TagAmount[]) => void;
 
   // --- VALIDATION ---
   validationErrors: string[];
@@ -137,8 +134,6 @@ interface UseTransactionFormReturn {
  * - Libellé obligatoire (non vide)
  * - Montant obligatoire et différent de 0
  * - Compte source obligatoire
- * - (MODE TRANSFER) Compte destination obligatoire et différent de source
- * - (TAGS) Somme des montants tags ≤ montant total
  *
  * **Gestion des comptes filtrés :**
  * - Comptes ÉPARGNE : Peuvent uniquement échanger avec le compte pivot (isJoint)
@@ -194,7 +189,6 @@ export const useTransactionForm = ({
   const [isExtra, setIsExtra] = useState<boolean>(false);
   const [isSalary, setIsSalary] = useState<boolean>(false);
   const [comments, setComments] = useState<string>("");
-  const [selectedTagAmounts, setSelectedTagAmounts] = useState<TagAmount[]>([]);
 
   // Filtrer les comptes COURANTS pour l'initialisation par défaut
   const checkingAccounts = useMemo(() => accounts.filter((a) => a.type === AccountType.CHECKING), [accounts]);
@@ -281,7 +275,6 @@ export const useTransactionForm = ({
     setIsExtra(false);
     setIsSalary(false);
     setComments("");
-    setSelectedTagAmounts([]);
     setAccountId(defaultAccountId);
     setValidationErrors([]);
   }, [initialMode, defaultDate, defaultBeneficiary, defaultAccountId]);
@@ -317,7 +310,6 @@ export const useTransactionForm = ({
 
           setAccountId(editingTransaction.accountId);
           setComments(editingTransaction.comments || "");
-          setSelectedTagAmounts(editingTransaction.tagAmounts || []);
 
           setCategory(editingTransaction.category);
           setSubCategory(editingTransaction.subCategory || "");
@@ -353,7 +345,6 @@ export const useTransactionForm = ({
    * - Libellé non vide
    * - Montant > 0
    * - Compte source renseigné
-   * - (TAGS) Somme tags ≤ montant total
    *
    * **Gestion du montant final :**
    * - EXPENSE + isRefund : -Math.abs(amount)
@@ -394,20 +385,6 @@ export const useTransactionForm = ({
       );
     }
 
-    // Validation des tagAmounts (permet ventilation partielle)
-    if (selectedTagAmounts.length > 0) {
-      const sumTagAmounts = selectedTagAmounts.reduce((sum, ta) => sum + ta.amount, 0);
-
-      const hasInvalidTagAmount = selectedTagAmounts.some((ta) => !ta.tagId || !Number.isFinite(ta.amount) || ta.amount <= 0);
-      if (hasInvalidTagAmount) {
-        errors.push("Chaque tag doit avoir un montant strictement supérieur à 0€");
-      }
-
-      if (sumTagAmounts > totalAmount + 0.01) {
-        errors.push(`La somme des montants affectés aux tags (${sumTagAmounts.toFixed(2)}€) dépasse le montant total (${totalAmount.toFixed(2)}€)`);
-      }
-    }
-
     // Si erreurs, arrêt de la soumission
     if (errors.length > 0) {
       setValidationErrors(errors);
@@ -438,7 +415,6 @@ export const useTransactionForm = ({
       isWaiting: targetIsWaiting,
       isExtra, // Toggle global au niveau opération
       comments: comments.trim() || undefined,
-      tagAmounts: selectedTagAmounts.length > 0 ? selectedTagAmounts : undefined,
     };
 
     onSuccess();
@@ -596,8 +572,6 @@ export const useTransactionForm = ({
     setIsSalary,
     comments,
     setComments,
-    selectedTagAmounts,
-    setSelectedTagAmounts,
 
     // Validation
     validationErrors,

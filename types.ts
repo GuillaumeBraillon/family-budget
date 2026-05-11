@@ -11,18 +11,6 @@ export interface Person {
   displayOrder?: number;
 }
 
-export interface Tag {
-  id: string;
-  name: string;
-  color: string;
-}
-
-export interface TagAmount {
-  tagId: string;
-  amount: number;
-  isExtra?: boolean; // Indique si ce montant est hors budget
-}
-
 export interface BeneficiaryAmount {
   beneficiaryId: string;
   amount: number;
@@ -115,7 +103,6 @@ export interface VariableTransaction {
   isWaiting: boolean; // True = En attente, False = Pointé
   isExtra: boolean; // True = Hors budget
   comments?: string;
-  tagAmounts?: TagAmount[]; // Ventilation des montants par tag
   position?: number; // Tri manuel (legacy/compat)
 }
 
@@ -145,7 +132,6 @@ export interface ExpenseConfig {
   startMonth?: string;
   endMonth?: string;
   isExtra?: boolean;
-  tagAmounts?: TagAmount[]; // Ventilation des montants par tag
 }
 
 export interface IncomeConfig {
@@ -161,7 +147,6 @@ export interface IncomeConfig {
   isSalary?: boolean; // Nouveau champ pour identifier les revenus structurels
   startMonth?: string;
   endMonth?: string;
-  tagAmounts?: TagAmount[]; // Ventilation des montants par tag
 }
 
 export interface PaidItemDetails {
@@ -180,7 +165,6 @@ export interface PaidItemDetails {
   isWaiting: boolean;
   isExtra: boolean;
   comments?: string;
-  tagAmounts?: TagAmount[]; // Ventilation des montants par tag
 }
 
 export type PlannedItemType = "EXPENSE" | "INCOME";
@@ -203,15 +187,14 @@ export interface PlannedItem {
   subCategoryId?: string; // ID de la sous-catégorie pour filtrage
   beneficiaryId: string;
   beneficiaryAmounts?: BeneficiaryAmount[];
-  isExtra: boolean; // Calculé : true si toggle global OU au moins un tag Extra
-  isExtraGlobal: boolean; // Toggle global uniquement (sans tags)
+  isExtra: boolean;
+  isExtraGlobal: boolean;
   isRefund?: boolean;
   isSalary?: boolean; // Propagation de l'info structurelle
   accountId: string;
   startMonth?: string;
   endMonth?: string;
   comments?: string;
-  tagAmounts?: TagAmount[]; // Ventilation des montants par tag
 }
 
 export interface WeeklyBudget {
@@ -320,10 +303,6 @@ export interface OperationFilters {
   isAccountFilterActive: boolean;
   beneficiaryIds: string[];
   isBeneficiaryFilterActive: boolean;
-  // Nouveau système de Tags
-  includedTagIds: string[];
-  excludedTagIds: string[];
-  tagPresence: "ALL" | "WITH_TAGS" | "WITHOUT_TAGS";
   // Filtres par catégories
   includedCategoryIds: string[];
   isCategoryFilterActive: boolean; // true = filtre actif ([] = rien afficher)

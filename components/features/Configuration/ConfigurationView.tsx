@@ -1,8 +1,8 @@
 import React from "react";
 import { Session } from "@supabase/supabase-js";
-import { Settings, UserCircle, CreditCard, Sliders, Bookmark, Shield } from "lucide-react";
+import { Settings, UserCircle, CreditCard, Sliders, Shield } from "lucide-react";
 import { ConfigTab } from "../../../hooks/useConfigurationUI";
-import { ExpenseConfig, IncomeConfig, CategoryDef, Person, Account, AppSettings, SavedLabel, Tag as TagType, AuthorizedUser } from "../../../types";
+import { ExpenseConfig, IncomeConfig, CategoryDef, Person, Account, AppSettings, SavedLabel, AuthorizedUser } from "../../../types";
 import { InfoBox } from "../../ui/InfoBox";
 import { ConfigurationTabs } from "./components/molecules/ConfigurationTabs";
 import { CategoryManager } from "./components/organisms/CategoryManager";
@@ -11,7 +11,6 @@ import { AccountManager } from "./components/organisms/AccountManager";
 import { GlobalSettings } from "./components/organisms/GlobalSettings";
 import { AccountLabelManager } from "./components/organisms/AccountLabelManager";
 import { OperationsManager } from "./components/organisms/OperationsManager";
-import { TagManager } from "./components/organisms/TagManager";
 import { UsersManager } from "./components/organisms/UsersManager";
 import { SystemSettings } from "./components/organisms/SystemSettings";
 
@@ -23,7 +22,6 @@ interface ConfigurationViewProps {
   accounts: Account[];
   settings: AppSettings;
   savedLabels: SavedLabel[];
-  tags?: TagType[];
   authorizedUsers?: AuthorizedUser[];
   session?: Session | null;
   activeTab: ConfigTab;
@@ -45,8 +43,6 @@ interface ConfigurationViewProps {
   onDeleteIncome: (id: string) => void;
   onImportLabels: () => Promise<{ count?: number; error?: unknown }> | void;
   onImportVirLabels: () => Promise<{ count?: number; error?: unknown }> | void;
-  onUpsertTag?: (t: TagType) => void;
-  onDeleteTag?: (id: string) => void;
   onToggleUserAuthorization?: (email: string, isAllowed: boolean) => Promise<{ data?: unknown; error?: unknown }> | void;
   onUpdateUserNotes?: (email: string, notes: string) => Promise<{ data?: unknown; error?: unknown }> | void;
   onDeleteUser?: (email: string) => Promise<{ data?: unknown; error?: unknown }> | void;
@@ -60,7 +56,6 @@ export const ConfigurationView: React.FC<ConfigurationViewProps> = ({
   accounts,
   settings,
   savedLabels,
-  tags = [],
   authorizedUsers = [],
   session,
   activeTab,
@@ -81,8 +76,6 @@ export const ConfigurationView: React.FC<ConfigurationViewProps> = ({
   onDeleteIncome,
   onImportLabels,
   onImportVirLabels,
-  onUpsertTag,
-  onDeleteTag,
   onToggleUserAuthorization,
   onUpdateUserNotes,
   onDeleteUser,
@@ -126,17 +119,6 @@ export const ConfigurationView: React.FC<ConfigurationViewProps> = ({
       {activeTab === "categories" && (
         <>
           <CategoryManager categories={categories} onUpdateCategories={onUpdateCategories} />
-        </>
-      )}
-
-      {activeTab === "tags" && onUpsertTag && onDeleteTag && (
-        <>
-          <InfoBox
-            title="Tags Thématiques"
-            description="Étiquettes colorées pour regrouper vos opérations par projets ou événements transversaux (#Vacances, #Noël, #Travaux)."
-            icon={<Bookmark size={18} />}
-          />
-          <TagManager tags={tags} onUpsertTag={onUpsertTag} onDeleteTag={onDeleteTag} />
         </>
       )}
 

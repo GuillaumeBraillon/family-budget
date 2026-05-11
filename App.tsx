@@ -51,7 +51,6 @@ const AppContent: React.FC = () => {
     transfers,
     variableTransactions,
     savedLabels,
-    tags,
     authorizedUsers,
     loading: budgetLoading,
     error: budgetError,
@@ -330,7 +329,6 @@ const AppContent: React.FC = () => {
             settings={settings}
             categories={categories}
             savedLabels={savedLabels}
-            tags={tags}
             onTogglePaid={actions.setPaidStatus}
             onUpsertVariable={actions.upsertVariableTransaction}
             onDeleteVariable={actions.deleteVariableTransaction}
@@ -369,7 +367,6 @@ const AppContent: React.FC = () => {
             accounts={accounts}
             settings={settings}
             savedLabels={savedLabels}
-            tags={tags}
             authorizedUsers={authorizedUsers}
             session={session}
             activeTab={activeTab}
@@ -391,8 +388,6 @@ const AppContent: React.FC = () => {
             onDeleteIncome={actions.deleteIncome}
             onImportLabels={actions.importLabels}
             onImportVirLabels={actions.importVirLabels}
-            onUpsertTag={actions.upsertTag}
-            onDeleteTag={actions.deleteTag}
             onToggleUserAuthorization={actions.toggleUserAuthorization}
             onUpdateUserNotes={actions.updateUserNotes}
             onDeleteUser={actions.deleteAuthorizedUser}

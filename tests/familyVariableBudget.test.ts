@@ -37,10 +37,6 @@ describe("calculateFamilyVariableNet", () => {
           { beneficiaryId: "b-family", amount: 150 },
           { beneficiaryId: "b-parent", amount: 50 },
         ],
-        tagAmounts: [
-          { tagId: "t-standard", amount: 120, isExtra: false },
-          { tagId: "t-extra", amount: 80, isExtra: true },
-        ],
       }),
     ];
 
@@ -90,10 +86,6 @@ describe("calculateFamilyVariableNetBreakdown", () => {
           { beneficiaryId: "b-family", amount: 150 },
           { beneficiaryId: "b-parent", amount: 50 },
         ],
-        tagAmounts: [
-          { tagId: "t-standard", amount: 120, isExtra: false },
-          { tagId: "t-extra", amount: 80, isExtra: true },
-        ],
       }),
       createPlannedItem({
         amount: 100,
@@ -105,8 +97,8 @@ describe("calculateFamilyVariableNetBreakdown", () => {
 
     const breakdown = calculateFamilyVariableNetBreakdown(items, ["b-family"]);
 
-    expect(breakdown.nature.standard).toBe(190);
-    expect(breakdown.nature.extra).toBe(60);
+    expect(breakdown.nature.standard).toBe(250);
+    expect(breakdown.nature.extra).toBe(0);
     expect(breakdown.nature.total).toBe(250);
     expect(breakdown.status.real).toBe(150);
     expect(breakdown.status.waiting).toBe(100);

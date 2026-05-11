@@ -42,18 +42,18 @@ Guide complet pour configurer et déployer la base de données PostgreSQL avec S
 4. **Vérification**
    - Allez dans "Table Editor"
    - Vous devriez voir 12 tables :
-     - `accounts`
-     - `app_settings`
-     - `authorized_users`
-     - `categories`
-     - `expense_configs`
-     - `income_configs`
-     - `paid_items`
-     - `paid_item_tags`
-     - `people`
-     - `saved_labels`
-     - `tags`
-     - `transfers`
+   - `accounts`
+   - `app_settings`
+   - `authorized_users`
+   - `categories`
+   - `expense_configs`
+   - `income_configs`
+   - `paid_items`
+     - `paid_item_beneficiaries`
+   - `people`
+   - `saved_labels`
+     - `sub_categories`
+   - `transfers`
 
 ## Étape 3 : Configurer l'authentification
 

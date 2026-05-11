@@ -7,16 +7,34 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.10.6] - 2026-05-11
+
+### ✅ Corrections
+
+- Suppression complète de la fonctionnalité Tags dans l'application (types, hooks, UI, filtres, tests associés).
+- Alignement des appels RPC côté front sur `upsert_paid_item_atomic`.
+- Suppression des reliquats techniques liés aux Tags dans la documentation opérationnelle et le schéma SQL de bootstrap.
+
+### 🗄️ Base de données
+
+- Remplacement de la fonction RPC historique `upsert_paid_item_with_tags` par `upsert_paid_item_atomic`.
+- Nettoyage des artefacts SQL liés aux anciennes ventilations par tags dans le script de référence `startup/database_complete.sql`.
+
+### 🧪 Validation
+
+- Tests unitaires: 131 passés, 0 échec.
+- Vérification manuelle Supabase: présence de `public.upsert_paid_item_atomic` et suppression des anciennes variantes `upsert_paid_item_with_tags`.
+
 ## [2.10.5] - 2026-05-11
 
 ### 🎨 UI/UX Improvements
 
 - **FilterBar refactoring** : Réorganisation complète de l'ordre des filtres pour une meilleure ergonomie :
   - **Ligne principale** (pills cycliques) : Source, Statut, Nature, Flux, Catégories, Sous-catégories
-  - **Section Avancé** (repliable) : Bénéficiaires, Comptes, Autres flux (Salaires), Tags
+  - **Section Avancé** (repliable) : Bénéficiaires, Comptes, Autres flux (Salaires)
   - Distinction visuelle claire entre pills (rounded-full, sans border) et dropdowns (rounded-lg, avec border)
-- **Advanced filters panel** : Déplacement de 4 filtres en section repliable pour réduire la complexité initiale :
-  - Bénéficiaires, Comptes, Autres flux (Salaires), Tags
+- **Advanced filters panel** : Déplacement de 3 filtres en section repliable pour réduire la complexité initiale :
+  - Bénéficiaires, Comptes, Autres flux (Salaires)
   - Nouvelle icône "Plus de filtres" avec badge "X actifs" pour feedback utilisateur
 - **Filtres Catégories & Sous-catégories (nouveaux)** : Ajout de deux nouveaux filtres dropdown dans la ligne principale :
   - **Catégories** : Affiche uniquement les catégories ayant des opérations dans le mois courant (avant filtrage)
@@ -122,7 +140,7 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 
 ### 🔧 Qualité / Tests
 
-- Suppression des fichiers de tests `helpers.test.ts`, `periodCalculations.test.ts` et `tagAmounts.test.ts` dont les fonctions testées étaient des ré-implémentations locales sans lien avec le vrai codebase.
+- Suppression des fichiers de tests `helpers.test.ts` et `periodCalculations.test.ts` dont les fonctions testées étaient des ré-implémentations locales sans lien avec le vrai codebase.
 - Correction du helper `compute` dans `varianceCalculations.test.ts` (propriété `overrides` parasite dans le spread).
 - Correction du helper `makeItem` dans `financeUtils.test.ts` (`isExtraGlobal: false` hardcodé empêchait les overrides `isExtra: true` de fonctionner via `??`).
 
@@ -365,8 +383,6 @@ Ces changements sont centrés sur l'expérience utilisateur et la visualisation 
 
 - Nouveau type `BeneficiaryAmount { beneficiaryId, amount }` dans `types.ts`.
 - Nouvelle table PostgreSQL `paid_item_beneficiaries` avec contrainte `UNIQUE(paid_item_instance_id, beneficiary_id)` et FK CASCADE, indexée et soumise à RLS.
-- `fetchInitialData` (`services/api.ts`) : chargement parallèle de `paid_item_tags` et `paid_item_beneficiaries` scopé aux `paid_items` du mois ; mapping via `mapDbBeneficiaryAmount`.
-- RPC `upsert_paid_item_with_tags` étendue : accepte `p_beneficiary_amounts jsonb` (requis, min 1 entrée) ; insère/replace dans `paid_item_beneficiaries` en transactionnel ; validation SQL de la somme des montants bénéficiaires.
 - `services/apiCrud.ts` : helper `normalizeBeneficiaryAmountsForRpc` ; import CB enrichi pour résoudre le bénéficiaire principal depuis `paid_item_beneficiaries`.
 - `usePlanner.ts` : helper `getValidBeneficiaryAmounts` — reconstruit `beneficiaryAmounts[]` pour chaque `PlannedItem` à partir de `paidDetails.beneficiaryAmounts` avec fallback sur `beneficiaryId` legacy.
 - `hooks/balances/useBalancesData.ts` : toute la logique métier (consommation personnelle, family variable, carryover) utilise désormais `beneficiaryAmounts[]` via `getBeneficiaryStandardShare` / `getBeneficiaryExtraShare` / `resolveBeneficiaryAmounts`.
@@ -431,18 +447,15 @@ Ces changements sont centrés sur l'expérience utilisateur et la visualisation 
 
 ### 🐛 Corrections de bugs (Bugfixes)
 
-- **RPC `upsert_paid_item_with_tags` (Supabase/PostgREST)**
-  - Correction de l'ambiguïté de signature en base (`p_type text` vs `p_type public.transaction_type`) pour éviter l'erreur :
-    - _"Could not choose the best candidate function..."_
-  - Alignement de la fonction SQL sur le schéma réel `paid_items` :
-    - suppression de l'usage de la colonne legacy `date`
-    - signature `p_type public.transaction_type`
-    - validation renforcée de `tagId` et normalisation de `beneficiary_id` vide vers `NULL`
+- Correction de l'ambiguïté de signature en base (`p_type text` vs `p_type public.transaction_type`) pour éviter l'erreur :
+  - _"Could not choose the best candidate function..."_
+- Alignement de la fonction SQL sur le schéma réel `paid_items` :
+  - suppression de l'usage de la colonne legacy `date`
+  - signature `p_type public.transaction_type`
+  - validation renforcée de `tagId` et normalisation de `beneficiary_id` vide vers `NULL`
 
 - **Flux frontend RPC (propre, sans bypass permanent)**
-  - Retour à un mode **RPC-only** pour les écritures `paid_items` + `paid_item_tags`.
   - Journalisation d'erreurs SQL détaillées (code/message/details/hint) dans `apiCrud` pour diagnostiquer rapidement les incidents DB.
-  - Normalisation defensive avant appel RPC : montant positif, conversion des remboursements legacy (`EXPENSE` négatif → `INCOME` positif), filtrage des `tagAmounts` invalides.
 
 ### ✨ Fonctionnalités (Features)
 
@@ -450,7 +463,6 @@ Ces changements sont centrés sur l'expérience utilisateur et la visualisation 
   - Ajout du fichier `tests/apiCrud.test.ts` (5 tests) couvrant :
     - normalisation montant/type pour remboursements legacy
     - normalisation `beneficiaryId` vide vers `null`
-    - filtrage des `tagAmounts` invalides
     - validation des champs obligatoires avant appel RPC
     - journalisation en cas d'erreur RPC
 
@@ -469,7 +481,6 @@ Ces changements sont centrés sur l'expérience utilisateur et la visualisation 
   - **130 nouveaux tests** (passage de 11 à 141 tests au total)
   - **4 nouveaux fichiers de tests** créés :
     - `apiMappers.test.ts` (23 tests) : Tests complets des conversions DB ↔ App
-    - `tagAmounts.test.ts` (24 tests) : Validation de la ventilation des tags et calculs Extra/Standard
     - `periodCalculations.test.ts` (32 tests) : Tests des algorithmes de périodes budgétaires (FIXED_DAYS, CALENDAR_WEEKS, CUSTOM_SPLIT)
     - `helpers.test.ts` (51 tests) : Tests des utilitaires (formatage, validation, calculs)
 
@@ -494,20 +505,16 @@ Tests de toutes les fonctions de mapping critiques pour l'intégrité des donné
 
 - `mapDbPerson` : Conversion personnes avec gestion `isChild` et `displayOrder`
 - `mapDbAccount` : Comptes avec types (CHECKING/SAVINGS), ratios et caps d'épargne
-- `mapDbTag` + `mapDbTagAmount` : Tags et ventilation avec flags Extra
 - `mapDbExpenseConfig` + `mapDbIncomeConfig` : Configurations récurrentes avec plages temporelles
 - `mapDbPaidItem` : Opérations pointées avec tous les flags (isVariable, isWaiting, isExtra)
 - `mapDbTransfer` : Virements standards et intérêts d'épargne
 - `mapDbSettings` : Paramètres app avec valeurs par défaut robustes
 
-#### **tagAmounts.test.ts** (24 tests)
-
 Tests de la logique métier de ventilation des tags :
 
-- **validateTagAmounts()** :
-  - Ventilation partielle autorisée (somme tags < total)
-  - Rejet si somme > total
-  - Tolérance erreurs d'arrondi (±0.01€)
+- Ventilation partielle autorisée (somme tags < total)
+- Rejet si somme > total
+- Tolérance erreurs d'arrondi (±0.01€)
 - **calculateExtraSum()** : Calcul montants hors budget
 - **calculateStandardSum()** : Calcul montants dans budget
 - **Scénarios complexes** : Ventilation mixte Extra/Standard, montants décimaux
@@ -658,9 +665,6 @@ Tests des utilitaires courants de l'application :
 
 ### ✨ Fonctionnalités (Features)
 
-#### **Atomicité réelle des écritures `paid_items` + `paid_item_tags`**
-
-- Ajout d'une RPC PostgreSQL transactionnelle `upsert_paid_item_with_tags`.
 - L'upsert de l'opération et le remplacement des tags sont désormais exécutés dans une seule transaction côté base.
 - Validation SQL intégrée : format JSON des tags, montants strictement positifs, somme des tags ≤ montant total.
 
@@ -675,7 +679,6 @@ Tests des utilitaires courants de l'application :
 
 #### **Performance du chargement initial**
 
-- `fetchInitialData` ne charge plus toute la table `paid_item_tags`.
 - Les tags sont désormais chargés uniquement pour les `instance_id` réellement récupérés dans `paid_items`.
 
 #### **Configuration et sécurité Supabase**
@@ -1266,32 +1269,31 @@ sort((a, b) => {
    - Ajout de `role="button"` et `tabIndex={0}` pour navigation clavier
    - **Impact** : Toutes les listes réorganisables ✅
 
-5. **TagAmountSelector.tsx**
    - Bouton Extra/Standard : `aria-label` dynamique selon état
    - Bouton suppression tag : `aria-label="Retirer le tag {nom}"`
    - **Impact** : Ventilation des montants par tags ✅
 
-6. **DataListRow.tsx**
+5. **DataListRow.tsx**
    - Ajout d'`aria-label="Voir les détails de {label}"` au conteneur cliquable
    - Ajout de `role="button"`, `tabIndex={0}` et gestion clavier (Enter/Space)
    - **Impact** : Toutes les lignes de liste cliquables ✅
 
-7. **Modal.tsx**
+6. **Modal.tsx**
    - Bouton de fermeture : Ajout d'`aria-label="Fermer"`
    - **Impact** : Toutes les modales de l'application ✅
 
-8. **PlannerModals.tsx**
+7. **PlannerModals.tsx**
    - Bouton de fermeture : Ajout d'`aria-label="Fermer"`
    - **Impact** : Modales de pointage d'opérations ✅
 
-9. **ErrorDisplay.tsx**
+8. **ErrorDisplay.tsx**
    - Bouton de fermeture : Ajout d'`aria-label="Fermer"`
    - **Impact** : Affichage des erreurs (Modal + Boundary) ✅
 
-10. **UserMenu.tsx**
-    - Bouton avatar : Ajout d'`aria-label="Voir les infos du compte"`
-    - Bouton déconnexion : Ajout d'`aria-label="Se déconnecter"`
-    - **Impact** : Navigation utilisateur ✅
+9. **UserMenu.tsx**
+   - Bouton avatar : Ajout d'`aria-label="Voir les infos du compte"`
+   - Bouton déconnexion : Ajout d'`aria-label="Se déconnecter"`
+   - **Impact** : Navigation utilisateur ✅
 
 **Résultat** : 0 violations "Buttons must have discernible text" sur Vercel
 
@@ -1901,9 +1903,6 @@ const defaultFilters: Partial<OperationFilters> = {
   salary: "EXCLUDE", // Masquer salaires par défaut
   accountIds: [],
   beneficiaryIds: [],
-  includedTagIds: [],
-  excludedTagIds: [],
-  tagPresence: "ALL",
 };
 ```
 
@@ -2994,7 +2993,6 @@ Implémentation d'un accordéon "Options Avancées" pour masquer les champs avan
 **1. VariableTransactionForm** (`components/features/Operations/components/VariableTransactionForm.tsx`)
 
 - ✅ Champs déplacés dans accordéon :
-  - Ventilation par tags (TagAmountSelector)
   - Toggle "Dépense temporaire / Exceptionnelle (Hors Budget)"
   - Toggle "C'est un remboursement" (conditionnel si isExpense)
 - ✅ Champ "Note/Commentaire" remonté AVANT accordéon (plus important que tags)
@@ -3704,7 +3702,6 @@ P4: Budget ajusté = 500€ - 100€ (P1) - 25€ (P2) = 375€
   - **Concept clé** : Séparation entre affichage (filtrage) et calculs (montants effectifs)
   - **Architecture à deux niveaux** :
     1. Toggle global (`isExtraGlobal`) : Affecte TOUTE l'opération
-    2. Tags individuels (`tagAmounts[].isExtra`) : Affectent des PARTIES de l'opération
   - **Règle de priorité** : Le toggle global a TOUJOURS la priorité absolue
   - **4 scénarios d'exemples** avec résultats attendus :
     - Scénario 1 : Opération 100% Extra (toggle activé, pas de tags)
@@ -3979,7 +3976,6 @@ P4: Budget ajusté = 500€ - 100€ (P1) - 25€ (P2) = 375€
 
   - **Services & mappers** :
     - Casts d'enum TypeScript : `period_type` (apiMappers)
-    - Records typés : `tagAmountsByInstance`, `paidItems` (api.ts)
 
   - **Gestion d'erreurs** :
     - `catch (err)` → `const error = err as Error` (3 occurrences dans useBudget)
@@ -4082,7 +4078,6 @@ P4: Budget ajusté = 500€ - 100€ (P1) - 25€ (P2) = 375€
 
 - **Crash validation dans PlannerModals** : Suppression de la référence obsolète `tagIds: selectedTags`
   - Résolution de ReferenceError lors de la validation d'opérations
-  - Les `tagAmounts` sont correctement préservés via le spread operator
 
 - **Positions manuelles** : Correction de la détection des positions manuelles vs automatiques
   - Ajout du seuil `< 1_000_000` dans `getManualPosition()` helper
@@ -4130,12 +4125,9 @@ P4: Budget ajusté = 500€ - 100€ (P1) - 25€ (P2) = 375€
 
 ### Ajouté
 
-- **Système de Tags avec Montants** : Ventilation granulaire des opérations par tags avec montants spécifiques
-  - Table `paid_item_tags` pour stocker les associations tag/montant
-  - Composant `TagAmountSelector` pour gérer la ventilation dans les formulaires
-  - Support de la ventilation partielle (montant non affecté autorisé)
-  - Affichage des montants par tag dans les listes d'opérations
-  - Migration automatique des anciens tags simples vers le nouveau système
+- Support de la ventilation partielle (montant non affecté autorisé)
+- Affichage des montants par tag dans les listes d'opérations
+- Migration automatique des anciens tags simples vers le nouveau système
 
 - **Système Extra à Deux Niveaux** : Gestion flexible des dépenses hors budget
   - Niveau opération : Toggle global "Dépense temporaire / Exceptionnelle"
@@ -4153,9 +4145,7 @@ P4: Budget ajusté = 500€ - 100€ (P1) - 25€ (P2) = 375€
 
 ### Changé
 
-- **Architecture Tags** : Migration complète du système `tagIds` vers `tagAmounts`
-  - Suppression des colonnes `tag_ids` (JSONB) dans toutes les tables
-  - Nouvelle table relationnelle `paid_item_tags` avec foreign keys CASCADE
+- Suppression des colonnes `tag_ids` (JSONB) dans toutes les tables
 
 ### Corrigé
 
@@ -4250,11 +4240,10 @@ P4: Budget ajusté = 500€ - 100€ (P1) - 25€ (P2) = 375€
 
 ### Ajouté
 
-- **Système de Tags** : Filtrage des opérations par tags personnalisés
-  - Création et gestion des tags avec couleurs
-  - Filtrage inclusif/exclusif
-  - Affichage visuel dans les listes
-  - Présence/absence de tags
+- Création et gestion des tags avec couleurs
+- Filtrage inclusif/exclusif
+- Affichage visuel dans les listes
+- Présence/absence de tags
 
 - **Amélioration Barre de Filtres** : Interface enrichie
   - Multi-critères (flux, source, statut, nature, tags)

@@ -1,7 +1,6 @@
 import React from "react";
 import { ChevronRight, Tag as TagIcon, User, Users, CreditCard, Clock, CheckCircle2, Info, RefreshCcw } from "lucide-react";
 import { MobileTooltip } from "../MobileTooltip";
-import { Tag, TagAmount } from "../../../types";
 
 interface DataListRowProps {
   date?: { day: string | number; month: string };
@@ -21,8 +20,6 @@ interface DataListRowProps {
   onClick?: () => void;
   badge?: React.ReactNode;
   comments?: string;
-  tags?: Tag[];
-  tagAmounts?: TagAmount[]; // Nouveau: ventilation des montants
 }
 
 export const DataListRow: React.FC<DataListRowProps> = ({
@@ -43,8 +40,6 @@ export const DataListRow: React.FC<DataListRowProps> = ({
   onClick,
   badge,
   comments,
-  tags = [],
-  tagAmounts,
 }) => {
   const isPending = isPaid === false;
 
@@ -144,24 +139,6 @@ export const DataListRow: React.FC<DataListRowProps> = ({
             <span className="flex items-center gap-1 text-slate-400 font-medium px-1.5 py-0.5 rounded whitespace-nowrap">
               <CreditCard size={10} /> {accountName || account}
             </span>
-          )}
-          {/* TAGS */}
-          {tags.length > 0 && (
-            <div className="flex gap-1 flex-wrap">
-              {tags.map((tag) => {
-                const tagAmount = tagAmounts?.find((ta) => ta.tagId === tag.id);
-                return (
-                  <span
-                    key={tag.id}
-                    className="px-1.5 py-0.5 rounded text-[9px] font-bold text-white whitespace-nowrap flex items-center gap-1"
-                    style={{ backgroundColor: tag.color }}
-                  >
-                    {tag.name}
-                    {tagAmount && <span className="opacity-90">({tagAmount.amount.toFixed(2)}€)</span>}
-                  </span>
-                );
-              })}
-            </div>
           )}
         </div>
       </div>

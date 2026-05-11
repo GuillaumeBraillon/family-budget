@@ -2,7 +2,7 @@
  * @file Hook de calcul des données d'opérations (checking accounts + stats)
  * @description Centralise tous les calculs de données pour la vue Opérations :
  * filtrage des comptes courants, génération du planner, calcul des statistiques rapides
- * avec gestion des remboursements et montants effectifs basés sur les tags.
+ * avec gestion des remboursements et montants effectifs basés sur les filtres actifs.
  *
  * @architecture
  * **Responsabilités :**
@@ -14,7 +14,6 @@
  *
  * **Logique métier :**
  * - **Remboursements** : Revenus de catégorie "EXPENSE" → Réduction des dépenses
- * - **Montants effectifs** : Si filtres de tags actifs → Utiliser les montants taggés
  * - **Extra** : Comptabilisation séparée des opérations hors budget
  *
  * **Optimisation :**
@@ -116,7 +115,7 @@ interface QuickStats {
  *
  * 5. **Calcul des statistiques** :
  *    - Pour chaque item : Détection type, remboursement, extra
- *    - Calcul des montants effectifs (basés sur tags si filtrés)
+ *    - Calcul des montants effectifs selon les filtres actifs
  *    - Accumulation dans `quickStats` (expenses + income)
  *
  * **Gestion des remboursements :**
@@ -126,12 +125,6 @@ interface QuickStats {
  * - La catégorie est définie comme EXPENSE dans `categories`
  *
  * Dans ce cas, le montant est SOUSTRAIT des dépenses au lieu d'être ajouté aux revenus.
- *
- * **Montants effectifs avec tags :**
- * Si des filtres `includedTagIds` sont actifs :
- * - Pour chaque item, utiliser uniquement les montants des tags filtrés
- * - Exemple : Opération 100€ avec tag "Alimentation" (60€) et "Loisirs" (40€)
- *   → Si filtre sur "Alimentation" → Montant effectif = 60€
  *
  * **Opérations Extra :**
  * Comptabilisées séparément dans `quickStats.*.extra` pour visibilité du hors budget.
@@ -247,106 +240,17 @@ export const useOperationsData = ({
   // 5. Calcul des statistiques rapides
   const quickStats = useMemo((): QuickStats => {
     /**
-     * Calcule le montant effectif d'un item en fonction des filtres actifs.
-     *
-     * @description
-     * Calcul contextuel basé sur plusieurs filtres :
-     *
-     * **1. Filtre Extra/Standard (`filters.nature`)** :
-     * - Si "ONLY" (Extra uniquement) : Calcule uniquement les montants Extra
-     *   * Opération avec toggle Extra global : Montant total
-     *   * Opération avec tags : Somme des tags marqués `isExtra: true`
-     *   * Opération sans tag et sans toggle : 0€
-     *
-     * - Si "EXCLUDE" (Standard uniquement) : Calcule uniquement les montants Standard
-     *   * Opération avec toggle Extra global + tags : Montant total - somme tags Extra
-     *   * Opération sans toggle : Montant total - somme tags Extra
-     *   * Opération sans tag : Montant total
-     *
-     * **2. Filtre Tags (`filters.includedTagIds`)** :
-     * - Si actif : Filtre également par tags sélectionnés
-     * - Combine avec le filtre Extra/Standard pour double filtrage
-     *
-     * **Exemples :**
-     * - Item 115.22€ avec tag 70€ Extra + 45.22€ non taggé
-     *   * Filtre Extra → 70€
-     *   * Filtre Standard → 45.22€
-     *   * Aucun filtre → 115.22€
-     *
-     * @param {PlannedItem} item - Opération à évaluer
-     * @returns {number} Montant effectif en €
+     * Calcule le montant effectif d'un item en fonction du filtre Extra/Standard.
      */
     const getEffectiveAmount = (item: PlannedItem): number => {
-      const hasTagFilter = filters.includedTagIds && filters.includedTagIds.length > 0;
-      const hasExtraFilter = filters.nature === "ONLY" || filters.nature === "EXCLUDE";
-
-      // Cas 1 : Filtre Extra/Standard actif
-      if (hasExtraFilter) {
-        // Utiliser le toggle global stocké dans isExtraGlobal (source de vérité)
-        const hasGlobalExtra = item.isExtraGlobal;
-
-        if (filters.nature === "ONLY") {
-          // Extra uniquement : calculer les montants Extra
-          if (hasGlobalExtra) {
-            // Toggle global : tout est Extra
-            if (hasTagFilter && item.tagAmounts) {
-              // Double filtre : Extra ET tags spécifiques
-              return item.tagAmounts.filter((ta) => filters.includedTagIds.includes(ta.tagId)).reduce((sum, ta) => sum + ta.amount, 0);
-            }
-            return item.amount; // Tout le montant est Extra
-          } else if (item.tagAmounts && item.tagAmounts.length > 0) {
-            // Pas de toggle global : calculer somme des tags Extra
-            const extraSum = item.tagAmounts
-              .filter((ta) => ta.isExtra === true)
-              .filter((ta) => !hasTagFilter || filters.includedTagIds.includes(ta.tagId))
-              .reduce((sum, ta) => sum + ta.amount, 0);
-            return extraSum;
-          }
-          return 0; // Aucun montant Extra
-        } else {
-          // Standard uniquement (EXCLUDE Extra) : calculer les montants Standard
-          if (hasGlobalExtra) {
-            // Toggle global : vérifier s'il reste du Standard via tags
-            if (item.tagAmounts && item.tagAmounts.length > 0) {
-              const standardSum = item.tagAmounts
-                .filter((ta) => !ta.isExtra)
-                .filter((ta) => !hasTagFilter || filters.includedTagIds.includes(ta.tagId))
-                .reduce((sum, ta) => sum + ta.amount, 0);
-              return standardSum;
-            }
-            return 0; // Toggle global sans tags : 100% Extra, 0 Standard
-          } else {
-            // Pas de toggle global : montant total - montants Extra
-            if (item.tagAmounts && item.tagAmounts.length > 0) {
-              const extraSum = item.tagAmounts.filter((ta) => ta.isExtra === true).reduce((sum, ta) => sum + ta.amount, 0);
-
-              if (hasTagFilter) {
-                // Double filtre : Standard ET tags spécifiques
-                const filteredSum = item.tagAmounts
-                  .filter((ta) => filters.includedTagIds.includes(ta.tagId))
-                  .filter((ta) => !ta.isExtra)
-                  .reduce((sum, ta) => sum + ta.amount, 0);
-                return filteredSum;
-              }
-
-              return item.amount - extraSum; // Montant Standard (total - Extra)
-            }
-            // Pas de tags : tout est Standard
-            return hasTagFilter ? 0 : item.amount;
-          }
-        }
+      if (filters.nature === "ONLY") {
+        return item.isExtraGlobal ? item.amount : 0;
       }
 
-      // Cas 2 : Filtre Tags uniquement (pas de filtre Extra)
-      if (hasTagFilter) {
-        if (!item.tagAmounts || item.tagAmounts.length === 0) {
-          return 0; // Item sans ventilation → pas de montant
-        }
-        // Somme des montants des tags filtrés
-        return item.tagAmounts.filter((ta) => filters.includedTagIds.includes(ta.tagId)).reduce((sum, ta) => sum + ta.amount, 0);
+      if (filters.nature === "EXCLUDE") {
+        return item.isExtraGlobal ? 0 : item.amount;
       }
 
-      // Cas 3 : Aucun filtre → Montant total
       return item.amount;
     };
 
@@ -415,12 +319,7 @@ export const useOperationsData = ({
         else target.pending += amount;
       } else {
         // Opérations récurrentes : Planned + Real/Pending
-        const plannedAmount =
-          filters.includedTagIds && filters.includedTagIds.length > 0
-            ? amount // Utiliser montant effectif filtré pour le prévu
-            : item.type === "INCOME" && isRefund
-              ? -item.originalAmount
-              : item.originalAmount;
+        const plannedAmount = item.type === "INCOME" && isRefund ? -item.originalAmount : item.originalAmount;
 
         target.planned += plannedAmount;
         if (item.isPaid) target.real += amount;
@@ -466,7 +365,7 @@ export const useOperationsData = ({
     }
 
     return stats;
-  }, [unsortedItems, categories, filters.includedTagIds, filters.nature, filters.beneficiaryIds, scope, activeWeek, filteredPeriodBudgets]);
+  }, [unsortedItems, categories, filters.nature, filters.beneficiaryIds, scope, activeWeek, filteredPeriodBudgets]);
 
   // 6. Formatage du mois court (ex: "jan.", "déc.")
   const monthShort = new Intl.DateTimeFormat("fr-FR", { month: "short" }).format(currentDate);

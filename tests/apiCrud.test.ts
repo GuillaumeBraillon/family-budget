@@ -27,7 +27,7 @@ vi.mock("../services/logger", () => ({
 
 import { apiSetPaidStatus, apiUpsertVariableTransaction } from "../services/apiCrud";
 
-describe("apiCrud - RPC upsert_paid_item_with_tags", () => {
+describe("apiCrud - RPC upsert_paid_item_atomic", () => {
   beforeEach(() => {
     rpcMock.mockReset();
     fromMock.mockReset();
@@ -60,44 +60,11 @@ describe("apiCrud - RPC upsert_paid_item_with_tags", () => {
 
     expect(rpcMock).toHaveBeenCalledTimes(1);
     expect(rpcMock).toHaveBeenCalledWith(
-      "upsert_paid_item_with_tags",
+      "upsert_paid_item_atomic",
       expect.objectContaining({
         p_instance_id: "var_1",
         p_amount: 42.5,
         p_type: "INCOME",
-      })
-    );
-  });
-
-  it("filtre les tagAmounts invalides avant envoi RPC", async () => {
-    rpcMock.mockResolvedValue({ data: null, error: null });
-
-    const tx: VariableTransaction = {
-      id: "var_2",
-      date: "2026-02-20",
-      label: "Courses",
-      amount: 100,
-      category: "Alimentation",
-      accountId: "3",
-      beneficiaryId: "p_joint",
-      type: "EXPENSE",
-      isWaiting: false,
-      isExtra: false,
-      tagAmounts: [
-        { tagId: "tag_ok", amount: 30, isExtra: true },
-        { tagId: "", amount: 10 },
-        { tagId: "tag_zero", amount: 0 },
-        { tagId: "tag_neg", amount: -5 },
-        { tagId: "tag_nan", amount: Number.NaN },
-      ],
-    };
-
-    await apiUpsertVariableTransaction(tx);
-
-    expect(rpcMock).toHaveBeenCalledWith(
-      "upsert_paid_item_with_tags",
-      expect.objectContaining({
-        p_tag_amounts: [{ tagId: "tag_ok", amount: 30, isExtra: true }],
       })
     );
   });
@@ -141,7 +108,7 @@ describe("apiCrud - RPC upsert_paid_item_with_tags", () => {
     await apiSetPaidStatus(details, details.instanceId);
 
     expect(rpcMock).toHaveBeenCalledWith(
-      "upsert_paid_item_with_tags",
+      "upsert_paid_item_atomic",
       expect.objectContaining({
         p_amount: 12.71,
         p_type: "INCOME",
@@ -206,7 +173,7 @@ describe("apiCrud - apiSetPaidStatus", () => {
 
     expect(rpcMock).toHaveBeenCalledTimes(1);
     expect(rpcMock).toHaveBeenCalledWith(
-      "upsert_paid_item_with_tags",
+      "upsert_paid_item_atomic",
       expect.objectContaining({
         p_instance_id: "exp_cfg-2026-03",
         p_amount: 800,
@@ -217,34 +184,7 @@ describe("apiCrud - apiSetPaidStatus", () => {
         p_is_variable: false,
         p_is_extra: false,
         p_is_salary: false,
-        p_tag_amounts: null, // Pas de tagAmounts → null
         p_beneficiary_amounts: null,
-      })
-    );
-  });
-
-  it("inclut les tagAmounts filtrés dans la RPC", async () => {
-    rpcMock.mockResolvedValue({ data: null, error: null });
-
-    const details: PaidItemDetails = {
-      ...baseDetails,
-      tagAmounts: [
-        { tagId: "t1", amount: 600, isExtra: false },
-        { tagId: "t2", amount: 200, isExtra: true },
-        { tagId: "", amount: 50 }, // tagId vide → filtré
-        { tagId: "t3", amount: 0 }, // montant 0 → filtré
-      ],
-    };
-
-    await apiSetPaidStatus(details, details.instanceId);
-
-    expect(rpcMock).toHaveBeenCalledWith(
-      "upsert_paid_item_with_tags",
-      expect.objectContaining({
-        p_tag_amounts: [
-          { tagId: "t1", amount: 600, isExtra: false },
-          { tagId: "t2", amount: 200, isExtra: true },
-        ],
       })
     );
   });
@@ -263,7 +203,7 @@ describe("apiCrud - apiSetPaidStatus", () => {
     await apiSetPaidStatus(details, details.instanceId);
 
     expect(rpcMock).toHaveBeenCalledWith(
-      "upsert_paid_item_with_tags",
+      "upsert_paid_item_atomic",
       expect.objectContaining({
         p_beneficiary_amounts: [
           { beneficiaryId: "b1", amount: 500 },
@@ -304,7 +244,7 @@ describe("apiCrud - apiSetPaidStatus", () => {
   it("journalise l'erreur RPC via logger.error", async () => {
     rpcMock.mockResolvedValue({
       data: null,
-      error: { message: "constraint violation", code: "23514", details: "tag sum exceeds total" },
+      error: { message: "constraint violation", code: "23514", details: "beneficiary sum exceeds total" },
     });
 
     const { loggerMock: logger } = vi.hoisted(() => ({ loggerMock: { error: vi.fn() } })) as any;
@@ -344,7 +284,7 @@ describe("apiCrud - apiUpsertVariableTransaction (cas complémentaires)", () => 
     await apiUpsertVariableTransaction(tx);
 
     expect(rpcMock).toHaveBeenCalledWith(
-      "upsert_paid_item_with_tags",
+      "upsert_paid_item_atomic",
       expect.objectContaining({
         p_is_extra: true,
       })
@@ -370,7 +310,7 @@ describe("apiCrud - apiUpsertVariableTransaction (cas complémentaires)", () => 
     await apiUpsertVariableTransaction(tx);
 
     expect(rpcMock).toHaveBeenCalledWith(
-      "upsert_paid_item_with_tags",
+      "upsert_paid_item_atomic",
       expect.objectContaining({
         p_is_variable: true,
         p_is_salary: false, // Toujours false pour les variables

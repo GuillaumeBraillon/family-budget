@@ -44,8 +44,6 @@ import {
   apiDeleteLabel,
   apiImportLabels,
   apiImportVirLabels,
-  apiUpsertTag,
-  apiDeleteTag,
 } from "../../services/api";
 
 /**
@@ -84,8 +82,6 @@ import {
  * @returns {Function} deleteLabel - Supprimer un libellé
  * @returns {Function} importLabels - Importer les libellés CB depuis paid_items
  * @returns {Function} importVirLabels - Importer les libellés VIR depuis paid_items
- * @returns {Function} upsertTag - Créer/modifier un tag
- * @returns {Function} deleteTag - Supprimer un tag
  *
  * @example
  * ```tsx
@@ -168,8 +164,6 @@ export const useBudgetActions = (
   const deleteLabel = wrapCrudWithReload(apiDeleteLabel, "Delete Label");
   const importLabels = wrapCrudWithReload(apiImportLabels, "Import Labels");
   const importVirLabels = wrapCrudWithReload(apiImportVirLabels, "Import VIR Labels");
-  const upsertTag = wrapCrudWithReload(apiUpsertTag, "Upsert Tag");
-  const deleteTag = wrapCrudWithReload(apiDeleteTag, "Delete Tag");
 
   return {
     // Utilisateurs autorisés
@@ -202,9 +196,5 @@ export const useBudgetActions = (
     deleteLabel,
     importLabels,
     importVirLabels,
-
-    // Tags
-    upsertTag,
-    deleteTag,
   };
 };

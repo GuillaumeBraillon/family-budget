@@ -25,7 +25,6 @@ Application web complète de gestion financière pour couples et familles, déve
 - 📊 Suivre leurs **revenus et dépenses** en temps réel
 - 💳 Gérer **plusieurs comptes bancaires** (courants, épargne)
 - 🔄 Automatiser les **opérations récurrentes** (loyers, salaires, abonnements)
-- 🏷️ **Ventiler finement** les dépenses par tags avec montants
 - ⚖️ Calculer l'**équité des contributions** entre membres du foyer
 - 📈 Visualiser les **tendances** et **projections** budgétaires
 - 🔐 Contrôler les **accès** via whitelist utilisateur
@@ -102,30 +101,12 @@ Application web complète de gestion financière pour couples et familles, déve
 - **Saisie rapide** :
   - Date, montant, catégorie
   - Libellés suggérés (auto-complétion)
-  - Support des tags avec ventilation
   - Mode "En attente" vs "Pointé"
 
-#### 🏷️ Système de tags avec montants
-
-- **Ventilation granulaire** : Affectez des montants spécifiques à chaque tag
-- **Ventilation partielle autorisée** : Montant non taggé possible
-- **Calculs contextuels** : Les totaux s'adaptent aux filtres actifs
-- **Affichage détaillé** : Montants par tag dans les listes
-
-**Exemple** :
-
-```
-Courses alimentaires : 150€
-  - Tag "Alimentaire" : 100€
-  - Tag "Produits ménagers" : 30€
-  - Sans tag : 20€
-```
-
-#### ⭐ Gestion Extra à deux niveaux
+#### ⭐ Gestion Extra
 
 - **Niveau opération** : Marquer toute l'opération comme "hors budget"
-- **Niveau tag** : Marquer individuellement certains montants de tags comme Extra
-- **Flexibilité maximale** : Opérations mixtes (ex: 150€ normaux + 50€ Extra)
+- **Usage simple** : distinguer les opérations standards des opérations hors budget
 
 #### 🔍 Filtres puissants
 
@@ -137,7 +118,6 @@ Courses alimentaires : 150€
 - **Salaires** : Inclure / Exclure
 - **Comptes** : Filtrage multi-sélection
 - **Bénéficiaires** : Filtrage multi-sélection
-- **Tags** : Inclusion / Exclusion / Présence
 
 #### 📊 Modes d'affichage
 
@@ -153,7 +133,6 @@ Courses alimentaires : 150€
   - Date effective
   - Compte utilisé
   - Libellé personnalisé
-  - Ventilation par tags
 - **Gestion de la waiting list** : Mode "En attente" pour opérations futures
 - **Historique** : Conservation des montants d'origine
 
@@ -247,12 +226,6 @@ Réorganisez l'ordre d'affichage des virements pour prioriser visuellement.
   - Transport → Essence, Assurance, Entretien
   - Salaire → Salaire net, Primes
 
-#### 🏷️ Tags
-
-- **Création** : Nom + Couleur
-- **Usage** : Ventilation transversale des opérations
-- **Filtrage** : Inclusion/Exclusion dans les analyses
-
 #### 📋 Libellés Sauvegardés
 
 - **Types** :
@@ -344,7 +317,7 @@ Le script crée automatiquement :
 - ✅ 12 tables principales
 - ✅ Tous les index de performance
 - ✅ Politiques Row Level Security
-- ✅ Contraintes, colonnes de tri manuel (`operations_sorting` / `accounts_sorting`) et fonction RPC transactionnelle pour les tags
+- ✅ Contraintes, colonnes de tri manuel (`operations_sorting` / `accounts_sorting`) et fonction RPC transactionnelle des opérations
 
 Ce fichier inclut désormais les évolutions récentes (tri manuel déterministe + RPC transactionnelle) pour permettre un bootstrap complet sans rejouer des migrations historiques.
 

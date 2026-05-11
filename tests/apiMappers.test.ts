@@ -4,18 +4,8 @@
  * entre les types DB (snake_case) et les types App (camelCase)
  */
 import { describe, it, expect } from "vitest";
-import {
-  mapDbPerson,
-  mapDbAccount,
-  mapDbTagAmount,
-  mapDbExpenseConfig,
-  mapDbIncomeConfig,
-  mapDbPaidItem,
-  mapDbTransfer,
-  mapDbSettings,
-  mapDbTag,
-} from "../services/apiMappers";
-import type { DbPerson, DbAccount, DbPaidItemTag, DbExpenseConfig, DbIncomeConfig, DbPaidItem, DbTransfer, DbSettings, DbTag } from "../services/dbTypes";
+import { mapDbPerson, mapDbAccount, mapDbExpenseConfig, mapDbIncomeConfig, mapDbPaidItem, mapDbTransfer, mapDbSettings } from "../services/apiMappers";
+import type { DbPerson, DbAccount, DbExpenseConfig, DbIncomeConfig, DbPaidItem, DbTransfer, DbSettings } from "../services/dbTypes";
 
 describe("apiMappers - Conversions DB vers App", () => {
   describe("mapDbPerson", () => {
@@ -105,74 +95,6 @@ describe("apiMappers - Conversions DB vers App", () => {
 
       const result = mapDbAccount(dbAccount);
       expect(result.currentBalance).toBe(0);
-    });
-  });
-
-  describe("mapDbTag", () => {
-    it("convertit correctement un tag", () => {
-      const dbTag: DbTag = {
-        id: "tag-1",
-        name: "Alimentation",
-        color: "#FF5733",
-      };
-
-      const result = mapDbTag(dbTag);
-
-      expect(result).toEqual({
-        id: "tag-1",
-        name: "Alimentation",
-        color: "#FF5733",
-      });
-    });
-  });
-
-  describe("mapDbTagAmount", () => {
-    it("convertit un TagAmount standard", () => {
-      const dbTagAmount: DbPaidItemTag = {
-        id: "tag-amount-1",
-        paid_item_instance_id: "item-1",
-        tag_id: "tag-1",
-        amount: 50.5,
-        is_extra: false,
-        created_at: "2025-12-01T00:00:00Z",
-      };
-
-      const result = mapDbTagAmount(dbTagAmount);
-
-      expect(result).toEqual({
-        tagId: "tag-1",
-        amount: 50.5,
-        isExtra: false,
-      });
-    });
-
-    it("convertit un TagAmount Extra", () => {
-      const dbTagAmount: DbPaidItemTag = {
-        id: "tag-amount-2",
-        paid_item_instance_id: "item-2",
-        tag_id: "tag-2",
-        amount: 120,
-        is_extra: true,
-        created_at: "2025-12-01T00:00:00Z",
-      };
-
-      const result = mapDbTagAmount(dbTagAmount);
-
-      expect(result.isExtra).toBe(true);
-      expect(result.amount).toBe(120);
-    });
-
-    it("convertit amount en Number", () => {
-      const dbTagAmount: DbPaidItemTag = {
-        paid_item_id: "item-3",
-        tag_id: "tag-3",
-        amount: "75.25", // Type peut être string en DB
-        is_extra: false,
-      } as any;
-
-      const result = mapDbTagAmount(dbTagAmount);
-      expect(result.amount).toBe(75.25);
-      expect(typeof result.amount).toBe("number");
     });
   });
 

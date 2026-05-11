@@ -9,12 +9,11 @@
  * - Un item peut avoir une ventilation multi-bénéficiaires (beneficiaryAmounts).
  *   Si absente, le champ beneficiaryId porte le montant total.
  * - Extra : toggle global (`isExtraGlobal` / `isExtra`) = toute l'opération hors budget.
- *   Sinon, ventilation via tagAmounts[].isExtra.
  * - Virements internes (`category === "Virement Interne"`) et intérêts d'épargne
  *   (`subCategory === "Intérêts"`) sont exclus des calculs budgétaires.
  */
 
-import { BeneficiaryAmount, OperationFilters, Person, TagAmount } from "../types";
+import { BeneficiaryAmount, OperationFilters, Person } from "../types";
 
 // ---------------------------------------------------------------------------
 // Types internes (sous-ensembles de PlannedItem et PaidItemDetails)
@@ -33,7 +32,6 @@ export interface HasExtraInfo {
   isExtraGlobal?: boolean;
   /** Valeur DB directe pour PaidItemDetails (équivaut à isExtraGlobal) */
   isExtra?: boolean;
-  tagAmounts?: TagAmount[];
   amount: number;
 }
 
@@ -90,22 +88,15 @@ export const getFamilyBeneficiaryIds = (people: Person[]): string[] => {
 /**
  * Retourne le montant Extra d'un item.
  *
- * Priorités :
- * 1. Toggle global activé (isExtraGlobal || isExtra) → tout le montant est Extra
- * 2. tagAmounts présents → somme des portions marquées isExtra
- * 3. Sinon → 0 (tout est Standard)
+ * Règle :
+ * - Toggle global activé (isExtraGlobal || isExtra) → tout le montant est Extra
+ * - Sinon → 0 (tout est Standard)
  */
 export const getExtraAmount = (item: HasExtraInfo): number => {
   const totalAmount = Number(item.amount) || 0;
-  const sign = totalAmount < 0 ? -1 : 1;
 
   const isGlobal = !!(item.isExtraGlobal ?? item.isExtra);
   if (isGlobal) return totalAmount;
-
-  if (item.tagAmounts && item.tagAmounts.length > 0) {
-    const extraAbsolute = item.tagAmounts.filter((ta) => ta.isExtra === true).reduce((sum, ta) => sum + ta.amount, 0);
-    return sign * extraAbsolute;
-  }
 
   return 0;
 };
@@ -185,9 +176,6 @@ export const buildOperationsFilters = (overrides: Partial<OperationFilters>): Pa
   isAccountFilterActive: false,
   beneficiaryIds: [],
   isBeneficiaryFilterActive: false,
-  includedTagIds: [],
-  excludedTagIds: [],
-  tagPresence: "ALL",
   includedCategoryIds: [],
   isCategoryFilterActive: false,
   includedSubCategoryIds: [],

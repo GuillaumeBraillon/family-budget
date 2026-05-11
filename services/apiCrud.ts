@@ -7,13 +7,11 @@
  * **Responsabilités :**
  * - Conversion des données applicatives vers format DB
  * - Exécution des requêtes Supabase (INSERT, UPDATE, DELETE)
- * - Gestion spéciale des relations (ex: `paid_item_tags` avec CASCADE)
+ * - Gestion spéciale des relations (ex: `paid_item_beneficiaries` avec CASCADE)
  * - Retour des résultats bruts (mapping fait par apiMappers)
  *
- * **Gestion des tags :**
- * Les `tagAmounts` sont stockés dans une table séparée (`paid_item_tags`)
- * avec foreign key CASCADE. La suppression d'un `paid_item` supprime
- * automatiquement ses tags associés.
+ * Les ventilations bénéficiaires sont stockées dans une table séparée
+ * avec foreign key CASCADE.
  *
  * @dependencies
  * - services/supabase : Instance client Supabase configurée
@@ -33,22 +31,8 @@ import {
   Transfer,
   VariableTransaction,
   SavedLabel,
-  Tag,
-  TagAmount,
   BeneficiaryAmount,
 } from "../types";
-
-const normalizeTagAmountsForRpc = (tagAmounts: TagAmount[] | undefined): TagAmount[] | null => {
-  if (tagAmounts === undefined) return null;
-
-  return tagAmounts
-    .filter((tagAmount) => Boolean(tagAmount.tagId) && Number.isFinite(tagAmount.amount) && tagAmount.amount > 0)
-    .map((tagAmount) => ({
-      tagId: tagAmount.tagId,
-      amount: tagAmount.amount,
-      isExtra: !!tagAmount.isExtra,
-    }));
-};
 
 const normalizeBeneficiaryAmountsForRpc = (beneficiaryAmounts: BeneficiaryAmount[] | undefined): BeneficiaryAmount[] | null => {
   if (beneficiaryAmounts === undefined) return null;
@@ -139,13 +123,6 @@ export const apiToggleUserAuthorization = async (email: string, isAllowed: boole
 export const apiUpdateUserNotes = async (email: string, notes: string) => supabase.from("authorized_users").update({ notes }).eq("email", email);
 
 export const apiDeleteAuthorizedUser = async (email: string) => supabase.from("authorized_users").delete().eq("email", email);
-
-/**
- * Opérations sur les Tags
- */
-export const apiUpsertTag = async (tag: Tag) => supabase.from("tags").upsert({ id: tag.id, name: tag.name, color: tag.color });
-
-export const apiDeleteTag = async (id: string) => supabase.from("tags").delete().eq("id", id);
 
 /**
  * Opérations sur les Membres (People)
@@ -542,19 +519,11 @@ export const apiDeleteIncome = async (id: string) => supabase.from("income_confi
  * Enregistre ou supprime le pointage d'une opération récurrente.
  *
  * @description
- * Gère la persistence des pointages mensuels avec traitement spécial des `tagAmounts`
- * qui sont stockés dans une table relationnelle séparée.
+ * Gère la persistence des pointages mensuels.
  *
  * **Comportement :**
- * - Si `details` fourni : Upsert du pointage + remplacement complet des tags
- * - Si `details = null` : Suppression du pointage (tags supprimés automatiquement par CASCADE)
- * - Les tags sont remplacés atomiquement (DELETE ancien + INSERT nouveau)
- *
- * **Gestion des tags :**
- * 1. Upsert du `paid_item` principal
- * 2. Suppression de tous les anciens `paid_item_tags`
- * 3. Insertion des nouveaux tags si `tagAmounts` présent
- * 4. Si `tagAmounts = []` : Suppression explicite des tags (ventilation vide)
+ * - Si `details` fourni : Upsert du pointage
+ * - Si `details = null` : Suppression du pointage
  *
  * @param {PaidItemDetails | null} details - Détails du pointage ou null pour supprimer
  * @param {string} instanceId - Identifiant de l'instance (non utilisé si details fourni)
@@ -562,14 +531,10 @@ export const apiDeleteIncome = async (id: string) => supabase.from("income_confi
  *
  * @example
  * ```tsx
- * // Pointer avec ventilation de tags
+ * // Pointer une opération
  * await apiSetPaidStatus({
  *   instanceId: "exp_123-2025-01",
  *   amount: 150,
- *   tagAmounts: [
- *     { tagId: 'tag1', amount: 100 },
- *     { tagId: 'tag2', amount: 50, isExtra: true }
- *   ],
  *   // ... autres champs
  * }, "exp_123-2025-01");
  *
@@ -579,7 +544,6 @@ export const apiDeleteIncome = async (id: string) => supabase.from("income_confi
  */
 export const apiSetPaidStatus = async (details: PaidItemDetails | null, instanceId: string) => {
   if (details) {
-    const normalizedTagAmounts = normalizeTagAmountsForRpc(details.tagAmounts);
     const normalizedBeneficiaryAmounts = normalizeBeneficiaryAmountsForRpc(details.beneficiaryAmounts);
     const normalizedPaidItem = normalizePaidItemForRpc(details.amount, details.type);
 
@@ -607,18 +571,16 @@ export const apiSetPaidStatus = async (details: PaidItemDetails | null, instance
       p_is_refund: !!details.isRefund,
       p_is_salary: !!details.isSalary,
       p_comments: details.comments || null,
-      p_tag_amounts: normalizedTagAmounts,
       p_beneficiary_amounts: normalizedBeneficiaryAmounts,
     };
 
-    const rpcResult = await supabase.rpc("upsert_paid_item_with_tags", rpcPayload);
+    const rpcResult = await supabase.rpc("upsert_paid_item_atomic", rpcPayload);
     if (rpcResult.error) {
-      logger.error("crud", "RPC upsert_paid_item_with_tags failed", {
+      logger.error("crud", "RPC upsert_paid_item_atomic failed", {
         context: "apiSetPaidStatus",
         instanceId: details.instanceId,
         amount: normalizedPaidItem.amount,
         type: normalizedPaidItem.type,
-        tagCount: normalizedTagAmounts?.length ?? null,
         beneficiaryCount: normalizedBeneficiaryAmounts?.length ?? null,
         error: formatSupabaseError(rpcResult.error),
       });
@@ -626,7 +588,7 @@ export const apiSetPaidStatus = async (details: PaidItemDetails | null, instance
 
     return rpcResult;
   } else {
-    // La suppression du paid_item déclenche automatiquement la suppression des paid_item_tags (CASCADE)
+    // La suppression du paid_item déclenche automatiquement la suppression des relations CASCADE.
     return supabase.from("paid_items").delete().eq("instance_id", instanceId);
   }
 };
@@ -651,7 +613,6 @@ export const apiDeleteTransfer = async (id: string) => supabase.from("transfers"
  * Opérations sur les Transactions Variables (Suivi Réel)
  */
 export const apiUpsertVariableTransaction = async (transaction: VariableTransaction) => {
-  const normalizedTagAmounts = normalizeTagAmountsForRpc(transaction.tagAmounts);
   const normalizedBeneficiaryAmounts = normalizeBeneficiaryAmountsForRpc(transaction.beneficiaryAmounts);
   const normalizedPaidItem = normalizePaidItemForRpc(transaction.amount, transaction.type);
 
@@ -679,18 +640,16 @@ export const apiUpsertVariableTransaction = async (transaction: VariableTransact
     p_is_refund: !!transaction.isRefund,
     p_is_salary: !!transaction.isSalary,
     p_comments: transaction.comments || null,
-    p_tag_amounts: normalizedTagAmounts,
     p_beneficiary_amounts: normalizedBeneficiaryAmounts,
   };
 
-  const rpcResult = await supabase.rpc("upsert_paid_item_with_tags", rpcPayload);
+  const rpcResult = await supabase.rpc("upsert_paid_item_atomic", rpcPayload);
   if (rpcResult.error) {
-    logger.error("crud", "RPC upsert_paid_item_with_tags failed", {
+    logger.error("crud", "RPC upsert_paid_item_atomic failed", {
       context: "apiUpsertVariableTransaction",
       instanceId: transaction.id,
       amount: normalizedPaidItem.amount,
       type: normalizedPaidItem.type,
-      tagCount: normalizedTagAmounts?.length ?? null,
       beneficiaryCount: normalizedBeneficiaryAmounts?.length ?? null,
       error: formatSupabaseError(rpcResult.error),
     });

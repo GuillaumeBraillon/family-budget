@@ -17,7 +17,6 @@ import {
   AppSettings,
   VariableTransaction,
   SavedLabel,
-  Tag,
   CategoryDef,
   OperationFilters,
 } from "../../../types";
@@ -47,7 +46,6 @@ interface OperationsViewProps {
   settings: AppSettings;
   categories: CategoryDef[];
   savedLabels?: SavedLabel[];
-  tags?: Tag[];
   onTogglePaid: (details: PaidItemDetails | null, instanceId: string) => void;
   onUpsertVariable: (t: VariableTransaction) => void;
   onDeleteVariable: (id: string) => void;
@@ -68,7 +66,6 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
   settings,
   categories,
   savedLabels,
-  tags = [],
   onTogglePaid,
   onUpsertVariable,
   onDeleteVariable,
@@ -192,7 +189,7 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
   const handleExport = () => {
     if (currentItems.length === 0) return;
 
-    const headers = ["Date", "Libellé", "Montant", "Type", "Catégorie", "Sous-Catégorie", "Bénéficiaire", "Compte", "Statut", "Note", "Tags"];
+    const headers = ["Date", "Libellé", "Montant", "Type", "Catégorie", "Sous-Catégorie", "Bénéficiaire", "Compte", "Statut", "Note"];
 
     const rows = currentItems.map((item) => {
       const dateStr =
@@ -212,12 +209,6 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
       const status = item.isPaid ? "Réel" : "En attente";
       const type = item.type === "INCOME" ? "Revenu" : "Dépense";
       const amount = formatNumberFr(item.amount);
-      const itemTags = item.tagAmounts
-        ? tags
-            .filter((t) => item.tagAmounts?.some((ta) => ta.tagId === t.id))
-            .map((t) => t.name)
-            .join(", ")
-        : "";
 
       return [
         escapeCsv(dateStr),
@@ -230,7 +221,6 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
         escapeCsv(accountName),
         escapeCsv(status),
         escapeCsv(item.comments || ""),
-        escapeCsv(itemTags),
       ];
     });
 
@@ -278,7 +268,6 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
           categories={categories}
           availableCategoryIds={availableCategoryIds}
           availableSubCategoryIds={availableSubCategoryIds}
-          tags={tags}
           onReset={resetFilters}
           sortOptions={sortOptions}
           sortKey={sortKey}
@@ -295,7 +284,6 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
         monthShort={monthShort}
         people={people}
         accounts={accounts}
-        tags={tags}
         currentDate={currentDate}
         onItemClick={handleItemClick}
         onAddClick={() => {
@@ -313,7 +301,6 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
         uncheckModal={ui.uncheckModal}
         accounts={accounts}
         people={people}
-        tags={tags}
         onTogglePaid={onTogglePaid}
         onCloseConfirm={ui.closeConfirmModal}
         onCloseUncheck={ui.closeUncheckModal}
@@ -326,7 +313,6 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
         accounts={accounts}
         categories={categories}
         people={people}
-        tags={tags}
         onAddTransaction={handleUpsertVariable}
         onDeleteTransaction={handleDeleteVariable}
         defaultDate={defaultVarDate}

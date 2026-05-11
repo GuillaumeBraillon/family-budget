@@ -8,7 +8,7 @@
  * **Responsabilités :**
  * - Gestion de l'état `showAllFilters` (affichage filtres avancés)
  * - Configuration des boutons cycliques (Flux, Statut, Source, Extra)
- * - Handlers des dropdowns multi-sélection (Comptes, Tags, Salaires, etc.)
+ * - Handlers des dropdowns multi-sélection (Comptes, Salaires, etc.)
  * - Calculs d'activité des filtres (détection changements par rapport au défaut)
  * - Fonction de réinitialisation globale
  *
@@ -18,7 +18,6 @@
  *
  * **Dropdowns multi-sélection :**
  * - Comptes : [] = tous sélectionnés (optimisation)
- * - Tags : Tri-state (inclus/exclus/neutre) avec mode présence
  * - Salaires/Virements : États binaires + "Tous"
  * - Bénéficiaires : [] = tous sélectionnés (optimisation)
  *
@@ -37,7 +36,7 @@
  *   activeFiltersCount,
  *   handleAccountChange,
  *   clear
- * } = useFilterBarLogic(filters, onFilterChange, accounts, people, tags, onReset);
+ * } = useFilterBarLogic(filters, onFilterChange, accounts, people, onReset);
  *
  * return (
  *   <div>
@@ -66,7 +65,7 @@ import {
   Users,
   FolderOpen,
 } from "lucide-react";
-import { OperationFilters, Account, Person, AccountType, Tag as TagType, CategoryDef } from "../../types";
+import { OperationFilters, Account, Person, AccountType, CategoryDef } from "../../types";
 import { FilterOption } from "../../components/ui/molecules/FilterDropdown";
 import { buildOperationsFilters } from "../../services/financeUtils";
 
@@ -86,7 +85,6 @@ export interface CyclicButtonConfig {
  * @param {Function} onFilterChange - Callback de mise à jour des filtres
  * @param {Account[]} accounts - Liste des comptes bancaires
  * @param {Person[]} people - Liste des bénéficiaires/membres
- * @param {TagType[]} tags - Liste des tags de ventilation
  * @param {CategoryDef[]} categories - Liste des catégories avec sous-catégories
  * @param {Function} [onReset] - Callback optionnel de réinitialisation personnalisée
  * @returns {Object} Configurations, handlers et états pour l'UI
@@ -96,7 +94,6 @@ export const useFilterBarLogic = (
   onFilterChange: (filters: OperationFilters) => void,
   accounts: Account[],
   people: Person[],
-  tags: TagType[] = [],
   categories: CategoryDef[] = [],
   availableCategoryIds: string[] = [],
   availableSubCategoryIds: string[] = [],
@@ -276,71 +273,6 @@ export const useFilterBarLogic = (
   };
 
   /**
-   * Options du dropdown Tags avec couleurs visuelles.
-   */
-  const tagOptions: FilterOption[] = tags.map((t) => ({
-    id: t.id,
-    label: t.name,
-    color: t.color,
-    icon: <div className="w-3 h-3 rounded-full" style={{ backgroundColor: t.color }} />,
-  }));
-
-  /**
-   * Handler tri-state des Tags (inclus/exclus/neutre).
-   *
-   * @param {string} id - ID du tag
-   * @param {"INCLUDE" | "EXCLUDE" | null} state - Nouvel état
-   *
-   * @description
-   * - "INCLUDE" : Tag doit être présent (ajoute à `includedTagIds`)
-   * - "EXCLUDE" : Tag doit être absent (ajoute à `excludedTagIds`)
-   * - null : Neutre (retire des deux listes)
-   *
-   * **Logique spéciale :** Si on inclut un tag alors que `tagPresence = "WITHOUT_TAGS"`,
-   * bascule automatiquement en "WITH_TAGS" pour cohérence.
-   */
-  const handleTagTriStateChange = (id: string, state: "INCLUDE" | "EXCLUDE" | null) => {
-    let newIncluded = [...filters.includedTagIds];
-    let newExcluded = [...filters.excludedTagIds];
-
-    newIncluded = newIncluded.filter((tid) => tid !== id);
-    newExcluded = newExcluded.filter((tid) => tid !== id);
-
-    if (state === "INCLUDE") {
-      newIncluded.push(id);
-      if (filters.tagPresence === "WITHOUT_TAGS") update("tagPresence", "WITH_TAGS");
-    } else if (state === "EXCLUDE") {
-      newExcluded.push(id);
-    }
-
-    onFilterChange({
-      ...filters,
-      includedTagIds: newIncluded,
-      excludedTagIds: newExcluded,
-    });
-  };
-
-  /**
-   * Handler du mode de présence des Tags.
-   *
-   * @param {"ALL" | "WITH_TAGS" | "WITHOUT_TAGS"} mode - Mode de présence
-   *
-   * @description
-   * - "ALL" : Affiche toutes les opérations (avec ou sans tags)
-   * - "WITH_TAGS" : Affiche uniquement les opérations taggées
-   * - "WITHOUT_TAGS" : Affiche uniquement les opérations non taggées
-   *
-   * **Nettoyage :** Si passage en "WITHOUT_TAGS", vide `includedTagIds` (incompatible).
-   */
-  const handleTagPresenceChange = (mode: "ALL" | "WITH_TAGS" | "WITHOUT_TAGS") => {
-    onFilterChange({
-      ...filters,
-      tagPresence: mode,
-      includedTagIds: mode === "WITHOUT_TAGS" ? [] : filters.includedTagIds,
-    });
-  };
-
-  /**
    * Options du dropdown Catégories — uniquement celles ayant des opérations ce mois-ci.
    */
   const categoryOptions: FilterOption[] = categories
@@ -448,11 +380,6 @@ export const useFilterBarLogic = (
   // --- DÉTECTION D'ACTIVITÉ DES FILTRES ---
 
   /**
-   * Détecte si les filtres Tags sont actifs (différents du défaut).
-   */
-  const isTagsActive = filters.includedTagIds.length > 0 || filters.excludedTagIds.length > 0 || filters.tagPresence !== "ALL";
-
-  /**
    * Détecte si le filtre Extra est actif (différent du défaut "ALL").
    */
   const isExtraActive = filters.nature !== "ALL";
@@ -490,7 +417,7 @@ export const useFilterBarLogic = (
   /**
    * Détecte si au moins un filtre secondaire (avancé) est actif.
    */
-  const hasActiveSecondary = isTagsActive || isSalaryActive || isAccountActive || isFluxActive || isCategoryActive || isSubCategoryActive;
+  const hasActiveSecondary = isSalaryActive || isAccountActive || isFluxActive || isCategoryActive || isSubCategoryActive;
 
   /**
    * Compte total des filtres actifs pour le badge global.
@@ -511,7 +438,7 @@ export const useFilterBarLogic = (
    * - Statut: Réel/Pointé (pas Tous !)
    * - Nature: Standard (pas Tout !)
    * - Salaires: Exclus
-   * - Aucune sélection de comptes/bénéficiaires/tags
+   * - Aucune sélection de comptes/bénéficiaires
    *
    * @returns {boolean} True si filtres par défaut, False si modifiés
    */
@@ -526,9 +453,6 @@ export const useFilterBarLogic = (
     !filters.isAccountFilterActive &&
     filters.beneficiaryIds.length === 0 &&
     !filters.isBeneficiaryFilterActive &&
-    filters.includedTagIds.length === 0 &&
-    filters.excludedTagIds.length === 0 &&
-    filters.tagPresence === DEFAULT.tagPresence &&
     filters.includedCategoryIds.length === 0 &&
     !filters.isCategoryFilterActive &&
     filters.includedSubCategoryIds.length === 0 &&
@@ -559,9 +483,6 @@ export const useFilterBarLogic = (
     subCategoryOptions,
     visualSubCategoryIds,
     handleSubCategoryChange,
-    tagOptions,
-    handleTagTriStateChange,
-    handleTagPresenceChange,
     benOptions,
     visualBenIds,
     handleBenChange,
@@ -569,7 +490,6 @@ export const useFilterBarLogic = (
     selectedSalary,
     handleSalaryChange,
     // Indicateurs d'activité
-    isTagsActive,
     isExtraActive,
     isSalaryActive,
     isSourceActive,

@@ -6,7 +6,7 @@
  *
  * @architecture
  * **Responsabilités :**
- * - Gestion de l'état des filtres (flux, source, statut, tags, comptes, bénéficiaires)
+ * - Gestion de l'état des filtres (flux, source, statut, comptes, bénéficiaires)
  * - Persistance automatique dans localStorage (clé : `operationsView_filters`)
  * - Initialisation depuis filtres externes (props `initialFilters`)
  * - Réinitialisation aux valeurs par défaut
@@ -39,9 +39,6 @@ import { buildOperationsFilters } from "../../services/financeUtils";
  * - **salary**: "EXCLUDE" → Masquer les salaires (revenus structurels)
  * - **accountIds**: [] → Tous les comptes (pas de filtrage)
  * - **beneficiaryIds**: [] → Tous les bénéficiaires
- * - **includedTagIds**: [] → Pas de filtrage par tags inclus
- * - **excludedTagIds**: [] → Pas de filtrage par tags exclus
- * - **tagPresence**: "ALL" → Afficher avec ou sans tags
  *
  * **Cas d'usage typiques :**
  * - Vue "Budget mensuel" : Voir toutes les dépenses variables réelles

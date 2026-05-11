@@ -1,5 +1,5 @@
 import React from "react";
-import { PlannedItem, Person, Account, Tag } from "../../../../types";
+import { PlannedItem, Person, Account } from "../../../../types";
 import { DataList } from "../../../ui/molecules/DataList";
 import { DataListRow } from "../../../ui/molecules/DataListRow";
 import { SortableRow } from "../../../ui/molecules/SortableRow";
@@ -13,7 +13,6 @@ interface OperationsListProps {
   monthShort: string;
   people: Person[];
   accounts: Account[];
-  tags: Tag[];
   currentDate: Date;
   onItemClick: (item: PlannedItem) => void;
   onAddClick: () => void;
@@ -27,7 +26,6 @@ export const OperationsList: React.FC<OperationsListProps> = ({
   monthShort,
   people,
   accounts,
-  tags,
   currentDate,
   onItemClick,
   onAddClick,
@@ -81,7 +79,6 @@ export const OperationsList: React.FC<OperationsListProps> = ({
         : person?.name;
     const account = accounts.find((a) => a.id === item.accountId);
     const isVariable = item.source === "VARIABLE";
-    const itemTags = item.tagAmounts ? tags.filter((t) => item.tagAmounts?.some((ta) => ta.tagId === t.id)) : [];
 
     return (
       <DataListRow
@@ -99,8 +96,6 @@ export const OperationsList: React.FC<OperationsListProps> = ({
         isPaid={!!item.isPaid}
         onClick={isAdmin ? () => onItemClick(item) : undefined}
         comments={item.comments}
-        tags={itemTags}
-        tagAmounts={item.tagAmounts}
         badge={
           <div className="flex gap-1 items-center">
             {isVariable ? (

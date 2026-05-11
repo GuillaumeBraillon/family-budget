@@ -46,7 +46,6 @@ import {
   VariableTransaction,
   SavedLabel,
   AccountType,
-  Tag,
   PlannedItem,
   AuthorizedUser,
 } from "../types";
@@ -112,7 +111,6 @@ const DEFAULT_VARIABLE_LABELS = ["Courses Alimentaires", "Essence / Carburant", 
  * @returns {Transfer[]} transfers - Virements internes
  * @returns {VariableTransaction[]} variableTransactions - Transactions variables
  * @returns {SavedLabel[]} savedLabels - Libellés sauvegardés
- * @returns {Tag[]} tags - Tags de ventilation
  * @returns {AuthorizedUser[]} authorizedUsers - Whitelist utilisateurs
  * @returns {boolean} loading - Indicateur de chargement
  * @returns {string | null} error - Message d'erreur utilisateur
@@ -153,7 +151,6 @@ export const useBudget = () => {
     transfers: [] as Transfer[],
     variableTransactions: [] as VariableTransaction[],
     savedLabels: [] as SavedLabel[],
-    tags: [] as Tag[],
     authorizedUsers: [] as AuthorizedUser[],
   });
 
@@ -213,7 +210,6 @@ export const useBudget = () => {
         transfers: res.transfers,
         variableTransactions: res.variableTransactions,
         savedLabels: res.savedLabels,
-        tags: res.tags,
         authorizedUsers: res.authorizedUsers ?? [],
       });
     } catch (err) {
@@ -533,7 +529,6 @@ export const useBudget = () => {
     ...budgetData,
     settings: settingsWithLabels,
     savedLabels: budgetData.savedLabels,
-    tags: budgetData.tags,
     authorizedUsers: budgetData.authorizedUsers,
     loading: isLoading,
     error: errorMessage,

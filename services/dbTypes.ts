@@ -22,21 +22,6 @@ export interface DbAuthorizedUser {
   notes?: string;
 }
 
-export interface DbTag {
-  id: string;
-  name: string;
-  color: string;
-}
-
-export interface DbPaidItemTag {
-  id: string;
-  paid_item_instance_id: string;
-  tag_id: string;
-  amount: number;
-  is_extra?: boolean;
-  created_at: string;
-}
-
 export interface DbPaidItemBeneficiary {
   id: string;
   paid_item_instance_id: string;
@@ -92,7 +77,6 @@ export interface DbExpenseConfig {
   start_month?: string | null;
   end_month?: string | null;
   is_extra: boolean;
-  tag_ids?: string[];
 }
 
 export interface DbIncomeConfig {
@@ -108,7 +92,6 @@ export interface DbIncomeConfig {
   is_salary: boolean;
   start_month?: string | null;
   end_month?: string | null;
-  tag_ids?: string[];
 }
 
 export interface DbPaidItem {
@@ -128,7 +111,6 @@ export interface DbPaidItem {
   is_salary?: boolean;
   comments?: string | null;
   date?: string; // Alias de payment_date pour compatibilité
-  tag_ids?: string[];
 }
 
 export interface DbTransfer {

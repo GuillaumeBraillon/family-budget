@@ -128,35 +128,9 @@ describe("getExtraAmount", () => {
     expect(getExtraAmount(item)).toBe(150);
   });
 
-  it("retourne la somme des tags Extra si toggle désactivé", () => {
-    const item = makeItem(200, {
-      tagAmounts: [
-        { tagId: "t1", amount: 80, isExtra: true },
-        { tagId: "t2", amount: 120, isExtra: false },
-      ],
-    });
-    expect(getExtraAmount(item)).toBe(80);
-  });
-
-  it("retourne 0 si aucun tag Extra et toggle désactivé", () => {
-    const item = makeItem(100, {
-      tagAmounts: [{ tagId: "t1", amount: 100, isExtra: false }],
-    });
-    expect(getExtraAmount(item)).toBe(0);
-  });
-
-  it("retourne 0 si aucun tag et toggle désactivé", () => {
+  it("retourne 0 si toggle désactivé", () => {
     const item = makeItem(100);
     expect(getExtraAmount(item)).toBe(0);
-  });
-
-  it("toggle global a priorité sur les tags", () => {
-    const item = makeItem(100, {
-      isExtraGlobal: true,
-      tagAmounts: [{ tagId: "t1", amount: 30, isExtra: true }],
-    });
-    // Toggle global → tout le montant, pas seulement les tags
-    expect(getExtraAmount(item)).toBe(100);
   });
 
   it("gère les montants négatifs (item INCOME)", () => {
@@ -164,12 +138,9 @@ describe("getExtraAmount", () => {
     expect(getExtraAmount(item)).toBe(-200);
   });
 
-  it("gère les montants négatifs avec tags Extra", () => {
-    const item = makeItem(-200, {
-      tagAmounts: [{ tagId: "t1", amount: 80, isExtra: true }],
-    });
-    // Signe négatif × 80 = -80
-    expect(getExtraAmount(item)).toBe(-80);
+  it("gère les montants négatifs sans extra", () => {
+    const item = makeItem(-200);
+    expect(getExtraAmount(item)).toBe(0);
   });
 });
 
@@ -188,14 +159,9 @@ describe("getStandardAmount", () => {
     expect(getStandardAmount(item)).toBe(100);
   });
 
-  it("retourne total - extraTags si ventilation partielle", () => {
-    const item = makeItem(200, {
-      tagAmounts: [
-        { tagId: "t1", amount: 60, isExtra: true },
-        { tagId: "t2", amount: 140, isExtra: false },
-      ],
-    });
-    expect(getStandardAmount(item)).toBe(140);
+  it("retourne le montant total si toggle extra désactivé", () => {
+    const item = makeItem(200, { isExtraGlobal: false });
+    expect(getStandardAmount(item)).toBe(200);
   });
 });
 
@@ -205,20 +171,15 @@ describe("getStandardAmount", () => {
 
 describe("getBeneficiaryStandardShare", () => {
   it("calcule la part standard au prorata du bénéficiaire", () => {
-    // b1 = 60/200 du total; 80€ standard → 24€
+    // b1 = 60/200 du total; standardTotal = 200
     const item = makeItem(200, {
       beneficiaryAmounts: [
         { beneficiaryId: "b1", amount: 60 },
         { beneficiaryId: "b2", amount: 140 },
       ],
-      tagAmounts: [
-        { tagId: "t1", amount: 80, isExtra: true },
-        { tagId: "t2", amount: 120, isExtra: false },
-      ],
     });
-    // standardTotal = 200 - 80 = 120
-    // ratio b1 = 60/200 = 0.3 → 120 * 0.3 = 36
-    expect(getBeneficiaryStandardShare(item, "b1")).toBeCloseTo(36, 5);
+    // ratio b1 = 60/200 = 0.3 → 200 * 0.3 = 60
+    expect(getBeneficiaryStandardShare(item, "b1")).toBeCloseTo(60, 5);
   });
 
   it("retourne 0 si le bénéficiaire n'est pas dans l'item", () => {
@@ -256,10 +217,10 @@ describe("getBeneficiaryExtraShare", () => {
         { beneficiaryId: "b1", amount: 100 },
         { beneficiaryId: "b2", amount: 100 },
       ],
-      tagAmounts: [{ tagId: "t1", amount: 80, isExtra: true }],
+      isExtraGlobal: true,
     });
-    // extraTotal = 80, ratio b1 = 0.5 → 40
-    expect(getBeneficiaryExtraShare(item, "b1")).toBeCloseTo(40, 5);
+    // extraTotal = 200, ratio b1 = 0.5 → 100
+    expect(getBeneficiaryExtraShare(item, "b1")).toBeCloseTo(100, 5);
   });
 
   it("retourne 0 si rien n'est Extra", () => {
@@ -369,9 +330,6 @@ describe("buildOperationsFilters", () => {
       isAccountFilterActive: false,
       beneficiaryIds: [],
       isBeneficiaryFilterActive: false,
-      includedTagIds: [],
-      excludedTagIds: [],
-      tagPresence: "ALL",
       includedCategoryIds: [],
       isCategoryFilterActive: false,
       includedSubCategoryIds: [],

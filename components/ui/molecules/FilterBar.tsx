@@ -30,7 +30,6 @@
  *   onFilterChange={setFilters}
  *   accounts={accounts}
  *   people={people}
- *   tags={tags}
  *   hiddenFilters={["salary", "transfer"]}
  *   onReset={resetFilters}
  * />
@@ -38,7 +37,7 @@
  */
 import React from "react";
 import { Tag } from "lucide-react";
-import { OperationFilters, Account, Person, Tag as TagType, CategoryDef } from "../../../types";
+import { OperationFilters, Account, Person, CategoryDef } from "../../../types";
 import { FilterDropdown } from "./FilterDropdown";
 import { CyclicFilterButton } from "../atoms/CyclicFilterButton";
 import { ListSorter } from "./ListSorter";
@@ -53,8 +52,6 @@ interface FilterBarProps {
   accounts: Account[];
   /** Liste des bénéficiaires/membres */
   people: Person[];
-  /** Liste des tags de ventilation */
-  tags?: TagType[];
   /** Liste des catégories */
   categories?: CategoryDef[];
   /** IDs des catégories utilisées ce mois-ci (source de vérité pour le dropdown) */
@@ -62,7 +59,7 @@ interface FilterBarProps {
   /** IDs des sous-catégories utilisées ce mois-ci */
   availableSubCategoryIds?: string[];
   /** Filtres à masquer (pour contextes spécifiques) */
-  hiddenFilters?: ("flux" | "source" | "status" | "nature" | "salary" | "accounts" | "beneficiaries" | "tags" | "categories" | "subCategories")[];
+  hiddenFilters?: ("flux" | "source" | "status" | "nature" | "salary" | "accounts" | "beneficiaries" | "categories" | "subCategories")[];
   /** Callback optionnel de réinitialisation personnalisée */
   onReset?: () => void;
   /** Options de tri disponibles */
@@ -98,7 +95,6 @@ interface FilterBarProps {
  * **Filtres Secondaires (repliables) :**
  * - Flux : Tous / Dépenses / Revenus
  * - Comptes (multi-sélection)
- * - Tags (tri-state avec mode présence)
  * - Salaires (binaire)
  * - Virements (binaire)
  *
@@ -112,7 +108,6 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   onFilterChange,
   accounts,
   people,
-  tags = [],
   categories = [],
   availableCategoryIds = [],
   availableSubCategoryIds = [],
@@ -145,9 +140,6 @@ export const FilterBar: React.FC<FilterBarProps> = ({
     subCategoryOptions,
     visualSubCategoryIds,
     handleSubCategoryChange,
-    tagOptions,
-    handleTagTriStateChange,
-    handleTagPresenceChange,
     benOptions,
     visualBenIds,
     handleBenChange,
@@ -159,7 +151,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
     clear,
     update,
     activeFiltersCount,
-  } = useFilterBarLogic(filters, onFilterChange, accounts, people, tags, categories, availableCategoryIds, availableSubCategoryIds, onReset);
+  } = useFilterBarLogic(filters, onFilterChange, accounts, people, categories, availableCategoryIds, availableSubCategoryIds, onReset);
 
   return (
     <div className="flex flex-col gap-1">
@@ -293,49 +285,6 @@ export const FilterBar: React.FC<FilterBarProps> = ({
               onChange={handleSalaryChange}
               onSelectAll={() => update("salary", "ALL")}
               color="emerald"
-            />
-          )}
-
-          {!hiddenFilters.includes("tags") && tags.length > 0 && (
-            <FilterDropdown
-              label="Tags"
-              icon={<Tag size={14} />}
-              options={tagOptions}
-              selectedValues={[]}
-              onChange={() => {}}
-              triStateMode={true}
-              includedValues={filters.includedTagIds}
-              excludedValues={filters.excludedTagIds}
-              onTriStateChange={handleTagTriStateChange}
-              onClear={() => onFilterChange({ ...filters, includedTagIds: [], excludedTagIds: [], tagPresence: "ALL" })}
-              headerContent={
-                <div className="flex bg-slate-100 p-0.5 rounded-lg mb-2">
-                  <button
-                    onClick={() => handleTagPresenceChange("ALL")}
-                    className={`flex-1 py-1 rounded text-[9px] font-bold text-center transition-all ${
-                      filters.tagPresence === "ALL" ? "bg-white text-slate-800 shadow-sm" : "text-slate-400"
-                    }`}
-                  >
-                    Tous
-                  </button>
-                  <button
-                    onClick={() => handleTagPresenceChange("WITH_TAGS")}
-                    className={`flex-1 py-1 rounded text-[9px] font-bold text-center transition-all ${
-                      filters.tagPresence === "WITH_TAGS" ? "bg-white text-indigo-600 shadow-sm" : "text-slate-400"
-                    }`}
-                  >
-                    Avec
-                  </button>
-                  <button
-                    onClick={() => handleTagPresenceChange("WITHOUT_TAGS")}
-                    className={`flex-1 py-1 rounded text-[9px] font-bold text-center transition-all ${
-                      filters.tagPresence === "WITHOUT_TAGS" ? "bg-white text-rose-600 shadow-sm" : "text-slate-400"
-                    }`}
-                  >
-                    Sans
-                  </button>
-                </div>
-              }
             />
           )}
         </div>

@@ -27,7 +27,6 @@ import {
   IncomeConfig,
   CategoryDef,
   Person,
-  Tag,
   SavedLabel,
   VariableTransaction,
   Transfer,
@@ -86,7 +85,6 @@ type BudgetData = {
   transfers: Transfer[];
   variableTransactions: VariableTransaction[];
   savedLabels: SavedLabel[];
-  tags: Tag[];
   authorizedUsers: AuthorizedUser[];
 };
 

@@ -19,13 +19,12 @@
 import React, { useState, useRef } from "react";
 import { useError } from "../../../../contexts/ErrorContext";
 import { TrendingUp, TrendingDown, Calendar, Trash2, Clock, CheckCircle2, Star, MessageSquare, RefreshCcw, Banknote } from "lucide-react";
-import { VariableTransaction, Account, CategoryDef, Person, SavedLabel, Tag, AccountType } from "../../../../types";
+import { VariableTransaction, Account, CategoryDef, Person, SavedLabel, AccountType } from "../../../../types";
 import { CategorySelector } from "../../../ui/molecules/CategorySelector";
 import { TextInput, AmountInput, SearchableTextInput } from "../../../ui/molecules/FormInputs";
 import { AccountSelector } from "../../../ui/molecules/SmartSelectors";
 import { ConfirmModal } from "../../../ui/atoms/ConfirmModal";
 import { Modal } from "../../../ui/Modal";
-import { TagAmountSelector } from "../../../ui/molecules/TagAmountSelector";
 import { BeneficiaryAmountSelector } from "../../../ui/molecules/BeneficiaryAmountSelector";
 import { ValidationErrorBlock } from "../../../ui/atoms/ValidationErrorBlock";
 import { useValidationScroll } from "../../../../hooks/useValidationScroll";
@@ -38,7 +37,6 @@ interface VariableTransactionFormProps {
   accounts: Account[];
   categories: CategoryDef[];
   people: Person[];
-  tags?: Tag[];
   onAddTransaction: (t: VariableTransaction) => void;
   onDeleteTransaction?: (id: string) => void;
   defaultDate: string;
@@ -55,7 +53,6 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
   accounts,
   categories,
   people,
-  tags = [],
   onAddTransaction,
   onDeleteTransaction,
   defaultDate,
@@ -209,14 +206,7 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
         />
 
         <AdvancedOptionsAccordion isOpen={showAdvanced} onToggle={setShowAdvanced}>
-          <TagAmountSelector
-            tags={tags}
-            selectedTagAmounts={form.selectedTagAmounts}
-            onTagAmountsChange={form.setSelectedTagAmounts}
-            totalAmount={parseFloat(form.amount) || 0}
-          />
-
-          {/* Toggle Extra Global - Compatible avec les tags individuels */}
+          {/* Toggle Extra Global */}
           <div
             onClick={() => form.setIsExtra(!form.isExtra)}
             className={`cursor-pointer px-3 py-2.5 rounded-lg border transition-all flex items-center gap-3 ${

@@ -11,16 +11,12 @@ import {
   VariableTransaction,
   SavedLabel,
   Transfer,
-  Tag,
   AuthorizedUser,
-  TagAmount,
   BeneficiaryAmount,
 } from "../types";
 import {
   DbPerson,
   DbAuthorizedUser,
-  DbTag,
-  DbPaidItemTag,
   DbPaidItemBeneficiary,
   DbAccount,
   DbCategory,
@@ -53,18 +49,6 @@ export const mapDbAuthorizedUser = (user: DbAuthorizedUser): AuthorizedUser => {
     notes: user.notes,
   };
 };
-
-export const mapDbTag = (tag: DbTag): Tag => ({
-  id: tag.id,
-  name: tag.name,
-  color: tag.color,
-});
-
-export const mapDbTagAmount = (tagAmount: DbPaidItemTag): TagAmount => ({
-  tagId: tagAmount.tag_id,
-  amount: Number(tagAmount.amount),
-  isExtra: !!tagAmount.is_extra,
-});
 
 export const mapDbBeneficiaryAmount = (beneficiaryAmount: DbPaidItemBeneficiary): BeneficiaryAmount => ({
   beneficiaryId: beneficiaryAmount.beneficiary_id,
