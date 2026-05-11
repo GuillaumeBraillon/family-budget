@@ -364,13 +364,18 @@ describe("buildOperationsFilters", () => {
       source: "ALL",
       status: "ALL",
       nature: "ALL",
-      transfer: "EXCLUDE",
       salary: "EXCLUDE",
       accountIds: [],
+      isAccountFilterActive: false,
       beneficiaryIds: [],
+      isBeneficiaryFilterActive: false,
       includedTagIds: [],
       excludedTagIds: [],
       tagPresence: "ALL",
+      includedCategoryIds: [],
+      isCategoryFilterActive: false,
+      includedSubCategoryIds: [],
+      isSubCategoryFilterActive: false,
     });
   });
 
@@ -387,7 +392,7 @@ describe("buildOperationsFilters", () => {
     expect(result.beneficiaryIds).toEqual(["b1"]);
     // Valeurs non overridées restent à leur défaut
     expect(result.flux).toBe("ALL");
-    expect(result.transfer).toBe("EXCLUDE");
+    expect(result.salary).toBe("EXCLUDE");
   });
 
   it("ne mute pas les tableaux par défaut", () => {

@@ -198,7 +198,9 @@ export interface PlannedItem {
   isPaid: boolean; // Pour l'UI : inverse de isWaiting
   isWaiting: boolean; // Pour la logique métier
   category: string;
+  categoryId?: string; // ID de la catégorie pour filtrage
   subCategory?: string;
+  subCategoryId?: string; // ID de la sous-catégorie pour filtrage
   beneficiaryId: string;
   beneficiaryAmounts?: BeneficiaryAmount[];
   isExtra: boolean; // Calculé : true si toggle global OU au moins un tag Extra
@@ -313,12 +315,18 @@ export interface OperationFilters {
   source: "RECURRING" | "VARIABLE" | "ALL";
   status: "WAITING" | "REAL" | "ALL";
   nature: "ALL" | "ONLY" | "EXCLUDE";
-  transfer: "ALL" | "ONLY" | "EXCLUDE";
-  salary: "ALL" | "ONLY" | "EXCLUDE";
+  salary: "ALL" | "ONLY" | "EXCLUDE" | "NONE";
   accountIds: string[];
+  isAccountFilterActive: boolean;
   beneficiaryIds: string[];
+  isBeneficiaryFilterActive: boolean;
   // Nouveau système de Tags
   includedTagIds: string[];
   excludedTagIds: string[];
   tagPresence: "ALL" | "WITH_TAGS" | "WITHOUT_TAGS";
+  // Filtres par catégories
+  includedCategoryIds: string[];
+  isCategoryFilterActive: boolean; // true = filtre actif ([] = rien afficher)
+  includedSubCategoryIds: string[];
+  isSubCategoryFilterActive: boolean; // true = filtre actif ([] = rien afficher)
 }

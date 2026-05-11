@@ -7,6 +7,64 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.10.5] - 2026-05-11
+
+### 🎨 UI/UX Improvements
+
+- **FilterBar refactoring** : Réorganisation complète de l'ordre des filtres pour une meilleure ergonomie :
+  - **Ligne principale** (pills cycliques) : Source, Statut, Nature, Flux, Catégories, Sous-catégories
+  - **Section Avancé** (repliable) : Bénéficiaires, Comptes, Autres flux (Salaires), Tags
+  - Distinction visuelle claire entre pills (rounded-full, sans border) et dropdowns (rounded-lg, avec border)
+- **Advanced filters panel** : Déplacement de 4 filtres en section repliable pour réduire la complexité initiale :
+  - Bénéficiaires, Comptes, Autres flux (Salaires), Tags
+  - Nouvelle icône "Plus de filtres" avec badge "X actifs" pour feedback utilisateur
+- **Filtres Catégories & Sous-catégories (nouveaux)** : Ajout de deux nouveaux filtres dropdown dans la ligne principale :
+  - **Catégories** : Affiche uniquement les catégories ayant des opérations dans le mois courant (avant filtrage)
+  - **Sous-catégories** : Scopes automatiquement aux sous-catégories des catégories sélectionnées + opérations du mois
+  - Permet une ventilation granulaire des opérations sans surcharge des dropdowns avec toutes les catégories DB
+
+### 🐛 Bug Fixes
+
+- **FilterBar "Tout décocher" behavior** : Correction de la sémantique filtre vide pour tous les dropdowns (Catégories, Sous-catégories, Comptes, Bénéficiaires, Salaires)
+  - Avant : Lorsque tous les éléments étaient décochés, le filtre était ignoré (affichage de toutes les opérations)
+  - Après : Lorsque tous les éléments sont décochés, aucune opération n'est affichée (comportement attendu)
+  - Implémentation via flags `isCategoryFilterActive`, `isAccountFilterActive`, `isBeneficiaryFilterActive`, `isSubCategoryFilterActive` pour distinguer "filtre inactif" (jamais utilisé) vs "filtre actif vide" (tout décoché)
+- **Category scoping** : Catégories et sous-catégories limitées aux opérations réelles du mois courant
+  - Avant : Affichage de toutes les catégories de la base de données
+  - Après : Seules les catégories ayant des opérations dans le mois (avant filtrage) sont proposées dans le dropdown
+  - Sous-catégories du mois + parents sélectionnés automatiquement si un parent a des opérations
+
+### 🧹 Code Quality
+
+- **Transfer filter removal** : Suppression complète du champ `transfer` (jamais utilisé) de l'interface `OperationFilters`
+  - Impacté : `types.ts`, `services/financeUtils.ts`, `hooks/usePlanner.ts`, `hooks/filterBar/useFilterBarLogic.tsx`, UI components
+  - Nettoyage code debt des appels `hiddenFilters={["transfer"]}`
+  - Mise à jour de `useBeneficiaryData.ts` et `useDashboardData.ts` pour supprimer les références `transfer`
+  - Mise à jour des tests associés (`financeUtils.test.ts`, `useOperationsData.test.ts`)
+- **TypeScript strict improvements** : Fix guard pour `categoryId` optionnel dans `usePlanner.ts`
+  - Validation stricte `i.categoryId && filters.includes(...)` pour éviter les erreurs de narrowing
+  - Conformité complète avec `"strict": true` de `tsconfig.json`
+
+### 📋 Technical Details
+
+- Ajout de 4 nouveaux flags d'activité dans `OperationFilters` :
+  - `isCategoryFilterActive: boolean` (défaut: `false`)
+  - `isAccountFilterActive: boolean` (défaut: `false`)
+  - `isBeneficiaryFilterActive: boolean` (défaut: `false`)
+  - `isSubCategoryFilterActive: boolean` (défaut: `false`)
+- Normalisation des defaults dans `buildOperationsFilters()` :
+  - `source: "ALL"` (avant : variait selon le contexte)
+  - `status: "ALL"` (avant : variait selon le contexte)
+  - `nature: "ALL"` (avant : `"EXCLUDE"` pour les revenus)
+  - Simplifie la logique de filtrage et rend les comportements prévisibles
+
+### ✅ Validation
+
+- Build production : ✅ succès (2.34s)
+- TypeScript strict : ✅ 0 errors
+- ESLint : ✅ 0 errors
+- Tests unitaires : ✅ tous passants
+
 ## [2.10.4] - 2026-05-07
 
 ### ✅ Corrections

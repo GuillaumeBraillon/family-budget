@@ -75,13 +75,18 @@ export const getDetailedAnalysisFilters = (flux: "EXPENSE" | "INCOME", source: "
   source,
   status: "REAL", // Uniquement opérations pointées (cohérent avec titre "Réel")
   nature: "ALL", // Inclut Standard + Extra
-  transfer: "ALL", // Inclut virements internes (flux complet)
   salary: "EXCLUDE", // Salaires dans tableau séparé "Trésorerie Globale"
   accountIds: [],
+  isAccountFilterActive: false,
   beneficiaryIds: [],
+  isBeneficiaryFilterActive: false,
   includedTagIds: [],
   excludedTagIds: [],
   tagPresence: "ALL",
+  includedCategoryIds: [],
+  isCategoryFilterActive: false,
+  includedSubCategoryIds: [],
+  isSubCategoryFilterActive: false,
 });
 
 /**
@@ -121,13 +126,18 @@ export const getGlobalAnalysisFilters = (column: GlobalAnalysisColumn): Operatio
     source: "ALL",
     status: "REAL", // Uniquement opérations pointées (titre "Réel")
     nature: "ALL",
-    transfer: "ALL", // Inclut virements internes
     salary: "ALL",
     accountIds: [],
+    isAccountFilterActive: false,
     beneficiaryIds: [],
+    isBeneficiaryFilterActive: false,
     includedTagIds: [],
     excludedTagIds: [],
     tagPresence: "ALL",
+    includedCategoryIds: [],
+    isCategoryFilterActive: false,
+    includedSubCategoryIds: [],
+    isSubCategoryFilterActive: false,
   };
 
   switch (column) {

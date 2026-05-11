@@ -201,14 +201,18 @@ export const FilterDropdown: React.FC<FilterDropdownProps> = ({
 
                   {!singleSelect && (onSelectAll || onClear) && (
                     <div className="flex gap-2">
-                      {onSelectAll && (
-                        <button
-                          onClick={onSelectAll}
-                          className="flex-1 py-1.5 px-2 text-[10px] font-bold bg-white border border-slate-200 rounded text-slate-600 hover:text-indigo-600 hover:border-indigo-200 transition-colors"
-                        >
-                          Tout cocher
-                        </button>
-                      )}
+                      {onSelectAll &&
+                        (() => {
+                          const allSelected = options.length > 0 && options.every((o) => selectedValues.includes(o.id));
+                          return (
+                            <button
+                              onClick={allSelected ? () => onChange([]) : onSelectAll}
+                              className="flex-1 py-1.5 px-2 text-[10px] font-bold bg-white border border-slate-200 rounded text-slate-600 hover:text-indigo-600 hover:border-indigo-200 transition-colors"
+                            >
+                              {allSelected ? "Tout décocher" : "Tout cocher"}
+                            </button>
+                          );
+                        })()}
                       {onClear && (
                         <button
                           onClick={onClear}

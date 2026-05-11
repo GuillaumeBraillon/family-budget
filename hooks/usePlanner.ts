@@ -216,6 +216,19 @@ export const usePlanner = (
   const currentMonthKey = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, "0")}`;
   const daysInMonth = getDaysInMonth(currentDate);
 
+  // Maps pour résoudre rapidement les IDs de catégories et sous-catégories à partir de leurs noms
+  const categoryNameToId = useMemo(() => {
+    const map = new Map<string, string>();
+    categories.forEach((c) => map.set(c.name, c.id));
+    return map;
+  }, [categories]);
+
+  const subCategoryNameToId = useMemo(() => {
+    const map = new Map<string, string>();
+    categories.forEach((c) => c.subCategories?.forEach((sc) => map.set(sc.name, sc.id)));
+    return map;
+  }, [categories]);
+
   const periodBudgets = useMemo(() => {
     const periods: WeeklyBudget[] = [];
     const type = settings.period_type || "FIXED_DAYS";
@@ -305,7 +318,9 @@ export const usePlanner = (
           amount: paid ? paid.amount : conf.amount,
           originalAmount: conf.amount,
           category: conf.category,
+          categoryId: categoryNameToId.get(conf.category),
           subCategory: conf.subCategory,
+          subCategoryId: conf.subCategory ? subCategoryNameToId.get(conf.subCategory) : undefined,
           beneficiaryId: conf.beneficiaryId,
           beneficiaryAmounts,
           accountId: conf.accountId,
@@ -339,7 +354,9 @@ export const usePlanner = (
         amount: paid ? paid.amount : inc.amount,
         originalAmount: inc.amount,
         category: inc.category,
+        categoryId: categoryNameToId.get(inc.category),
         subCategory: inc.subCategory,
+        subCategoryId: inc.subCategory ? subCategoryNameToId.get(inc.subCategory) : undefined,
         beneficiaryId: inc.beneficiaryId,
         beneficiaryAmounts,
         accountId: inc.accountId,
@@ -372,7 +389,9 @@ export const usePlanner = (
           amount: vt.amount,
           originalAmount: vt.amount,
           category: vt.category,
+          categoryId: categoryNameToId.get(vt.category),
           subCategory: vt.subCategory,
+          subCategoryId: vt.subCategory ? subCategoryNameToId.get(vt.subCategory) : undefined,
           beneficiaryId: vt.beneficiaryId || "",
           beneficiaryAmounts:
             vt.beneficiaryAmounts && vt.beneficiaryAmounts.length > 0
@@ -420,7 +439,7 @@ export const usePlanner = (
       })
     );
     return periods;
-  }, [configs, incomeConfigs, paidItems, variableTransactions, currentMonthKey, settings, currentDate, daysInMonth]);
+  }, [configs, incomeConfigs, paidItems, variableTransactions, currentMonthKey, settings, currentDate, daysInMonth, categoryNameToId, subCategoryNameToId]);
 
   const filteredPeriodBudgets = useMemo(() => {
     return periodBudgets.map((w) => {
@@ -507,14 +526,22 @@ export const usePlanner = (
           });
         }
 
-        if (filters.transfer === "ONLY") items = items.filter((i) => i.category === "Virement Interne");
-        else if (filters.transfer === "EXCLUDE") items = items.filter((i) => i.category !== "Virement Interne");
-
         if (filters.salary === "ONLY") items = items.filter((i) => i.isSalary === true);
         else if (filters.salary === "EXCLUDE") items = items.filter((i) => !i.isSalary);
+        else if (filters.salary === "NONE") items = [];
 
-        if (filters.accountIds.length > 0) items = items.filter((i) => filters.accountIds.includes(i.accountId));
-        if (filters.beneficiaryIds.length > 0) {
+        if (filters.isCategoryFilterActive || (filters.includedCategoryIds || []).length > 0) {
+          items = items.filter((i) => i.categoryId && (filters.includedCategoryIds || []).includes(i.categoryId));
+        }
+
+        if (filters.isSubCategoryFilterActive || (filters.includedSubCategoryIds || []).length > 0) {
+          items = items.filter((i) => i.subCategoryId && (filters.includedSubCategoryIds || []).includes(i.subCategoryId));
+        }
+
+        if (filters.isAccountFilterActive || filters.accountIds.length > 0) {
+          items = items.filter((i) => filters.accountIds.includes(i.accountId));
+        }
+        if (filters.isBeneficiaryFilterActive || filters.beneficiaryIds.length > 0) {
           items = items.filter((i) => resolveBeneficiaryAmounts(i).some((ba) => filters.beneficiaryIds.includes(ba.beneficiaryId)));
         }
 
@@ -689,5 +716,26 @@ export const usePlanner = (
     };
   };
 
-  return { filteredPeriodBudgets, calculatePeriodStatistics };
+  // IDs des catégories/sous-catégories effectivement utilisées ce mois-ci (avant tout filtre)
+  const availableCategoryIds = useMemo(() => {
+    const ids = new Set<string>();
+    periodBudgets.forEach((w) =>
+      w.items.forEach((item) => {
+        if (item.categoryId) ids.add(item.categoryId);
+      })
+    );
+    return Array.from(ids);
+  }, [periodBudgets]);
+
+  const availableSubCategoryIds = useMemo(() => {
+    const ids = new Set<string>();
+    periodBudgets.forEach((w) =>
+      w.items.forEach((item) => {
+        if (item.subCategoryId) ids.add(item.subCategoryId);
+      })
+    );
+    return Array.from(ids);
+  }, [periodBudgets]);
+
+  return { filteredPeriodBudgets, calculatePeriodStatistics, availableCategoryIds, availableSubCategoryIds };
 };

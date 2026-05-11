@@ -225,7 +225,7 @@ export const useOperationsData = ({
   const checkingIncomes = useMemo(() => incomeConfigs.filter((i) => checkingAccountIds.includes(i.accountId)), [incomeConfigs, checkingAccountIds]);
 
   // 3. Génération du planner (périodes + items filtrés)
-  const { filteredPeriodBudgets } = usePlanner(
+  const { filteredPeriodBudgets, availableCategoryIds, availableSubCategoryIds } = usePlanner(
     checkingConfigs,
     checkingIncomes,
     paidItems,
@@ -475,5 +475,7 @@ export const useOperationsData = ({
     unsortedItems,
     quickStats,
     monthShort,
+    availableCategoryIds,
+    availableSubCategoryIds,
   };
 };

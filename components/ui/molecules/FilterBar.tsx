@@ -38,7 +38,7 @@
  */
 import React from "react";
 import { Tag } from "lucide-react";
-import { OperationFilters, Account, Person, Tag as TagType } from "../../../types";
+import { OperationFilters, Account, Person, Tag as TagType, CategoryDef } from "../../../types";
 import { FilterDropdown } from "./FilterDropdown";
 import { CyclicFilterButton } from "../atoms/CyclicFilterButton";
 import { ListSorter } from "./ListSorter";
@@ -55,8 +55,14 @@ interface FilterBarProps {
   people: Person[];
   /** Liste des tags de ventilation */
   tags?: TagType[];
+  /** Liste des catégories */
+  categories?: CategoryDef[];
+  /** IDs des catégories utilisées ce mois-ci (source de vérité pour le dropdown) */
+  availableCategoryIds?: string[];
+  /** IDs des sous-catégories utilisées ce mois-ci */
+  availableSubCategoryIds?: string[];
   /** Filtres à masquer (pour contextes spécifiques) */
-  hiddenFilters?: ("flux" | "source" | "status" | "nature" | "transfer" | "salary" | "accounts" | "beneficiaries" | "tags")[];
+  hiddenFilters?: ("flux" | "source" | "status" | "nature" | "salary" | "accounts" | "beneficiaries" | "tags" | "categories" | "subCategories")[];
   /** Callback optionnel de réinitialisation personnalisée */
   onReset?: () => void;
   /** Options de tri disponibles */
@@ -107,6 +113,9 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   accounts,
   people,
   tags = [],
+  categories = [],
+  availableCategoryIds = [],
+  availableSubCategoryIds = [],
   hiddenFilters = [],
   onReset,
   sortOptions,
@@ -130,6 +139,12 @@ export const FilterBar: React.FC<FilterBarProps> = ({
     accountOptions,
     visualAccountIds,
     handleAccountChange,
+    categoryOptions,
+    visualCategoryIds,
+    handleCategoryChange,
+    subCategoryOptions,
+    visualSubCategoryIds,
+    handleSubCategoryChange,
     tagOptions,
     handleTagTriStateChange,
     handleTagPresenceChange,
@@ -139,44 +154,50 @@ export const FilterBar: React.FC<FilterBarProps> = ({
     salaryOptions,
     selectedSalary,
     handleSalaryChange,
-    transferOptions,
-    selectedTransfer,
-    handleTransferChange,
-    isTagsActive,
-    isSalaryActive,
-    isTransferActive,
-    isAccountActive,
-    isFluxActive,
     hasActiveSecondary,
     isDefaultFilters,
     clear,
     update,
-  } = useFilterBarLogic(filters, onFilterChange, accounts, people, tags, onReset);
+    activeFiltersCount,
+  } = useFilterBarLogic(filters, onFilterChange, accounts, people, tags, categories, availableCategoryIds, availableSubCategoryIds, onReset);
 
   return (
     <div className="flex flex-col gap-1">
       {/* HEADER + FILTRES PRIMAIRES */}
       <div className="flex flex-wrap items-center gap-2 justify-between">
         <div className="flex flex-wrap items-center gap-2">
-          {/* FILTRES PRIMAIRES (Boutons Cycliques) */}
-          {/* BÉNÉFICIAIRES */}
-          {!hiddenFilters.includes("beneficiaries") && (
+          {/* FILTRES PRIMAIRES - ordre personnalisé */}
+          {!hiddenFilters.includes("source") && <CyclicFilterButton {...sourceConfig} onClick={cycleSource} />}
+          {!hiddenFilters.includes("status") && <CyclicFilterButton {...statusConfig} onClick={cycleStatus} />}
+          {!hiddenFilters.includes("nature") && <CyclicFilterButton {...extraConfig} onClick={cycleExtra} />}
+          {!hiddenFilters.includes("flux") && <CyclicFilterButton {...fluxConfig} onClick={cycleFlux} />}
+
+          {!hiddenFilters.includes("categories") && categoryOptions.length > 0 && (
             <FilterDropdown
-              label="Bénéficiaires"
+              label="Catégories"
               icon={<Tag size={14} />}
-              options={benOptions}
-              selectedValues={visualBenIds}
-              onChange={handleBenChange}
-              onSelectAll={() => update("beneficiaryIds", [])}
+              options={categoryOptions}
+              selectedValues={visualCategoryIds}
+              onChange={handleCategoryChange}
+              onSelectAll={() => handleCategoryChange(categoryOptions.map((o) => o.id))}
             />
           )}
-          {!hiddenFilters.includes("source") && <CyclicFilterButton {...sourceConfig} onClick={cycleSource} />}
 
-          {!hiddenFilters.includes("status") && <CyclicFilterButton {...statusConfig} onClick={cycleStatus} />}
+          {!hiddenFilters.includes("subCategories") && subCategoryOptions.length > 0 && (
+            <FilterDropdown
+              label="Sous-Cat."
+              icon={<Tag size={14} />}
+              options={subCategoryOptions}
+              selectedValues={visualSubCategoryIds}
+              onChange={handleSubCategoryChange}
+              onSelectAll={() => handleSubCategoryChange(subCategoryOptions.map((o) => o.id))}
+            />
+          )}
+        </div>
 
-          {!hiddenFilters.includes("nature") && <CyclicFilterButton {...extraConfig} onClick={cycleExtra} />}
+        <div className="flex items-center gap-2">
+          <span className="text-xs px-2 py-0.5 bg-indigo-50 rounded-full">{hasActiveSecondary ? `${activeFiltersCount} actifs` : ""}</span>
 
-          {/* BOUTON TOGGLE "PLUS DE FILTRES" */}
           <button
             onClick={() => setShowAllFilters(!showAllFilters)}
             className={`h-[30px] px-3 rounded-lg border text-xs font-bold transition-all flex items-center gap-1.5 ${
@@ -209,7 +230,6 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             )}
           </button>
 
-          {/* BOUTON RESET (Toujours visible, grisé et désactivé si filtres par défaut) */}
           <button
             onClick={clear}
             disabled={isDefaultFilters}
@@ -224,14 +244,13 @@ export const FilterBar: React.FC<FilterBarProps> = ({
               <polyline points="23 4 23 10 17 10"></polyline>
               <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
             </svg>
-            <span className="hidden sm:inline">Reset</span>
           </button>
-        </div>
 
-        {/* SECTION TRI (à droite) */}
-        {sortOptions && sortKey && sortOrder && onSortChange && (
-          <ListSorter options={sortOptions} currentSort={sortKey} currentOrder={sortOrder} onSortChange={onSortChange} canToggleOrder={canToggleOrder} />
-        )}
+          {/* SECTION TRI (à droite) */}
+          {sortOptions && sortKey && sortOrder && onSortChange && (
+            <ListSorter options={sortOptions} currentSort={sortKey} currentOrder={sortOrder} onSortChange={onSortChange} canToggleOrder={canToggleOrder} />
+          )}
+        </div>
       </div>
 
       {/* FILTRES SECONDAIRES (Repliables) */}
@@ -242,23 +261,42 @@ export const FilterBar: React.FC<FilterBarProps> = ({
           }`}
         >
           <span className="text-[9px] font-bold text-slate-500 uppercase mr-1">Avancé :</span>
-          {/* FLUX (Dépenses/Revenus) */}
-          {!hiddenFilters.includes("flux") && (showAllFilters || isFluxActive) && <CyclicFilterButton {...fluxConfig} onClick={cycleFlux} />}
 
-          {/* COMPTES */}
-          {!hiddenFilters.includes("accounts") && (showAllFilters || isAccountActive) && (
+          {!hiddenFilters.includes("beneficiaries") && (
+            <FilterDropdown
+              label="Bénéficiaires"
+              icon={<Tag size={14} />}
+              options={benOptions}
+              selectedValues={visualBenIds}
+              onChange={handleBenChange}
+              onSelectAll={() => handleBenChange(benOptions.map((o) => o.id))}
+            />
+          )}
+
+          {!hiddenFilters.includes("accounts") && (
             <FilterDropdown
               label="Comptes"
               icon={<Tag size={14} />}
               options={accountOptions}
               selectedValues={visualAccountIds}
               onChange={handleAccountChange}
-              onSelectAll={() => update("accountIds", [])}
+              onSelectAll={() => handleAccountChange(accountOptions.map((o) => o.id))}
             />
           )}
 
-          {/* TAGS */}
-          {!hiddenFilters.includes("tags") && tags.length > 0 && (showAllFilters || isTagsActive) && (
+          {!hiddenFilters.includes("salary") && (
+            <FilterDropdown
+              label="Autres flux"
+              icon={<Tag size={14} />}
+              options={salaryOptions}
+              selectedValues={selectedSalary}
+              onChange={handleSalaryChange}
+              onSelectAll={() => update("salary", "ALL")}
+              color="emerald"
+            />
+          )}
+
+          {!hiddenFilters.includes("tags") && tags.length > 0 && (
             <FilterDropdown
               label="Tags"
               icon={<Tag size={14} />}
@@ -298,32 +336,6 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                   </button>
                 </div>
               }
-            />
-          )}
-
-          {/* SALAIRES */}
-          {!hiddenFilters.includes("salary") && (showAllFilters || isSalaryActive) && (
-            <FilterDropdown
-              label="Salaires"
-              icon={<Tag size={14} />}
-              options={salaryOptions}
-              selectedValues={selectedSalary}
-              onChange={handleSalaryChange}
-              onSelectAll={() => update("salary", "ALL")}
-              color="emerald"
-            />
-          )}
-
-          {/* VIREMENTS */}
-          {!hiddenFilters.includes("transfer") && (showAllFilters || isTransferActive) && (
-            <FilterDropdown
-              label="Virements"
-              icon={<Tag size={14} />}
-              options={transferOptions}
-              selectedValues={selectedTransfer}
-              onChange={handleTransferChange}
-              onSelectAll={() => update("transfer", "ALL")}
-              color="slate"
             />
           )}
         </div>

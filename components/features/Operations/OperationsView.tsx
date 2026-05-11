@@ -100,7 +100,6 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
   const { filters, setFilters, resetFilters } = useOperationsFilters(initialFilters);
 
   // Récupération des périodes pour le WeekSelector
-  const _checkingAccounts = accounts.filter((a) => a.type === "COURANT");
   const { filteredPeriodBudgets } = usePlanner(
     configs,
     incomeConfigs,
@@ -113,7 +112,7 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
     filters
   );
 
-  const { unsortedItems, quickStats, monthShort } = useOperationsData({
+  const { unsortedItems, quickStats, monthShort, availableCategoryIds, availableSubCategoryIds } = useOperationsData({
     accounts,
     configs,
     incomeConfigs,
@@ -276,7 +275,9 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
           onFilterChange={setFilters}
           accounts={accounts}
           people={people}
-          hiddenFilters={["transfer"]}
+          categories={categories}
+          availableCategoryIds={availableCategoryIds}
+          availableSubCategoryIds={availableSubCategoryIds}
           tags={tags}
           onReset={resetFilters}
           sortOptions={sortOptions}

@@ -52,11 +52,7 @@ import { buildOperationsFilters } from "../../services/financeUtils";
  * @constant
  * @type {OperationFilters}
  */
-const DEFAULT_FILTERS: OperationFilters = buildOperationsFilters({
-  source: "VARIABLE",
-  status: "REAL",
-  nature: "EXCLUDE",
-}) as OperationFilters;
+const DEFAULT_FILTERS: OperationFilters = buildOperationsFilters({}) as OperationFilters;
 
 /**
  * Hook de gestion des filtres d'opérations avec persistance localStorage.
@@ -151,7 +147,9 @@ export const useOperationsFilters = (initialFilters?: Partial<OperationFilters>)
 
     if (saved) {
       try {
-        baseFilters = JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        // Merger avec DEFAULT_FILTERS pour ajouter les nouveaux champs manquants (migration)
+        baseFilters = { ...DEFAULT_FILTERS, ...parsed };
       } catch {
         // Données corrompues → Retour aux défauts
         baseFilters = DEFAULT_FILTERS;

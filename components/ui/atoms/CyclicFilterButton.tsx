@@ -64,10 +64,26 @@ export const CyclicFilterButton: React.FC<CyclicFilterButtonProps> = ({ label, i
   return (
     <button
       onClick={onClick}
-      className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-bold transition-all shadow-sm whitespace-nowrap ${color} ${className}`}
+      className={`flex items-center gap-1.5 px-3 h-[30px] rounded-full text-[11px] font-bold transition-all whitespace-nowrap ${color} ${className}`}
     >
       {icon}
       {label}
+      <svg
+        width="10"
+        height="10"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className="opacity-40 ml-0.5"
+      >
+        <polyline points="17 1 21 5 17 9"></polyline>
+        <path d="M3 11V9a4 4 0 0 1 4-4h14"></path>
+        <polyline points="7 23 3 19 7 15"></polyline>
+        <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
+      </svg>
     </button>
   );
 };

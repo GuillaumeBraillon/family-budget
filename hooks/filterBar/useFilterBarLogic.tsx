@@ -64,8 +64,9 @@ import {
   ShoppingBag,
   ListFilter,
   Users,
+  FolderOpen,
 } from "lucide-react";
-import { OperationFilters, Account, Person, AccountType, Tag as TagType } from "../../types";
+import { OperationFilters, Account, Person, AccountType, Tag as TagType, CategoryDef } from "../../types";
 import { FilterOption } from "../../components/ui/molecules/FilterDropdown";
 import { buildOperationsFilters } from "../../services/financeUtils";
 
@@ -86,6 +87,7 @@ export interface CyclicButtonConfig {
  * @param {Account[]} accounts - Liste des comptes bancaires
  * @param {Person[]} people - Liste des bénéficiaires/membres
  * @param {TagType[]} tags - Liste des tags de ventilation
+ * @param {CategoryDef[]} categories - Liste des catégories avec sous-catégories
  * @param {Function} [onReset] - Callback optionnel de réinitialisation personnalisée
  * @returns {Object} Configurations, handlers et états pour l'UI
  */
@@ -95,6 +97,9 @@ export const useFilterBarLogic = (
   accounts: Account[],
   people: Person[],
   tags: TagType[] = [],
+  categories: CategoryDef[] = [],
+  availableCategoryIds: string[] = [],
+  availableSubCategoryIds: string[] = [],
   onReset?: () => void
 ) => {
   const [showAllFilters, setShowAllFilters] = useState(false);
@@ -115,7 +120,6 @@ export const useFilterBarLogic = (
    * - source: "VARIABLE" (focus sur les opérations courantes)
    * - status: "REAL" (uniquement les opérations pointées)
    * - extra: "EXCLUDE" (exclure les opérations hors budget)
-   * - transfer: "EXCLUDE" (exclure les virements internes)
    * - salary: "EXCLUDE" (exclure les salaires structurels)
    * - Réinitialisation de tous les multi-sélecteurs ([], "ALL")
    */
@@ -123,7 +127,7 @@ export const useFilterBarLogic = (
     if (onReset) {
       onReset();
     } else {
-      onFilterChange(buildOperationsFilters({ source: "VARIABLE", status: "REAL", nature: "EXCLUDE" }) as OperationFilters);
+      onFilterChange(buildOperationsFilters({}) as OperationFilters);
     }
   };
 
@@ -145,14 +149,14 @@ export const useFilterBarLogic = (
   const getFluxConfig = (): CyclicButtonConfig => {
     switch (filters.flux) {
       case "EXPENSE":
-        return { label: "Dépenses", icon: <TrendingDown size={14} />, color: "bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-100" };
+        return { label: "Dépenses", icon: <TrendingDown size={14} />, color: "bg-indigo-100 text-indigo-700 hover:bg-indigo-200" };
       case "INCOME":
-        return { label: "Revenus", icon: <TrendingUp size={14} />, color: "bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100" };
+        return { label: "Revenus", icon: <TrendingUp size={14} />, color: "bg-emerald-100 text-emerald-700 hover:bg-emerald-200" };
       default:
         return {
           label: "Flux: Tous",
           icon: <ArrowRightLeft size={14} />,
-          color: "bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300",
+          color: "bg-slate-100 text-slate-500 hover:bg-slate-200",
         };
     }
   };
@@ -173,14 +177,14 @@ export const useFilterBarLogic = (
   const getStatusConfig = (): CyclicButtonConfig => {
     switch (filters.status) {
       case "REAL":
-        return { label: "Réel (Pointé)", icon: <CheckCircle2 size={14} />, color: "bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100" };
+        return { label: "Réel (Pointé)", icon: <CheckCircle2 size={14} />, color: "bg-emerald-100 text-emerald-700 hover:bg-emerald-200" };
       case "WAITING":
-        return { label: "En attente", icon: <Clock size={14} />, color: "bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100" };
+        return { label: "En attente", icon: <Clock size={14} />, color: "bg-amber-100 text-amber-700 hover:bg-amber-200" };
       default:
         return {
           label: "Statut: Tous",
           icon: <ListFilter size={14} />,
-          color: "bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300",
+          color: "bg-slate-100 text-slate-500 hover:bg-slate-200",
         };
     }
   };
@@ -201,14 +205,14 @@ export const useFilterBarLogic = (
   const getSourceConfig = (): CyclicButtonConfig => {
     switch (filters.source) {
       case "RECURRING":
-        return { label: "Récurrent", icon: <CalendarClock size={14} />, color: "bg-sky-50 border-sky-200 text-sky-700 hover:bg-sky-100" };
+        return { label: "Récurrent", icon: <CalendarClock size={14} />, color: "bg-sky-100 text-sky-700 hover:bg-sky-200" };
       case "VARIABLE":
-        return { label: "Variable", icon: <ShoppingBag size={14} />, color: "bg-fuchsia-50 border-fuchsia-200 text-fuchsia-700 hover:bg-fuchsia-100" };
+        return { label: "Variable", icon: <ShoppingBag size={14} />, color: "bg-fuchsia-100 text-fuchsia-700 hover:bg-fuchsia-200" };
       default:
         return {
           label: "Source: Toutes",
           icon: <List size={14} />,
-          color: "bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300",
+          color: "bg-slate-100 text-slate-500 hover:bg-slate-200",
         };
     }
   };
@@ -234,14 +238,14 @@ export const useFilterBarLogic = (
   const getExtraConfig = (): CyclicButtonConfig => {
     switch (filters.nature) {
       case "EXCLUDE":
-        return { label: "Standard", icon: <Circle size={14} />, color: "bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200" };
+        return { label: "Standard", icon: <Circle size={14} />, color: "bg-slate-200 text-slate-600 hover:bg-slate-300" };
       case "ONLY":
-        return { label: "Extras", icon: <Star size={14} />, color: "bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100" };
+        return { label: "Extras", icon: <Star size={14} />, color: "bg-amber-100 text-amber-700 hover:bg-amber-200" };
       default:
         return {
           label: "Nature: Tout",
           icon: <Layers size={14} />,
-          color: "bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300",
+          color: "bg-slate-100 text-slate-500 hover:bg-slate-200",
         };
     }
   };
@@ -261,18 +265,14 @@ export const useFilterBarLogic = (
    * mais visuellement on affiche tous les IDs pour UX cohérente.
    */
   const allAccountIds = accountOptions.map((o) => o.id);
-  const visualAccountIds = filters.accountIds.length === 0 ? allAccountIds : filters.accountIds;
+  const visualAccountIds = !filters.isAccountFilterActive && filters.accountIds.length === 0 ? allAccountIds : filters.accountIds;
 
-  /**
-   * Handler du dropdown Comptes.
-   *
-   * @description
-   * - Si tous sélectionnés → Stocke `[]` (optimisation)
-   * - Sinon → Stocke la sélection explicite
-   */
   const handleAccountChange = (ids: string[]) => {
-    if (ids.length === allAccountIds.length) update("accountIds", []);
-    else update("accountIds", ids);
+    if (ids.length === allAccountIds.length) {
+      onFilterChange({ ...filters, accountIds: [], isAccountFilterActive: false });
+    } else {
+      onFilterChange({ ...filters, accountIds: ids, isAccountFilterActive: true });
+    }
   };
 
   /**
@@ -341,6 +341,68 @@ export const useFilterBarLogic = (
   };
 
   /**
+   * Options du dropdown Catégories — uniquement celles ayant des opérations ce mois-ci.
+   */
+  const categoryOptions: FilterOption[] = categories
+    .filter((c) => availableCategoryIds.includes(c.id))
+    .map((c) => ({
+      id: c.id,
+      label: c.name,
+      icon: <FolderOpen size={14} className="text-slate-400" />,
+    }));
+
+  /**
+   * IDs visuels pour le dropdown Catégories.
+   */
+  const allCategoryIds = categoryOptions.map((o) => o.id);
+  const visualCategoryIds = !filters.isCategoryFilterActive && filters.includedCategoryIds.length === 0 ? allCategoryIds : filters.includedCategoryIds;
+
+  const handleCategoryChange = (ids: string[]) => {
+    if (ids.length === allCategoryIds.length) {
+      onFilterChange({ ...filters, includedCategoryIds: [], isCategoryFilterActive: false });
+    } else {
+      onFilterChange({ ...filters, includedCategoryIds: ids, isCategoryFilterActive: true });
+    }
+  };
+
+  /**
+   * Options du dropdown Sous-Catégories.
+   *
+   * @description
+   * Limité aux sous-catégories des catégories sélectionnées (ou toutes si aucune
+   * sélection), et uniquement celles ayant au moins une opération ce mois-ci.
+   */
+  const parentCatsForSub =
+    filters.includedCategoryIds.length > 0
+      ? categories.filter((c) => filters.includedCategoryIds.includes(c.id))
+      : categories.filter((c) => availableCategoryIds.includes(c.id));
+
+  const subCategoryOptions: FilterOption[] = parentCatsForSub.flatMap((c) =>
+    (c.subCategories || [])
+      .filter((sc) => availableSubCategoryIds.includes(sc.id))
+      .map((sc) => ({
+        id: sc.id,
+        label: `${sc.name}`,
+        icon: <FolderOpen size={14} className="text-slate-400" />,
+      }))
+  );
+
+  /**
+   * IDs visuels pour le dropdown Sous-Catégories.
+   */
+  const allSubCategoryIds = subCategoryOptions.map((o) => o.id);
+  const visualSubCategoryIds =
+    !filters.isSubCategoryFilterActive && filters.includedSubCategoryIds.length === 0 ? allSubCategoryIds : filters.includedSubCategoryIds;
+
+  const handleSubCategoryChange = (ids: string[]) => {
+    if (ids.length === allSubCategoryIds.length) {
+      onFilterChange({ ...filters, includedSubCategoryIds: [], isSubCategoryFilterActive: false });
+    } else {
+      onFilterChange({ ...filters, includedSubCategoryIds: ids, isSubCategoryFilterActive: true });
+    }
+  };
+
+  /**
    * Options du dropdown Bénéficiaires avec icône selon type (enfant/adulte).
    */
   const benOptions: FilterOption[] = people.map((p) => ({
@@ -353,14 +415,14 @@ export const useFilterBarLogic = (
    * IDs visuels pour le dropdown Bénéficiaires (optimisation similaire aux comptes).
    */
   const allBenIds = benOptions.map((o) => o.id);
-  const visualBenIds = filters.beneficiaryIds.length === 0 ? allBenIds : filters.beneficiaryIds;
+  const visualBenIds = !filters.isBeneficiaryFilterActive && filters.beneficiaryIds.length === 0 ? allBenIds : filters.beneficiaryIds;
 
-  /**
-   * Handler du dropdown Bénéficiaires.
-   */
   const handleBenChange = (ids: string[]) => {
-    if (ids.length === allBenIds.length) update("beneficiaryIds", []);
-    else update("beneficiaryIds", ids);
+    if (ids.length === allBenIds.length) {
+      onFilterChange({ ...filters, beneficiaryIds: [], isBeneficiaryFilterActive: false });
+    } else {
+      onFilterChange({ ...filters, beneficiaryIds: ids, isBeneficiaryFilterActive: true });
+    }
   };
 
   /**
@@ -374,42 +436,13 @@ export const useFilterBarLogic = (
   /**
    * Sélection visuelle actuelle pour le dropdown Salaires.
    */
-  const selectedSalary = filters.salary === "ALL" ? ["OTHER", "SALARY"] : filters.salary === "ONLY" ? ["SALARY"] : ["OTHER"];
+  const selectedSalary = filters.salary === "ALL" ? ["OTHER", "SALARY"] : filters.salary === "ONLY" ? ["SALARY"] : filters.salary === "NONE" ? [] : ["OTHER"];
 
-  /**
-   * Handler du dropdown Salaires.
-   *
-   * @description
-   * - Tous/Aucun sélectionnés → "ALL"
-   * - "SALARY" seul → "ONLY"
-   * - "OTHER" seul → "EXCLUDE"
-   */
   const handleSalaryChange = (ids: string[]) => {
-    if (ids.length === 2 || ids.length === 0) update("salary", "ALL");
+    if (ids.length === 2) update("salary", "ALL");
+    else if (ids.length === 0) update("salary", "NONE");
     else if (ids[0] === "SALARY") update("salary", "ONLY");
     else update("salary", "EXCLUDE");
-  };
-
-  /**
-   * Options du dropdown Virements (binaire : Opérations/Virements).
-   */
-  const transferOptions: FilterOption[] = [
-    { id: "STANDARD", label: "Opérations", icon: <Layers size={14} className="text-slate-400" /> },
-    { id: "TRANSFER", label: "Virements", icon: <ArrowRightLeft size={14} className="text-indigo-500" /> },
-  ];
-
-  /**
-   * Sélection visuelle actuelle pour le dropdown Virements.
-   */
-  const selectedTransfer = filters.transfer === "ALL" ? ["STANDARD", "TRANSFER"] : filters.transfer === "ONLY" ? ["TRANSFER"] : ["STANDARD"];
-
-  /**
-   * Handler du dropdown Virements.
-   */
-  const handleTransferChange = (ids: string[]) => {
-    if (ids.length === 2 || ids.length === 0) update("transfer", "ALL");
-    else if (ids[0] === "TRANSFER") update("transfer", "ONLY");
-    else update("transfer", "EXCLUDE");
   };
 
   // --- DÉTECTION D'ACTIVITÉ DES FILTRES ---
@@ -440,19 +473,24 @@ export const useFilterBarLogic = (
   const isFluxActive = filters.flux !== "ALL";
 
   /**
-   * Détecte si le filtre Virements est actif (différent du défaut "EXCLUDE").
-   */
-  const isTransferActive = filters.transfer !== "EXCLUDE";
-
-  /**
    * Détecte si le filtre Comptes est actif (sélection explicite).
    */
-  const isAccountActive = filters.accountIds.length > 0;
+  const isAccountActive = filters.isAccountFilterActive || filters.accountIds.length > 0;
+
+  /**
+   * Détecte si le filtre Catégories est actif (sélection explicite).
+   */
+  const isCategoryActive = filters.isCategoryFilterActive || filters.includedCategoryIds.length > 0;
+
+  /**
+   * Détecte si le filtre Sous-Catégories est actif (sélection explicite).
+   */
+  const isSubCategoryActive = filters.isSubCategoryFilterActive || filters.includedSubCategoryIds.length > 0;
 
   /**
    * Détecte si au moins un filtre secondaire (avancé) est actif.
    */
-  const hasActiveSecondary = isTagsActive || isSalaryActive || isTransferActive || isAccountActive || isFluxActive;
+  const hasActiveSecondary = isTagsActive || isSalaryActive || isAccountActive || isFluxActive || isCategoryActive || isSubCategoryActive;
 
   /**
    * Compte total des filtres actifs pour le badge global.
@@ -472,25 +510,29 @@ export const useFilterBarLogic = (
    * - Source: Variable (pas Toutes !)
    * - Statut: Réel/Pointé (pas Tous !)
    * - Nature: Standard (pas Tout !)
-   * - Virements: Exclus
    * - Salaires: Exclus
    * - Aucune sélection de comptes/bénéficiaires/tags
    *
    * @returns {boolean} True si filtres par défaut, False si modifiés
    */
-  const DEFAULT = buildOperationsFilters({ source: "VARIABLE", status: "REAL", nature: "EXCLUDE" });
+  const DEFAULT = buildOperationsFilters({});
   const isDefaultFilters =
     filters.flux === DEFAULT.flux &&
     filters.source === DEFAULT.source &&
     filters.status === DEFAULT.status &&
     filters.nature === DEFAULT.nature &&
-    filters.transfer === DEFAULT.transfer &&
     filters.salary === DEFAULT.salary &&
     filters.accountIds.length === 0 &&
+    !filters.isAccountFilterActive &&
     filters.beneficiaryIds.length === 0 &&
+    !filters.isBeneficiaryFilterActive &&
     filters.includedTagIds.length === 0 &&
     filters.excludedTagIds.length === 0 &&
-    filters.tagPresence === DEFAULT.tagPresence;
+    filters.tagPresence === DEFAULT.tagPresence &&
+    filters.includedCategoryIds.length === 0 &&
+    !filters.isCategoryFilterActive &&
+    filters.includedSubCategoryIds.length === 0 &&
+    !filters.isSubCategoryFilterActive;
 
   return {
     // État UI
@@ -511,6 +553,12 @@ export const useFilterBarLogic = (
     accountOptions,
     visualAccountIds,
     handleAccountChange,
+    categoryOptions,
+    visualCategoryIds,
+    handleCategoryChange,
+    subCategoryOptions,
+    visualSubCategoryIds,
+    handleSubCategoryChange,
     tagOptions,
     handleTagTriStateChange,
     handleTagPresenceChange,
@@ -520,18 +568,15 @@ export const useFilterBarLogic = (
     salaryOptions,
     selectedSalary,
     handleSalaryChange,
-    transferOptions,
-    selectedTransfer,
-    handleTransferChange,
-
     // Indicateurs d'activité
     isTagsActive,
     isExtraActive,
     isSalaryActive,
     isSourceActive,
     isFluxActive,
-    isTransferActive,
     isAccountActive,
+    isCategoryActive,
+    isSubCategoryActive,
     hasActiveSecondary,
     activeFiltersCount,
     isDefaultFilters,

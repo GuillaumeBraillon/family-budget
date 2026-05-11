@@ -15,13 +15,18 @@ const defaultFilters: OperationFilters = {
   source: "ALL",
   status: "ALL",
   nature: "ALL",
-  transfer: "EXCLUDE",
   salary: "EXCLUDE",
   accountIds: [],
+  isAccountFilterActive: false,
   beneficiaryIds: [],
+  isBeneficiaryFilterActive: false,
   includedTagIds: [],
   excludedTagIds: [],
   tagPresence: "ALL",
+  includedCategoryIds: [],
+  isCategoryFilterActive: false,
+  includedSubCategoryIds: [],
+  isSubCategoryFilterActive: false,
 };
 
 const accounts: Account[] = [

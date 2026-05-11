@@ -90,13 +90,18 @@ export const getBeneficiaryAnalysisFilters = (
   source,
   status: "REAL", // Uniquement opérations pointées
   nature,
-  transfer: "EXCLUDE", // Virements internes exclus
   salary: flux === "INCOME" && source === "RECURRING" ? "ALL" : "EXCLUDE",
   accountIds: [],
+  isAccountFilterActive: false,
   beneficiaryIds: [beneficiaryId],
+  isBeneficiaryFilterActive: true,
   includedTagIds: [],
   excludedTagIds: [],
   tagPresence: "ALL",
+  includedCategoryIds: [],
+  isCategoryFilterActive: false,
+  includedSubCategoryIds: [],
+  isSubCategoryFilterActive: false,
 });
 
 /**
