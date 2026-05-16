@@ -2,6 +2,7 @@ import React from "react";
 import { Plus, Calendar } from "lucide-react";
 import { useAuth } from "../../../hooks/useAuth";
 import { useBudget } from "../../../hooks/useBudget";
+import { useAdminView } from "../../../contexts/AdminViewContext";
 
 interface DataListProps {
   title: string;
@@ -26,8 +27,10 @@ export const DataList: React.FC<DataListProps> = ({
 }) => {
   const { user } = useAuth();
   const { authorizedUsers } = useBudget();
+  const { viewAsNonAdmin } = useAdminView();
   const currentEmail = user?.email;
-  const isAdmin = !!authorizedUsers.find((u) => u.email === currentEmail && !!u.isAdmin);
+  const actualIsAdmin = !!authorizedUsers.find((u) => u.email === currentEmail && !!u.isAdmin);
+  const isAdmin = actualIsAdmin && !viewAsNonAdmin;
 
   return (
     <div className={`bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden flex flex-col ${className}`}>

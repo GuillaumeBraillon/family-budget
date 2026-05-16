@@ -7,6 +7,34 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.10.7] - 2026-05-16
+
+### ✅ Corrections
+
+- Correction du drag & drop dans la vue `Operations` : DnD réactivé pour les admins réels et désormais dépendant du mode de tri manuel.
+- Correction du comportement des filtres avancés : en mode replié seuls les dropdowns actifs sont affichés (on n'affiche plus l'ensemble des filtres).
+
+### 🎨 UI/UX
+
+- `FilterBar` : réorganisation des filtres (primaires à gauche, tri à droite), déplacement de `Plus de filtres` après le bouton Reset et déplacement du bouton `Fermer` en fin de section Avancé.
+- Suppression du badge "X actifs" et ajustements visuels des boutons (indicateur d'activité).
+- `QuickPeriodSummary` : suppression des labels "Prévu", "Cible" et "Extra" pour simplifier l'affichage.
+- `SimplifiedFamilyCard` : amélioration typographique des montants secondaires (`text-sm`).
+
+### 🔐 Administration
+
+- Introduction de `AdminViewContext` permettant aux administrateurs d'activer un mode "view as non-admin".
+- `AppContent` enveloppé par `AdminViewProvider` et ajout d'un bouton bascule dans le `Header` (icônes Eye / EyeOff).
+- Les composants respectent désormais le flag : `Dashboard` affiche une `SimplifiedFamilyCard` en vue non-admin, tandis que les cartes complètes restent visibles pour les admins.
+- `GlobalMonthlyAnalysis` est masqué en vue non-admin.
+- `OperationsView`, `OperationsList` et `DataList` appliquent les permissions réelles : réordonner et éditer sont réservés aux admins effectifs.
+- Nouveau composant `SimplifiedFamilyCard` ajouté pour la vue non-admin.
+
+### ✅ Validation rapide
+
+- TypeScript strict : vérifié localement (aucune erreur de typage liée aux modifications).
+- Tests unitaires ciblés : vérifications manuelles des composants modifiés.
+
 ## [2.10.6] - 2026-05-11
 
 ### ✅ Corrections

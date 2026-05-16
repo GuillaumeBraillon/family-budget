@@ -150,15 +150,14 @@ export const FilterBar: React.FC<FilterBarProps> = ({
     isDefaultFilters,
     clear,
     update,
-    activeFiltersCount,
   } = useFilterBarLogic(filters, onFilterChange, accounts, people, categories, availableCategoryIds, availableSubCategoryIds, onReset);
 
   return (
-    <div className="flex flex-col gap-1">
-      {/* HEADER + FILTRES PRIMAIRES */}
-      <div className="flex flex-wrap items-center gap-2 justify-between">
+    <div className="flex items-start gap-2">
+      {/* GAUCHE : tous les filtres (primaires + secondaires) */}
+      <div className="flex flex-col gap-1 flex-1">
+        {/* FILTRES PRIMAIRES */}
         <div className="flex flex-wrap items-center gap-2">
-          {/* FILTRES PRIMAIRES - ordre personnalisé */}
           {!hiddenFilters.includes("source") && <CyclicFilterButton {...sourceConfig} onClick={cycleSource} />}
           {!hiddenFilters.includes("status") && <CyclicFilterButton {...statusConfig} onClick={cycleStatus} />}
           {!hiddenFilters.includes("nature") && <CyclicFilterButton {...extraConfig} onClick={cycleExtra} />}
@@ -185,42 +184,6 @@ export const FilterBar: React.FC<FilterBarProps> = ({
               onSelectAll={() => handleSubCategoryChange(subCategoryOptions.map((o) => o.id))}
             />
           )}
-        </div>
-
-        <div className="flex items-center gap-2">
-          <span className="text-xs px-2 py-0.5 bg-indigo-50 rounded-full">{hasActiveSecondary ? `${activeFiltersCount} actifs` : ""}</span>
-
-          <button
-            onClick={() => setShowAllFilters(!showAllFilters)}
-            className={`h-[30px] px-3 rounded-lg border text-xs font-bold transition-all flex items-center gap-1.5 ${
-              showAllFilters
-                ? "bg-slate-800 text-white border-slate-800"
-                : hasActiveSecondary
-                  ? "bg-indigo-50 text-indigo-600 border-indigo-200"
-                  : "bg-white text-slate-500 border-slate-200 hover:border-slate-300"
-            }`}
-          >
-            {showAllFilters ? (
-              <>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="18" y1="6" x2="6" y2="18"></line>
-                  <line x1="6" y1="6" x2="18" y2="18"></line>
-                </svg>
-                <span className="hidden sm:inline">Fermer</span>
-              </>
-            ) : (
-              <>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="4" y1="9" x2="20" y2="9"></line>
-                  <line x1="4" y1="15" x2="20" y2="15"></line>
-                  <line x1="10" y1="3" x2="8" y2="21"></line>
-                  <line x1="16" y1="3" x2="14" y2="21"></line>
-                </svg>
-                <span className="hidden sm:inline">Plus de filtres</span>
-                {hasActiveSecondary && <span className="w-2 h-2 rounded-full bg-indigo-500 ml-0.5"></span>}
-              </>
-            )}
-          </button>
 
           <button
             onClick={clear}
@@ -238,55 +201,84 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             </svg>
           </button>
 
-          {/* SECTION TRI (à droite) */}
-          {sortOptions && sortKey && sortOrder && onSortChange && (
-            <ListSorter options={sortOptions} currentSort={sortKey} currentOrder={sortOrder} onSortChange={onSortChange} canToggleOrder={canToggleOrder} />
+          {!showAllFilters && (
+            <button
+              onClick={() => setShowAllFilters(true)}
+              className={`h-[30px] px-3 rounded-lg border text-xs font-bold transition-all flex items-center gap-1.5 ${
+                hasActiveSecondary ? "bg-indigo-50 text-indigo-600 border-indigo-200" : "bg-white text-slate-500 border-slate-200 hover:border-slate-300"
+              }`}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="4" y1="9" x2="20" y2="9"></line>
+                <line x1="4" y1="15" x2="20" y2="15"></line>
+                <line x1="10" y1="3" x2="8" y2="21"></line>
+                <line x1="16" y1="3" x2="14" y2="21"></line>
+              </svg>
+              <span className="hidden sm:inline">Plus de filtres</span>
+              {hasActiveSecondary && <span className="w-2 h-2 rounded-full bg-indigo-500 ml-0.5"></span>}
+            </button>
           )}
         </div>
+
+        {/* FILTRES SECONDAIRES (repliables) */}
+        {(showAllFilters || hasActiveSecondary) && (
+          <div className="flex flex-wrap items-center gap-2 bg-slate-50 rounded-xl border border-slate-100 animate-in slide-in-from-top-1 duration-200">
+            {showAllFilters && <span className="text-[9px] font-bold text-slate-500 uppercase mr-1">Avancé :</span>}
+
+            {!hiddenFilters.includes("beneficiaries") && (showAllFilters || visualBenIds.length < benOptions.length) && (
+              <FilterDropdown
+                label="Bénéficiaires"
+                icon={<Tag size={14} />}
+                options={benOptions}
+                selectedValues={visualBenIds}
+                onChange={handleBenChange}
+                onSelectAll={() => handleBenChange(benOptions.map((o) => o.id))}
+              />
+            )}
+
+            {!hiddenFilters.includes("accounts") && (showAllFilters || visualAccountIds.length < accountOptions.length) && (
+              <FilterDropdown
+                label="Comptes"
+                icon={<Tag size={14} />}
+                options={accountOptions}
+                selectedValues={visualAccountIds}
+                onChange={handleAccountChange}
+                onSelectAll={() => handleAccountChange(accountOptions.map((o) => o.id))}
+              />
+            )}
+
+            {!hiddenFilters.includes("salary") && (showAllFilters || selectedSalary.length < salaryOptions.length) && (
+              <FilterDropdown
+                label="Autres flux"
+                icon={<Tag size={14} />}
+                options={salaryOptions}
+                selectedValues={selectedSalary}
+                onChange={handleSalaryChange}
+                onSelectAll={() => update("salary", "ALL")}
+                color="emerald"
+              />
+            )}
+
+            {showAllFilters && (
+              <button
+                onClick={() => setShowAllFilters(false)}
+                className="h-[30px] px-3 rounded-lg border text-xs font-bold transition-all flex items-center gap-1.5 bg-slate-800 text-white border-slate-800"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+                <span className="hidden sm:inline">Fermer</span>
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* FILTRES SECONDAIRES (Repliables) */}
-      {(showAllFilters || hasActiveSecondary) && (
-        <div
-          className={`flex flex-wrap items-center gap-2 bg-slate-50 rounded-xl border border-slate-100 animate-in slide-in-from-top-1 duration-200 ${
-            !showAllFilters ? "hidden sm:flex" : ""
-          }`}
-        >
-          <span className="text-[9px] font-bold text-slate-500 uppercase mr-1">Avancé :</span>
-
-          {!hiddenFilters.includes("beneficiaries") && (
-            <FilterDropdown
-              label="Bénéficiaires"
-              icon={<Tag size={14} />}
-              options={benOptions}
-              selectedValues={visualBenIds}
-              onChange={handleBenChange}
-              onSelectAll={() => handleBenChange(benOptions.map((o) => o.id))}
-            />
-          )}
-
-          {!hiddenFilters.includes("accounts") && (
-            <FilterDropdown
-              label="Comptes"
-              icon={<Tag size={14} />}
-              options={accountOptions}
-              selectedValues={visualAccountIds}
-              onChange={handleAccountChange}
-              onSelectAll={() => handleAccountChange(accountOptions.map((o) => o.id))}
-            />
-          )}
-
-          {!hiddenFilters.includes("salary") && (
-            <FilterDropdown
-              label="Autres flux"
-              icon={<Tag size={14} />}
-              options={salaryOptions}
-              selectedValues={selectedSalary}
-              onChange={handleSalaryChange}
-              onSelectAll={() => update("salary", "ALL")}
-              color="emerald"
-            />
-          )}
+      {/* DROITE : tri (toujours ancré à droite) */}
+      {sortOptions && sortKey && sortOrder && onSortChange && (
+        <div className="flex-shrink-0">
+          <ListSorter options={sortOptions} currentSort={sortKey} currentOrder={sortOrder} onSortChange={onSortChange} canToggleOrder={canToggleOrder} />
         </div>
       )}
     </div>

@@ -5,6 +5,7 @@ import { useAuth } from "./hooks/useAuth";
 import { useAuthorization } from "./hooks/useAuthorization";
 import { useConfigurationUI, ConfigTab } from "./hooks/useConfigurationUI";
 import { ErrorProvider, useError } from "./contexts/ErrorContext";
+import { AdminViewProvider } from "./contexts/AdminViewContext";
 import { PeriodNavigationProvider } from "./contexts/PeriodNavigationContext";
 import { ErrorModal } from "./components/ui/ErrorModal";
 import { Toast } from "./components/ui/Toast";
@@ -420,7 +421,9 @@ const App: React.FC = () => {
   return (
     <ErrorProvider>
       <PeriodNavigationProvider>
-        <AppContent />
+        <AdminViewProvider>
+          <AppContent />
+        </AdminViewProvider>
       </PeriodNavigationProvider>
     </ErrorProvider>
   );

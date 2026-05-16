@@ -1,9 +1,10 @@
 import React from "react";
-import { WalletCards, Download } from "lucide-react";
+import { WalletCards, Download, Eye, EyeOff } from "lucide-react";
 import { Session } from "@supabase/supabase-js";
 import { usePWAInstall } from "../../hooks/usePWAInstall";
 import { UserMenu } from "./UserMenu";
 import { NAV_ITEMS, ViewState } from "../../constants/navigation";
+import { useAdminView } from "../../contexts/AdminViewContext";
 
 interface HeaderProps {
   currentView: ViewState;
@@ -16,11 +17,13 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({ currentView, onViewChange, onLogout, userEmail, session, isAdmin }) => {
   const { isInstallable, install } = usePWAInstall();
+  const { viewAsNonAdmin, toggleViewAsNonAdmin } = useAdminView();
 
   // Filtrer les éléments de navigation en fonction des droits d'accès
+  const effectiveIsAdmin = !!isAdmin && !viewAsNonAdmin;
   const visibleNavItems = NAV_ITEMS.filter((item) => {
-    // Si l'item est réservé aux admins, vérifier le rôle de l'utilisateur
-    if (!isAdmin && ["transfers", "analytics", "config"].includes(item.id)) return false;
+    // Si l'item est réservé aux admins, vérifier le rôle effectif de l'utilisateur
+    if (!effectiveIsAdmin && ["transfers", "analytics", "config"].includes(item.id)) return false;
     return true;
   });
 
@@ -62,6 +65,18 @@ export const Header: React.FC<HeaderProps> = ({ currentView, onViewChange, onLog
               >
                 <Download size={14} />
                 <span className="hidden sm:inline">Installer</span>
+              </button>
+            )}
+
+            {/* TOGGLE : Voir comme non-admin (visible uniquement aux vrais admins) */}
+            {isAdmin && (
+              <button
+                onClick={toggleViewAsNonAdmin}
+                title={viewAsNonAdmin ? "Revenir au mode admin" : "Voir comme non-admin"}
+                className="flex items-center gap-2 bg-amber-50 text-amber-700 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-amber-100 transition-colors"
+              >
+                {viewAsNonAdmin ? <EyeOff size={14} /> : <Eye size={14} />}
+                <span className="hidden sm:inline">{viewAsNonAdmin ? "Mode admin" : "Voir comme non-admin"}</span>
               </button>
             )}
 

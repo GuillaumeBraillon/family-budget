@@ -17,9 +17,13 @@ import React, { useState, useMemo } from "react";
 import { useDashboardData } from "../../../hooks/dashboard";
 import { useBalancesData } from "../../../hooks/balances";
 import { usePeriodNav } from "../../../contexts/PeriodNavigationContext";
+import { useAuth } from "../../../hooks/useAuth";
+import { useBudget } from "../../../hooks/useBudget";
+import { useAdminView } from "../../../contexts/AdminViewContext";
 import { GlobalMonthlyAnalysis } from "./components/GlobalMonthlyAnalysis";
 import { PendingOperationsCard } from "../Balances/components/PendingOperationsCard";
 import { FamilyVariableBalanceCard } from "../Balances/components/FamilyVariableBalanceCard";
+import { SimplifiedFamilyCard } from "./components/SimplifiedFamilyCard";
 import { PersonalBudgetSummary } from "../Balances/components/PersonalBudgetSummary";
 import { PeriodNavigationBar } from "../../ui/molecules/PeriodNavigationBar";
 import {
@@ -164,6 +168,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const totalAmount = familyVariableNetBreakdown?.status.real ?? familyVariableNetAmount;
   const displayedFamilyAmount = standardAmount - waitingStandardAmount;
 
+  // --- AUTORISATION ---
+  const { user } = useAuth();
+  const { authorizedUsers } = useBudget();
+  const { viewAsNonAdmin } = useAdminView();
+  const currentEmail = user?.email;
+  const actualIsAdmin = !!authorizedUsers.find((u) => u.email === currentEmail && !!u.isAdmin);
+  const isAdmin = actualIsAdmin && !viewAsNonAdmin;
+
   const handleNavigateToOperations = (date: Date, filters: Partial<OperationFilters>) => {
     onNavigateToPlanner(date, filters, scope === "PERIOD" ? activeWeek : undefined);
   };
@@ -182,49 +194,73 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       <SavingsSummaryCard accounts={accountsAtDate} />
 
       {/* SECTION SOLDES : Opérations en attente + Budget variable Famille */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5 md:gap-2">
-        {/* SECTION BUDGET PERSONNEL */}
-        <PersonalBudgetSummary
-          totalPersonalBudgetAmount={totalPersonalBudgetAmount}
-          spentPersonalBudgetAmount={personalBudgetConsumedAmount}
-          totalPersonalRemainingAmount={totalPersonalRemainingAmount}
-          beneficiariesDetails={consumedDetails}
-          currentDate={currentDate}
-          onNavigateToOperations={handleNavigateToMonth}
-        />
-        {/* SECTION BUDGET FAMILLE */}
-        <FamilyVariableBalanceCard
-          familyVariableBudgetTotalAmount={familyVariableBudgetTotalAmount}
-          familyVariableMonthBudgetAmount={familyVariableMonthBudgetAmount}
-          familyVariablePeriodsCount={familyVariablePeriodsCount}
-          familyVariablePeriodValue={familyVariablePeriodValue ?? 0}
-          familyVariableNetAmount={familyVariableNetAmount}
-          familyVariableRemainingAmount={familyVariableBudgetRemainingAmount}
-          standardAmount={standardAmount}
-          refundsAmount={refundsAmount}
-          extraAmount={extraAmount}
-          totalAmount={totalAmount}
-          realAmount={realAmount}
-          waitingAmount={waitingAmount}
-          displayedFamilyAmount={displayedFamilyAmount}
-          familyBeneficiaryIds={familyBeneficiaryIds}
-          currentDate={currentDate}
-          onNavigateToOperations={handleNavigateToOperations}
-        />
-        {/* SECTION OPÉRATIONS EN ATTENTE */}
-        <PendingOperationsCard
-          totalPendingAmount={totalPendingAmount}
-          totalPendingRecurringAmount={totalPendingRecurringAmount}
-          totalPendingVariableAmount={totalPendingVariableAmount}
-          paidRecurringAmount={paidRecurringAmount}
-          paidRecurringNetAmount={paidRecurringNetAmount}
-          totalRecurringAmount={totalRecurringAmount}
-          overduePendingRecurringAmount={overduePendingRecurringAmount}
-          overduePendingVariableAmount={overduePendingVariableAmount}
-          currentDate={currentDate}
-          onNavigateToOperations={handleNavigateToOperations}
-        />
-      </div>
+      {isAdmin ? (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5 md:gap-2">
+          {/* SECTION BUDGET PERSONNEL */}
+          <PersonalBudgetSummary
+            totalPersonalBudgetAmount={totalPersonalBudgetAmount}
+            spentPersonalBudgetAmount={personalBudgetConsumedAmount}
+            totalPersonalRemainingAmount={totalPersonalRemainingAmount}
+            beneficiariesDetails={consumedDetails}
+            currentDate={currentDate}
+            onNavigateToOperations={handleNavigateToMonth}
+          />
+          {/* SECTION BUDGET FAMILLE */}
+          <FamilyVariableBalanceCard
+            familyVariableBudgetTotalAmount={familyVariableBudgetTotalAmount}
+            familyVariableMonthBudgetAmount={familyVariableMonthBudgetAmount}
+            familyVariablePeriodsCount={familyVariablePeriodsCount}
+            familyVariablePeriodValue={familyVariablePeriodValue ?? 0}
+            familyVariableNetAmount={familyVariableNetAmount}
+            familyVariableRemainingAmount={familyVariableBudgetRemainingAmount}
+            standardAmount={standardAmount}
+            refundsAmount={refundsAmount}
+            extraAmount={extraAmount}
+            totalAmount={totalAmount}
+            realAmount={realAmount}
+            waitingAmount={waitingAmount}
+            displayedFamilyAmount={displayedFamilyAmount}
+            familyBeneficiaryIds={familyBeneficiaryIds}
+            currentDate={currentDate}
+            onNavigateToOperations={handleNavigateToOperations}
+          />
+          {/* SECTION OPÉRATIONS EN ATTENTE */}
+          <PendingOperationsCard
+            totalPendingAmount={totalPendingAmount}
+            totalPendingRecurringAmount={totalPendingRecurringAmount}
+            totalPendingVariableAmount={totalPendingVariableAmount}
+            paidRecurringAmount={paidRecurringAmount}
+            paidRecurringNetAmount={paidRecurringNetAmount}
+            totalRecurringAmount={totalRecurringAmount}
+            overduePendingRecurringAmount={overduePendingRecurringAmount}
+            overduePendingVariableAmount={overduePendingVariableAmount}
+            currentDate={currentDate}
+            onNavigateToOperations={handleNavigateToOperations}
+          />
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 md:gap-2">
+          {/* SECTION BUDGET PERSONNEL */}
+          <PersonalBudgetSummary
+            totalPersonalBudgetAmount={totalPersonalBudgetAmount}
+            spentPersonalBudgetAmount={personalBudgetConsumedAmount}
+            totalPersonalRemainingAmount={totalPersonalRemainingAmount}
+            beneficiariesDetails={consumedDetails}
+            currentDate={currentDate}
+            onNavigateToOperations={handleNavigateToMonth}
+          />
+          {/* SECTION SIMPLIFIÉE : Budget Famille + Récurrentes */}
+          <SimplifiedFamilyCard
+            familyVariableBudgetTotalAmount={familyVariableBudgetTotalAmount}
+            displayedFamilyAmount={displayedFamilyAmount}
+            familyBeneficiaryIds={familyBeneficiaryIds}
+            paidRecurringNetAmount={paidRecurringNetAmount}
+            totalPendingRecurringAmount={totalPendingRecurringAmount}
+            currentDate={currentDate}
+            onNavigateToOperations={handleNavigateToOperations}
+          />
+        </div>
+      )}
 
       {/* SECTION MACRO : Trésorerie Globale & Épargne */}
       <GlobalMonthlyAnalysis data={globalMonthlyData} year={selectedYear} onNavigateToPlanner={onNavigateToPlanner} onYearChange={setSelectedYear} />

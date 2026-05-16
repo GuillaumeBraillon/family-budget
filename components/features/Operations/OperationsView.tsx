@@ -7,6 +7,7 @@ import { useOperationsFilters, useOperationsSorting, useOperationsData } from ".
 import { usePeriodNav } from "../../../contexts/PeriodNavigationContext";
 import { useAuth } from "../../../hooks/useAuth";
 import { useBudget } from "../../../hooks/useBudget";
+import { useAdminView } from "../../../contexts/AdminViewContext";
 import {
   ExpenseConfig,
   IncomeConfig,
@@ -164,8 +165,10 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
 
   const { user } = useAuth();
   const { authorizedUsers } = useBudget();
+  const { viewAsNonAdmin } = useAdminView();
   const currentEmail = user?.email;
-  const isAdmin = !!authorizedUsers.find((u) => u.email === currentEmail && !!u.isAdmin);
+  const actualIsAdmin = !!authorizedUsers.find((u) => u.email === currentEmail && !!u.isAdmin);
+  const isAdmin = actualIsAdmin && !viewAsNonAdmin;
 
   const handleItemClick = (item: PlannedItem) => {
     // Édition réservée aux admins (silent no-op pour non-admins)
@@ -293,7 +296,7 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
         }}
         isAdmin={isAdmin}
         onExport={handleExport}
-        onReorder={isManualSort ? handleReorder : undefined}
+        onReorder={isManualSort && actualIsAdmin ? handleReorder : undefined}
       />
 
       <PlannerModals

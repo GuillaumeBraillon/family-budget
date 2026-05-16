@@ -2,6 +2,9 @@ import React from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "../../../ui/Card";
 import { ClickableAmount } from "../../../ui/atoms/ClickableAmount";
 import { getGlobalAnalysisFilters } from "../../../../hooks/dashboard";
+import { useAuth } from "../../../../hooks/useAuth";
+import { useBudget } from "../../../../hooks/useBudget";
+import { useAdminView } from "../../../../contexts/AdminViewContext";
 import { OperationFilters } from "../../../../types";
 import { MonthSelector } from "./MonthSelector";
 
@@ -26,6 +29,16 @@ interface GlobalMonthlyAnalysisProps {
 export const GlobalMonthlyAnalysis: React.FC<GlobalMonthlyAnalysisProps> = ({ data, year, onNavigateToPlanner, onYearChange }) => {
   // Filtrer les mois vides (futur ou pas de données)
   const activeMonths = data.filter((m) => m.totalIncome > 0 || m.expenses > 0);
+
+  // Autorisation: rendre l'élément transparent pour les non-admins
+  const { user } = useAuth();
+  const { authorizedUsers } = useBudget();
+  const { viewAsNonAdmin } = useAdminView();
+  const currentEmail = user?.email;
+  const actualIsAdmin = !!authorizedUsers.find((u) => u.email === currentEmail && !!u.isAdmin);
+  const isAdmin = actualIsAdmin && !viewAsNonAdmin;
+
+  if (!isAdmin) return null;
 
   return (
     <Card className="rounded-3xl">

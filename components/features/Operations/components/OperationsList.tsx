@@ -140,7 +140,7 @@ export const OperationsList: React.FC<OperationsListProps> = ({
         emptyMessage="Aucune opération ne correspond à vos filtres pour cette période."
         headerActions={headerActions}
       >
-        {onReorder && isAdmin ? (
+        {onReorder ? (
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
             <SortableContext items={items.map((i) => i.instanceId)} strategy={verticalListSortingStrategy}>
               {items.map((item) => (
