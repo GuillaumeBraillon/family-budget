@@ -7,6 +7,12 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.10.8] - 2026-05-16
+
+### ✅ Corrections
+
+- Ajout d'un padding inférieur réactif sur les conteneurs principaux : `pb-[calc(4rem+env(safe-area-inset-bottom))]` (avec `md:pb-0`) afin d'éviter que le contenu soit masqué par une barre inférieure ou la safe-area des appareils sur les petits écrans.
+
 ## [2.10.7] - 2026-05-16
 
 ### ✅ Corrections
