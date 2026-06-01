@@ -271,7 +271,7 @@ export const usePlanner = (
         isPaid: isActuallyPaid,
         isWaiting: !isActuallyPaid,
         paidDetails: paid,
-        isRefund: paid?.isRefund || false,
+        isRefund: !!paid?.isRefund,
         isExtra: baseIsExtra,
         isExtraGlobal: baseIsExtra, // Toggle brut
         isSalary: !!inc.isSalary,
@@ -370,7 +370,18 @@ export const usePlanner = (
       }
 
       if (filters) {
-        if (filters.flux !== "ALL") items = items.filter((i) => i.type === filters.flux);
+        if (filters.flux !== "ALL") {
+          if (filters.flux === "EXPENSE") {
+            // Dépenses + remboursements (réduisent les dépenses)
+            items = items.filter((i) => i.type === "EXPENSE" || (i.type === "INCOME" && i.isRefund));
+          } else if (filters.flux === "INCOME") {
+            // Revenus purs (sans remboursements)
+            items = items.filter((i) => i.type === "INCOME" && !i.isRefund);
+          } else if (filters.flux === "REFUND") {
+            // Remboursements uniquement
+            items = items.filter((i) => i.isRefund === true);
+          }
+        }
         if (filters.source !== "ALL") items = items.filter((i) => i.source === filters.source);
         if (filters.status !== "ALL") {
           const wantWaiting = filters.status === "WAITING";

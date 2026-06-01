@@ -7,6 +7,18 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.10.10] - 2026-06-01
+
+### 🔍 Filtres / Flux
+
+- Ajout d'un 4e état au filtre cyclique **Flux** : `ALL → EXPENSE → INCOME → REFUND → ALL`.
+- `types.ts` : union `OperationFilters.flux` étendue avec `"REFUND"`.
+- `hooks/filterBar/useFilterBarLogic.tsx` : cycle mis à jour, nouveau cas `REFUND` dans `getFluxConfig` (label "Remboursements", couleur rose).
+- `hooks/usePlanner.ts` :
+  - Simplification de l'assignation `isRefund` : utilise directement `paid?.isRefund` / `vt.isRefund` (suppression de la détection par nom de catégorie).
+  - Ajout du cas manquant `REFUND` dans `filteredPeriodBudgets` : `items.filter(i => i.isRefund === true)`.
+  - `INCOME` : affiche uniquement les revenus sans flag `isRefund`.
+
 ## [2.10.9] - 2026-06-01
 
 ### 🎨 UI

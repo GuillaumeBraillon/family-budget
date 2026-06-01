@@ -131,11 +131,11 @@ export const useFilterBarLogic = (
   // --- CONFIGURATION DES BOUTONS CYCLIQUES ---
 
   /**
-   * Cycle l'état du filtre Flux dans l'ordre : Tous → Dépenses → Revenus → Tous.
+   * Cycle l'état du filtre Flux dans l'ordre : Tous → Dépenses → Revenus → Remboursements → Tous.
    */
   const cycleFlux = () => {
-    const next = filters.flux === "ALL" ? "EXPENSE" : filters.flux === "EXPENSE" ? "INCOME" : "ALL";
-    update("flux", next);
+    const next = filters.flux === "ALL" ? "EXPENSE" : filters.flux === "EXPENSE" ? "INCOME" : filters.flux === "INCOME" ? "REFUND" : "ALL";
+    update("flux", next as OperationFilters["flux"]);
   };
 
   /**
@@ -149,6 +149,8 @@ export const useFilterBarLogic = (
         return { label: "Dépenses", icon: <TrendingDown size={14} />, color: "bg-indigo-100 text-indigo-700 hover:bg-indigo-200" };
       case "INCOME":
         return { label: "Revenus", icon: <TrendingUp size={14} />, color: "bg-emerald-100 text-emerald-700 hover:bg-emerald-200" };
+      case "REFUND":
+        return { label: "Remboursements", icon: <TrendingUp size={14} />, color: "bg-rose-100 text-rose-700 hover:bg-rose-200" };
       default:
         return {
           label: "Flux: Tous",

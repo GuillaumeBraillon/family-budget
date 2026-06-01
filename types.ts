@@ -294,7 +294,7 @@ export interface BalanceRow {
 }
 
 export interface OperationFilters {
-  flux: "EXPENSE" | "INCOME" | "ALL";
+  flux: "EXPENSE" | "INCOME" | "REFUND" | "ALL";
   source: "RECURRING" | "VARIABLE" | "ALL";
   status: "WAITING" | "REAL" | "ALL";
   nature: "ALL" | "ONLY" | "EXCLUDE";
