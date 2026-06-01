@@ -7,6 +7,26 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.10.9] - 2026-06-01
+
+### 🎨 UI
+
+- Regroupement des opérations par jour dans `OperationsList` :
+  - Affiche la date en toutes lettres (locale `fr-FR`) et un séparateur "Solde du jour" avec le montant net du jour formaté.
+  - Les listes en mode DnD et les listes plates affichent les séparateurs journaliers et les éléments groupés par jour.
+
+### 🔧 Tri / Données
+
+- `operations_sorting` conserve désormais l'`instanceId` complet (ex. `c2-2026-06`) au lieu de normaliser en retirant le suffixe mensuel.
+- Ajout de `sanitizeOperationsSorting` : supprime les anciens `configId` récurrents, déduplique et préserve l'ordre avant persistance.
+- `useOperationsSorting` / `getItemId` utilisent `instanceId`; `usePlanner` construit une map de tri indexée sur les ids stockés et retombe sur `configId` pour compatibilité avec les données legacy.
+- Les opérations de réordonnancement (`moveItem`, `updateOperationsSorting`) manipulent et persistents des `instanceId` et des tableaux nettoyés.
+
+### 🧾 Autres
+
+- Ajustement des filtres globaux du dashboard : exclusion des salaires par défaut dans les filtres de base.
+- Nettoyage : réorganisation et réduction de `.github/copilot-instructions.md`.
+
 ## [2.10.8] - 2026-05-16
 
 ### ✅ Corrections

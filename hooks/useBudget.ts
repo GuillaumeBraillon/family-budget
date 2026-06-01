@@ -247,6 +247,27 @@ export const useBudget = () => {
   // Hook des actions CRUD wrappées avec reload
   const crudActions = useBudgetActions(loadData, setErrorMessage);
 
+  const getRecurringConfigIdSet = () =>
+    new Set<string>([...budgetDataRef.current.configs.map((c) => c.id), ...budgetDataRef.current.incomeConfigs.map((i) => i.id)]);
+
+  /**
+   * Nettoie operations_sorting avant écriture :
+   * - retire les anciens IDs de config récurrente (legacy: c2, c3...)
+   * - conserve les instanceId (ex: c2-2026-06) et IDs variables
+   * - déduplique en préservant l'ordre
+   */
+  const sanitizeOperationsSorting = (sorting: string[]): string[] => {
+    const recurringConfigIds = getRecurringConfigIdSet();
+    const seen = new Set<string>();
+
+    return sorting.filter((id) => {
+      if (recurringConfigIds.has(id)) return false;
+      if (seen.has(id)) return false;
+      seen.add(id);
+      return true;
+    });
+  };
+
   // --- ACTIONS SPÉCIFIQUES (NON DÉLÉGUÉES) ---
 
   /**
@@ -255,7 +276,8 @@ export const useBudget = () => {
    * @param {string[]} newSorting - Nouvel ordre complet des instance_ids
    */
   const updateOperationsSorting = async (newSorting: string[]) => {
-    const newSettings = { ...budgetDataRef.current.settings, operations_sorting: newSorting };
+    const sanitizedSorting = sanitizeOperationsSorting(newSorting);
+    const newSettings = { ...budgetDataRef.current.settings, operations_sorting: sanitizedSorting };
 
     // Mise à jour optimiste
     setBudgetData((prev) => ({ ...prev, settings: newSettings }));
@@ -337,6 +359,7 @@ export const useBudget = () => {
     if (details && !oldItem && !newSorting.includes(instanceId)) {
       newSorting = [instanceId, ...newSorting];
     }
+    newSorting = sanitizeOperationsSorting(newSorting);
 
     // 1. Mise à jour Optimiste de l'UI
     setBudgetData((prev) => {
@@ -370,57 +393,45 @@ export const useBudget = () => {
   };
 
   /**
-   * Retire le suffixe mensuel (c_noveo-2026-03 → c_noveo).
-   * Utilisé pour écrire des IDs stables cross-mois dans operations_sorting.
-   */
-  const toStableId = (id: string) => id.replace(/-\d{4}-\d{2}$/, "");
-
-  /**
    * Déplace une opération dans l'ordre d'affichage manuel.
-   * Normalise et déduplique l'array à chaque écriture pour auto-réparer
-   * les données corrompues (doublons, IDs mensuels mélangés).
+   * Persiste des instanceId (par mois) pour éviter les collisions inter-mois
+   * sur les opérations récurrentes.
    */
   const moveItem = async (item: PlannedItem, targetId: string) => {
     const currentSorting = budgetDataRef.current.settings.operations_sorting || [];
 
-    // Normaliser + dédupliquer (auto-réparation de l'array corrompu)
-    const seen = new Set<string>();
-    const newSorting = currentSorting.map(toStableId).filter((id) => {
-      if (seen.has(id)) return false;
-      seen.add(id);
-      return true;
-    });
+    const newSorting = sanitizeOperationsSorting(currentSorting);
 
-    const stableItemId = toStableId(item.instanceId);
-    const stableTargetId = toStableId(targetId);
+    const movingInstanceId = item.instanceId;
+    const targetInstanceId = targetId;
 
-    if (!newSorting.includes(stableItemId)) {
-      newSorting.push(stableItemId);
+    if (!newSorting.includes(movingInstanceId)) {
+      newSorting.push(movingInstanceId);
     }
-    if (!newSorting.includes(stableTargetId)) {
-      newSorting.push(stableTargetId);
+    if (!newSorting.includes(targetInstanceId)) {
+      newSorting.push(targetInstanceId);
     }
 
-    const oldIndex = newSorting.indexOf(stableItemId);
+    const oldIndex = newSorting.indexOf(movingInstanceId);
     if (oldIndex === -1) return;
 
     // Capturer l'index original du target AVANT suppression pour détecter la direction
-    const originalTargetIndex = newSorting.indexOf(stableTargetId);
+    const originalTargetIndex = newSorting.indexOf(targetInstanceId);
     const movingDown = originalTargetIndex > oldIndex;
 
     newSorting.splice(oldIndex, 1);
 
     // Re-chercher le target dans le tableau modifié (l'index a peut-être décalé)
-    const targetIndex = newSorting.indexOf(stableTargetId);
+    const targetIndex = newSorting.indexOf(targetInstanceId);
     if (targetIndex === -1) {
-      newSorting.push(stableItemId);
+      newSorting.push(movingInstanceId);
     } else if (movingDown) {
       // Déplacement vers le bas : insérer APRÈS le target
       // (dnd-kit sémantique : l'item prend la place juste après l'item survolé)
-      newSorting.splice(targetIndex + 1, 0, stableItemId);
+      newSorting.splice(targetIndex + 1, 0, movingInstanceId);
     } else {
       // Déplacement vers le haut : insérer AVANT le target
-      newSorting.splice(targetIndex, 0, stableItemId);
+      newSorting.splice(targetIndex, 0, movingInstanceId);
     }
 
     // moveItem: updateOperationsSorting called with normalized, deduped array
@@ -438,15 +449,9 @@ export const useBudget = () => {
     // Si c'est une nouvelle transaction, on l'ajoute au tri manuel
     if (isNew) {
       const currentSorting = budgetDataRef.current.settings.operations_sorting || [];
-      // Normaliser + dédupliquer au passage
-      const seen = new Set<string>();
-      const stableSorting = currentSorting.map(toStableId).filter((id) => {
-        if (seen.has(id)) return false;
-        seen.add(id);
-        return true;
-      });
-      if (!stableSorting.includes(tx.id)) {
-        const newSorting = [tx.id, ...stableSorting];
+      const normalizedSorting = sanitizeOperationsSorting(currentSorting);
+      if (!normalizedSorting.includes(tx.id)) {
+        const newSorting = [tx.id, ...normalizedSorting];
         await apiUpdateSettings({ ...budgetDataRef.current.settings, operations_sorting: newSorting });
       }
     }

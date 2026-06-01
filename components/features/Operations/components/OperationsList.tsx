@@ -33,6 +33,11 @@ export const OperationsList: React.FC<OperationsListProps> = ({
   onReorder,
   isAdmin,
 }) => {
+  const numberFormatter = new Intl.NumberFormat("fr-FR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
@@ -63,6 +68,50 @@ export const OperationsList: React.FC<OperationsListProps> = ({
   };
 
   const headerActions = onExport && items.length > 0 ? <ExportCsvButton onClick={onExport} disabled={items.length === 0} /> : null;
+
+  const formatFullDate = (day: number) => {
+    const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+    const fullDate = date.toLocaleDateString("fr-FR", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+    return fullDate.charAt(0).toUpperCase() + fullDate.slice(1);
+  };
+
+  const formatSignedAmount = (amount: number) => {
+    const sign = amount > 0 ? "+" : amount < 0 ? "-" : "";
+    return `${sign}${numberFormatter.format(Math.abs(amount))} €`;
+  };
+
+  const dailyGroups = Array.from(
+    items.reduce((acc, item) => {
+      const day = item.day;
+      if (!acc.has(day)) {
+        acc.set(day, []);
+      }
+      acc.get(day)?.push(item);
+      return acc;
+    }, new Map<number, PlannedItem[]>())
+  ).map(([day, dayItems]) => {
+    const dailyBalance = dayItems.reduce((sum, item) => sum + (item.type === "INCOME" ? item.amount : -item.amount), 0);
+    return {
+      day,
+      dayItems,
+      fullDateLabel: formatFullDate(day),
+      dailyBalance,
+    };
+  });
+
+  const renderDaySeparator = (day: number, fullDateLabel: string, dailyBalance: number) => (
+    <div key={`sep-${day}`} className="px-4 py-2 bg-slate-50 border-y border-slate-200 flex items-center justify-between gap-3">
+      <span className="text-xs sm:text-sm font-bold text-slate-700">{fullDateLabel}</span>
+      <span className={`text-xs sm:text-sm font-black ${dailyBalance > 0 ? "text-emerald-700" : dailyBalance < 0 ? "text-rose-700" : "text-slate-600"}`}>
+        Solde du jour: {formatSignedAmount(dailyBalance)}
+      </span>
+    </div>
+  );
 
   const renderRow = (item: PlannedItem) => {
     const progress = getExtraProgress(item);
@@ -143,17 +192,27 @@ export const OperationsList: React.FC<OperationsListProps> = ({
         {onReorder ? (
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
             <SortableContext items={items.map((i) => i.instanceId)} strategy={verticalListSortingStrategy}>
-              {items.map((item) => (
-                <SortableRow key={item.instanceId} id={item.instanceId}>
-                  {renderRow(item)}
-                </SortableRow>
+              {dailyGroups.map((group) => (
+                <React.Fragment key={`day-${group.day}`}>
+                  {renderDaySeparator(group.day, group.fullDateLabel, group.dailyBalance)}
+                  {group.dayItems.map((item) => (
+                    <SortableRow key={item.instanceId} id={item.instanceId}>
+                      {renderRow(item)}
+                    </SortableRow>
+                  ))}
+                </React.Fragment>
               ))}
             </SortableContext>
           </DndContext>
         ) : (
           <div>
-            {items.map((item) => (
-              <div key={item.instanceId}>{renderRow(item)}</div>
+            {dailyGroups.map((group) => (
+              <React.Fragment key={`day-static-${group.day}`}>
+                {renderDaySeparator(group.day, group.fullDateLabel, group.dailyBalance)}
+                {group.dayItems.map((item) => (
+                  <div key={item.instanceId}>{renderRow(item)}</div>
+                ))}
+              </React.Fragment>
             ))}
           </div>
         )}

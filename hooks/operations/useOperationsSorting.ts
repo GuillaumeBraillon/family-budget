@@ -40,16 +40,10 @@ export interface SortOption {
  *
  * @param {string[]} operationsSorting - Array d'IDs définissant l'ordre manuel (provenant de app_settings)
  */
-/**
- * Retire le suffixe mensuel des IDs récurrents (c_noveo-2026-03 → c_noveo).
- * Les variables (var_xxx) et income configs (1765xxx) sont retournés inchangés.
- */
-const getStableSortId = (id: string): string => id.replace(/-\d{4}-\d{2}$/, "");
-
 export const useOperationsSorting = (operationsSorting: string[] = []) => {
-  // Normaliser + dédupliquer (correction des IDs mixtes ou mensuels en base)
+  // Dédupliquer strictement: le tri manuel est désormais porté par instanceId (mensuel)
   const seen = new Set<string>();
-  const dedupedOrderIds = operationsSorting.map(getStableSortId).filter((id) => {
+  const dedupedOrderIds = operationsSorting.filter((id) => {
     if (seen.has(id)) return false;
     seen.add(id);
     return true;
@@ -62,7 +56,7 @@ export const useOperationsSorting = (operationsSorting: string[] = []) => {
     defaultSortOrder: "desc",
     manualSortOrder: "desc",
     manualOrderIds: dedupedOrderIds,
-    getItemId: (item) => getStableSortId(item.instanceId),
+    getItemId: (item) => item.instanceId,
     fallbackManualCompare: (a, b) => {
       if (a.day !== b.day) return b.day - a.day;
       return a.instanceId.localeCompare(b.instanceId);

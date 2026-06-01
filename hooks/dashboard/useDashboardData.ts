@@ -121,9 +121,9 @@ export const getGlobalAnalysisFilters = (column: GlobalAnalysisColumn): Operatio
   const baseFilters: OperationFilters = {
     flux: "INCOME",
     source: "ALL",
-    status: "REAL", // Uniquement opérations pointées (titre "Réel")
+    status: "REAL",
     nature: "ALL",
-    salary: "ALL",
+    salary: "EXCLUDE",
     accountIds: [],
     isAccountFilterActive: false,
     beneficiaryIds: [],
@@ -138,33 +138,24 @@ export const getGlobalAnalysisFilters = (column: GlobalAnalysisColumn): Operatio
     case "salaries":
       return {
         ...baseFilters,
-        flux: "INCOME",
-        source: "RECURRING", // Salaires sont toujours récurrents
-        salary: "ONLY", // Uniquement les salaires
+        salary: "ONLY",
       };
 
     case "otherIncome":
       return {
         ...baseFilters,
-        flux: "INCOME",
-        source: "ALL", // Récurrents + Variables
-        salary: "EXCLUDE", // SANS les salaires
       };
 
     case "totalIncome":
       return {
         ...baseFilters,
-        flux: "INCOME",
-        source: "ALL",
-        salary: "ALL", // TOUS les revenus
+        salary: "ALL",
       };
 
     case "expenses":
       return {
         ...baseFilters,
         flux: "EXPENSE",
-        source: "ALL", // Récurrentes + Variables
-        salary: "EXCLUDE", // Les salaires ne sont pas des dépenses
       };
 
     default:

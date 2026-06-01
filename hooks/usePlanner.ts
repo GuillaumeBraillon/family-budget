@@ -318,22 +318,29 @@ export const usePlanner = (
       });
 
     const sortingMap = new Map<string, number>();
-    // Normaliser le suffixe mensuel (c_noveo-2026-03 → c_noveo) et dédupliquer
-    // pour être cohérent quel que soit le format stocké en base
-    const toStableId = (id: string) => id.replace(/-\d{4}-\d{2}$/, "");
     (settings.operations_sorting || []).forEach((id, index) => {
-      const stableId = toStableId(id);
-      if (!sortingMap.has(stableId)) {
-        sortingMap.set(stableId, index);
+      if (!sortingMap.has(id)) {
+        sortingMap.set(id, index);
       }
     });
+
+    const getSortIndex = (item: { instanceId: string; configId: string }): number => {
+      const exact = sortingMap.get(item.instanceId);
+      if (exact !== undefined) return exact;
+
+      // Compat legacy : ancien format stocké sur configId (ex: c2)
+      const legacy = sortingMap.get(item.configId);
+      if (legacy !== undefined) return legacy;
+
+      return Infinity;
+    };
 
     // --- SYSTÈME DE TRI ROBUSTE ---
     // Utilise operations_sorting pour cohérence totale
     periods.forEach((w) =>
       w.items.sort((a, b) => {
-        const indexA = sortingMap.has(toStableId(a.instanceId)) ? sortingMap.get(toStableId(a.instanceId))! : Infinity;
-        const indexB = sortingMap.has(toStableId(b.instanceId)) ? sortingMap.get(toStableId(b.instanceId))! : Infinity;
+        const indexA = getSortIndex(a);
+        const indexB = getSortIndex(b);
 
         // Si les deux sont hors de la liste, tri par jour puis ID
         if (indexA === Infinity && indexB === Infinity) {
