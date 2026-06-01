@@ -41,8 +41,8 @@ export const SimplifiedFamilyCard: React.FC<SimplifiedFamilyCardProps> = ({
   const consumedRecurring = Math.abs(roundTo0(paidRecurringNetAmount));
   const budgetRecurring = Math.max(1, roundTo0(totalRecurringNetAmount));
 
-  const rowClass = "flex items-center justify-between text-sm text-slate-500";
-  const amountClass = "font-black text-slate-800 text-lg";
+  const rowClass = "flex items-center justify-between text-[11px] gap-3";
+  const amountClass = "font-black text-slate-600 whitespace-nowrap";
 
   return (
     <Card className="rounded-3xl">
@@ -54,11 +54,10 @@ export const SimplifiedFamilyCard: React.FC<SimplifiedFamilyCardProps> = ({
         {/* SECTION 1 : Budget variable famille */}
         {familyVariableBudgetTotalAmount > 0 && (
           <div className="flex flex-col gap-2">
-            <span className="font-semibold text-slate-600 uppercase tracking-wider text-xs">Budget Famille</span>
-
+            <span className="text-xs uppercase tracking-widest text-slate-400 font-bold">Budget Famille</span>
             <div className={rowClass}>
-              <span>Dépensé</span>
-              <span className="flex items-baseline gap-1">
+              <span className="font-bold text-slate-700 truncate">Dépensé</span>
+              <span className="flex items-baseline gap-1 whitespace-nowrap">
                 <ClickableAmount
                   date={currentDate}
                   filters={buildOperationsFilters({ source: "VARIABLE", status: "REAL", nature: "EXCLUDE", beneficiaryIds: familyBeneficiaryIds })}
@@ -68,9 +67,7 @@ export const SimplifiedFamilyCard: React.FC<SimplifiedFamilyCardProps> = ({
                 >
                   {roundTo0(spentFamily)} €
                 </ClickableAmount>
-                <span className="text-sm text-slate-800">
-                  / {roundTo0(budgetFamily)} € <span className="text-slate-800">(autorisé)</span>
-                </span>
+                <span className="font-black text-slate-600 whitespace-nowrap">/ {roundTo0(budgetFamily)} €</span>
               </span>
             </div>
 
@@ -81,11 +78,11 @@ export const SimplifiedFamilyCard: React.FC<SimplifiedFamilyCardProps> = ({
         {/* SECTION 2 : Récurrentes */}
         {totalRecurringNetAmount > 0 && (
           <div className="flex flex-col gap-2">
-            <span className="font-semibold text-slate-600 uppercase tracking-wider text-xs">Récurrentes</span>
+            <span className="text-xs uppercase tracking-widest text-slate-400 font-bold">Récurrentes</span>
 
             <div className={rowClass}>
-              <span>Pointé</span>
-              <span className="flex items-baseline gap-1">
+              <span className="font-bold text-slate-700 truncate">Pointé</span>
+              <span className="flex items-baseline gap-1 whitespace-nowrap">
                 <ClickableAmount
                   date={currentDate}
                   filters={buildOperationsFilters({ source: "RECURRING", status: "REAL" })}
@@ -95,9 +92,7 @@ export const SimplifiedFamilyCard: React.FC<SimplifiedFamilyCardProps> = ({
                 >
                   {consumedRecurring} €
                 </ClickableAmount>
-                <span className="text-sm text-slate-800">
-                  / {budgetRecurring} € <span className="text-slate-800">(total)</span>
-                </span>
+                <span className="font-black text-slate-600 whitespace-nowrap">/ {budgetRecurring} €</span>
               </span>
             </div>
 

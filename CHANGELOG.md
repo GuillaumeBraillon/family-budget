@@ -7,6 +7,22 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.10.11] - 2026-06-01
+
+### ✨ Dashboard
+
+- Ajout de `SavingsJointFlowsCard` dans le dashboard non-admin pour visualiser les flux entre compte joint et épargne.
+- `DashboardView` calcule un `savingsJointFlowSummary` dédié (montants épargnés/utilisés et agrégations associées) et injecte la carte dans la grille.
+- Ajustement de la grille dashboard en `lg:grid-cols-3` pour intégrer la nouvelle carte.
+
+### 🎨 UI / Harmonisation
+
+- Harmonisation typographique et des espacements de `SimplifiedFamilyCard` (montants, labels, densité visuelle).
+- `SavingsJointFlowsCard` alignée sur les conventions visuelles des cartes budget:
+  - titres/labels en style uppercase `text-slate-400`,
+  - structure `CardHeader` / `CardContent` et rythmes d'espacement cohérents,
+  - utilisation de `BudgetProgressBar` pour 2 lectures explicites: `Utilisé / Épargné` et `Reste / Épargné`.
+
 ## [2.10.10] - 2026-06-01
 
 ### 🔍 Filtres / Flux

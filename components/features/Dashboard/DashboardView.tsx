@@ -24,10 +24,12 @@ import { GlobalMonthlyAnalysis } from "./components/GlobalMonthlyAnalysis";
 import { PendingOperationsCard } from "../Balances/components/PendingOperationsCard";
 import { FamilyVariableBalanceCard } from "../Balances/components/FamilyVariableBalanceCard";
 import { SimplifiedFamilyCard } from "./components/SimplifiedFamilyCard";
+import { SavingsJointFlowsCard } from "./components/SavingsJointFlowsCard";
 import { PersonalBudgetSummary } from "../Balances/components/PersonalBudgetSummary";
 import { PeriodNavigationBar } from "../../ui/molecules/PeriodNavigationBar";
 import {
   Account,
+  AccountType,
   Person,
   ExpenseConfig,
   IncomeConfig,
@@ -139,6 +141,88 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const totalPendingVariableAmount = useMemo(() => pendingVariableDetails.reduce((sum, d) => sum + d.amount, 0), [pendingVariableDetails]);
   const totalPendingAmount = totalPendingRecurringAmount + totalPendingVariableAmount;
 
+  const savingsJointFlowSummary = useMemo(() => {
+    const currentMonth = currentDate.getMonth();
+    const currentYear = currentDate.getFullYear();
+    const selectedPeriod = filteredPeriodBudgets.find((period) => period.weekNumber === activeWeek);
+    const accountById = new Map(accountsAtDate.map((acc) => [acc.id, acc]));
+    const pairTotals = new Map<string, { from: string; to: string; amount: number }>();
+    const usedBySavingsAccount = new Map<string, number>();
+
+    const addPairTotal = (from: string, to: string, amount: number) => {
+      if (amount <= 0) return;
+      const key = `${from}__${to}`;
+      const existing = pairTotals.get(key);
+      if (existing) {
+        existing.amount += amount;
+      } else {
+        pairTotals.set(key, { from, to, amount });
+      }
+    };
+
+    const isInSelectedScope = (dateString: string): boolean => {
+      const date = new Date(dateString);
+      const inCurrentMonth = date.getMonth() === currentMonth && date.getFullYear() === currentYear;
+      if (!inCurrentMonth) return false;
+
+      if (scope === "MONTH") return true;
+      if (!selectedPeriod) return false;
+
+      const day = date.getDate();
+      return day >= selectedPeriod.startDate && day <= selectedPeriod.endDate;
+    };
+
+    let savedAmount = 0;
+    let usedAmount = 0;
+
+    transfers.forEach((transfer) => {
+      if (!isInSelectedScope(transfer.date)) return;
+
+      const source = accountById.get(transfer.sourceAccountId);
+      const destination = accountById.get(transfer.destinationAccountId);
+      if (!source || !destination) return;
+
+      if (source.type === AccountType.SAVINGS && destination.isJoint === true) {
+        usedAmount += transfer.amount;
+        usedBySavingsAccount.set(source.id, (usedBySavingsAccount.get(source.id) || 0) + transfer.amount);
+      } else if (source.isJoint === true && destination.type === AccountType.SAVINGS) {
+        savedAmount += transfer.amount;
+        addPairTotal(source.name, destination.name, transfer.amount);
+      }
+    });
+
+    const savingsRows = accountsAtDate
+      .filter((acc) => acc.type === AccountType.SAVINGS)
+      .map((acc) => {
+        const used = usedBySavingsAccount.get(acc.id) || 0;
+        return {
+          accountName: acc.name,
+          balance: acc.currentBalance,
+          usedAmount: used,
+          netAfterUsed: acc.currentBalance - used,
+        };
+      })
+      .sort((a, b) => a.accountName.localeCompare(b.accountName));
+
+    const savingsBalanceTotal = savingsRows.reduce((sum, row) => sum + row.balance, 0);
+    const savingsNetAfterUsed = savingsRows.reduce((sum, row) => sum + row.netAfterUsed, 0);
+
+    const lines = Array.from(pairTotals.values()).sort((a, b) => {
+      const fromCompare = a.from.localeCompare(b.from);
+      if (fromCompare !== 0) return fromCompare;
+      return a.to.localeCompare(b.to);
+    });
+
+    return {
+      savedAmount,
+      usedAmount,
+      savingsBalanceTotal,
+      savingsNetAfterUsed,
+      lines,
+      savingsRows,
+    };
+  }, [transfers, currentDate, scope, filteredPeriodBudgets, activeWeek, accountsAtDate]);
+
   // --- CALCUL DES RETARDS (OPÉRATIONS EN ATTENTE AVANT LA COUPURE) ---
   const overduePendingRecurringAmount = useMemo(() => {
     return filteredPeriodBudgets
@@ -239,7 +323,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           />
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 md:gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5 md:gap-2">
           {/* SECTION BUDGET PERSONNEL */}
           <PersonalBudgetSummary
             totalPersonalBudgetAmount={totalPersonalBudgetAmount}
@@ -259,6 +343,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             currentDate={currentDate}
             onNavigateToOperations={handleNavigateToOperations}
           />
+          <SavingsJointFlowsCard summary={savingsJointFlowSummary} />
         </div>
       )}
 
