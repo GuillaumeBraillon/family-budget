@@ -4,6 +4,9 @@ import { BudgetProgressBar } from "./BudgetProgressBar";
 import { ClickableAmount } from "../../../ui/atoms/ClickableAmount";
 import { buildOperationsFilters } from "../../../../services/financeUtils";
 import { OperationFilters } from "../../../../types";
+import { useAdminView } from "@/contexts/AdminViewContext";
+import { useAuth } from "@/hooks/useAuth";
+import { useBudget } from "@/hooks/useBudget";
 
 interface SimplifiedFamilyCardProps {
   // Budget variable famille
@@ -44,6 +47,16 @@ export const SimplifiedFamilyCard: React.FC<SimplifiedFamilyCardProps> = ({
   const rowClass = "flex items-center justify-between text-[11px] gap-3";
   const amountClass = "font-black text-slate-600 whitespace-nowrap";
 
+  // Autorisation: rendre l'élément transparent pour les non-admins
+  const { user } = useAuth();
+  const { authorizedUsers } = useBudget();
+  const { viewAsNonAdmin } = useAdminView();
+  const currentEmail = user?.email;
+  const actualIsAdmin = !!authorizedUsers.find((u) => u.email === currentEmail && !!u.isAdmin);
+  const isAdmin = actualIsAdmin && !viewAsNonAdmin;
+
+  if (isAdmin) return null;
+
   return (
     <Card className="rounded-3xl">
       <CardHeader className="p-4 pb-2 border-b-0">
@@ -78,7 +91,7 @@ export const SimplifiedFamilyCard: React.FC<SimplifiedFamilyCardProps> = ({
         {/* SECTION 2 : Récurrentes */}
         {totalRecurringNetAmount > 0 && (
           <div className="flex flex-col gap-2">
-            <span className="text-xs uppercase tracking-widest text-slate-400 font-bold">Récurrentes</span>
+            <span className="text-xs uppercase tracking-widest text-slate-400 font-bold">Opérations en attente</span>
 
             <div className={rowClass}>
               <span className="font-bold text-slate-700 truncate">Pointé</span>
@@ -92,7 +105,15 @@ export const SimplifiedFamilyCard: React.FC<SimplifiedFamilyCardProps> = ({
                 >
                   {consumedRecurring} €
                 </ClickableAmount>
-                <span className="font-black text-slate-600 whitespace-nowrap">/ {budgetRecurring} €</span>
+                <ClickableAmount
+                  date={currentDate}
+                  filters={buildOperationsFilters({ source: "RECURRING" })}
+                  onNavigate={onNavigateToOperations}
+                  as="button"
+                  className={amountClass}
+                >
+                  / {budgetRecurring} €
+                </ClickableAmount>
               </span>
             </div>
 

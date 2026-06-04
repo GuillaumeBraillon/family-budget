@@ -6,6 +6,9 @@ import { ClickableAmount } from "../../../ui/atoms/ClickableAmount";
 import { buildOperationsFilters } from "../../../../services/financeUtils";
 import { BudgetProgressBar } from "../../Dashboard/components/BudgetProgressBar";
 import { Card, CardHeader, CardTitle, CardContent } from "../../../ui/Card";
+import { useAuth } from "@/hooks/useAuth";
+import { useBudget } from "@/hooks/useBudget";
+import { useAdminView } from "@/contexts/AdminViewContext";
 
 interface FamilyVariableBalanceCardProps {
   familyVariableBudgetTotalAmount: number;
@@ -51,6 +54,16 @@ export const FamilyVariableBalanceCard: React.FC<FamilyVariableBalanceCardProps>
   const previousPeriodOverrun = baseBudgetPerPeriod - familyVariableBudgetTotalAmount;
   const subCardClass = "rounded-2xl p-4 border border-slate-200 bg-slate-50 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-start";
   const sectionLabelClass = "text-xs uppercase tracking-widest text-slate-400 font-bold";
+
+  // Autorisation: rendre l'élément transparent pour les non-admins
+  const { user } = useAuth();
+  const { authorizedUsers } = useBudget();
+  const { viewAsNonAdmin } = useAdminView();
+  const currentEmail = user?.email;
+  const actualIsAdmin = !!authorizedUsers.find((u) => u.email === currentEmail && !!u.isAdmin);
+  const isAdmin = actualIsAdmin && !viewAsNonAdmin;
+
+  if (!isAdmin) return null;
 
   // Tooltip détaillé pour les dépenses famille
   const renderFamilySpentTooltip = () => (
@@ -133,9 +146,9 @@ export const FamilyVariableBalanceCard: React.FC<FamilyVariableBalanceCardProps>
         <div className="flex items-center gap-1.5">
           <CardTitle className="text-sm uppercase tracking-widest text-slate-500 font-bold">Budget Famille</CardTitle>
           <MobileTooltip text={renderFamilySpentTooltip()} icon={<Info size={16} />} widthClass="w-72" />
+          {isAdmin && <div className="ml-auto text-xs text-slate-400 font-medium">Admin only</div>}
         </div>
         <span className="text-2xl font-black text-indigo-500">{roundTo0(familyVariableBudgetTotalAmount)} €</span>
-
         {/* Barre de progression du budget famille */}
         <BudgetProgressBar consumed={displayedFamilyAmount} budget={familyVariableBudgetTotalAmount} />
       </CardHeader>

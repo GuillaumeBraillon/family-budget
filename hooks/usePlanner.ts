@@ -142,6 +142,7 @@ export const usePlanner = (
 
   const periodBudgets = useMemo(() => {
     const periods: WeeklyBudget[] = [];
+    const assignedInstanceIds = new Set<string>();
     const type = settings.period_type || "FIXED_DAYS";
     const val = settings.period_value || 7;
 
@@ -214,6 +215,7 @@ export const usePlanner = (
         const paid = paidItems[instanceId];
         const isActuallyPaid = paid ? !paid.isWaiting : false;
         const day = paid ? getDayFromDateStr(paid.paymentDate, conf.dayOfMonth) : conf.dayOfMonth;
+        assignedInstanceIds.add(instanceId);
 
         const baseIsExtra = !!(paid?.isExtra ?? conf.isExtra);
         const beneficiaryAmounts = getValidBeneficiaryAmounts(paid?.beneficiaryAmounts, conf.beneficiaryId, paid ? paid.amount : conf.amount);
@@ -248,6 +250,7 @@ export const usePlanner = (
       const paid = paidItems[instanceId];
       const isActuallyPaid = paid ? !paid.isWaiting : false;
       const day = paid ? getDayFromDateStr(paid.paymentDate, inc.dayOfMonth) : inc.dayOfMonth;
+      assignedInstanceIds.add(instanceId);
 
       const baseIsExtra = !!(paid?.isExtra ?? inc.isExtra);
       const beneficiaryAmounts = getValidBeneficiaryAmounts(paid?.beneficiaryAmounts, inc.beneficiaryId, paid ? paid.amount : inc.amount);
@@ -286,6 +289,7 @@ export const usePlanner = (
       })
       .forEach((vt) => {
         const d = new Date(vt.date).getDate();
+        assignedInstanceIds.add(vt.id);
         assignToPeriod({
           type: vt.type === "INCOME" ? "INCOME" : "EXPENSE",
           source: "VARIABLE",
@@ -314,6 +318,46 @@ export const usePlanner = (
           isExtra: !!vt.isExtra,
           isExtraGlobal: !!vt.isExtra, // Toggle brut de la variable
           comments: vt.comments || "",
+        });
+      });
+
+    // Préserve les opérations récurrentes déjà pointées même si leur config a été supprimée.
+    Object.values(paidItems)
+      .filter((paid) => {
+        if (paid.isVariable) return false;
+        if (assignedInstanceIds.has(paid.instanceId)) return false;
+
+        const paidDate = new Date(paid.paymentDate);
+        return paidDate.getMonth() === currentDate.getMonth() && paidDate.getFullYear() === currentDate.getFullYear();
+      })
+      .forEach((paid) => {
+        const inferredConfigId = paid.instanceId.replace(/-\d{4}-\d{2}$/, "");
+        const fallbackBeneficiaryId = paid.beneficiaryAmounts?.[0]?.beneficiaryId || "";
+
+        assignToPeriod({
+          type: paid.type,
+          source: "RECURRING",
+          configId: inferredConfigId,
+          instanceId: paid.instanceId,
+          day: getDayFromDateStr(paid.paymentDate, 1),
+          label: paid.label,
+          amount: paid.amount,
+          originalAmount: paid.amount,
+          category: paid.category,
+          categoryId: categoryNameToId.get(paid.category),
+          subCategory: paid.subCategory,
+          subCategoryId: paid.subCategory ? subCategoryNameToId.get(paid.subCategory) : undefined,
+          beneficiaryId: fallbackBeneficiaryId,
+          beneficiaryAmounts: getValidBeneficiaryAmounts(paid.beneficiaryAmounts, fallbackBeneficiaryId, paid.amount),
+          accountId: paid.accountId,
+          isPaid: !paid.isWaiting,
+          isWaiting: !!paid.isWaiting,
+          paidDetails: paid,
+          isRefund: !!paid.isRefund,
+          isSalary: !!paid.isSalary,
+          isExtra: !!paid.isExtra,
+          isExtraGlobal: !!paid.isExtra,
+          comments: paid.comments || "",
         });
       });
 

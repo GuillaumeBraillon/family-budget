@@ -7,6 +7,41 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.10.12] - 2026-06-04
+
+Restriction des cartes administrateur et correction des paid_items orphelins dans le planner
+
+Ajouts :
+
+- Ajout des contrôles de visibilité réservés aux administrateurs sur :
+  - FamilyVariableBalanceCard
+  - PendingOperationsCard
+  - SimplifiedFamilyCard
+- Affichage d’un label « Admin only » sur les cartes réservées aux administrateurs.
+- Ajout de tests dans `tests/usePlanner.test.ts` pour :
+  - Vérifier la conservation des `paid_items` orphelins.
+  - Éviter la création de doublons.
+
+Améliorations :
+
+- Refonte de l’affichage de `PendingOperationsCard` et `SimplifiedFamilyCard` :
+  - Regroupement des montants récurrents sur une seule ligne.
+  - Montants rendus cliquables.
+  - Ajustement des libellés et des classes CSS.
+- Simplification du layout de `DashboardView` :
+  - Suppression des conditions `isAdmin` directement dans la vue.
+  - Affichage uniforme des cartes dans une grille commune.
+  - Réorganisation de l’ordre des composants.
+- Amélioration du planner :
+  - Suivi des `assignedInstanceIds`.
+  - Conservation des `paid_items` récurrents dont la configuration d’origine a été supprimée.
+  - Réinjection automatique de ces éléments dans la période courante afin d’éviter leur disparition de l’interface.
+
+Technique :
+
+- Ajustements mineurs de styles et de classes.
+- Ajout des imports nécessaires liés aux hooks et aux contextes.
+
 ## [2.10.11] - 2026-06-01
 
 ### ✨ Dashboard

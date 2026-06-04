@@ -6,6 +6,9 @@ import { buildOperationsFilters } from "../../../../services/financeUtils";
 import { OperationFilters } from "../../../../types";
 import { Card, CardHeader, CardTitle, CardContent } from "../../../ui/Card";
 import { BudgetProgressBar } from "../../Dashboard/components/BudgetProgressBar";
+import { useAuth } from "@/hooks/useAuth";
+import { useAdminView } from "@/contexts/AdminViewContext";
+import { useBudget } from "@/hooks/useBudget";
 
 interface PendingOperationsCardProps {
   totalPendingAmount: number;
@@ -128,8 +131,21 @@ export const PendingOperationsCard: React.FC<PendingOperationsCardProps> = ({
     );
   }, [totalRecurringAmount, paidRecurringAmount, paidRecurringNetAmount, netPending, totalRecurringNetAmount, currentDate, onNavigateToOperations]);
 
+  // Autorisation: rendre l'élément transparent pour les non-admins
+  const { user } = useAuth();
+  const { authorizedUsers } = useBudget();
+  const { viewAsNonAdmin } = useAdminView();
+  const currentEmail = user?.email;
+  const actualIsAdmin = !!authorizedUsers.find((u) => u.email === currentEmail && !!u.isAdmin);
+  const isAdmin = actualIsAdmin && !viewAsNonAdmin;
+
+  if (!isAdmin) return null;
+
   const subCardClass = "rounded-2xl p-4 border border-slate-200 bg-slate-50 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between";
   const sectionLabelClass = "text-xs uppercase tracking-widest text-slate-400 font-bold";
+
+  const rowClass = "flex items-center justify-between text-[11px] gap-3";
+  const amountClass = "font-black text-slate-600 whitespace-nowrap";
 
   // Ensure progress bar values are not negative
   const consumedForBar = Math.abs(Math.round(paidRecurringNetAmount));
@@ -160,6 +176,7 @@ export const PendingOperationsCard: React.FC<PendingOperationsCardProps> = ({
         <div className="flex items-center gap-1.5">
           <CardTitle className="text-sm uppercase tracking-widest text-slate-500 font-bold">Opérations en attente</CardTitle>
           <MobileTooltip text={renderPendingTotalTooltip()} icon={<Info size={16} />} widthClass="w-72" />
+          {isAdmin && <div className="ml-auto text-xs text-slate-400 font-medium">Admin only</div>}
         </div>
         <ClickableAmount
           date={currentDate}
@@ -176,27 +193,28 @@ export const PendingOperationsCard: React.FC<PendingOperationsCardProps> = ({
           <span className="text-xs uppercase tracking-widest text-slate-400 font-bold">Récurrentes</span>
           <MobileTooltip icon={<Info size={13} />} widthClass="w-72" text={recurringTooltip} />
         </div>
-        <div className="grid grid-cols-2 gap-2 mb-2">
-          <ClickableAmount
-            date={currentDate}
-            filters={buildOperationsFilters({ source: "RECURRING", status: "REAL" })}
-            onNavigate={onNavigateToOperations}
-            as="button"
-            className="inline-flex items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"
-          >
-            <span>Payé</span>
-            <span className="font-black">{roundTo0(paidRecurringNetAmount)} €</span>
-          </ClickableAmount>
-          <ClickableAmount
-            date={currentDate}
-            filters={buildOperationsFilters({ source: "RECURRING" })}
-            onNavigate={onNavigateToOperations}
-            as="button"
-            className="inline-flex items-center justify-between rounded-lg border border-indigo-200 bg-indigo-50 px-2.5 py-1.5 text-xs font-semibold text-indigo-700 hover:bg-indigo-100"
-          >
-            <span>Total</span>
-            <span className="font-black">{roundTo0(budgetForBar)} €</span>
-          </ClickableAmount>
+        <div className={rowClass}>
+          <span className="font-bold text-slate-700 truncate">Pointé</span>
+          <span className="flex items-baseline gap-1 whitespace-nowrap">
+            <ClickableAmount
+              date={currentDate}
+              filters={buildOperationsFilters({ source: "RECURRING", status: "REAL" })}
+              onNavigate={onNavigateToOperations}
+              as="button"
+              className={amountClass}
+            >
+              {roundTo0(paidRecurringNetAmount)} €
+            </ClickableAmount>
+            <ClickableAmount
+              date={currentDate}
+              filters={buildOperationsFilters({ source: "RECURRING" })}
+              onNavigate={onNavigateToOperations}
+              as="button"
+              className={amountClass}
+            >
+              / {roundTo0(budgetForBar)} €
+            </ClickableAmount>
+          </span>
         </div>
         <BudgetProgressBar consumed={consumedForBar} budget={budgetForBar} />
       </CardHeader>
