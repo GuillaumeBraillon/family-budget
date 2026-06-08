@@ -1,5 +1,4 @@
 import React from "react";
-import { Info } from "lucide-react";
 import { MobileTooltip } from "../../../ui/MobileTooltip";
 import { OperationFilters } from "../../../../types";
 import { ClickableAmount } from "../../../ui/atoms/ClickableAmount";
@@ -9,6 +8,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "../../../ui/Card";
 import { useAuth } from "@/hooks/useAuth";
 import { useBudget } from "@/hooks/useBudget";
 import { useAdminView } from "@/contexts/AdminViewContext";
+import { Info } from "lucide-react";
 
 interface FamilyVariableBalanceCardProps {
   familyVariableBudgetTotalAmount: number;
@@ -54,6 +54,8 @@ export const FamilyVariableBalanceCard: React.FC<FamilyVariableBalanceCardProps>
   const previousPeriodOverrun = baseBudgetPerPeriod - familyVariableBudgetTotalAmount;
   const subCardClass = "rounded-2xl p-4 border border-slate-200 bg-slate-50 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-start";
   const sectionLabelClass = "text-xs uppercase tracking-widest text-slate-400 font-bold";
+  const rowClass = "flex items-center justify-between text-[11px] gap-3";
+  const amountClass = "font-black text-slate-600 whitespace-nowrap";
 
   // Autorisation: rendre l'élément transparent pour les non-admins
   const { user } = useAuth();
@@ -142,16 +144,37 @@ export const FamilyVariableBalanceCard: React.FC<FamilyVariableBalanceCardProps>
 
   return (
     <Card className="rounded-3xl">
-      <CardHeader className="p-4 pb-0 border-b-0">
+      <CardHeader className="p-4 pb-2 border-b-0">
         <div className="flex items-center gap-1.5">
           <CardTitle className="text-sm uppercase tracking-widest text-slate-500 font-bold">Budget Famille</CardTitle>
           <MobileTooltip text={renderFamilySpentTooltip()} icon={<Info size={16} />} widthClass="w-72" />
           {isAdmin && <div className="ml-auto text-xs text-slate-400 font-medium">Admin only</div>}
         </div>
-        <span className="text-2xl font-black text-indigo-500">{roundTo0(familyVariableBudgetTotalAmount)} €</span>
-        {/* Barre de progression du budget famille */}
-        <BudgetProgressBar consumed={displayedFamilyAmount} budget={familyVariableBudgetTotalAmount} />
       </CardHeader>
+
+      <CardContent className="p-4 pt-2 flex flex-col gap-5">
+        {/* SECTION 1 : Budget variable famille */}
+        <div className="flex flex-col gap-2">
+          <div className={rowClass}>
+            <span className="font-bold text-slate-700 truncate">Dépensé</span>
+            <span className="flex items-baseline gap-1 whitespace-nowrap">
+              <ClickableAmount
+                date={currentDate}
+                filters={buildOperationsFilters({ source: "VARIABLE", status: "REAL", nature: "EXCLUDE", beneficiaryIds: familyBeneficiaryIds })}
+                onNavigate={onNavigateToOperations}
+                as="button"
+                className={amountClass}
+              >
+                {roundTo0(displayedFamilyAmount)} €
+              </ClickableAmount>
+              <span className="font-black text-slate-600 whitespace-nowrap">/ {roundTo0(familyVariableBudgetTotalAmount)} €</span>
+            </span>
+          </div>
+
+          {/* Barre de progression du budget famille */}
+          <BudgetProgressBar consumed={displayedFamilyAmount} budget={familyVariableBudgetTotalAmount} />
+        </div>
+      </CardContent>
 
       <CardContent className="p-4 pt-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">

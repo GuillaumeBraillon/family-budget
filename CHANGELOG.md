@@ -7,6 +7,14 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.10.13] - 2026-06-08
+
+- Refonte de la mise en page et du style de la carte FamilyVariableBalanceCard
+  - Réorganisation de l'interface utilisateur : ajustement du remplissage de l'en-tête (pb-2), déplacement du montant affiché et de la progression du budget dans le contenu de la carte, et ajout d'espacement entre les sections.
+  - Introduction de constantes réutilisables pour les classes de lignes et de montants afin d'assurer une mise en page et une typographie cohérentes.
+  - Remplacement du montant statique par un élément ClickableAmount permettant d'accéder aux opérations filtrées, et déplacement de l'importation des informations pour éviter les doublons.
+  - Ces modifications améliorent l'espacement, l'accessibilité du lien vers le montant et la structure générale de la carte.
+
 ## [2.10.12] - 2026-06-04
 
 Restriction des cartes administrateur et correction des paid_items orphelins dans le planner
