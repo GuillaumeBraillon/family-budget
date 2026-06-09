@@ -20,6 +20,7 @@ import { GlobalMonthlyAnalysis } from "../Dashboard/components/GlobalMonthlyAnal
 import { AnnualIncomeAnalysis } from "./charts/AnnualIncomeAnalysis";
 import { AnnualBeneficiaryAnalysis } from "./charts/AnnualBeneficiaryAnalysis";
 import { Account, Person, ExpenseConfig, IncomeConfig, PaidItemDetails, AppSettings, VariableTransaction, CategoryDef, OperationFilters } from "../../../types";
+import { SavingsByCategoryCard } from "../Dashboard/components/SavingsByCategoryCard";
 
 interface AnalyticsViewProps {
   accounts: Account[];
@@ -66,6 +67,20 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
     <div className="flex flex-col gap-1.5 md:gap-2 m-2">
       {/* HEADER : Situation financière + Sélecteur d'année + navigation vers la config */}
       <MonthSelector year={selectedYear} onYearChange={setSelectedYear} />
+
+      {/* Soldes par catégorie */}
+      <SavingsByCategoryCard
+        accounts={accounts}
+        configs={configs}
+        incomeConfigs={incomeConfigs}
+        paidItems={paidItems}
+        variableTransactions={variableTransactions}
+        categories={categories}
+        year={selectedYear}
+        onYearChange={setSelectedYear}
+        onNavigateToPlanner={onNavigateToPlanner}
+        people={people}
+      />
 
       {/* SECTION MACRO : Trésorerie Globale & Épargne */}
       <GlobalMonthlyAnalysis data={globalMonthlyData} year={selectedYear} onNavigateToPlanner={onNavigateToPlanner} onYearChange={setSelectedYear} />

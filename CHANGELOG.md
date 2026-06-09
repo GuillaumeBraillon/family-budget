@@ -7,6 +7,19 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.10.15] - 2026-06-09
+
+### ✨ Fonctionnalités (Features)
+
+- **SavingsByCategoryCard** : Création et intégration du nouveau composant d'analyse matricielle détaillée (`components/features/Dashboard/components/SavingsByCategoryCard.tsx`).
+  - Calcul dynamique d'une matrice croisée des montants mensuels et annuels par catégorie et sous-catégorie, agrégeant les configurations récurrentes, les configurations de revenus, les éléments payés (`PaidItemDetails`) et les transactions variables.
+  - Extraction sécurisée et typée de l'identifiant bénéficiaire via le premier élément de `beneficiaryAmounts` ou la configuration parente (`paid.beneficiaryAmounts[0].beneficiaryId || config.beneficiaryId`).
+  - Implémentation de filtres avancés (flux, catégories, bénéficiaires, comptes courants), d'options de tri (alphabétique, montants annuels) et d'un sélecteur d'année/mois.
+  - Rendu strictement réservé aux utilisateurs administrateurs (`isAdmin` effectif).
+  - Intégration des montants cliquables (`ClickableAmount`) avec transmission des filtres d'opérations pour une navigation contextuelle fluide vers le planificateur (`onNavigateToPlanner`).
+  - Intégration et injection du composant avec ses props requises dans `DashboardView` et `AnalyticsView`.
+  - Conformité TypeScript strict et éradication complète des types `any` et des assignations mortes ESLint (`no-useless-assignment`).
+
 ## [2.10.14] - 2026-06-09
 
 ### 🔐 Permissions

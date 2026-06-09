@@ -39,6 +39,7 @@ import {
 } from "../../../types";
 import { useAccountBalancesAtDate } from "../../../hooks/accounts/useAccountBalancesAtDate";
 import { SavingsSummaryCard } from "./components/SavingsSummaryCard";
+import { SavingsByCategoryCard } from "./components/SavingsByCategoryCard";
 
 interface DashboardViewProps {
   accounts: Account[];
@@ -327,6 +328,20 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           onNavigateToOperations={handleNavigateToOperations}
         />
       </div>
+
+      {/* Soldes par catégorie */}
+      <SavingsByCategoryCard
+        accounts={accounts}
+        configs={configs}
+        incomeConfigs={incomeConfigs}
+        paidItems={paidItemsFromBudget}
+        variableTransactions={variableTransactions}
+        categories={categories}
+        year={selectedYear}
+        onYearChange={setSelectedYear}
+        onNavigateToPlanner={onNavigateToPlanner}
+        people={people}
+      />
 
       {/* Trésorerie Globale & Épargne */}
       <GlobalMonthlyAnalysis data={globalMonthlyData} year={selectedYear} onNavigateToPlanner={onNavigateToPlanner} onYearChange={setSelectedYear} />
