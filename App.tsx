@@ -266,7 +266,7 @@ const AppContent: React.FC = () => {
           session={session}
           isAdmin={currentUserIsAdmin}
         />
-        <main className="max-w-9xl mx-auto animate-in fade-in duration-500 flex flex-col gap-1.5 md:gap-2 pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
+        <main className="w-full min-w-0 max-w-full mx-auto animate-in fade-in duration-500 flex flex-col gap-1.5 md:gap-2 pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0 overflow-x-hidden">
           <WelcomeEmptyState onStartConfig={() => navigateToConfig("family")} />
         </main>
       </div>
@@ -284,7 +284,7 @@ const AppContent: React.FC = () => {
         isAdmin={currentUserIsAdmin}
       />
 
-      <main className="max-w-9xl mx-auto animate-in fade-in duration-500 flex flex-col gap-1.5 md:gap-2 pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
+      <main className="w-full min-w-0 max-w-full mx-auto animate-in fade-in duration-500 flex flex-col gap-1.5 md:gap-2 pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0 overflow-x-hidden">
         {currentView === "dashboard" && (
           <DashboardView
             accounts={accounts}
@@ -313,6 +313,7 @@ const AppContent: React.FC = () => {
             categories={categories}
             onUpdateAccount={actions.upsertAccount}
             onNavigateToPlanner={navigateToPlannerWithContext}
+            isAdmin={currentUserIsAdmin}
           />
         )}
 

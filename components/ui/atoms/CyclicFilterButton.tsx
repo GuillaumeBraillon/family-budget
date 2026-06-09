@@ -64,7 +64,7 @@ export const CyclicFilterButton: React.FC<CyclicFilterButtonProps> = ({ label, i
   return (
     <button
       onClick={onClick}
-      className={`flex items-center gap-1.5 px-3 h-[30px] rounded-full text-[11px] font-bold transition-all whitespace-nowrap ${color} ${className}`}
+      className={`flex items-center gap-1 px-2.5 h-7 rounded-full text-[10px] font-bold transition-all whitespace-nowrap sm:gap-1.5 sm:px-3 sm:h-[30px] sm:text-[11px] ${color} ${className}`}
     >
       {icon}
       {label}

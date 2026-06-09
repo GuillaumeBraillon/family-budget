@@ -7,6 +7,27 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.10.14] - 2026-06-09
+
+### 🔐 Permissions
+
+- La modification des soldes bancaires est désormais réservée aux administrateurs effectifs.
+- Le mode « voir comme non-admin » désactive aussi l'édition des soldes : les crayons, curseurs d'édition et actions de sauvegarde sont masqués ou bloqués.
+
+### 📱 Responsive
+
+- Réorganisation des filtres et tris pour une lecture plus compacte :
+  - filtres sur une ligne dédiée,
+  - tris sur une deuxième ligne,
+  - alignement cohérent dans les vues Opérations et Transferts.
+- Correction des débordements horizontaux sur mobile via des contraintes de largeur sur le conteneur principal, la navigation de période et le sélecteur de semaines.
+- Ajustement des espacements et tailles de boutons pour garder une interface dense sans casser l'affichage desktop.
+
+### ✅ Validation
+
+- TypeScript strict : vérifié avec succès.
+- Build production : vérifié avec succès.
+
 ## [2.10.13] - 2026-06-08
 
 - Refonte de la mise en page et du style de la carte FamilyVariableBalanceCard

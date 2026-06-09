@@ -13,6 +13,7 @@ import React, { useMemo } from "react";
 import { Account, Person, ExpenseConfig, IncomeConfig, PaidItemDetails, AppSettings, VariableTransaction, CategoryDef, OperationFilters } from "../../../types";
 import { useBalancesData, useBalancesRows } from "../../../hooks/balances";
 import { usePeriodNav } from "../../../contexts/PeriodNavigationContext";
+import { useAdminView } from "../../../contexts/AdminViewContext";
 import { getBeneficiaryStandardShare, isBudgetExcluded } from "../../../services/financeUtils";
 import { computePersonalVariance } from "../../../hooks/balances/varianceUtils";
 import { PeriodNavigationBar } from "../../ui/molecules/PeriodNavigationBar";
@@ -30,6 +31,7 @@ interface BalancesViewProps {
   categories: CategoryDef[];
   onUpdateAccount: (account: Account) => void;
   onNavigateToPlanner: (date: Date, filters?: Partial<OperationFilters>, weekNumber?: number) => void;
+  isAdmin?: boolean;
 }
 
 export const BalancesView: React.FC<BalancesViewProps> = ({
@@ -43,9 +45,12 @@ export const BalancesView: React.FC<BalancesViewProps> = ({
   categories,
   onUpdateAccount,
   onNavigateToPlanner,
+  isAdmin: actualIsAdmin = false,
 }) => {
   // --- NAVIGATION DE PÉRIODE (partagée via context) ---
   const { currentDate, scope, activeWeek } = usePeriodNav();
+  const { viewAsNonAdmin } = useAdminView();
+  const canEditBalances = actualIsAdmin && !viewAsNonAdmin;
 
   // --- HOOKS SPÉCIALISÉS (Logique métier déléguée) ---
 
@@ -76,6 +81,8 @@ export const BalancesView: React.FC<BalancesViewProps> = ({
   // --- HANDLERS ---
 
   const handleUpdateBalance = (id: string, newBalance: number) => {
+    if (!canEditBalances) return;
+
     const account = accounts.find((a) => a.id === id);
     if (account) {
       onUpdateAccount({ ...account, currentBalance: newBalance });
@@ -187,6 +194,7 @@ export const BalancesView: React.FC<BalancesViewProps> = ({
           onNavigateToPlanner={onNavigateToPlanner}
           currentDate={currentDate}
           activeWeek={scope === "PERIOD" ? activeWeek : undefined}
+          canEditBalances={canEditBalances}
         />
       )}
 
@@ -202,6 +210,7 @@ export const BalancesView: React.FC<BalancesViewProps> = ({
         varianceAccounts={personalVarianceAccounts}
         excessAccounts={excessAccounts}
         deficitAccounts={deficitAccounts}
+        canEditBalances={canEditBalances}
       />
 
       <TransferSummaryCard transferSummary={transferSummary} />

@@ -20,7 +20,10 @@ export const WeekSelector: React.FC<WeekSelectorProps> = ({ weeks, activeWeek, o
   const isSearching = !!searchQuery && searchQuery.trim().length > 0;
 
   return (
-    <div className="grid bg-white border border-slate-200 p-1 rounded-xl shadow-sm" style={{ gridTemplateColumns: `repeat(${weeks.length}, minmax(0, 1fr))` }}>
+    <div
+      className="grid w-full min-w-0 bg-white border border-slate-200 p-1 rounded-xl shadow-sm"
+      style={{ gridTemplateColumns: `repeat(${weeks.length}, minmax(0, 1fr))` }}
+    >
       {weeks.map((week) => {
         // En mode recherche, on compte les éléments trouvés (déjà filtrés dans 'weeks')
         // En mode normal, on compte les éléments non payés

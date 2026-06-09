@@ -31,7 +31,7 @@ export const ListSorter: React.FC<ListSorterProps> = ({ options, currentSort, cu
   };
 
   return (
-    <div className={`flex items-center gap-1 sm:gap-2 overflow-x-auto no-scrollbar ${className}`}>
+    <div className={`flex flex-row flex-wrap items-center gap-1 sm:gap-2 ${className}`}>
       <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest hidden sm:inline mr-1">Trier</span>
       {options.map((opt) => {
         const isActive = currentSort === opt.key;
@@ -39,7 +39,7 @@ export const ListSorter: React.FC<ListSorterProps> = ({ options, currentSort, cu
           <button
             key={opt.key}
             onClick={() => handleClick(opt.key)}
-            className={`px-2.5 py-1.5 rounded-lg text-[10px] sm:text-xs font-bold flex items-center gap-1.5 transition-all whitespace-nowrap border ${
+            className={`h-7 px-2 py-1 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition-all whitespace-nowrap border sm:h-auto sm:px-2.5 sm:py-1.5 sm:text-xs sm:gap-1.5 ${
               isActive
                 ? "bg-indigo-50 text-indigo-700 border-indigo-200 shadow-sm"
                 : "bg-white text-slate-500 hover:text-slate-700 border-slate-200 hover:border-slate-300"

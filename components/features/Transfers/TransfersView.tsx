@@ -237,81 +237,83 @@ export const TransfersView: React.FC<TransfersViewProps> = ({
 
       {/* FILTRES COMPACTS */}
       <div className="bg-white p-2 rounded-xl border border-slate-200 shadow-sm">
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Type de compte */}
-          <select
-            value={filters.accountTypeFilter}
-            onChange={(e) => {
-              filters.setAccountTypeFilter(e.target.value as "ALL" | "CHECKING" | "SAVINGS");
-              filters.setSpecificAccountId(null);
-            }}
-            className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
-          >
-            <option value="ALL">Tous les comptes</option>
-            <option value="CHECKING">Comptes Courants</option>
-            <option value="SAVINGS">Comptes Épargne</option>
-          </select>
-
-          {/* Compte spécifique */}
-          {filters.accountTypeFilter !== "ALL" && (
+        <div className="flex flex-col gap-1.5">
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Type de compte */}
             <select
-              value={filters.specificAccountId || ""}
-              onChange={(e) => filters.setSpecificAccountId(e.target.value || null)}
+              value={filters.accountTypeFilter}
+              onChange={(e) => {
+                filters.setAccountTypeFilter(e.target.value as "ALL" | "CHECKING" | "SAVINGS");
+                filters.setSpecificAccountId(null);
+              }}
               className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
             >
-              <option value="">Tous les {filters.accountTypeFilter === "CHECKING" ? "courants" : "d'épargne"}</option>
-              {accounts
-                .filter((a) => a.type === (filters.accountTypeFilter === "CHECKING" ? AccountType.CHECKING : AccountType.SAVINGS))
-                .map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.name}
+              <option value="ALL">Tous les comptes</option>
+              <option value="CHECKING">Comptes Courants</option>
+              <option value="SAVINGS">Comptes Épargne</option>
+            </select>
+
+            {/* Compte spécifique */}
+            {filters.accountTypeFilter !== "ALL" && (
+              <select
+                value={filters.specificAccountId || ""}
+                onChange={(e) => filters.setSpecificAccountId(e.target.value || null)}
+                className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+              >
+                <option value="">Tous les {filters.accountTypeFilter === "CHECKING" ? "courants" : "d'épargne"}</option>
+                {accounts
+                  .filter((a) => a.type === (filters.accountTypeFilter === "CHECKING" ? AccountType.CHECKING : AccountType.SAVINGS))
+                  .map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.name}
+                    </option>
+                  ))}
+              </select>
+            )}
+
+            {/* Filtrer par motif */}
+            {motifs.length > 0 && (
+              <select
+                value={filters.selectedMotif || ""}
+                onChange={(e) => filters.setSelectedMotif(e.target.value || null)}
+                className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+              >
+                <option value="">Tous les motifs</option>
+                {motifs.map((motif) => (
+                  <option key={motif} value={motif}>
+                    {motif}
                   </option>
                 ))}
-            </select>
-          )}
+              </select>
+            )}
 
-          {/* Filtrer par motif */}
-          {motifs.length > 0 && (
-            <select
-              value={filters.selectedMotif || ""}
-              onChange={(e) => filters.setSelectedMotif(e.target.value || null)}
-              className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
-            >
-              <option value="">Tous les motifs</option>
-              {motifs.map((motif) => (
-                <option key={motif} value={motif}>
-                  {motif}
-                </option>
-              ))}
-            </select>
-          )}
-
-          {/* Filtre opérations directes (intérêts) */}
-          {filters.accountTypeFilter === "SAVINGS" && (
-            <button
-              onClick={() => {
-                const cycle: Record<string, "ALL" | "EXCLUDE" | "ONLY"> = {
-                  ALL: "EXCLUDE",
-                  EXCLUDE: "ONLY",
-                  ONLY: "ALL",
-                };
-                filters.setInterestFilter(cycle[filters.interestFilter]);
-              }}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all cursor-pointer ${
-                filters.interestFilter === "ALL"
-                  ? "bg-blue-50 border-blue-200 text-blue-700"
-                  : filters.interestFilter === "ONLY"
-                    ? "bg-emerald-50 border-emerald-200 text-emerald-700"
-                    : "bg-slate-50 border-slate-200 text-slate-600 hover:border-slate-300"
-              }`}
-            >
-              <TrendingUp size={12} />
-              <span>{filters.interestFilter === "ALL" ? "Tous" : filters.interestFilter === "ONLY" ? "Intérêts" : "Sans intérêts"}</span>
-            </button>
-          )}
+            {/* Filtre opérations directes (intérêts) */}
+            {filters.accountTypeFilter === "SAVINGS" && (
+              <button
+                onClick={() => {
+                  const cycle: Record<string, "ALL" | "EXCLUDE" | "ONLY"> = {
+                    ALL: "EXCLUDE",
+                    EXCLUDE: "ONLY",
+                    ONLY: "ALL",
+                  };
+                  filters.setInterestFilter(cycle[filters.interestFilter]);
+                }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all cursor-pointer ${
+                  filters.interestFilter === "ALL"
+                    ? "bg-blue-50 border-blue-200 text-blue-700"
+                    : filters.interestFilter === "ONLY"
+                      ? "bg-emerald-50 border-emerald-200 text-emerald-700"
+                      : "bg-slate-50 border-slate-200 text-slate-600 hover:border-slate-300"
+                }`}
+              >
+                <TrendingUp size={12} />
+                <span>{filters.interestFilter === "ALL" ? "Tous" : filters.interestFilter === "ONLY" ? "Intérêts" : "Sans intérêts"}</span>
+              </button>
+            )}
+          </div>
 
           {/* Tri */}
-          <div className="ml-auto">
+          <div className="flex min-w-0">
             <ListSorter
               options={sortOptions}
               currentSort={sortKey}

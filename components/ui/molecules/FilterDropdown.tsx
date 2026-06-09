@@ -128,7 +128,7 @@ export const FilterDropdown: React.FC<FilterDropdownProps> = ({
         <button
           type="button"
           onClick={toggleOpen}
-          className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-bold transition-all shadow-sm whitespace-nowrap ${
+          className={`flex h-7 items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[11px] font-bold transition-all shadow-sm whitespace-nowrap sm:h-auto sm:gap-2 sm:px-3 sm:py-1.5 sm:text-xs ${
             isActive ? activeBtnClass : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300"
           }`}
         >

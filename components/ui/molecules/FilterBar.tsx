@@ -153,11 +153,11 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   } = useFilterBarLogic(filters, onFilterChange, accounts, people, categories, availableCategoryIds, availableSubCategoryIds, onReset);
 
   return (
-    <div className="flex items-start gap-2">
-      {/* GAUCHE : tous les filtres (primaires + secondaires) */}
+    <div className="flex min-w-0 flex-col gap-1.5">
+      {/* FILTRES : première ligne */}
       <div className="flex flex-col gap-1 flex-1">
         {/* FILTRES PRIMAIRES */}
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
           {!hiddenFilters.includes("source") && <CyclicFilterButton {...sourceConfig} onClick={cycleSource} />}
           {!hiddenFilters.includes("status") && <CyclicFilterButton {...statusConfig} onClick={cycleStatus} />}
           {!hiddenFilters.includes("nature") && <CyclicFilterButton {...extraConfig} onClick={cycleExtra} />}
@@ -188,7 +188,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
           <button
             onClick={clear}
             disabled={isDefaultFilters}
-            className={`h-[30px] px-3 rounded-lg border text-[10px] font-black uppercase transition-colors flex items-center gap-1 ${
+            className={`h-7 px-2.5 rounded-lg border text-[10px] font-black uppercase transition-colors flex items-center gap-1 sm:h-[30px] sm:px-3 ${
               isDefaultFilters
                 ? "border-slate-200 bg-slate-50 text-slate-300 cursor-not-allowed"
                 : "border-rose-100 bg-rose-50 text-rose-500 hover:text-rose-700 hover:border-rose-200 cursor-pointer"
@@ -204,7 +204,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
           {!showAllFilters && (
             <button
               onClick={() => setShowAllFilters(true)}
-              className={`h-[30px] px-3 rounded-lg border text-xs font-bold transition-all flex items-center gap-1.5 ${
+              className={`h-7 px-2.5 rounded-lg border text-[11px] font-bold transition-all flex items-center gap-1 sm:h-[30px] sm:px-3 sm:text-xs sm:gap-1.5 ${
                 hasActiveSecondary ? "bg-indigo-50 text-indigo-600 border-indigo-200" : "bg-white text-slate-500 border-slate-200 hover:border-slate-300"
               }`}
             >
@@ -222,7 +222,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
 
         {/* FILTRES SECONDAIRES (repliables) */}
         {(showAllFilters || hasActiveSecondary) && (
-          <div className="flex flex-wrap items-center gap-2 bg-slate-50 rounded-xl border border-slate-100 animate-in slide-in-from-top-1 duration-200">
+          <div className="flex flex-wrap items-center gap-1.5 bg-slate-50 rounded-xl border border-slate-100 p-1 animate-in slide-in-from-top-1 duration-200 sm:gap-2 sm:p-1.5">
             {showAllFilters && <span className="text-[9px] font-bold text-slate-500 uppercase mr-1">Avancé :</span>}
 
             {!hiddenFilters.includes("beneficiaries") && (showAllFilters || visualBenIds.length < benOptions.length) && (
@@ -262,7 +262,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             {showAllFilters && (
               <button
                 onClick={() => setShowAllFilters(false)}
-                className="h-[30px] px-3 rounded-lg border text-xs font-bold transition-all flex items-center gap-1.5 bg-slate-800 text-white border-slate-800"
+                className="h-7 px-2.5 rounded-lg border text-[11px] font-bold transition-all flex items-center gap-1 bg-slate-800 text-white border-slate-800 sm:h-[30px] sm:px-3 sm:text-xs sm:gap-1.5"
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -275,10 +275,17 @@ export const FilterBar: React.FC<FilterBarProps> = ({
         )}
       </div>
 
-      {/* DROITE : tri (toujours ancré à droite) */}
+      {/* TRI : deuxième ligne */}
       {sortOptions && sortKey && sortOrder && onSortChange && (
-        <div className="flex-shrink-0">
-          <ListSorter options={sortOptions} currentSort={sortKey} currentOrder={sortOrder} onSortChange={onSortChange} canToggleOrder={canToggleOrder} />
+        <div className="flex w-full min-w-0 flex-none">
+          <ListSorter
+            options={sortOptions}
+            currentSort={sortKey}
+            currentOrder={sortOrder}
+            onSortChange={onSortChange}
+            canToggleOrder={canToggleOrder}
+            className="justify-start"
+          />
         </div>
       )}
     </div>

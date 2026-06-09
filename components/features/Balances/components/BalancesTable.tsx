@@ -64,6 +64,7 @@ interface BalancesTableProps {
   varianceAccounts?: AccountVarianceData[];
   excessAccounts?: ExcessAccountData[];
   deficitAccounts?: DeficitAccountData[];
+  canEditBalances?: boolean;
 }
 
 interface BalanceDisplayProps {
@@ -71,6 +72,7 @@ interface BalanceDisplayProps {
   amount: number;
   onClick: (e: React.MouseEvent) => void;
   tooltipContent: React.ReactNode;
+  canEdit?: boolean;
 }
 
 interface VarianceNavProps {
@@ -274,27 +276,31 @@ const VarianceBadge: React.FC<VarianceBadgeProps> = ({
   );
 };
 
-const BalanceDisplay: React.FC<BalanceDisplayProps> = ({ label, amount, onClick, tooltipContent }) => {
+const BalanceDisplay: React.FC<BalanceDisplayProps> = ({ label, amount, onClick, tooltipContent, canEdit = false }) => {
   return (
     <div className="flex items-center gap-1">
       <span className="text-[9px] text-slate-500 font-medium">{label}</span>
       <div
-        className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-slate-100 rounded font-mono font-bold text-xs text-slate-700 hover:bg-slate-200 transition-colors cursor-pointer"
+        className={`inline-flex items-center gap-1 px-1.5 py-0.5 bg-slate-100 rounded font-mono font-bold text-xs text-slate-700 transition-colors ${
+          canEdit ? "hover:bg-slate-200 cursor-pointer" : ""
+        }`}
         onClick={onClick}
-        title="Cliquer pour modifier le solde"
+        title={canEdit ? "Cliquer pour modifier le solde" : undefined}
       >
         {amount.toFixed(2)} €
-        <button
-          type="button"
-          className="p-0.5 bg-slate-200 rounded-full text-slate-400 hover:text-indigo-600 transition-colors"
-          aria-label="Modifier le solde"
-          onClick={(e) => {
-            e.stopPropagation();
-            onClick(e);
-          }}
-        >
-          <Pencil size={10} />
-        </button>
+        {canEdit && (
+          <button
+            type="button"
+            className="p-0.5 bg-slate-200 rounded-full text-slate-400 hover:text-indigo-600 transition-colors"
+            aria-label="Modifier le solde"
+            onClick={(e) => {
+              e.stopPropagation();
+              onClick(e);
+            }}
+          >
+            <Pencil size={10} />
+          </button>
+        )}
       </div>
       <MobileTooltip
         text={tooltipContent}
@@ -318,6 +324,7 @@ export const BalancesTable: React.FC<BalancesTableProps> = ({
   varianceAccounts = [],
   excessAccounts = [],
   deficitAccounts = [],
+  canEditBalances = false,
 }) => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [tempBalance, setTempBalance] = useState<string>("");
@@ -335,6 +342,8 @@ export const BalancesTable: React.FC<BalancesTableProps> = ({
 
   const startEdit = (id: string, balance: number, e: React.MouseEvent, mode: "WITH_PENDING" | "WITHOUT_PENDING" = "WITH_PENDING") => {
     e.stopPropagation();
+    if (!canEditBalances) return;
+
     setEditingId(id);
     setEditMode(mode);
     setTempBalance(balance.toFixed(2));
@@ -348,6 +357,8 @@ export const BalancesTable: React.FC<BalancesTableProps> = ({
 
   const saveEdit = (id: string, e: React.MouseEvent | React.KeyboardEvent, pendingAmount?: number) => {
     e.stopPropagation();
+    if (!canEditBalances) return;
+
     const editedValue = parseFloat(tempBalance);
     if (!isNaN(editedValue)) {
       const finalBalance = editMode === "WITHOUT_PENDING" && pendingAmount !== undefined ? editedValue - pendingAmount : editedValue;
@@ -388,7 +399,9 @@ export const BalancesTable: React.FC<BalancesTableProps> = ({
                         <span className="text-slate-700">Prend en compte les opérations en attente</span>
                       </div>
 
-                      <p className="text-slate-600 text-[9px] italic mt-1 pt-1 border-t border-slate-200">Cliquez sur le solde pour le modifier.</p>
+                      {canEditBalances && (
+                        <p className="text-slate-600 text-[9px] italic mt-1 pt-1 border-t border-slate-200">Cliquez sur le solde pour le modifier.</p>
+                      )}
                     </div>
                   }
                   iconClassName="text-indigo-500 hover:text-indigo-700 transition-colors"
@@ -473,7 +486,7 @@ export const BalancesTable: React.FC<BalancesTableProps> = ({
                     </div>
                   </td>
                   <td
-                    className="px-4 py-2.5 text-right cursor-pointer"
+                    className={`px-4 py-2.5 text-right ${canEditBalances ? "cursor-pointer" : ""}`}
                     onClick={(e) => {
                       if (editingId !== row.id) startEdit(row.id, row.balance, e, "WITH_PENDING");
                     }}
@@ -525,6 +538,7 @@ export const BalancesTable: React.FC<BalancesTableProps> = ({
                           onClick={(e) => {
                             if (editingId !== row.id) startEdit(row.id, row.balance, e, "WITH_PENDING");
                           }}
+                          canEdit={canEditBalances}
                           tooltipContent={
                             <div className="space-y-1 text-[10px]">
                               <ClickableAmount
@@ -578,6 +592,7 @@ export const BalancesTable: React.FC<BalancesTableProps> = ({
                               e.stopPropagation();
                               startEdit(row.id, row.balance + (row.pendingAmount ?? 0), e, "WITHOUT_PENDING");
                             }}
+                            canEdit={canEditBalances}
                             tooltipContent={
                               <div className="space-y-1 text-[10px]">
                                 <ClickableAmount

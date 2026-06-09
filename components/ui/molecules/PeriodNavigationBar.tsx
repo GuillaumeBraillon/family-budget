@@ -31,13 +31,15 @@ export const PeriodNavigationBar: React.FC<PeriodNavigationBarProps> = ({ filter
   const { currentDate, scope, activeWeek, setScope, setActiveWeek, handlePrevMonth, handleNextMonth } = usePeriodNav();
 
   return (
-    <div className="flex flex-row gap-1.5 md:gap-2 items-center flex-wrap">
+    <div className="flex min-w-0 flex-row gap-1.5 md:gap-2 items-center flex-wrap">
       <MonthNavigator date={currentDate} onPrev={handlePrevMonth} onNext={handleNextMonth} />
       {showScope && <ScopeSelector scope={scope} onScopeChange={setScope} />}
       {showScope && scope === "PERIOD" && filteredPeriodBudgets.length > 0 && (
-        <WeekSelector weeks={filteredPeriodBudgets} activeWeek={activeWeek} onSelect={setActiveWeek} searchQuery="" showBadge={false} />
+        <div className="w-full min-w-0 md:w-auto">
+          <WeekSelector weeks={filteredPeriodBudgets} activeWeek={activeWeek} onSelect={setActiveWeek} searchQuery="" showBadge={false} />
+        </div>
       )}
-      {children && <div className="ml-auto">{children}</div>}
+      {children && <div className="w-full min-w-0 md:ml-auto md:w-auto">{children}</div>}
     </div>
   );
 };
