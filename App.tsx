@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { Loader2, AlertCircle } from "lucide-react";
 import { useBudget } from "./hooks/useBudget";
 import { useAuth } from "./hooks/useAuth";
 import { useAuthorization } from "./hooks/useAuthorization";
-import { useConfigurationUI, ConfigTab } from "./hooks/useConfigurationUI";
+import { useConfigurationUI } from "./hooks/useConfigurationUI";
+import { useAppNavigation } from "./hooks/useAppNavigation";
+import { useAutoImport } from "./hooks/useAutoImport";
 import { ErrorProvider, useError } from "./contexts/ErrorContext";
 import { AdminViewProvider } from "./contexts/AdminViewContext";
 import { PeriodNavigationProvider } from "./contexts/PeriodNavigationContext";
@@ -19,11 +21,7 @@ import { LoginView } from "./components/features/Auth/LoginView";
 import { UnauthorizedView } from "./components/features/Auth/UnauthorizedView";
 import { WelcomeEmptyState } from "./components/features/Dashboard/components/WelcomeEmptyState";
 import { isSupabaseConfigured } from "./services/supabase";
-import { OperationFilters } from "./types";
 import { AnalyticsView } from "./components/features/Analytics/AnalyticsView";
-import { ViewState, VIEW_ORDER } from "./constants/navigation";
-
-const VIEWS: ViewState[] = VIEW_ORDER;
 
 const AppContent: React.FC = () => {
   const { currentError, clearError } = useError();
@@ -34,11 +32,9 @@ const AppContent: React.FC = () => {
   // 2. Autorisation (whitelist)
   const { isAuthorized, loading: authzLoading } = useAuthorization(session);
 
-  // 3. État UI
-  const [currentView, setCurrentView] = useState<ViewState>("dashboard");
-  const [plannerContext, setPlannerContext] = useState<{ date: Date; weekNumber?: number; filters?: Partial<OperationFilters> } | null>(null);
-  const [pendingLabelImports, setPendingLabelImports] = useState<{ cb: boolean; vir: boolean }>({ cb: false, vir: false });
-  const [autoImportToast, setAutoImportToast] = useState<{ type: "success" | "error" | "info"; message: string } | null>(null);
+  // 3. UI State & Navigation
+  const { activeTab, setActiveTab } = useConfigurationUI();
+  const { currentView, setCurrentView, plannerContext, navigateToConfig, navigateToPlannerWithContext, touchHandlers } = useAppNavigation(setActiveTab);
 
   // 4. Données Budget (ne chargent que si authentifié ET autorisé)
   const {
@@ -59,6 +55,9 @@ const AppContent: React.FC = () => {
     actions,
   } = useBudget();
 
+  // 5. Imports automatiques
+  const { setPendingLabelImports, autoImportToast, setAutoImportToast } = useAutoImport(currentView, actions);
+
   const currentUserIsAdmin = React.useMemo(() => {
     try {
       const email = session?.user?.email;
@@ -68,115 +67,6 @@ const AppContent: React.FC = () => {
       return false;
     }
   }, [authorizedUsers, session]);
-
-  const { activeTab, setActiveTab } = useConfigurationUI();
-
-  // --- LOGIQUE SWIPE ---
-  const [touchStart, setTouchStart] = useState<{ x: number; y: number } | null>(null);
-  const [touchEnd, setTouchEnd] = useState<{ x: number; y: number } | null>(null);
-
-  const onTouchStart = (e: React.TouchEvent) => {
-    setTouchEnd(null);
-    const target = e.target as HTMLElement;
-    let isScrollable = false;
-    let el = target;
-    while (el && el !== e.currentTarget && el !== document.body) {
-      if (el.scrollWidth > el.clientWidth) {
-        const style = window.getComputedStyle(el);
-        if (["auto", "scroll"].includes(style.overflowX) || ["auto", "scroll"].includes(style.overflow)) {
-          isScrollable = true;
-          break;
-        }
-      }
-      el = el.parentElement as HTMLElement;
-    }
-    if (!isScrollable) {
-      setTouchStart({ x: e.targetTouches[0].clientX, y: e.targetTouches[0].clientY });
-    } else {
-      setTouchStart(null);
-    }
-  };
-
-  const onTouchMove = (e: React.TouchEvent) => {
-    setTouchEnd({ x: e.targetTouches[0].clientX, y: e.targetTouches[0].clientY });
-  };
-
-  const onTouchEnd = () => {
-    if (!touchStart || !touchEnd) return;
-    const xDist = touchStart.x - touchEnd.x;
-    const yDist = touchStart.y - touchEnd.y;
-    if (Math.abs(yDist) > Math.abs(xDist)) return;
-    const minSwipeDistance = 50;
-    const isLeftSwipe = xDist > minSwipeDistance;
-    const isRightSwipe = xDist < -minSwipeDistance;
-    if (isLeftSwipe || isRightSwipe) {
-      const currentIndex = VIEWS.indexOf(currentView);
-      if (isLeftSwipe && currentIndex < VIEWS.length - 1) {
-        setCurrentView(VIEWS[currentIndex + 1]);
-      }
-      if (isRightSwipe && currentIndex > 0) {
-        setCurrentView(VIEWS[currentIndex - 1]);
-      }
-    }
-  };
-  // -------------------
-
-  // Les données sont chargées UNE FOIS dans useBudget au montage initial
-
-  const navigateToConfig = (tab: ConfigTab) => {
-    setActiveTab(tab);
-    setCurrentView("config");
-  };
-
-  const navigateToPlannerWithContext = (date: Date, filters?: Partial<OperationFilters>, weekNumber?: number) => {
-    setPlannerContext({ date, filters, weekNumber });
-    setCurrentView("planner");
-  };
-
-  // Effacer le contexte de navigation quand on quitte Operations
-  useEffect(() => {
-    if (currentView !== "planner" && plannerContext !== null) {
-      // Use setTimeout to avoid setState during render cascade
-      const timer = setTimeout(() => setPlannerContext(null), 0);
-      return () => clearTimeout(timer);
-    }
-  }, [currentView, plannerContext]);
-
-  useEffect(() => {
-    if (currentView === "planner") return;
-    if (!pendingLabelImports.cb && !pendingLabelImports.vir) return;
-
-    const importsToRun = pendingLabelImports;
-
-    const runAutoImportOnLeavePlanner = async () => {
-      setPendingLabelImports({ cb: false, vir: false });
-      const cbResult = importsToRun.cb ? await actions.importLabels() : null;
-      const virResult = importsToRun.vir ? await actions.importVirLabels() : null;
-
-      const cbError = !!(cbResult && (cbResult as { error?: unknown }).error);
-      const virError = !!(virResult && (virResult as { error?: unknown }).error);
-
-      if (cbError || virError) {
-        setAutoImportToast({ type: "error", message: "Import auto des libellés: erreur." });
-        return;
-      }
-
-      const cbCount = cbResult && typeof (cbResult as { count?: unknown }).count === "number" ? ((cbResult as { count: number }).count ?? 0) : 0;
-      const virCount = virResult && typeof (virResult as { count?: unknown }).count === "number" ? ((virResult as { count: number }).count ?? 0) : 0;
-      const totalCount = cbCount + virCount;
-
-      if (totalCount > 0) {
-        setAutoImportToast({
-          type: "success",
-          message: `${totalCount} libellé${totalCount > 1 ? "s" : ""} importé${totalCount > 1 ? "s" : ""} automatiquement.`,
-        });
-      } else {
-        setAutoImportToast({ type: "info", message: "Import auto: aucun nouveau libellé." });
-      }
-    };
-
-    void runAutoImportOnLeavePlanner();
-  }, [currentView, pendingLabelImports, actions]);
 
   // --- RENDU CONDITIONNEL ---
 
@@ -274,7 +164,7 @@ const AppContent: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans text-slate-900" onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
+    <div className="min-h-screen bg-slate-50 font-sans text-slate-900" {...touchHandlers}>
       <Header
         currentView={currentView}
         onViewChange={setCurrentView}

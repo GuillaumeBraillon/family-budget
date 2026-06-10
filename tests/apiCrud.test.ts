@@ -95,7 +95,7 @@ describe("apiCrud - RPC upsert_paid_item_atomic", () => {
       amount: -12.71,
       paymentDate: "2026-02-20",
       accountId: "3",
-      beneficiaryAmounts: [{ beneficiaryId: "p_persona", amount: 12.71 }],
+      beneficiaryAmounts: [{ beneficiaryId: "p_stan", amount: 12.71 }],
       label: "CB Utile",
       category: "Achats & Shopping",
       subCategory: "Restaurants",

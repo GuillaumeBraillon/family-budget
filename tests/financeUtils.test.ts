@@ -269,12 +269,12 @@ describe("isBudgetExcluded", () => {
 
 describe("getFamilyBeneficiaryIds", () => {
   it('retourne l\'ID de la personne nommée "Famille"', () => {
-    const people = [makePerson("p1", "Guillaume", false, 1), makePerson("p-fam", "Famille", false, 2)];
+    const people = [makePerson("p1", "Picsou", false, 1), makePerson("p-fam", "Famille", false, 2)];
     expect(getFamilyBeneficiaryIds(people)).toEqual(["p-fam"]);
   });
 
   it("inclut les enfants dans le groupe Famille", () => {
-    const people = [makePerson("p1", "Guillaume", false, 1), makePerson("c1", "Alice", true, 3), makePerson("c2", "Bob", true, 4)];
+    const people = [makePerson("p1", "Picsou", false, 1), makePerson("c1", "Alice", true, 3), makePerson("c2", "Bob", true, 4)];
     const result = getFamilyBeneficiaryIds(people);
     expect(result).toContain("c1");
     expect(result).toContain("c2");
@@ -290,7 +290,7 @@ describe("getFamilyBeneficiaryIds", () => {
   });
 
   it("fallback sur le premier adulte par displayOrder si aucun groupe Famille", () => {
-    const people = [makePerson("p2", "Camille", false, 2), makePerson("p1", "Guillaume", false, 1)];
+    const people = [makePerson("p2", "Cartman", false, 2), makePerson("p1", "Picsou", false, 1)];
     const result = getFamilyBeneficiaryIds(people);
     expect(result).toEqual(["p1"]); // displayOrder 1 en premier
   });

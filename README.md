@@ -2,12 +2,15 @@
 
 Application web complète de gestion financière pour couples et familles, développée avec React et TypeScript, hébergée sur Vercel avec base de données Supabase.
 
+![Aperçu Desktop](public/screencapture-desktop-non-admin.png)
+
 ---
 
 ## 📑 Table des matières
 
 - [Présentation](#-présentation)
 - [Fonctionnalités complètes](#-fonctionnalités-complètes)
+- [Aperçu Mobile](#-aperçu-mobile)
 - [Démarrage rapide](#-démarrage-rapide)
 - [Configuration](#️-configuration)
 - [Stack technique](#-stack-technique)
@@ -51,6 +54,16 @@ Application web complète de gestion financière pour couples et familles, déve
 - Soldes par compte (courant / épargne)
 - Mouvements mensuels d'épargne
 - Tendances des dépenses
+
+---
+
+### 📱 Aperçu Mobile
+
+L'application est entièrement responsive et conçue comme une PWA (Progressive Web App).
+
+<p align="center">
+  <img src="public/screencapture-mobile.png" width="300" alt="Aperçu Mobile">
+</p>
 
 ---
 

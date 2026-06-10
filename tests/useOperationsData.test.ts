@@ -31,7 +31,7 @@ const accounts: Account[] = [
     id: "acc-1",
     name: "Compte courant",
     type: AccountType.CHECKING,
-    ownerId: "p-guillaume",
+    ownerId: "p-picsou",
     currentBalance: 0,
     isJoint: false,
   },
@@ -51,10 +51,10 @@ const createItem = (): PlannedItem => ({
   isPaid: true,
   isWaiting: false,
   category: "Courses",
-  beneficiaryId: "p-guillaume",
+  beneficiaryId: "p-picsou",
   beneficiaryAmounts: [
-    { beneficiaryId: "p-guillaume", amount: 8 },
-    { beneficiaryId: "p_persona", amount: 4.1 },
+    { beneficiaryId: "p-picsou", amount: 8 },
+    { beneficiaryId: "p_stan", amount: 4.1 },
   ],
   isExtra: false,
   isExtraGlobal: false,
@@ -78,7 +78,7 @@ describe("useOperationsData - ventilation bénéficiaires", () => {
   });
 
   it("calcule les quickStats en fonction de la part du bénéficiaire filtré", () => {
-    const { result: guillaumeResult } = renderHook(() =>
+    const { result: picsouResult } = renderHook(() =>
       useOperationsData({
         accounts,
         configs: [],
@@ -89,13 +89,13 @@ describe("useOperationsData - ventilation bénéficiaires", () => {
         searchQuery: "",
         settings: {} as AppSettings,
         categories,
-        filters: { ...defaultFilters, beneficiaryIds: ["p-guillaume"] },
+        filters: { ...defaultFilters, beneficiaryIds: ["p-picsou"] },
         scope: "MONTH",
         activeWeek: 1,
       })
     );
 
-    const { result: personaResult } = renderHook(() =>
+    const { result: stanResult } = renderHook(() =>
       useOperationsData({
         accounts,
         configs: [],
@@ -106,13 +106,13 @@ describe("useOperationsData - ventilation bénéficiaires", () => {
         searchQuery: "",
         settings: {} as AppSettings,
         categories,
-        filters: { ...defaultFilters, beneficiaryIds: ["p_persona"] },
+        filters: { ...defaultFilters, beneficiaryIds: ["p_stan"] },
         scope: "MONTH",
         activeWeek: 1,
       })
     );
 
-    expect(guillaumeResult.current.quickStats.expenses.real).toBeCloseTo(8, 5);
-    expect(personaResult.current.quickStats.expenses.real).toBeCloseTo(4.1, 5);
+    expect(picsouResult.current.quickStats.expenses.real).toBeCloseTo(8, 5);
+    expect(stanResult.current.quickStats.expenses.real).toBeCloseTo(4.1, 5);
   });
 });

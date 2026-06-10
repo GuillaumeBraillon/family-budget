@@ -7,6 +7,15 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.11.0] - 2026-06-10
+
+### 🚀 Portfolio Release & Refactoring
+
+- **Audit & Anonymisation** : Audit technique complet pour publication en portfolio. Remplacement des données nominatives par une thématique Geek (Picsou, Cartman, Stan Marsh, etc.) dans les tests et le changelog.
+- **Refactoring architectural** : Allégement significatif de `App.tsx`. Extraction de la navigation (gestures) dans `hooks/useAppNavigation.ts` et du mécanisme d'auto-import dans `hooks/useAutoImport.ts`.
+- **Nettoyage Dépendances** : Éradication des packages inutilisés (`framer-motion`, etc.), normalisation des versions pour React 19 et passage à `vitest` pour l'ensemble de la suite de tests.
+- **Documentation** : Mise à jour du `README.md` avec de nouveaux visuels et une présentation structurée du projet.
+
 ## [2.10.15] - 2026-06-09
 
 ### ✨ Fonctionnalités (Features)
@@ -492,7 +501,7 @@ Technique :
 
 ### 🧪 Tests
 
-- Ajout d'un test unitaire dédié `tests/useOperationsData.test.ts` pour verrouiller la ventilation bénéficiaires (ex: opération 12,10€ ventilée 8€ / 4,10€ → `quickStats` renvoie bien 8€ pour Guillaume et 4,10€ pour Person A quand filtré).
+- Ajout d'un test unitaire dédié `tests/useOperationsData.test.ts` pour verrouiller la ventilation bénéficiaires (ex: opération 12,10€ ventilée 8€ / 4,10€ → `quickStats` renvoie bien 8€ pour Picsou et 4,10€ pour Stan quand filtré).
 
 ### 🧰 Divers
 
@@ -2700,11 +2709,11 @@ Correction majeure du système de gestion des filtres dans la vue Opérations po
 
 ```
 // Utilisateur configure :
-Flux: Dépenses, Source: Variables, Bénéficiaire: Guillaume
+Flux: Dépenses, Source: Variables, Bénéficiaire: Picsou
 
 // Navigation vers Balances, clic "En attente Standard"
 → Applique SEULEMENT : status="WAITING", extra="EXCLUDE", accountIds=[...]
-→ PRÉSERVE : flux="EXPENSE", source="VARIABLE", beneficiaryIds=["Guillaume"]
+→ PRÉSERVE : flux="EXPENSE", source="VARIABLE", beneficiaryIds=["Picsou"]
 
 // Retour sur Opérations → Filtres restaurés depuis localStorage
 ```
