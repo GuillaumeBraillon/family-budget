@@ -555,7 +555,7 @@ await actions.upsertAccount(newAccount);
 
 ## 🤖 Historique de conception
 
-**Phase 1 : Développement initial (décembre 2024 - 6 janvier 2026)**
+**Phase 1 : Développement initial (décembre 2025 - 6 janvier 2026)**
 
 Conception et aide au développement réalisées via l'interface **Google AI Studio**.
 
