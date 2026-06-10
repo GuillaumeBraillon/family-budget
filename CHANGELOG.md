@@ -7,6 +7,12 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.12.0] - 2026-06-10
+
+### 🤖 CI/CD Automation
+
+- **Auto-Release Pipeline** : Automatisation complète du flux de déploiement. Le commit déclenche désormais automatiquement la synchronisation de `package.json`, la création du tag Git local, le push vers GitHub, et la génération d'une Release GitHub avec les notes extraites du changelog.
+
 ## [2.11.0] - 2026-06-10
 
 ### 🚀 Portfolio Release & Refactoring

@@ -1,0 +1,34 @@
+name: CD - Auto Release
+
+on:
+  push:
+    tags:
+      - "v*" # S'exécute uniquement lors du push d'un tag versionné
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract Release Notes
+        id: extract_notes
+        run: |
+          # Extrait la section du CHANGELOG correspondant au tag poussé
+          VERSION=${GITHUB_REF#refs/tags/v}
+          sed -n "/## \[$VERSION\]/,/## \[/p" CHANGELOG.md | sed '1d;$d' > release_notes.md
+          echo "Notes extraites pour v$VERSION"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          body_path: release_notes.md
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
