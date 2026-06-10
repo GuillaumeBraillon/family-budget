@@ -377,6 +377,22 @@ Ce fichier inclut désormais les évolutions récentes (tri manuel déterministe
 
 ---
 
+## 🤖 AI Readiness Score
+
+**Score global : 8/10**
+
+### 📊 Détail de l’évaluation
+
+- 🧱 Structuration des données (LLM-ready) : 8.5/10
+- 🧩 Séparation des responsabilités : 9/10
+- 🔌 Compatibilité API / tool calling : 7.5/10
+- 🤖 Intégration IA native actuelle : 6/10
+- 📚 Extensibilité vers RAG / agents : 8/10
+
+### 🎯 Conclusion
+
+Architecture solide et déjà adaptée à une intégration d’une couche IA (LLM / RAG / agents). Le projet est un bon candidat pour évolution vers assistant financier intelligent.
+
 ## 🏗️ Architecture
 
 ### Atomic Design
@@ -547,10 +563,12 @@ Conception et aide au développement réalisées via l'interface **Google AI Stu
 
 À partir du commit **"feat(auth): Implement user authentication and login flow"**, migration de l'environnement de travail vers **VS Code**, utilisant :
 
-- **GitHub Copilot** (assistance en ligne)
-- **Claude 3.5 Sonnet** en mode Agent/Édition
+- **GitHub Copilot Pro (VS Code)** : assistance principale au développement, avec sélection de modèles selon les besoins et les coûts : GPT-5.3-Codex, Claude Sonnet 4.6, Gemini 3 Flash, GPT-5.4, GPT-5.4 mini, GPT-5 mini
+- **OpenAI Codex (VS Code)** : utilisation avec GPT-5.5 via forfait gratuit pour génération et refactorisation de code
+- **Claude (Anthropic)** : utilisation de Sonnet 4.6 via forfait gratuit pour raisonnement, architecture et refactorisation complexe
+- **Gemini (Google)** : utilisation de Gemini 3.5 Flash et 3.1 Pro via forfait gratuit pour assistance alternative et vérification de solutions
 
-Cette approche hybride combine la puissance de Copilot pour les suggestions contextuelles et de Claude pour les refactorisations complexes et l'architecture.
+Cette approche hybride combine plusieurs environnements IA afin d’optimiser la qualité du code, la rapidité de développement et la diversité des suggestions.
 
 ---
 
