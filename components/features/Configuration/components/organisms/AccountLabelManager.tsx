@@ -357,20 +357,20 @@ export const AccountLabelManager: React.FC<AccountLabelManagerProps> = ({
             <div className="flex gap-2">
               {isExpenseMode && onImportLabels && (
                 <button
-                  onClick={() => runImport(onImportLabels!, "CB")}
+                  onClick={() => runImport(onImportLabels!, "Dépenses")}
                   className="text-xs font-medium text-slate-500 hover:text-indigo-600 flex items-center gap-1.5 transition-colors bg-white px-3 py-1 rounded-lg border border-slate-200 shadow-sm hover:border-indigo-200 active:scale-95"
-                  title="Importer les libellés 'CB %' depuis l'historique"
+                  title="Importer tous les nouveaux libellés depuis l'historique des dépenses"
                 >
-                  <DownloadCloud size={14} /> Import (CB)
+                  <DownloadCloud size={14} /> Import (Tout)
                 </button>
               )}
               {!isExpenseMode && onImportVirLabels && (
                 <button
-                  onClick={() => runImport(onImportVirLabels!, "VIR")}
+                  onClick={() => runImport(onImportVirLabels!, "Revenus")}
                   className="text-xs font-medium text-slate-500 hover:text-indigo-600 flex items-center gap-1.5 transition-colors bg-white px-3 py-1 rounded-lg border border-slate-200 shadow-sm hover:border-indigo-200 active:scale-95"
-                  title="Importer les libellés 'VIR %' depuis l'historique"
+                  title="Importer tous les nouveaux libellés depuis l'historique des revenus"
                 >
-                  <DownloadCloud size={14} /> Import (VIR)
+                  <DownloadCloud size={14} /> Import (Tout)
                 </button>
               )}
             </div>

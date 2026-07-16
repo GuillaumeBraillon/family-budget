@@ -7,6 +7,14 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.12.2] - 2026-07-16
+
+### ✨ Libellés & Importation
+
+- **Import Global** : Suppression de la restriction d'importation aux sources "CB" ou "VIR". Désormais, tous les nouveaux libellés sont importés depuis l'historique complet (Dépenses et Revenus).
+- **Nettoyage Automatique** : Ajout d'un "trim" systématique sur les libellés lors de l'import et de la vérification des doublons pour éviter la duplication des libellés avec des espaces en fin de chaîne.
+- **Refactoring sémantique** : Migration interne des indicateurs d'import `cb/vir` vers `expense/income` dans `useAutoImport` et l'interface utilisateur.
+
 ## [2.12.1] - 2026-06-10
 
 ### 🤖 CI/CD Automation

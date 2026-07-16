@@ -15,35 +15,35 @@ interface AutoImportActions {
  * Hook gérant l'import automatique des libellés lors de la navigation.
  */
 export const useAutoImport = (currentView: ViewState, actions: AutoImportActions) => {
-  const [pendingLabelImports, setPendingLabelImports] = useState<{ cb: boolean; vir: boolean }>({ cb: false, vir: false });
+  const [pendingLabelImports, setPendingLabelImports] = useState<{ expense: boolean; income: boolean }>({ expense: false, income: false });
   const [autoImportToast, setAutoImportToast] = useState<{ type: "success" | "error" | "info"; message: string } | null>(null);
 
   useEffect(() => {
     // Si on n'est plus dans le planner et qu'il y a des imports en attente
     if (currentView === "planner") return;
-    if (!pendingLabelImports.cb && !pendingLabelImports.vir) return;
+    if (!pendingLabelImports.expense && !pendingLabelImports.income) return;
 
     const importsToRun = pendingLabelImports;
 
     const runAutoImportOnLeavePlanner = async () => {
-      setPendingLabelImports({ cb: false, vir: false });
+      setPendingLabelImports({ expense: false, income: false });
 
-      const [cbResult, virResult] = await Promise.all([
-        importsToRun.cb ? actions.importLabels() : Promise.resolve<AutoImportResult>({ count: 0 }),
-        importsToRun.vir ? actions.importVirLabels() : Promise.resolve<AutoImportResult>({ count: 0 }),
+      const [expenseResult, incomeResult] = await Promise.all([
+        importsToRun.expense ? actions.importLabels() : Promise.resolve<AutoImportResult>({ count: 0 }),
+        importsToRun.income ? actions.importVirLabels() : Promise.resolve<AutoImportResult>({ count: 0 }),
       ]);
 
-      const cbError = !!cbResult?.error;
-      const virError = !!virResult?.error;
+      const expenseError = !!expenseResult?.error;
+      const incomeError = !!incomeResult?.error;
 
-      if (cbError || virError) {
+      if (expenseError || incomeError) {
         setAutoImportToast({ type: "error", message: "Import auto des libellés: erreur." });
         return;
       }
 
-      const cbCount = cbResult?.count ?? 0;
-      const virCount = virResult?.count ?? 0;
-      const totalCount = cbCount + virCount;
+      const expenseCount = expenseResult?.count ?? 0;
+      const incomeCount = incomeResult?.count ?? 0;
+      const totalCount = expenseCount + incomeCount;
 
       if (totalCount > 0) {
         setAutoImportToast({

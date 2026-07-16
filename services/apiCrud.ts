@@ -209,16 +209,15 @@ export const apiUpsertLabel = async (label: SavedLabel) =>
 export const apiDeleteLabel = async (id: string) => supabase.from("saved_labels").delete().eq("id", id);
 
 export const apiImportLabels = async () => {
-  // Récupérer tous les paid_items CB avec leurs catégories ET comptes
-  const { data: rawItems, error: fetchError } = await supabase
+  // Récupérer tous les paid_items de type EXPENSE
+  const { data: items, error: fetchError } = await supabase
     .from("paid_items")
     .select("instance_id, label, category, sub_category, account_id")
-    .ilike("label", "CB%");
+    .eq("type", "EXPENSE");
 
   if (fetchError) return { error: fetchError };
 
-  const items = (rawItems || []).filter((item) => (item.label || "").toUpperCase().startsWith("CB "));
-  const instanceIds = Array.from(new Set(items.map((item) => item.instance_id).filter(Boolean)));
+  const instanceIds = Array.from(new Set((items || []).map((item) => item.instance_id).filter(Boolean)));
 
   let primaryBeneficiaryByInstance: Record<string, string> = {};
   if (instanceIds.length > 0) {
@@ -255,7 +254,7 @@ export const apiImportLabels = async () => {
   const { data: subCategories, error: subCatError } = await supabase.from("sub_categories").select("id, name, category_id");
   if (subCatError) return { error: subCatError };
 
-  const existingSet = new Set(existing?.map((e) => e.name));
+  const existingSet = new Set(existing?.map((e) => (e.name || "").trim()));
 
   // Grouper par libellé et compter les occurrences de chaque catégorie ET compte
   const labelStats: Record<
@@ -272,19 +271,20 @@ export const apiImportLabels = async () => {
   > = {};
 
   items?.forEach((item) => {
-    if (!item.label) return;
-    if (!labelStats[item.label]) labelStats[item.label] = {};
+    const trimmedLabel = (item.label || "").trim();
+    if (!trimmedLabel) return;
+    if (!labelStats[trimmedLabel]) labelStats[trimmedLabel] = {};
     const beneficiaryId = primaryBeneficiaryByInstance[item.instance_id] || "";
     const key = `${item.category}|${item.sub_category || ""}|${item.account_id || ""}|${beneficiaryId}`;
-    if (!labelStats[item.label][key]) {
-      labelStats[item.label][key] = {
+    if (!labelStats[trimmedLabel][key]) {
+      labelStats[trimmedLabel][key] = {
         count: 0,
         subCategory: item.sub_category,
         accountId: item.account_id,
         beneficiaryId: beneficiaryId || undefined,
       };
     }
-    labelStats[item.label][key].count++;
+    labelStats[trimmedLabel][key].count++;
   });
 
   const toInsert = Object.keys(labelStats)
@@ -335,16 +335,15 @@ export const apiImportLabels = async () => {
 };
 
 export const apiImportVirLabels = async () => {
-  // Récupérer tous les paid_items VIR avec leurs catégories ET comptes
-  const { data: rawItems, error: fetchError } = await supabase
+  // Récupérer tous les paid_items de type INCOME
+  const { data: items, error: fetchError } = await supabase
     .from("paid_items")
     .select("instance_id, label, category, sub_category, account_id")
-    .ilike("label", "VIR%");
+    .eq("type", "INCOME");
 
   if (fetchError) return { error: fetchError };
 
-  const items = (rawItems || []).filter((item) => (item.label || "").toUpperCase().startsWith("VIR "));
-  const instanceIds = Array.from(new Set(items.map((item) => item.instance_id).filter(Boolean)));
+  const instanceIds = Array.from(new Set((items || []).map((item) => item.instance_id).filter(Boolean)));
 
   let primaryBeneficiaryByInstance: Record<string, string> = {};
   if (instanceIds.length > 0) {
@@ -381,7 +380,7 @@ export const apiImportVirLabels = async () => {
   const { data: subCategories, error: subCatError } = await supabase.from("sub_categories").select("id, name, category_id");
   if (subCatError) return { error: subCatError };
 
-  const existingSet = new Set(existing?.map((e) => e.name));
+  const existingSet = new Set(existing?.map((e) => (e.name || "").trim()));
 
   // Grouper par libellé et compter les occurrences de chaque catégorie ET compte
   const labelStats: Record<
@@ -398,19 +397,20 @@ export const apiImportVirLabels = async () => {
   > = {};
 
   items?.forEach((item) => {
-    if (!item.label) return;
-    if (!labelStats[item.label]) labelStats[item.label] = {};
+    const trimmedLabel = (item.label || "").trim();
+    if (!trimmedLabel) return;
+    if (!labelStats[trimmedLabel]) labelStats[trimmedLabel] = {};
     const beneficiaryId = primaryBeneficiaryByInstance[item.instance_id] || "";
     const key = `${item.category}|${item.sub_category || ""}|${item.account_id || ""}|${beneficiaryId}`;
-    if (!labelStats[item.label][key]) {
-      labelStats[item.label][key] = {
+    if (!labelStats[trimmedLabel][key]) {
+      labelStats[trimmedLabel][key] = {
         count: 0,
         subCategory: item.sub_category,
         accountId: item.account_id,
         beneficiaryId: beneficiaryId || undefined,
       };
     }
-    labelStats[item.label][key].count++;
+    labelStats[trimmedLabel][key].count++;
   });
 
   const toInsert = Object.keys(labelStats)

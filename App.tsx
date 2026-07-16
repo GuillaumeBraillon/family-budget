@@ -227,8 +227,8 @@ const AppContent: React.FC = () => {
             onMoveItem={actions.moveItem}
             onVariableCreated={(type) =>
               setPendingLabelImports((prev) => ({
-                cb: prev.cb || type === "EXPENSE",
-                vir: prev.vir || type === "INCOME",
+                expense: prev.expense || type === "EXPENSE",
+                income: prev.income || type === "INCOME",
               }))
             }
           />
