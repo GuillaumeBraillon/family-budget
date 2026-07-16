@@ -12,7 +12,7 @@ jobs:
       contents: write
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -37,18 +37,15 @@ jobs:
             git tag -a "v${{ env.VERSION }}" -m "Version ${{ env.VERSION }}"
             git push origin "v${{ env.VERSION }}"
             
-            # 3. Créer la Release via Action (plus simple pour le corps de la release)
+            # 3. Marquer qu'une release doit être publiée
             echo "RELEASE_NEEDED=true" >> $GITHUB_ENV
           fi
 
       - name: Publish GitHub Release
         if: env.RELEASE_NEEDED == 'true'
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: v${{ env.VERSION }}
-          name: Version ${{ env.VERSION }}
-          body_path: release_notes.md
-          draft: false
-          prerelease: false
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "v${{ env.VERSION }}" \
+            --title "Version ${{ env.VERSION }}" \
+            --notes-file release_notes.md

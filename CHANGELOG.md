@@ -7,6 +7,14 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.12.3] - 2026-07-16
+
+### 🤖 CI/CD Automation
+
+- **Compatibilité GitHub Actions** : Migration du workflow de release pour éviter les actions ciblant Node.js 20 déprécié.
+- **Checkout mis à jour** : Passage de `actions/checkout@v4` à `actions/checkout@v5`.
+- **Publication de release** : Remplacement de `softprops/action-gh-release@v2` par la commande `gh release create` avec génération des notes depuis `release_notes.md`.
+
 ## [2.12.2] - 2026-07-16
 
 ### ✨ Libellés & Importation
