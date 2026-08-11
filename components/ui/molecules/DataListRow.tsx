@@ -131,7 +131,7 @@ export const DataListRow: React.FC<DataListRowProps> = ({
             </span>
           )}
           {beneficiary && (
-            <span className="hidden sm:flex items-center gap-1 text-slate-500 font-medium whitespace-nowrap">
+            <span className="flex items-center gap-1 text-slate-500 font-medium truncate max-w-[110px] sm:max-w-none sm:whitespace-nowrap">
               {isChild ? <User size={10} /> : <Users size={10} />} {beneficiary}
             </span>
           )}

@@ -86,9 +86,12 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
 
   const handleFormSubmit = async (targetIsWaiting: boolean) => {
     try {
-      const result = form.handleSubmit(targetIsWaiting, onClose);
+      const result = form.handleSubmit(targetIsWaiting);
       if (!result) return;
+      // La modale ne se ferme qu'une fois la sauvegarde effectivement réussie,
+      // sinon une erreur (ex: RPC) laisserait croire à tort que les changements sont conservés.
       await onAddTransaction(result as VariableTransaction);
+      onClose();
     } catch (err) {
       showError(err as Error, "Sauvegarde de transaction");
     }

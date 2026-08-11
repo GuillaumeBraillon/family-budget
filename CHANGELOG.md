@@ -7,6 +7,14 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.12.4] - 2026-08-11
+
+### 🐛 Correctif données / ventilation bénéficiaires
+
+- **Chargement complet Supabase** : correction d'un plafond silencieux à 1000 lignes sur les requêtes `paid_items`, `paid_item_beneficiaries` et `transfers` lors du chargement initial.
+- **Ventilation visible à l'édition** : les opérations historiques au-delà de 1000 lignes conservent désormais correctement leur ventilation bénéficiaire dans le formulaire de modification.
+- **Robustesse des données** : les opérations et ventilations existantes en base sont maintenant rechargées par pagination pour éviter les lignes absentes côté interface alors qu'elles sont bien présentes en base.
+
 ## [2.12.3] - 2026-07-16
 
 ### 🤖 CI/CD Automation

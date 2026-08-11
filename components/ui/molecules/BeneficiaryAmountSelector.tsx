@@ -70,26 +70,28 @@ export const BeneficiaryAmountSelector: React.FC<BeneficiaryAmountSelectorProps>
         <div className="space-y-1.5">
           {selectedBeneficiaryAmounts.map((beneficiaryAmount) => {
             const person = people.find((p) => p.id === beneficiaryAmount.beneficiaryId);
-            if (!person) return null;
+            // Bénéficiaire orphelin (personne supprimée/introuvable) : affiché quand même pour rester visible et corrigeable.
+            const displayName = person ? `${person.name} ${person.isChild ? "(Enfant)" : ""}` : `Bénéficiaire inconnu (${beneficiaryAmount.beneficiaryId})`;
 
             return (
-              <div key={person.id} className="flex items-center gap-2 bg-slate-50 p-2 rounded-lg border border-slate-200">
-                <span className="text-sm text-slate-700 flex-1">
-                  {person.name} {person.isChild ? "(Enfant)" : ""}
-                </span>
+              <div
+                key={beneficiaryAmount.beneficiaryId}
+                className={`flex items-center gap-2 p-2 rounded-lg border ${person ? "bg-slate-50 border-slate-200" : "bg-amber-50 border-amber-200"}`}
+              >
+                <span className={`text-sm flex-1 ${person ? "text-slate-700" : "text-amber-700 italic"}`}>{displayName}</span>
                 <input
                   type="number"
                   step="0.01"
                   value={beneficiaryAmount.amount}
-                  onChange={(e) => handleAmountChange(person.id, parseFloat(e.target.value) || 0)}
+                  onChange={(e) => handleAmountChange(beneficiaryAmount.beneficiaryId, parseFloat(e.target.value) || 0)}
                   className="w-24 px-2 py-1 text-sm border border-slate-300 rounded bg-white text-slate-900 font-bold focus:ring-2 focus:ring-indigo-500 outline-none"
                 />
                 <span className="text-xs text-slate-400 font-medium">€</span>
                 <button
                   type="button"
-                  onClick={() => handleRemoveBeneficiary(person.id)}
+                  onClick={() => handleRemoveBeneficiary(beneficiaryAmount.beneficiaryId)}
                   className="text-slate-400 hover:text-red-500 transition-colors"
-                  aria-label={`Retirer ${person.name}`}
+                  aria-label={`Retirer ${displayName}`}
                 >
                   <X size={16} />
                 </button>

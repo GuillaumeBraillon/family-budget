@@ -110,7 +110,7 @@ interface UseTransactionFormReturn {
   standardSuggestions: string[];
 
   // --- ACTIONS ---
-  handleSubmit: (targetIsWaiting: boolean, onSuccess: () => void) => VariableTransaction | null;
+  handleSubmit: (targetIsWaiting: boolean) => VariableTransaction | null;
   resetForm: () => void;
   handleLabelChange: (newLabel: string) => Promise<void>;
   isSuggesting: boolean;
@@ -156,7 +156,7 @@ interface UseTransactionFormReturn {
  *
  * // Utilisation dans le render
  * <input value={form.label} onChange={(e) => form.setLabel(e.target.value)} />
- * <button onClick={() => form.handleSubmit(false, onClose)}>Valider</button>
+ * <button onClick={() => form.handleSubmit(false)}>Valider</button>
  * ```
  */
 export const useTransactionForm = ({
@@ -339,23 +339,23 @@ export const useTransactionForm = ({
    * @description
    * 1. Valide tous les champs obligatoires
    * 2. Construit l'objet Transaction
-   * 3. Appelle onSuccess si validation OK
+   * 3. Retourne la transaction (la fermeture/persistance est gérée par l'appelant après sauvegarde effective)
    *
    * **Règles de validation :**
    * - Libellé non vide
    * - Montant > 0
    * - Compte source renseigné
+   * - Au moins un bénéficiaire explicitement sélectionné (pas de fallback silencieux)
    *
    * **Gestion du montant final :**
    * - EXPENSE + isRefund : -Math.abs(amount)
    * - Sinon : Math.abs(amount)
    *
    * @param {boolean} targetIsWaiting - Statut "en attente" ou "pointé"
-   * @param {() => void} onSuccess - Callback appelé après validation réussie
    * @returns {VariableTransaction | null} Transaction construite ou null si erreur
    *
    */
-  const handleSubmit = (targetIsWaiting: boolean, onSuccess: () => void): VariableTransaction | null => {
+  const handleSubmit = (targetIsWaiting: boolean): VariableTransaction | null => {
     const errors: string[] = [];
 
     // Validation des champs obligatoires
@@ -364,8 +364,9 @@ export const useTransactionForm = ({
     if (!accountId) errors.push("Le compte est obligatoire");
 
     const totalAmount = Math.abs(parseFloat(amount) || 0);
-    const normalizedBeneficiaryAmounts =
-      selectedBeneficiaryAmounts.length > 0 ? selectedBeneficiaryAmounts : beneficiaryId ? [{ beneficiaryId, amount: totalAmount }] : [];
+    // Pas de fallback sur `beneficiaryId` (valeur par défaut invisible côté UI) : le bénéficiaire
+    // doit avoir été explicitement ajouté via le sélecteur pour que la validation soit significative.
+    const normalizedBeneficiaryAmounts = selectedBeneficiaryAmounts;
 
     if (normalizedBeneficiaryAmounts.length === 0) {
       errors.push("Au moins un bénéficiaire est obligatoire");
@@ -417,7 +418,6 @@ export const useTransactionForm = ({
       comments: comments.trim() || undefined,
     };
 
-    onSuccess();
     return transaction;
   };
 

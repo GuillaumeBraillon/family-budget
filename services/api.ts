@@ -28,6 +28,28 @@ import {
   apiImportVirLabels,
 } from "./apiCrud";
 
+// PostgREST plafonne silencieusement chaque requête à ce nombre de lignes (défaut Supabase).
+const SUPABASE_MAX_ROWS = 1000;
+
+/**
+ * Récupère toutes les lignes d'une table en paginant par blocs de SUPABASE_MAX_ROWS,
+ * pour éviter la troncature silencieuse au-delà de la limite par requête de PostgREST.
+ */
+async function fetchAllRows<T>(
+  buildQuery: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>
+): Promise<{ data: T[]; error: { message: string } | null }> {
+  const allRows: T[] = [];
+  let from = 0;
+  for (;;) {
+    const { data, error } = await buildQuery(from, from + SUPABASE_MAX_ROWS - 1);
+    if (error) return { data: allRows, error };
+    allRows.push(...(data || []));
+    if (!data || data.length < SUPABASE_MAX_ROWS) break;
+    from += SUPABASE_MAX_ROWS;
+  }
+  return { data: allRows, error: null };
+}
+
 /**
  * Orchestrateur de données : Récupère l'intégralité du contexte applicatif au démarrage.
  * Délègue la conversion des données brutes aux fonctions de mapping.
@@ -72,19 +94,27 @@ export const fetchInitialData = async () => {
     supabase
       .from("income_configs")
       .select("id, label, amount, account_id, beneficiary_id, day_of_month, category, sub_category, is_extra, is_salary, start_month, end_month"),
-    supabase
-      .from("paid_items")
-      .select(
-        "instance_id, amount, payment_date, account_id, label, category, sub_category, type, is_variable, is_waiting, is_extra, is_refund, is_salary, comments"
-      ),
+    fetchAllRows<DbPaidItem>((from, to) =>
+      supabase
+        .from("paid_items")
+        .select(
+          "instance_id, amount, payment_date, account_id, label, category, sub_category, type, is_variable, is_waiting, is_extra, is_refund, is_salary, comments"
+        )
+        .order("instance_id", { ascending: true })
+        .range(from, to)
+    ),
     supabase
       .from("app_settings")
       .select("id, personal_budget_amount, family_variable_budget, period_type, period_value, operations_sorting, accounts_sorting")
       .maybeSingle(),
-    supabase
-      .from("transfers")
-      .select("id, date, label, amount, source_account_id, destination_account_id, created_at, is_interest")
-      .order("date", { ascending: false }),
+    fetchAllRows((from, to) =>
+      supabase
+        .from("transfers")
+        .select("id, date, label, amount, source_account_id, destination_account_id, created_at, is_interest")
+        .order("date", { ascending: false })
+        .order("id", { ascending: true })
+        .range(from, to)
+    ),
     supabase.from("saved_labels").select("id, name, type, is_expense, category_id, sub_category_id, account_id, beneficiary_id"),
     supabase
       .from("authorized_users")
@@ -125,10 +155,13 @@ export const fetchInitialData = async () => {
   const paidItemInstanceIds = Array.from(new Set((paidItemsRes.data || []).map((item: DbPaidItem) => item.instance_id)));
   let paidItemBeneficiariesData: DbPaidItemBeneficiary[] = [];
   if (paidItemInstanceIds.length > 0) {
-    const { data: beneficiaryData, error: beneficiaryError } = await supabase
-      .from("paid_item_beneficiaries")
-      .select("id, paid_item_instance_id, beneficiary_id, amount, created_at")
-      .in("paid_item_instance_id", paidItemInstanceIds);
+    const { data: beneficiaryData, error: beneficiaryError } = await fetchAllRows<DbPaidItemBeneficiary>((from, to) =>
+      supabase
+        .from("paid_item_beneficiaries")
+        .select("id, paid_item_instance_id, beneficiary_id, amount, created_at")
+        .order("id", { ascending: true })
+        .range(from, to)
+    );
 
     if (beneficiaryError) {
       throw new Error(beneficiaryError.message || "Erreur lors du chargement de la ventilation des bénéficiaires");
