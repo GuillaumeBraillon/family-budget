@@ -34,6 +34,28 @@ import {
   BeneficiaryAmount,
 } from "../types";
 
+// PostgREST plafonne silencieusement chaque requete a ce nombre de lignes (defaut Supabase).
+export const SUPABASE_MAX_ROWS = 1000;
+
+/**
+ * Recupere toutes les lignes d'une table en paginant par blocs de SUPABASE_MAX_ROWS,
+ * pour eviter la troncature silencieuse au-dela de la limite par requete de PostgREST.
+ */
+export async function fetchAllRows<T>(
+  buildQuery: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>
+): Promise<{ data: T[]; error: { message: string } | null }> {
+  const allRows: T[] = [];
+  let from = 0;
+  for (;;) {
+    const { data, error } = await buildQuery(from, from + SUPABASE_MAX_ROWS - 1);
+    if (error) return { data: allRows, error };
+    allRows.push(...(data || []));
+    if (!data || data.length < SUPABASE_MAX_ROWS) break;
+    from += SUPABASE_MAX_ROWS;
+  }
+  return { data: allRows, error: null };
+}
+
 const normalizeBeneficiaryAmountsForRpc = (beneficiaryAmounts: BeneficiaryAmount[] | undefined): BeneficiaryAmount[] | null => {
   if (beneficiaryAmounts === undefined) return null;
 
@@ -210,10 +232,9 @@ export const apiDeleteLabel = async (id: string) => supabase.from("saved_labels"
 
 export const apiImportLabels = async () => {
   // Récupérer tous les paid_items de type EXPENSE
-  const { data: items, error: fetchError } = await supabase
-    .from("paid_items")
-    .select("instance_id, label, category, sub_category, account_id")
-    .eq("type", "EXPENSE");
+  const { data: items, error: fetchError } = await fetchAllRows((from, to) =>
+    supabase.from("paid_items").select("instance_id, label, category, sub_category, account_id").eq("type", "EXPENSE").range(from, to)
+  );
 
   if (fetchError) return { error: fetchError };
 
@@ -221,10 +242,9 @@ export const apiImportLabels = async () => {
 
   let primaryBeneficiaryByInstance: Record<string, string> = {};
   if (instanceIds.length > 0) {
-    const { data: beneficiaryRows, error: beneficiaryError } = await supabase
-      .from("paid_item_beneficiaries")
-      .select("paid_item_instance_id, beneficiary_id, amount")
-      .in("paid_item_instance_id", instanceIds);
+    const { data: beneficiaryRows, error: beneficiaryError } = await fetchAllRows((from, to) =>
+      supabase.from("paid_item_beneficiaries").select("paid_item_instance_id, beneficiary_id, amount").in("paid_item_instance_id", instanceIds).range(from, to)
+    );
 
     if (beneficiaryError) return { error: beneficiaryError };
 
@@ -336,10 +356,9 @@ export const apiImportLabels = async () => {
 
 export const apiImportVirLabels = async () => {
   // Récupérer tous les paid_items de type INCOME
-  const { data: items, error: fetchError } = await supabase
-    .from("paid_items")
-    .select("instance_id, label, category, sub_category, account_id")
-    .eq("type", "INCOME");
+  const { data: items, error: fetchError } = await fetchAllRows((from, to) =>
+    supabase.from("paid_items").select("instance_id, label, category, sub_category, account_id").eq("type", "INCOME").range(from, to)
+  );
 
   if (fetchError) return { error: fetchError };
 
@@ -347,10 +366,9 @@ export const apiImportVirLabels = async () => {
 
   let primaryBeneficiaryByInstance: Record<string, string> = {};
   if (instanceIds.length > 0) {
-    const { data: beneficiaryRows, error: beneficiaryError } = await supabase
-      .from("paid_item_beneficiaries")
-      .select("paid_item_instance_id, beneficiary_id, amount")
-      .in("paid_item_instance_id", instanceIds);
+    const { data: beneficiaryRows, error: beneficiaryError } = await fetchAllRows((from, to) =>
+      supabase.from("paid_item_beneficiaries").select("paid_item_instance_id, beneficiary_id, amount").in("paid_item_instance_id", instanceIds).range(from, to)
+    );
 
     if (beneficiaryError) return { error: beneficiaryError };
 

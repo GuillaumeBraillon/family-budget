@@ -12,6 +12,7 @@ import { SortOrder } from "../../../../ui/molecules/ListSorter";
 import { ValidationErrorBlock } from "../../../../ui/atoms/ValidationErrorBlock";
 import { useValidationScroll } from "../../../../../hooks/useValidationScroll";
 import { AdvancedOptionsAccordion } from "../../../../ui/molecules/AdvancedOptionsAccordion";
+import { getDefaultAccountId } from "../../../../../hooks/accounts/getDefaultAccountId";
 
 interface ExpenseRulesEditorProps {
   configs: ExpenseConfig[];
@@ -46,7 +47,8 @@ export const ExpenseRulesEditor: React.FC<ExpenseRulesEditorProps> = ({
   // Scroll automatique vers les erreurs de validation
   useValidationScroll(validationErrors, errorBlockRef);
 
-  const defaultAccount = accounts[0]?.id || "";
+  // Le compte par defaut doit etre un compte Courant (seul type propose par AccountSelector ici)
+  const defaultAccount = getDefaultAccountId(accounts, true);
 
   const currentMonthKey = useMemo(() => {
     const now = new Date();
@@ -101,7 +103,7 @@ export const ExpenseRulesEditor: React.FC<ExpenseRulesEditorProps> = ({
       label: "",
       amount: "",
       dayOfMonth: 1,
-      accountId: accounts[0]?.id || "",
+      accountId: defaultAccount,
       beneficiaryId: defaultBeneficiary,
       category: "",
       subCategory: "",
@@ -130,7 +132,7 @@ export const ExpenseRulesEditor: React.FC<ExpenseRulesEditorProps> = ({
       label: "",
       amount: "",
       dayOfMonth: 1,
-      accountId: accounts[0]?.id || "",
+      accountId: defaultAccount,
       beneficiaryId: people[0]?.id,
       category: "",
       subCategory: "",

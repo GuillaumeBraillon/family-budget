@@ -7,6 +7,13 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.12.5] - 2026-08-26
+
+### 🐛 Corrections
+
+- **Compte par défaut incohérent (Dépenses/Revenus récurrents)** : la requête Supabase des comptes ne garantissait pas d'ordre stable (`accounts` sans `.order()`), et `ExpenseRulesEditor`/`IncomeEditor` pré-remplissaient le compte par défaut avec `accounts[0]` sans filtrer sur le type Courant attendu par le sélecteur. Un nouveau modèle récurrent pouvait ainsi être enregistré silencieusement sur un compte Épargne pendant que l'UI affichait visuellement un compte Courant. Tri déterministe ajouté sur la requête des comptes, et réutilisation de `getDefaultAccountId(accounts, true)` pour un compte par défaut toujours cohérent avec le filtre du sélecteur.
+- **Bénéficiaire manquant sur les libellés auto-importés** : `apiImportLabels`/`apiImportVirLabels` lisaient `paid_items` et `paid_item_beneficiaries` sans pagination (`.select()` sans `.range()`), plafonnées silencieusement à 1000 lignes par PostgREST. Au-delà de ce seuil, certains bénéficiaires récents pouvaient être absents du résultat, produisant des `saved_labels` avec bénéficiaire vide malgré une donnée correcte en base. Le helper `fetchAllRows` a été mutualisé (déplacé vers `services/apiCrud.ts`, exporté) et réutilisé dans ces deux fonctions d'import.
+
 ## [2.12.4] - 2026-08-11
 
 ### 🐛 Correctif données / ventilation bénéficiaires

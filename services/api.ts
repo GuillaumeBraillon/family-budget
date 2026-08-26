@@ -26,29 +26,8 @@ import {
   apiDeleteLabel,
   apiImportLabels,
   apiImportVirLabels,
+  fetchAllRows,
 } from "./apiCrud";
-
-// PostgREST plafonne silencieusement chaque requête à ce nombre de lignes (défaut Supabase).
-const SUPABASE_MAX_ROWS = 1000;
-
-/**
- * Récupère toutes les lignes d'une table en paginant par blocs de SUPABASE_MAX_ROWS,
- * pour éviter la troncature silencieuse au-delà de la limite par requête de PostgREST.
- */
-async function fetchAllRows<T>(
-  buildQuery: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>
-): Promise<{ data: T[]; error: { message: string } | null }> {
-  const allRows: T[] = [];
-  let from = 0;
-  for (;;) {
-    const { data, error } = await buildQuery(from, from + SUPABASE_MAX_ROWS - 1);
-    if (error) return { data: allRows, error };
-    allRows.push(...(data || []));
-    if (!data || data.length < SUPABASE_MAX_ROWS) break;
-    from += SUPABASE_MAX_ROWS;
-  }
-  return { data: allRows, error: null };
-}
 
 /**
  * Orchestrateur de données : Récupère l'intégralité du contexte applicatif au démarrage.
@@ -85,7 +64,7 @@ export const fetchInitialData = async () => {
     authUsersRes,
   ] = await Promise.all([
     supabase.from("people").select("id, name, is_child, display_order"),
-    supabase.from("accounts").select("id, name, type, owner_id, current_balance, bank_name, is_joint"),
+    supabase.from("accounts").select("id, name, type, owner_id, current_balance, bank_name, is_joint").order("id", { ascending: true }),
     supabase.from("categories").select("id, name, type"),
     supabase.from("sub_categories").select("id, name, category_id, created_at"),
     supabase
