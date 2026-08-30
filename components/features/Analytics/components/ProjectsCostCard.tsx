@@ -16,8 +16,10 @@ import React, { useMemo, useState } from "react";
 import { Briefcase, CalendarDays, ChevronDown, ChevronUp } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../../../ui/Card";
 import { ClickableAmount } from "../../../ui/atoms/ClickableAmount";
+import { ExportCsvButton } from "../../../ui/atoms/ExportCsvButton";
 import { CategoryDef, OperationFilters, PaidItemDetails, Project } from "../../../../types";
 import { buildOperationsFilters, isBudgetExcluded } from "../../../../services/financeUtils";
+import { useCsvExport } from "../../../../hooks/useCsvExport";
 
 interface ProjectsCostCardProps {
   projects: Project[];
@@ -34,11 +36,21 @@ interface ProjectCost {
   operationsCount: number;
   firstDate?: Date;
   lastDate?: Date;
-  byCategory: { name: string; categoryId?: string; amount: number; count: number; firstDate?: Date; lastDate?: Date }[];
+  byCategory: {
+    name: string;
+    categoryId?: string;
+    amount: number;
+    expensesTotal: number;
+    refundsTotal: number;
+    count: number;
+    firstDate?: Date;
+    lastDate?: Date;
+  }[];
 }
 
 const formatAmount = (amount: number) => `${amount.toFixed(2)} €`;
 const formatCompactDate = (date?: Date) => (date ? date.toLocaleDateString("fr-FR", { month: "short", year: "numeric" }) : "Date inconnue");
+const formatCsvDate = (date?: Date) => (date ? date.toISOString().split("T")[0] : "");
 const getPaymentDate = (item: PaidItemDetails) => {
   const date = new Date(item.paymentDate);
   return Number.isNaN(date.getTime()) ? undefined : date;
@@ -58,6 +70,7 @@ const getLaterDate = (a?: Date, b?: Date) => {
 
 export const ProjectsCostCard: React.FC<ProjectsCostCardProps> = ({ projects, paidItems, categories, onNavigateToPlanner }) => {
   const [expandedProjectId, setExpandedProjectId] = useState<string | null>(null);
+  const { exportToCsv, escapeCsv, formatNumberFr } = useCsvExport();
 
   const projectCosts = useMemo<ProjectCost[]>(() => {
     const categoryIdByName = new Map(categories.map((category) => [category.name, category.id]));
@@ -70,7 +83,7 @@ export const ProjectsCostCard: React.FC<ProjectsCostCardProps> = ({ projects, pa
         count: number;
         firstDate?: Date;
         lastDate?: Date;
-        byCategory: Map<string, { amount: number; count: number; firstDate?: Date; lastDate?: Date }>;
+        byCategory: Map<string, { amount: number; expensesTotal: number; refundsTotal: number; count: number; firstDate?: Date; lastDate?: Date }>;
       }
     >();
 
@@ -89,9 +102,16 @@ export const ProjectsCostCard: React.FC<ProjectsCostCardProps> = ({ projects, pa
         count: 0,
         firstDate: undefined,
         lastDate: undefined,
-        byCategory: new Map<string, { amount: number; count: number; firstDate?: Date; lastDate?: Date }>(),
+        byCategory: new Map<string, { amount: number; expensesTotal: number; refundsTotal: number; count: number; firstDate?: Date; lastDate?: Date }>(),
       };
-      const categoryStats = current.byCategory.get(item.category) || { amount: 0, count: 0, firstDate: undefined, lastDate: undefined };
+      const categoryStats = current.byCategory.get(item.category) || {
+        amount: 0,
+        expensesTotal: 0,
+        refundsTotal: 0,
+        count: 0,
+        firstDate: undefined,
+        lastDate: undefined,
+      };
 
       current.total += signedAmount;
       if (item.type === "EXPENSE") current.expensesTotal += item.amount;
@@ -101,6 +121,8 @@ export const ProjectsCostCard: React.FC<ProjectsCostCardProps> = ({ projects, pa
       current.lastDate = getLaterDate(current.lastDate, paymentDate);
 
       categoryStats.amount += signedAmount;
+      if (item.type === "EXPENSE") categoryStats.expensesTotal += item.amount;
+      if (item.isRefund) categoryStats.refundsTotal += item.amount;
       categoryStats.count += 1;
       categoryStats.firstDate = getEarlierDate(categoryStats.firstDate, paymentDate);
       categoryStats.lastDate = getLaterDate(categoryStats.lastDate, paymentDate);
@@ -132,14 +154,72 @@ export const ProjectsCostCard: React.FC<ProjectsCostCardProps> = ({ projects, pa
     onNavigateToPlanner(date || new Date(), buildOperationsFilters(filters));
   };
 
+  const handleExport = () => {
+    const headers = [
+      "Type de ligne",
+      "Projet",
+      "Statut projet",
+      "Date début",
+      "Date fin",
+      "Catégorie",
+      "Nombre opérations",
+      "Dépenses",
+      "Remboursé",
+      "Coût net",
+      "Moyenne",
+      "Part du projet",
+    ];
+
+    const rows = projectCosts.flatMap((projectCost) => {
+      const projectRows = [
+        [
+          escapeCsv("Projet"),
+          escapeCsv(projectCost.project.name),
+          escapeCsv(projectCost.project.isArchived ? "Archivé" : "Actif"),
+          escapeCsv(formatCsvDate(projectCost.firstDate)),
+          escapeCsv(formatCsvDate(projectCost.lastDate)),
+          escapeCsv(""),
+          projectCost.operationsCount.toString(),
+          formatNumberFr(projectCost.expensesTotal),
+          formatNumberFr(projectCost.refundsTotal),
+          formatNumberFr(projectCost.total),
+          formatNumberFr(projectCost.operationsCount > 0 ? projectCost.total / projectCost.operationsCount : 0),
+          formatNumberFr(100, 0),
+        ],
+      ];
+
+      const categoryRows = projectCost.byCategory.map((category) => [
+        escapeCsv("Catégorie"),
+        escapeCsv(projectCost.project.name),
+        escapeCsv(projectCost.project.isArchived ? "Archivé" : "Actif"),
+        escapeCsv(formatCsvDate(category.firstDate)),
+        escapeCsv(formatCsvDate(category.lastDate)),
+        escapeCsv(category.name),
+        category.count.toString(),
+        formatNumberFr(category.expensesTotal),
+        formatNumberFr(category.refundsTotal),
+        formatNumberFr(category.amount),
+        formatNumberFr(category.count > 0 ? category.amount / category.count : 0),
+        formatNumberFr(projectCost.total !== 0 ? (category.amount / projectCost.total) * 100 : 0, 0),
+      ]);
+
+      return [...projectRows, ...categoryRows];
+    });
+
+    exportToCsv(headers, rows, "details_projets_analytics");
+  };
+
   if (projectCosts.length === 0) return null;
 
   return (
     <Card className="rounded-3xl">
       <CardHeader className="p-4 pb-3 border-b border-slate-100">
-        <CardTitle className="text-sm font-bold text-slate-700 uppercase tracking-widest flex items-center gap-2">
-          <Briefcase size={16} className="text-indigo-500" /> Coût réel par projet
-        </CardTitle>
+        <div className="flex items-center justify-between gap-3">
+          <CardTitle className="text-sm font-bold text-slate-700 uppercase tracking-widest flex items-center gap-2">
+            <Briefcase size={16} className="text-indigo-500" /> Coût réel par projet
+          </CardTitle>
+          <ExportCsvButton onClick={handleExport} label="Export CSV" showLabel={false} />
+        </div>
       </CardHeader>
       <CardContent className="p-2 sm:p-4">
         <div className="flex flex-col divide-y divide-slate-100">

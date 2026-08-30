@@ -7,6 +7,17 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.13.1] - 2026-08-30
+
+### ✨ Fonctionnalités (Features)
+
+- **Analytics > Coût réel par projet** : ajout d'un export CSV depuis `ProjectsCostCard` via le module existant `useCsvExport`.
+  - Ligne de synthèse par projet.
+  - Lignes de détail par catégorie.
+  - Export des dates de début/fin, nombre d'opérations, dépenses, remboursements, coût net, moyenne et part du projet.
+
+---
+
 ## [2.13.0] - 2026-08-30
 
 ### ✨ Fonctionnalités (Features)
