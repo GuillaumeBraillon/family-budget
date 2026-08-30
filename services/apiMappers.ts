@@ -13,6 +13,7 @@ import {
   Transfer,
   AuthorizedUser,
   BeneficiaryAmount,
+  Project,
 } from "../types";
 import {
   DbPerson,
@@ -27,6 +28,7 @@ import {
   DbPaidItem,
   DbTransfer,
   DbSettings,
+  DbProject,
 } from "./dbTypes";
 
 export const mapDbPerson = (person: DbPerson): Person => ({
@@ -134,6 +136,7 @@ export const mapDbPaidItem = (item: DbPaidItem): PaidItemDetails => ({
   isWaiting: !!item.is_waiting,
   isExtra: !!item.is_extra,
   comments: item.comments || undefined,
+  projectId: item.project_id ?? undefined,
 });
 
 export const mapDbTransfer = (transfer: DbTransfer): Transfer => ({
@@ -161,6 +164,14 @@ export const mapDbVariableTransaction = (transaction: DbPaidItem): VariableTrans
   isWaiting: !!transaction.is_waiting,
   isExtra: !!transaction.is_extra,
   comments: transaction.comments || undefined,
+  projectId: transaction.project_id ?? undefined,
+});
+
+export const mapDbProject = (project: DbProject): Project => ({
+  id: project.id,
+  name: project.name,
+  isArchived: !!project.is_archived,
+  createdAt: project.created_at ?? undefined,
 });
 
 export const mapDbSettings = (data: DbSettings | null): AppSettings => {

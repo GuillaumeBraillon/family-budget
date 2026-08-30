@@ -36,8 +36,8 @@
  * ```
  */
 import React from "react";
-import { Tag } from "lucide-react";
-import { OperationFilters, Account, Person, CategoryDef } from "../../../types";
+import { Tag, Briefcase } from "lucide-react";
+import { OperationFilters, Account, Person, CategoryDef, Project } from "../../../types";
 import { FilterDropdown } from "./FilterDropdown";
 import { CyclicFilterButton } from "../atoms/CyclicFilterButton";
 import { ListSorter } from "./ListSorter";
@@ -58,8 +58,10 @@ interface FilterBarProps {
   availableCategoryIds?: string[];
   /** IDs des sous-catégories utilisées ce mois-ci */
   availableSubCategoryIds?: string[];
+  /** Liste des projets (regroupements d'opérations) */
+  projects?: Project[];
   /** Filtres à masquer (pour contextes spécifiques) */
-  hiddenFilters?: ("flux" | "source" | "status" | "nature" | "salary" | "accounts" | "beneficiaries" | "categories" | "subCategories")[];
+  hiddenFilters?: ("flux" | "source" | "status" | "nature" | "salary" | "accounts" | "beneficiaries" | "categories" | "subCategories" | "projects")[];
   /** Callback optionnel de réinitialisation personnalisée */
   onReset?: () => void;
   /** Options de tri disponibles */
@@ -111,6 +113,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   categories = [],
   availableCategoryIds = [],
   availableSubCategoryIds = [],
+  projects = [],
   hiddenFilters = [],
   onReset,
   sortOptions,
@@ -140,6 +143,10 @@ export const FilterBar: React.FC<FilterBarProps> = ({
     subCategoryOptions,
     visualSubCategoryIds,
     handleSubCategoryChange,
+    projectOptions,
+    visualProjectIds,
+    handleProjectChange,
+    handleProjectSelectAll,
     benOptions,
     visualBenIds,
     handleBenChange,
@@ -150,7 +157,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
     isDefaultFilters,
     clear,
     update,
-  } = useFilterBarLogic(filters, onFilterChange, accounts, people, categories, availableCategoryIds, availableSubCategoryIds, onReset);
+  } = useFilterBarLogic(filters, onFilterChange, accounts, people, categories, availableCategoryIds, availableSubCategoryIds, projects, onReset);
 
   return (
     <div className="flex min-w-0 flex-col gap-1.5">
@@ -182,6 +189,18 @@ export const FilterBar: React.FC<FilterBarProps> = ({
               selectedValues={visualSubCategoryIds}
               onChange={handleSubCategoryChange}
               onSelectAll={() => handleSubCategoryChange(subCategoryOptions.map((o) => o.id))}
+            />
+          )}
+
+          {!hiddenFilters.includes("projects") && projectOptions.length > 0 && (
+            <FilterDropdown
+              label="Projets"
+              icon={<Briefcase size={14} />}
+              options={projectOptions}
+              selectedValues={visualProjectIds}
+              onChange={handleProjectChange}
+              onClear={() => handleProjectChange([])}
+              onSelectAll={handleProjectSelectAll}
             />
           )}
 

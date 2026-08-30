@@ -242,6 +242,7 @@ export const usePlanner = (
           isWaiting: !isActuallyPaid,
           paidDetails: paid,
           comments: paid?.comments || "",
+          projectId: paid?.projectId,
         });
       });
 
@@ -279,6 +280,7 @@ export const usePlanner = (
         isExtraGlobal: baseIsExtra, // Toggle brut
         isSalary: !!inc.isSalary,
         comments: paid?.comments || "",
+        projectId: paid?.projectId,
       });
     });
 
@@ -318,6 +320,7 @@ export const usePlanner = (
           isExtra: !!vt.isExtra,
           isExtraGlobal: !!vt.isExtra, // Toggle brut de la variable
           comments: vt.comments || "",
+          projectId: vt.projectId,
         });
       });
 
@@ -358,6 +361,7 @@ export const usePlanner = (
           isExtra: !!paid.isExtra,
           isExtraGlobal: !!paid.isExtra,
           comments: paid.comments || "",
+          projectId: paid.projectId,
         });
       });
 
@@ -448,6 +452,16 @@ export const usePlanner = (
 
         if (filters.isSubCategoryFilterActive || (filters.includedSubCategoryIds || []).length > 0) {
           items = items.filter((i) => i.subCategoryId && (filters.includedSubCategoryIds || []).includes(i.subCategoryId));
+        }
+
+        const projectFilterMode =
+          filters.projectFilterMode || (filters.isProjectFilterActive || (filters.includedProjectIds || []).length > 0 ? "SELECTED" : "ALL");
+        if (projectFilterMode === "WITH_PROJECT") {
+          items = items.filter((i) => !!i.projectId);
+        } else if (projectFilterMode === "WITHOUT_PROJECT") {
+          items = items.filter((i) => !i.projectId);
+        } else if (projectFilterMode === "SELECTED" || filters.isProjectFilterActive || (filters.includedProjectIds || []).length > 0) {
+          items = items.filter((i) => i.projectId && (filters.includedProjectIds || []).includes(i.projectId));
         }
 
         if (filters.isAccountFilterActive || filters.accountIds.length > 0) {

@@ -111,6 +111,14 @@ export interface DbPaidItem {
   is_salary?: boolean;
   comments?: string | null;
   date?: string; // Alias de payment_date pour compatibilité
+  project_id?: string | null;
+}
+
+export interface DbProject {
+  id: string;
+  name: string;
+  is_archived?: boolean | null;
+  created_at?: string | null;
 }
 
 export interface DbTransfer {

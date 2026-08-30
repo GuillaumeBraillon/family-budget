@@ -99,6 +99,8 @@ interface UseTransactionFormReturn {
   setIsSalary: (isSalary: boolean) => void;
   comments: string;
   setComments: (comments: string) => void;
+  projectId: string;
+  setProjectId: (projectId: string) => void;
 
   // --- VALIDATION ---
   validationErrors: string[];
@@ -189,6 +191,7 @@ export const useTransactionForm = ({
   const [isExtra, setIsExtra] = useState<boolean>(false);
   const [isSalary, setIsSalary] = useState<boolean>(false);
   const [comments, setComments] = useState<string>("");
+  const [projectId, setProjectId] = useState<string>("");
 
   // Filtrer les comptes COURANTS pour l'initialisation par défaut
   const checkingAccounts = useMemo(() => accounts.filter((a) => a.type === AccountType.CHECKING), [accounts]);
@@ -275,6 +278,7 @@ export const useTransactionForm = ({
     setIsExtra(false);
     setIsSalary(false);
     setComments("");
+    setProjectId("");
     setAccountId(defaultAccountId);
     setValidationErrors([]);
   }, [initialMode, defaultDate, defaultBeneficiary, defaultAccountId]);
@@ -323,6 +327,7 @@ export const useTransactionForm = ({
           );
           setIsExtra(!!editingTransaction.isExtra);
           setIsSalary(!!editingTransaction.isSalary);
+          setProjectId(editingTransaction.projectId || "");
         } else {
           resetForm();
         }
@@ -416,6 +421,7 @@ export const useTransactionForm = ({
       isWaiting: targetIsWaiting,
       isExtra, // Toggle global au niveau opération
       comments: comments.trim() || undefined,
+      projectId: projectId || undefined,
     };
 
     return transaction;
@@ -572,6 +578,8 @@ export const useTransactionForm = ({
     setIsSalary,
     comments,
     setComments,
+    projectId,
+    setProjectId,
 
     // Validation
     validationErrors,

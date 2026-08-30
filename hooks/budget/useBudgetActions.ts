@@ -44,6 +44,8 @@ import {
   apiDeleteLabel,
   apiImportLabels,
   apiImportVirLabels,
+  apiUpsertProject,
+  apiDeleteProject,
 } from "../../services/api";
 
 /**
@@ -164,6 +166,8 @@ export const useBudgetActions = (
   const deleteLabel = wrapCrudWithReload(apiDeleteLabel, "Delete Label");
   const importLabels = wrapCrudWithReload(apiImportLabels, "Import Labels");
   const importVirLabels = wrapCrudWithReload(apiImportVirLabels, "Import VIR Labels");
+  const upsertProject = wrapCrudWithReload(apiUpsertProject, "Upsert Project");
+  const deleteProject = wrapCrudWithReload(apiDeleteProject, "Delete Project");
 
   return {
     // Utilisateurs autorisés
@@ -196,5 +200,9 @@ export const useBudgetActions = (
     deleteLabel,
     importLabels,
     importVirLabels,
+
+    // Projets
+    upsertProject,
+    deleteProject,
   };
 };

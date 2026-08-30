@@ -2,10 +2,11 @@ import React, { useState } from "react";
 import { X, Check, MessageSquare } from "lucide-react";
 import { Modal } from "../../../ui/Modal";
 import { FormField } from "../../../ui/atoms/FormField";
-import { Account, PaidItemDetails, PlannedItem, Person, BeneficiaryAmount } from "../../../../types";
+import { Account, PaidItemDetails, PlannedItem, Person, BeneficiaryAmount, Project } from "../../../../types";
 import { useError } from "../../../../contexts/ErrorContext";
 import { AdvancedOptionsAccordion } from "../../../ui/molecules/AdvancedOptionsAccordion";
 import { BeneficiaryAmountSelector } from "../../../ui/molecules/BeneficiaryAmountSelector";
+import { ProjectSelector } from "../../../ui/molecules/SmartSelectors";
 
 type ConfirmModalState = {
   isOpen: boolean;
@@ -16,6 +17,7 @@ type ConfirmModalState = {
   label: string;
   comments: string;
   beneficiaryAmounts: BeneficiaryAmount[];
+  projectId: string;
 };
 
 type UncheckModalState = {
@@ -28,6 +30,7 @@ interface PlannerModalsProps {
   uncheckModal: UncheckModalState;
   accounts: Account[];
   people: Person[];
+  projects?: Project[];
   onTogglePaid: (details: PaidItemDetails | null, instanceId: string) => void;
   onCloseConfirm: () => void;
   onCloseUncheck: () => void;
@@ -39,6 +42,7 @@ export const PlannerModals: React.FC<PlannerModalsProps> = ({
   uncheckModal,
   accounts,
   people,
+  projects = [],
   onTogglePaid,
   onCloseConfirm,
   onCloseUncheck,
@@ -112,6 +116,12 @@ export const PlannerModals: React.FC<PlannerModalsProps> = ({
                 onBeneficiaryAmountsChange={(beneficiaryAmounts) => setConfirmModal({ ...confirmModal, beneficiaryAmounts })}
               />
 
+              <ProjectSelector
+                projects={projects}
+                value={confirmModal.projectId}
+                onChange={(e) => setConfirmModal({ ...confirmModal, projectId: e.target.value })}
+              />
+
               <AdvancedOptionsAccordion isOpen={showAdvanced} onToggle={setShowAdvanced}>
                 <FormField label="Note / Commentaire">
                   <div className="relative">
@@ -147,6 +157,7 @@ export const PlannerModals: React.FC<PlannerModalsProps> = ({
                           comments: confirmModal.comments.trim() || undefined,
                           isWaiting: false,
                           isVariable: false,
+                          projectId: confirmModal.projectId || undefined,
                         } as PaidItemDetails,
                         confirmModal.item.instanceId
                       );

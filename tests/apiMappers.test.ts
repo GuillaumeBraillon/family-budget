@@ -4,8 +4,17 @@
  * entre les types DB (snake_case) et les types App (camelCase)
  */
 import { describe, it, expect } from "vitest";
-import { mapDbPerson, mapDbAccount, mapDbExpenseConfig, mapDbIncomeConfig, mapDbPaidItem, mapDbTransfer, mapDbSettings } from "../services/apiMappers";
-import type { DbPerson, DbAccount, DbExpenseConfig, DbIncomeConfig, DbPaidItem, DbTransfer, DbSettings } from "../services/dbTypes";
+import {
+  mapDbPerson,
+  mapDbAccount,
+  mapDbExpenseConfig,
+  mapDbIncomeConfig,
+  mapDbPaidItem,
+  mapDbTransfer,
+  mapDbSettings,
+  mapDbProject,
+} from "../services/apiMappers";
+import type { DbPerson, DbAccount, DbExpenseConfig, DbIncomeConfig, DbPaidItem, DbTransfer, DbSettings, DbProject } from "../services/dbTypes";
 
 describe("apiMappers - Conversions DB vers App", () => {
   describe("mapDbPerson", () => {
@@ -307,6 +316,52 @@ describe("apiMappers - Conversions DB vers App", () => {
 
       const result = mapDbPaidItem(dbItem);
       expect(result.type).toBe("EXPENSE");
+    });
+
+    it("propage project_id vers projectId, et undefined si absent", () => {
+      const withProject: DbPaidItem = {
+        instance_id: "exp-4-2026-02",
+        amount: 120,
+        payment_date: "2026-02-20",
+        account_id: "acc-1",
+        label: "Restaurant",
+        category: "Loisirs",
+        sub_category: null,
+        type: "EXPENSE",
+        is_variable: true,
+        is_waiting: false,
+        is_extra: false,
+        comments: null,
+        project_id: "proj-vacances-ete",
+      };
+
+      expect(mapDbPaidItem(withProject).projectId).toBe("proj-vacances-ete");
+
+      const withoutProject: DbPaidItem = { ...withProject, instance_id: "exp-5-2026-02", project_id: null };
+      expect(mapDbPaidItem(withoutProject).projectId).toBeUndefined();
+    });
+  });
+
+  describe("mapDbProject", () => {
+    it("convertit un projet actif", () => {
+      const dbProject: DbProject = {
+        id: "proj-1",
+        name: "Vacances été 2026",
+        is_archived: false,
+        created_at: "2026-02-01T10:00:00Z",
+      };
+
+      expect(mapDbProject(dbProject)).toEqual({
+        id: "proj-1",
+        name: "Vacances été 2026",
+        isArchived: false,
+        createdAt: "2026-02-01T10:00:00Z",
+      });
+    });
+
+    it("gère is_archived null/undefined comme false", () => {
+      const dbProject: DbProject = { id: "proj-2", name: "Travaux" };
+      expect(mapDbProject(dbProject).isArchived).toBe(false);
     });
   });
 

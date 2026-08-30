@@ -12,6 +12,8 @@ import {
   apiDeleteAccount,
   apiUpsertCategory,
   apiDeleteCategory,
+  apiUpsertProject,
+  apiDeleteProject,
   apiUpdateSettings,
   apiUpsertConfig,
   apiDeleteConfig,
@@ -47,6 +49,7 @@ export const fetchInitialData = async () => {
       transfers: [],
       variableTransactions: [],
       savedLabels: [],
+      projects: [],
     };
   }
 
@@ -62,6 +65,7 @@ export const fetchInitialData = async () => {
     transfersRes,
     savedLabelsRes,
     authUsersRes,
+    projectsRes,
   ] = await Promise.all([
     supabase.from("people").select("id, name, is_child, display_order"),
     supabase.from("accounts").select("id, name, type, owner_id, current_balance, bank_name, is_joint").order("id", { ascending: true }),
@@ -77,7 +81,7 @@ export const fetchInitialData = async () => {
       supabase
         .from("paid_items")
         .select(
-          "instance_id, amount, payment_date, account_id, label, category, sub_category, type, is_variable, is_waiting, is_extra, is_refund, is_salary, comments"
+          "instance_id, amount, payment_date, account_id, label, category, sub_category, type, is_variable, is_waiting, is_extra, is_refund, is_salary, comments, project_id"
         )
         .order("instance_id", { ascending: true })
         .range(from, to)
@@ -99,6 +103,7 @@ export const fetchInitialData = async () => {
       .from("authorized_users")
       .select("email, name, avatar_url, is_allowed, added_at, added_by, last_login_at, notes, is_admin")
       .order("added_at", { ascending: false }),
+    supabase.from("projects").select("id, name, is_archived, created_at").order("name", { ascending: true }),
   ]);
 
   const responses = [
@@ -113,6 +118,7 @@ export const fetchInitialData = async () => {
     transfersRes,
     savedLabelsRes,
     authUsersRes,
+    projectsRes,
   ];
   const errors = responses.map((r) => r.error).filter((e) => e !== null);
 
@@ -130,6 +136,7 @@ export const fetchInitialData = async () => {
   const transfers = (transfersRes.data || []).map(mappers.mapDbTransfer);
   const savedLabels = (savedLabelsRes.data || []).map(mappers.mapDbSavedLabel);
   const authorizedUsers = (authUsersRes.data || []).map(mappers.mapDbAuthorizedUser);
+  const projects = (projectsRes.data || []).map(mappers.mapDbProject);
 
   const paidItemInstanceIds = Array.from(new Set((paidItemsRes.data || []).map((item: DbPaidItem) => item.instance_id)));
   let paidItemBeneficiariesData: DbPaidItemBeneficiary[] = [];
@@ -185,11 +192,12 @@ export const fetchInitialData = async () => {
         isWaiting: mapped.isWaiting,
         isExtra: mapped.isExtra,
         comments: mapped.comments,
+        projectId: mapped.projectId,
       });
     }
   });
 
-  return { people, accounts, categories, configs, incomeConfigs, paidItems, settings, transfers, variableTransactions, savedLabels, authorizedUsers };
+  return { people, accounts, categories, configs, incomeConfigs, paidItems, settings, transfers, variableTransactions, savedLabels, authorizedUsers, projects };
 };
 
 // Ré-exports explicites
@@ -203,6 +211,8 @@ export {
   apiDeleteAccount,
   apiUpsertCategory,
   apiDeleteCategory,
+  apiUpsertProject,
+  apiDeleteProject,
   apiUpdateSettings,
   apiUpsertConfig,
   apiDeleteConfig,

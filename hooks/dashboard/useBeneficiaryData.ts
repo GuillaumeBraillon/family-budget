@@ -99,6 +99,9 @@ export const getBeneficiaryAnalysisFilters = (
   isCategoryFilterActive: false,
   includedSubCategoryIds: [],
   isSubCategoryFilterActive: false,
+  projectFilterMode: "ALL",
+  includedProjectIds: [],
+  isProjectFilterActive: false,
 });
 
 /**

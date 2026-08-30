@@ -33,6 +33,7 @@ import {
   PaidItemDetails,
   AuthorizedUser,
   AppSettings,
+  Project,
 } from "../../types";
 import { apiUpsertAccount } from "../../services/api";
 
@@ -86,6 +87,7 @@ type BudgetData = {
   variableTransactions: VariableTransaction[];
   savedLabels: SavedLabel[];
   authorizedUsers: AuthorizedUser[];
+  projects: Project[];
 };
 
 export const useBudgetBalances = (budgetDataRef: MutableRefObject<BudgetData>, setBudgetData: Dispatch<SetStateAction<BudgetData>>) => {

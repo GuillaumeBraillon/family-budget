@@ -32,6 +32,7 @@ import {
   VariableTransaction,
   SavedLabel,
   BeneficiaryAmount,
+  Project,
 } from "../types";
 
 // PostgREST plafonne silencieusement chaque requete a ce nombre de lignes (defaut Supabase).
@@ -212,6 +213,18 @@ export const apiUpsertCategory = async (categoryOrList: CategoryDef | CategoryDe
 };
 
 export const apiDeleteCategory = async (id: string) => supabase.from("categories").delete().eq("id", id);
+
+/**
+ * Opérations sur les Projets (regroupements d'opérations pour coût réel d'événement)
+ */
+export const apiUpsertProject = async (project: Project) =>
+  supabase.from("projects").upsert({
+    id: project.id,
+    name: project.name,
+    is_archived: !!project.isArchived,
+  });
+
+export const apiDeleteProject = async (id: string) => supabase.from("projects").delete().eq("id", id);
 
 /**
  * Opérations sur les Libellés Sauvegardés (Saved Labels)
@@ -590,6 +603,7 @@ export const apiSetPaidStatus = async (details: PaidItemDetails | null, instance
       p_is_salary: !!details.isSalary,
       p_comments: details.comments || null,
       p_beneficiary_amounts: normalizedBeneficiaryAmounts,
+      p_project_id: details.projectId || null,
     };
 
     const rpcResult = await supabase.rpc("upsert_paid_item_atomic", rpcPayload);
@@ -659,6 +673,7 @@ export const apiUpsertVariableTransaction = async (transaction: VariableTransact
     p_is_salary: !!transaction.isSalary,
     p_comments: transaction.comments || null,
     p_beneficiary_amounts: normalizedBeneficiaryAmounts,
+    p_project_id: transaction.projectId || null,
   };
 
   const rpcResult = await supabase.rpc("upsert_paid_item_atomic", rpcPayload);

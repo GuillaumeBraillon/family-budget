@@ -20,6 +20,7 @@ import {
   SavedLabel,
   CategoryDef,
   OperationFilters,
+  Project,
 } from "../../../types";
 
 // Imports UI Atomic (Generic)
@@ -47,6 +48,7 @@ interface OperationsViewProps {
   settings: AppSettings;
   categories: CategoryDef[];
   savedLabels?: SavedLabel[];
+  projects?: Project[];
   onTogglePaid: (details: PaidItemDetails | null, instanceId: string) => void;
   onUpsertVariable: (t: VariableTransaction) => void;
   onDeleteVariable: (id: string) => void;
@@ -67,6 +69,7 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
   settings,
   categories,
   savedLabels,
+  projects = [],
   onTogglePaid,
   onUpsertVariable,
   onDeleteVariable,
@@ -271,6 +274,7 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
           categories={categories}
           availableCategoryIds={availableCategoryIds}
           availableSubCategoryIds={availableSubCategoryIds}
+          projects={projects}
           onReset={resetFilters}
           sortOptions={sortOptions}
           sortKey={sortKey}
@@ -287,6 +291,7 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
         monthShort={monthShort}
         people={people}
         accounts={accounts}
+        projects={projects}
         currentDate={currentDate}
         onItemClick={handleItemClick}
         onAddClick={() => {
@@ -304,6 +309,7 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
         uncheckModal={ui.uncheckModal}
         accounts={accounts}
         people={people}
+        projects={projects}
         onTogglePaid={onTogglePaid}
         onCloseConfirm={ui.closeConfirmModal}
         onCloseUncheck={ui.closeUncheckModal}
@@ -316,6 +322,7 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
         accounts={accounts}
         categories={categories}
         people={people}
+        projects={projects}
         onAddTransaction={handleUpsertVariable}
         onDeleteTransaction={handleDeleteVariable}
         defaultDate={defaultVarDate}

@@ -65,7 +65,7 @@ import {
   Users,
   FolderOpen,
 } from "lucide-react";
-import { OperationFilters, Account, Person, AccountType, CategoryDef } from "../../types";
+import { OperationFilters, Account, Person, AccountType, CategoryDef, Project } from "../../types";
 import { FilterOption } from "../../components/ui/molecules/FilterDropdown";
 import { buildOperationsFilters } from "../../services/financeUtils";
 
@@ -97,6 +97,7 @@ export const useFilterBarLogic = (
   categories: CategoryDef[] = [],
   availableCategoryIds: string[] = [],
   availableSubCategoryIds: string[] = [],
+  projects: Project[] = [],
   onReset?: () => void
 ) => {
   const [showAllFilters, setShowAllFilters] = useState(false);
@@ -337,6 +338,68 @@ export const useFilterBarLogic = (
   };
 
   /**
+   * Options du dropdown Projets (non archivés).
+   */
+  const projectItemOptions: FilterOption[] = projects
+    .filter((p) => !p.isArchived)
+    .map((p) => ({
+      id: p.id,
+      label: p.name,
+      icon: <FolderOpen size={14} className="text-slate-400" />,
+    }));
+
+  const PROJECT_WITH_ID = "__WITH_PROJECT__";
+  const PROJECT_WITHOUT_ID = "__WITHOUT_PROJECT__";
+  const projectOptions: FilterOption[] = [
+    { id: PROJECT_WITH_ID, label: "Avec projet", icon: <Briefcase size={14} className="text-indigo-500" /> },
+    { id: PROJECT_WITHOUT_ID, label: "Sans projet", icon: <Circle size={14} className="text-slate-400" /> },
+    ...projectItemOptions,
+  ];
+
+  const allProjectIds = projectItemOptions.map((o) => o.id);
+  const projectFilterMode = filters.projectFilterMode || (filters.isProjectFilterActive || filters.includedProjectIds.length > 0 ? "SELECTED" : "ALL");
+  const visualProjectIds =
+    projectFilterMode === "WITH_PROJECT"
+      ? [PROJECT_WITH_ID]
+      : projectFilterMode === "WITHOUT_PROJECT"
+        ? [PROJECT_WITHOUT_ID]
+        : projectFilterMode === "SELECTED"
+          ? filters.includedProjectIds
+          : [];
+
+  const handleProjectChange = (ids: string[]) => {
+    const includesWithProject = ids.includes(PROJECT_WITH_ID);
+    const includesWithoutProject = ids.includes(PROJECT_WITHOUT_ID);
+
+    if (includesWithProject && includesWithoutProject) {
+      const nextMode = projectFilterMode === "WITHOUT_PROJECT" ? "WITH_PROJECT" : "WITHOUT_PROJECT";
+      onFilterChange({ ...filters, projectFilterMode: nextMode, includedProjectIds: [], isProjectFilterActive: true });
+      return;
+    }
+
+    if (includesWithoutProject) {
+      onFilterChange({ ...filters, projectFilterMode: "WITHOUT_PROJECT", includedProjectIds: [], isProjectFilterActive: true });
+      return;
+    }
+
+    if (includesWithProject) {
+      onFilterChange({ ...filters, projectFilterMode: "WITH_PROJECT", includedProjectIds: [], isProjectFilterActive: true });
+      return;
+    }
+
+    const selectedProjectIds = ids.filter((id) => allProjectIds.includes(id));
+    if (selectedProjectIds.length === 0) {
+      onFilterChange({ ...filters, projectFilterMode: "ALL", includedProjectIds: [], isProjectFilterActive: false });
+    } else {
+      onFilterChange({ ...filters, projectFilterMode: "SELECTED", includedProjectIds: selectedProjectIds, isProjectFilterActive: true });
+    }
+  };
+
+  const handleProjectSelectAll = () => {
+    onFilterChange({ ...filters, projectFilterMode: "WITH_PROJECT", includedProjectIds: [], isProjectFilterActive: true });
+  };
+
+  /**
    * Options du dropdown Bénéficiaires avec icône selon type (enfant/adulte).
    */
   const benOptions: FilterOption[] = people.map((p) => ({
@@ -417,9 +480,14 @@ export const useFilterBarLogic = (
   const isSubCategoryActive = filters.isSubCategoryFilterActive || filters.includedSubCategoryIds.length > 0;
 
   /**
+   * Détecte si le filtre Projets est actif (sélection explicite).
+   */
+  const isProjectActive = projectFilterMode !== "ALL" || filters.isProjectFilterActive || filters.includedProjectIds.length > 0;
+
+  /**
    * Détecte si au moins un filtre secondaire (avancé) est actif.
    */
-  const hasActiveSecondary = isSalaryActive || isAccountActive || isFluxActive || isCategoryActive || isSubCategoryActive;
+  const hasActiveSecondary = isSalaryActive || isAccountActive || isFluxActive || isCategoryActive || isSubCategoryActive || isProjectActive;
 
   /**
    * Compte total des filtres actifs pour le badge global.
@@ -458,7 +526,10 @@ export const useFilterBarLogic = (
     filters.includedCategoryIds.length === 0 &&
     !filters.isCategoryFilterActive &&
     filters.includedSubCategoryIds.length === 0 &&
-    !filters.isSubCategoryFilterActive;
+    !filters.isSubCategoryFilterActive &&
+    (filters.projectFilterMode || "ALL") === DEFAULT.projectFilterMode &&
+    filters.includedProjectIds.length === 0 &&
+    !filters.isProjectFilterActive;
 
   return {
     // État UI
@@ -485,6 +556,10 @@ export const useFilterBarLogic = (
     subCategoryOptions,
     visualSubCategoryIds,
     handleSubCategoryChange,
+    projectOptions,
+    visualProjectIds,
+    handleProjectChange,
+    handleProjectSelectAll,
     benOptions,
     visualBenIds,
     handleBenChange,
@@ -499,6 +574,7 @@ export const useFilterBarLogic = (
     isAccountActive,
     isCategoryActive,
     isSubCategoryActive,
+    isProjectActive,
     hasActiveSecondary,
     activeFiltersCount,
     isDefaultFilters,

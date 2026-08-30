@@ -1,7 +1,7 @@
 import React from "react";
-import { CreditCard, User } from "lucide-react";
+import { CreditCard, User, Briefcase } from "lucide-react";
 import { SelectInput } from "./FormInputs";
-import { Account, Person, AccountType } from "../../../types";
+import { Account, Person, AccountType, Project } from "../../../types";
 
 interface AccountSelectorProps extends Omit<React.SelectHTMLAttributes<HTMLSelectElement>, "children"> {
   accounts: Account[];
@@ -50,6 +50,31 @@ export const BeneficiarySelector: React.FC<BeneficiarySelectorProps> = ({ people
       {people.map((p) => (
         <option key={p.id} value={p.id}>
           {p.name} {p.isChild ? "(Enfant)" : ""}
+        </option>
+      ))}
+    </SelectInput>
+  );
+};
+
+interface ProjectSelectorProps extends Omit<React.SelectHTMLAttributes<HTMLSelectElement>, "children"> {
+  projects: Project[];
+  label?: string;
+  color?: "indigo" | "emerald";
+}
+
+/**
+ * Sélecteur du projet/événement associé à une opération (regroupement transverse aux catégories).
+ * Toujours facultatif : l'option "(Aucun projet)" reste la valeur par défaut.
+ */
+export const ProjectSelector: React.FC<ProjectSelectorProps> = ({ projects, label = "Projet", color, value, ...props }) => {
+  const activeProjects = projects.filter((p) => !p.isArchived || p.id === value);
+
+  return (
+    <SelectInput label={label} icon={Briefcase} color={color} value={value} {...props}>
+      <option value="">(Aucun projet)</option>
+      {activeProjects.map((p) => (
+        <option key={p.id} value={p.id}>
+          {p.name}
         </option>
       ))}
     </SelectInput>

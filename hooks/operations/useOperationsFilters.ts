@@ -147,6 +147,9 @@ export const useOperationsFilters = (initialFilters?: Partial<OperationFilters>)
         const parsed = JSON.parse(saved);
         // Merger avec DEFAULT_FILTERS pour ajouter les nouveaux champs manquants (migration)
         baseFilters = { ...DEFAULT_FILTERS, ...parsed };
+        if (!parsed.projectFilterMode) {
+          baseFilters.projectFilterMode = parsed.isProjectFilterActive || (parsed.includedProjectIds || []).length > 0 ? "SELECTED" : "ALL";
+        }
       } catch {
         // Données corrompues → Retour aux défauts
         baseFilters = DEFAULT_FILTERS;

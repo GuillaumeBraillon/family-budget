@@ -1,5 +1,5 @@
 import React from "react";
-import { PlannedItem, Person, Account } from "../../../../types";
+import { PlannedItem, Person, Account, Project } from "../../../../types";
 import { DataList } from "../../../ui/molecules/DataList";
 import { DataListRow } from "../../../ui/molecules/DataListRow";
 import { SortableRow } from "../../../ui/molecules/SortableRow";
@@ -19,6 +19,7 @@ interface OperationsListProps {
   onExport?: () => void;
   onReorder?: (item: PlannedItem, oldIndex: number, newIndex: number) => void;
   isAdmin?: boolean;
+  projects?: Project[];
 }
 
 export const OperationsList: React.FC<OperationsListProps> = ({
@@ -32,6 +33,7 @@ export const OperationsList: React.FC<OperationsListProps> = ({
   onExport,
   onReorder,
   isAdmin,
+  projects = [],
 }) => {
   const numberFormatter = new Intl.NumberFormat("fr-FR", {
     minimumFractionDigits: 2,
@@ -128,6 +130,8 @@ export const OperationsList: React.FC<OperationsListProps> = ({
         : person?.name;
     const account = accounts.find((a) => a.id === item.accountId);
     const isVariable = item.source === "VARIABLE";
+    const project = item.projectId ? projects.find((p) => p.id === item.projectId) : undefined;
+    const projectName = project?.name ?? "Projet";
 
     return (
       <DataListRow
@@ -159,6 +163,15 @@ export const OperationsList: React.FC<OperationsListProps> = ({
             {item.isSalary && (
               <span className="text-[9px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded font-bold uppercase flex items-center gap-1">
                 <Briefcase size={10} /> Salaire
+              </span>
+            )}
+            {item.projectId && (
+              <span
+                className="text-[9px] bg-violet-50 text-violet-700 px-1.5 py-0.5 rounded font-bold uppercase flex items-center gap-1 max-w-[120px]"
+                title={projectName}
+              >
+                <Briefcase size={10} />
+                <span className="truncate">{projectName}</span>
               </span>
             )}
             {item.isExtra &&

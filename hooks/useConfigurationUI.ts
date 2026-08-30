@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-export type ConfigTab = "budget" | "family" | "accounts" | "operations" | "categories" | "labels" | "users" | "system";
+export type ConfigTab = "budget" | "family" | "accounts" | "operations" | "categories" | "projects" | "labels" | "users" | "system";
 
 /**
  * Hook de gestion de l'état UI de la vue Configuration.

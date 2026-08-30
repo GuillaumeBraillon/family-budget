@@ -63,6 +63,18 @@ export interface SavedLabel {
   beneficiaryId?: string; // Bénéficiaire suggéré pour auto-complétion
 }
 
+/**
+ * Regroupement libre d'opérations pointées (ex: "Vacances été 2026") permettant
+ * de connaître le coût réel d'un événement/projet, indépendamment des catégories.
+ * Une opération pointée appartient à au plus un projet (cardinalité simple).
+ */
+export interface Project {
+  id: string;
+  name: string;
+  isArchived?: boolean;
+  createdAt?: string;
+}
+
 export enum TransactionType {
   DEBIT = "DEBIT",
   CREDIT = "CREDIT",
@@ -104,6 +116,7 @@ export interface VariableTransaction {
   isExtra: boolean; // True = Hors budget
   comments?: string;
   position?: number; // Tri manuel (legacy/compat)
+  projectId?: string; // Projet/événement associé (optionnel)
 }
 
 export type PeriodType = "FIXED_DAYS" | "CALENDAR_WEEKS" | "CUSTOM_SPLIT";
@@ -165,6 +178,7 @@ export interface PaidItemDetails {
   isWaiting: boolean;
   isExtra: boolean;
   comments?: string;
+  projectId?: string; // Projet/événement associé (optionnel)
 }
 
 export type PlannedItemType = "EXPENSE" | "INCOME";
@@ -195,6 +209,7 @@ export interface PlannedItem {
   startMonth?: string;
   endMonth?: string;
   comments?: string;
+  projectId?: string; // Projet/événement associé (optionnel, uniquement si pointé)
 }
 
 export interface WeeklyBudget {
@@ -308,4 +323,7 @@ export interface OperationFilters {
   isCategoryFilterActive: boolean; // true = filtre actif ([] = rien afficher)
   includedSubCategoryIds: string[];
   isSubCategoryFilterActive: boolean; // true = filtre actif ([] = rien afficher)
+  projectFilterMode: "ALL" | "WITH_PROJECT" | "WITHOUT_PROJECT" | "SELECTED";
+  includedProjectIds: string[];
+  isProjectFilterActive: boolean; // true = filtre actif ([] = rien afficher)
 }

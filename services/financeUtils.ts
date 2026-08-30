@@ -180,5 +180,8 @@ export const buildOperationsFilters = (overrides: Partial<OperationFilters>): Pa
   isCategoryFilterActive: false,
   includedSubCategoryIds: [],
   isSubCategoryFilterActive: false,
+  projectFilterMode: "ALL",
+  includedProjectIds: [],
+  isProjectFilterActive: false,
   ...overrides,
 });

@@ -84,6 +84,9 @@ export const getDetailedAnalysisFilters = (flux: "EXPENSE" | "INCOME", source: "
   isCategoryFilterActive: false,
   includedSubCategoryIds: [],
   isSubCategoryFilterActive: false,
+  projectFilterMode: "ALL",
+  includedProjectIds: [],
+  isProjectFilterActive: false,
 });
 
 /**
@@ -132,6 +135,9 @@ export const getGlobalAnalysisFilters = (column: GlobalAnalysisColumn): Operatio
     isCategoryFilterActive: false,
     includedSubCategoryIds: [],
     isSubCategoryFilterActive: false,
+    projectFilterMode: "ALL",
+    includedProjectIds: [],
+    isProjectFilterActive: false,
   };
 
   switch (column) {

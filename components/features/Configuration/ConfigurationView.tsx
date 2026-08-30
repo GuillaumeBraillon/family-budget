@@ -1,8 +1,8 @@
 import React from "react";
 import { Session } from "@supabase/supabase-js";
-import { Settings, UserCircle, CreditCard, Sliders, Shield } from "lucide-react";
+import { Settings, UserCircle, CreditCard, Sliders, Shield, Briefcase } from "lucide-react";
 import { ConfigTab } from "../../../hooks/useConfigurationUI";
-import { ExpenseConfig, IncomeConfig, CategoryDef, Person, Account, AppSettings, SavedLabel, AuthorizedUser } from "../../../types";
+import { ExpenseConfig, IncomeConfig, CategoryDef, Person, Account, AppSettings, SavedLabel, AuthorizedUser, Project } from "../../../types";
 import { InfoBox } from "../../ui/InfoBox";
 import { ConfigurationTabs } from "./components/molecules/ConfigurationTabs";
 import { CategoryManager } from "./components/organisms/CategoryManager";
@@ -13,6 +13,7 @@ import { AccountLabelManager } from "./components/organisms/AccountLabelManager"
 import { OperationsManager } from "./components/organisms/OperationsManager";
 import { UsersManager } from "./components/organisms/UsersManager";
 import { SystemSettings } from "./components/organisms/SystemSettings";
+import { ProjectManager } from "./components/organisms/ProjectManager";
 
 interface ConfigurationViewProps {
   configs: ExpenseConfig[];
@@ -27,6 +28,9 @@ interface ConfigurationViewProps {
   activeTab: ConfigTab;
   setActiveTab: (tab: ConfigTab) => void;
   onUpdateCategories: (newCategories: CategoryDef[]) => void;
+  projects: Project[];
+  onUpsertProject: (p: Project) => void;
+  onDeleteProject: (id: string) => void;
   onUpsertPerson: (p: Person) => void;
   onDeletePerson: (id: string) => void;
   onUpsertAccount: (a: Account) => void;
@@ -61,6 +65,9 @@ export const ConfigurationView: React.FC<ConfigurationViewProps> = ({
   activeTab,
   setActiveTab,
   onUpdateCategories,
+  projects,
+  onUpsertProject,
+  onDeleteProject,
   onUpsertPerson,
   onDeletePerson,
   onUpsertAccount,
@@ -119,6 +126,17 @@ export const ConfigurationView: React.FC<ConfigurationViewProps> = ({
       {activeTab === "categories" && (
         <>
           <CategoryManager categories={categories} onUpdateCategories={onUpdateCategories} />
+        </>
+      )}
+
+      {activeTab === "projects" && (
+        <>
+          <InfoBox
+            title="Projets & Événements"
+            description="Regroupez des opérations de catégories différentes (restaurants, carburant, achats...) sous un même projet pour connaître son coût réel total (ex: vacances, travaux)."
+            icon={<Briefcase size={18} />}
+          />
+          <ProjectManager projects={projects} onUpsertProject={onUpsertProject} onDeleteProject={onDeleteProject} />
         </>
       )}
 

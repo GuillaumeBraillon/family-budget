@@ -19,10 +19,10 @@
 import React, { useState, useRef } from "react";
 import { useError } from "../../../../contexts/ErrorContext";
 import { TrendingUp, TrendingDown, Calendar, Trash2, Clock, CheckCircle2, Star, MessageSquare, RefreshCcw, Banknote } from "lucide-react";
-import { VariableTransaction, Account, CategoryDef, Person, SavedLabel, AccountType } from "../../../../types";
+import { VariableTransaction, Account, CategoryDef, Person, SavedLabel, AccountType, Project } from "../../../../types";
 import { CategorySelector } from "../../../ui/molecules/CategorySelector";
 import { TextInput, AmountInput, SearchableTextInput } from "../../../ui/molecules/FormInputs";
-import { AccountSelector } from "../../../ui/molecules/SmartSelectors";
+import { AccountSelector, ProjectSelector } from "../../../ui/molecules/SmartSelectors";
 import { ConfirmModal } from "../../../ui/atoms/ConfirmModal";
 import { Modal } from "../../../ui/Modal";
 import { BeneficiaryAmountSelector } from "../../../ui/molecules/BeneficiaryAmountSelector";
@@ -45,6 +45,7 @@ interface VariableTransactionFormProps {
   editingTransaction?: VariableTransaction | null;
   initialMode?: "STANDARD";
   lockMode?: boolean;
+  projects?: Project[];
 }
 
 export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = ({
@@ -61,6 +62,7 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
   editingTransaction,
   initialMode = "STANDARD",
   lockMode: _lockMode = false,
+  projects = [],
 }) => {
   const { showError } = useError();
   // --- HOOKS SPÉCIALISÉS (LOGIQUE DÉLÉGUÉE) ---
@@ -199,6 +201,8 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
           onCategoryChange={form.setCategory}
           onSubCategoryChange={form.setSubCategory}
         />
+
+        <ProjectSelector projects={projects} value={form.projectId} onChange={(e) => form.setProjectId(e.target.value)} />
 
         <TextInput
           label="Note / Commentaire"

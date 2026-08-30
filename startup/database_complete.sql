@@ -125,6 +125,16 @@ CREATE TABLE IF NOT EXISTS income_configs (
   end_month text    -- Format: YYYY-MM
 );
 
+-- Table: projects
+-- Regroupements libres d'opérations (ex: "Vacances été 2026") pour calculer un coût réel
+-- transverse aux catégories. Une opération pointée appartient à au plus un projet.
+CREATE TABLE IF NOT EXISTS projects (
+  id text PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  name text NOT NULL,
+  is_archived boolean DEFAULT false NOT NULL,
+  created_at timestamptz DEFAULT now()
+);
+
 -- Table: paid_items
 -- Opérations pointées (récurrentes + variables)
 -- Note: le bénéficiaire n'est PAS stocké ici — il est dans paid_item_beneficiaries.
@@ -146,6 +156,10 @@ CREATE TABLE IF NOT EXISTS paid_items (
   position bigint DEFAULT 0,
   type text NOT NULL CHECK (type IN ('EXPENSE', 'INCOME'))
 );
+
+-- Colonne ajoutée après la création initiale de la table (installations existantes) :
+-- ré-exécutable sans risque, y compris juste après le CREATE TABLE ci-dessus.
+ALTER TABLE paid_items ADD COLUMN IF NOT EXISTS project_id text REFERENCES projects(id) ON DELETE SET NULL;
 
 -- Table: paid_item_beneficiaries
 -- Ventilation des montants par bénéficiaire
@@ -185,6 +199,7 @@ CREATE INDEX IF NOT EXISTS idx_expense_configs_account ON expense_configs(accoun
 CREATE INDEX IF NOT EXISTS idx_income_configs_account ON income_configs(account_id);
 CREATE INDEX IF NOT EXISTS idx_income_configs_beneficiary ON income_configs(beneficiary_id);
 CREATE INDEX IF NOT EXISTS idx_paid_items_account ON paid_items(account_id);
+CREATE INDEX IF NOT EXISTS idx_paid_items_project ON paid_items(project_id);
 CREATE INDEX IF NOT EXISTS idx_transfers_source ON transfers(source_account_id);
 CREATE INDEX IF NOT EXISTS idx_transfers_dest ON transfers(destination_account_id);
 CREATE INDEX IF NOT EXISTS idx_paid_item_beneficiaries_instance ON paid_item_beneficiaries(paid_item_instance_id);
@@ -231,6 +246,7 @@ ALTER TABLE income_configs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE paid_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE paid_item_beneficiaries ENABLE ROW LEVEL SECURITY;
 ALTER TABLE transfers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE projects ENABLE ROW LEVEL SECURITY;
 
 -- Politique par défaut : Tous les utilisateurs authentifiés peuvent tout faire
 -- Note: Adapter ces politiques selon vos besoins de sécurité
@@ -271,6 +287,9 @@ CREATE POLICY "Enable all for authenticated users" ON paid_item_beneficiaries
 CREATE POLICY "Enable all for authenticated users" ON transfers
   FOR ALL USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
 
+CREATE POLICY "Enable all for authenticated users" ON projects
+  FOR ALL USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
+
 -- =====================================
 -- 3.1 FONCTIONS RPC TRANSACTIONNELLES
 -- =====================================
@@ -292,7 +311,8 @@ CREATE OR REPLACE FUNCTION public.upsert_paid_item_atomic(
   p_is_refund           boolean,
   p_is_salary           boolean,
   p_comments            text,
-  p_beneficiary_amounts jsonb DEFAULT NULL
+  p_beneficiary_amounts jsonb DEFAULT NULL,
+  p_project_id          text DEFAULT NULL
 )
 RETURNS void
 LANGUAGE plpgsql
@@ -330,7 +350,8 @@ BEGIN
     is_extra,
     is_refund,
     is_salary,
-    comments
+    comments,
+    project_id
   ) VALUES (
     p_instance_id,
     p_amount,
@@ -345,7 +366,8 @@ BEGIN
     COALESCE(p_is_extra, false),
     COALESCE(p_is_refund, false),
     COALESCE(p_is_salary, false),
-    p_comments
+    p_comments,
+    p_project_id
   )
   ON CONFLICT (instance_id) DO UPDATE SET
     amount       = EXCLUDED.amount,
@@ -360,7 +382,8 @@ BEGIN
     is_extra     = EXCLUDED.is_extra,
     is_refund    = EXCLUDED.is_refund,
     is_salary    = EXCLUDED.is_salary,
-    comments     = EXCLUDED.comments;
+    comments     = EXCLUDED.comments,
+    project_id   = EXCLUDED.project_id;
 
   -- Bénéficiaires (déjà validés ci-dessus : non NULL, array, min 1 entrée)
   SELECT COALESCE(sum((entry->>'amount')::numeric), 0)
@@ -393,7 +416,7 @@ $$;
 
 GRANT EXECUTE ON FUNCTION public.upsert_paid_item_atomic(
   text, numeric, date, text, text, text, text,
-  public.transaction_type, boolean, boolean, boolean, boolean, boolean, text, jsonb
+  public.transaction_type, boolean, boolean, boolean, boolean, boolean, text, jsonb, text
 ) TO authenticated;
 
 -- =====================================
@@ -417,6 +440,8 @@ COMMENT ON TABLE income_configs IS 'Modèles de revenus récurrents (salaires, e
 COMMENT ON TABLE paid_items IS 'Opérations réelles pointées (récurrentes + variables)';
 COMMENT ON TABLE paid_item_beneficiaries IS 'Ventilation des montants par bénéficiaire pour calculs budgétaires';
 COMMENT ON TABLE transfers IS 'Virements internes entre comptes (ne comptent pas dans le budget)';
+COMMENT ON TABLE projects IS 'Regroupements libres d''opérations pointées pour suivre le coût réel d''un événement ou projet (ex: vacances)';
+COMMENT ON COLUMN paid_items.project_id IS 'Projet auquel rattacher l''opération (optionnel, indépendant de la catégorie)';
 
 COMMENT ON COLUMN people.is_child IS 'Les enfants sont exclus des calculs d''équité';
 COMMENT ON COLUMN income_configs.is_salary IS 'Identifie les revenus structurels (salaires) pour les calculs';
@@ -437,6 +462,7 @@ ANALYZE income_configs;
 ANALYZE paid_items;
 ANALYZE paid_item_beneficiaries;
 ANALYZE transfers;
+ANALYZE projects;
 
 -- =====================================
 -- NOTES D'IMPLÉMENTATION

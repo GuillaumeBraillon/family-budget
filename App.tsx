@@ -49,6 +49,7 @@ const AppContent: React.FC = () => {
     variableTransactions,
     savedLabels,
     authorizedUsers,
+    projects,
     loading: budgetLoading,
     error: budgetError,
     isDbEmpty,
@@ -221,6 +222,7 @@ const AppContent: React.FC = () => {
             settings={settings}
             categories={categories}
             savedLabels={savedLabels}
+            projects={projects}
             onTogglePaid={actions.setPaidStatus}
             onUpsertVariable={actions.upsertVariableTransaction}
             onDeleteVariable={actions.deleteVariableTransaction}
@@ -263,6 +265,9 @@ const AppContent: React.FC = () => {
             session={session}
             activeTab={activeTab}
             setActiveTab={setActiveTab}
+            projects={projects}
+            onUpsertProject={actions.upsertProject}
+            onDeleteProject={actions.deleteProject}
             onUpdateCategories={actions.upsertCategory}
             onUpsertPerson={actions.upsertPerson}
             onDeletePerson={actions.deletePerson}
@@ -297,6 +302,7 @@ const AppContent: React.FC = () => {
             categories={categories}
             onNavigateToPlanner={navigateToPlannerWithContext}
             onNavigateToConfig={() => navigateToConfig("budget")}
+            projects={projects}
           />
         )}
       </main>

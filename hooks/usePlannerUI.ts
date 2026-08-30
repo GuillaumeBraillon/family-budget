@@ -82,6 +82,7 @@ export const usePlannerUI = (initialDate: Date = new Date(), initialWeek?: numbe
     label: string;
     comments: string;
     beneficiaryAmounts: BeneficiaryAmount[];
+    projectId: string;
   }>({
     isOpen: false,
     item: null,
@@ -91,6 +92,7 @@ export const usePlannerUI = (initialDate: Date = new Date(), initialWeek?: numbe
     label: "",
     comments: "",
     beneficiaryAmounts: [],
+    projectId: "",
   });
 
   const [uncheckModal, setUncheckModal] = useState<{
@@ -128,6 +130,7 @@ export const usePlannerUI = (initialDate: Date = new Date(), initialWeek?: numbe
       label: item.label,
       comments: item.comments || "",
       beneficiaryAmounts: item.beneficiaryAmounts && item.beneficiaryAmounts.length > 0 ? item.beneficiaryAmounts : fallbackBeneficiaryAmounts,
+      projectId: item.projectId || "",
     });
   };
 

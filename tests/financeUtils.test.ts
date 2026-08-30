@@ -334,6 +334,9 @@ describe("buildOperationsFilters", () => {
       isCategoryFilterActive: false,
       includedSubCategoryIds: [],
       isSubCategoryFilterActive: false,
+      projectFilterMode: "ALL",
+      includedProjectIds: [],
+      isProjectFilterActive: false,
     });
   });
 

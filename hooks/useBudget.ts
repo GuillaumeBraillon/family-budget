@@ -48,6 +48,7 @@ import {
   AccountType,
   PlannedItem,
   AuthorizedUser,
+  Project,
 } from "../types";
 import { useBudgetBalances } from "./budget/useBudgetBalances";
 import { useBudgetActions } from "./budget/useBudgetActions";
@@ -152,6 +153,7 @@ export const useBudget = () => {
     variableTransactions: [] as VariableTransaction[],
     savedLabels: [] as SavedLabel[],
     authorizedUsers: [] as AuthorizedUser[],
+    projects: [] as Project[],
   });
 
   // Ref pour accéder aux données actuelles dans les fonctions async sans stale closures
@@ -211,6 +213,7 @@ export const useBudget = () => {
         variableTransactions: res.variableTransactions,
         savedLabels: res.savedLabels,
         authorizedUsers: res.authorizedUsers ?? [],
+        projects: res.projects ?? [],
       });
     } catch (err) {
       const error = err as Error;

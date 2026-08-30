@@ -19,8 +19,20 @@ import { MonthSelector } from "../Dashboard/components/MonthSelector";
 import { GlobalMonthlyAnalysis } from "../Dashboard/components/GlobalMonthlyAnalysis";
 import { AnnualIncomeAnalysis } from "./charts/AnnualIncomeAnalysis";
 import { AnnualBeneficiaryAnalysis } from "./charts/AnnualBeneficiaryAnalysis";
-import { Account, Person, ExpenseConfig, IncomeConfig, PaidItemDetails, AppSettings, VariableTransaction, CategoryDef, OperationFilters } from "../../../types";
+import {
+  Account,
+  Person,
+  ExpenseConfig,
+  IncomeConfig,
+  PaidItemDetails,
+  AppSettings,
+  VariableTransaction,
+  CategoryDef,
+  OperationFilters,
+  Project,
+} from "../../../types";
 import { SavingsByCategoryCard } from "../Dashboard/components/SavingsByCategoryCard";
+import { ProjectsCostCard } from "./components/ProjectsCostCard";
 
 interface AnalyticsViewProps {
   accounts: Account[];
@@ -31,6 +43,7 @@ interface AnalyticsViewProps {
   settings: AppSettings;
   variableTransactions?: VariableTransaction[];
   categories: CategoryDef[];
+  projects?: Project[];
   onNavigateToPlanner: (date: Date, filters?: Partial<OperationFilters>, weekNumber?: number) => void;
   onNavigateToConfig: () => void;
 }
@@ -44,6 +57,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
   settings,
   variableTransactions = [],
   categories,
+  projects = [],
   onNavigateToPlanner,
 }) => {
   // --- ÉTAT UI (Navigation année) ---
@@ -68,6 +82,9 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
       {/* HEADER : Situation financière + Sélecteur d'année + navigation vers la config */}
       <MonthSelector year={selectedYear} onYearChange={setSelectedYear} />
 
+      {/* SECTION PROJETS : Coût réel par projet/événement (transverse aux catégories) */}
+      <ProjectsCostCard projects={projects} paidItems={paidItems} categories={categories} onNavigateToPlanner={onNavigateToPlanner} />
+
       {/* Soldes par catégorie */}
       <SavingsByCategoryCard
         accounts={accounts}
@@ -84,7 +101,6 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
 
       {/* SECTION MACRO : Trésorerie Globale & Épargne */}
       <GlobalMonthlyAnalysis data={globalMonthlyData} year={selectedYear} onNavigateToPlanner={onNavigateToPlanner} onYearChange={setSelectedYear} />
-
       {/* SECTION MICRO : Analyse Complète (Réel) */}
       <AnnualIncomeAnalysis data={annualData} year={selectedYear} onYearChange={setSelectedYear} onNavigateToPlanner={onNavigateToPlanner} />
 

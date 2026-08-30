@@ -7,6 +7,58 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.13.0] - 2026-08-30
+
+### ✨ Fonctionnalités (Features)
+
+- **Projets & Événements** : nouveau regroupement libre d'opérations, indépendant des catégories, pour connaître le coût réel d'un événement ou d'un projet (ex: "Vacances été 2026") réparti sur plusieurs catégories (restaurants, carburant, achats divers...).
+  - Nouvelle entité `Project` (`types.ts`) : un simple nom + statut archivé, une opération pointée appartient à au plus un projet (cardinalité simple, volontairement différente de l'ancien système de tags supprimé en 2.10.x).
+  - Nouvel onglet **Configuration > Projets** (`ProjectManager.tsx`) : création, renommage, archivage et suppression des projets.
+  - Sélecteur "Projet" (optionnel, "Aucun projet" par défaut) ajouté au formulaire de transaction variable et à la confirmation de pointage d'une dépense/revenu récurrent.
+  - Nouveau filtre "Projets" dans la barre de filtres d'Opérations (`FilterBar`/`useFilterBarLogic`) avec modes explicites :
+    - **Toutes les opérations** (`projectFilterMode: "ALL"`)
+    - **Avec projet** (`WITH_PROJECT`)
+    - **Sans projet** (`WITHOUT_PROJECT`)
+    - **Projets sélectionnés** (`SELECTED`)
+  - Navigation depuis Analytics vers Opérations avec filtres projet/catégorie : clic sur le total d'un projet ou sur une ligne de catégorie pour ouvrir la vue Opérations déjà filtrée.
+  - Nouvelle carte **Analytics > Coût réel par projet** (`ProjectsCostCard.tsx`) : total par projet (remboursements déduits, virements internes/intérêts exclus) avec détail par catégorie.
+  - Détail enrichi dans `ProjectsCostCard` :
+    - période couverte par le projet
+    - nombre d'opérations
+    - badge projet archivé
+    - total dépenses
+    - total remboursé
+    - moyenne par opération
+    - nombre d'opérations, pourcentage du total et période par catégorie
+
+### 🗄️ Base de données
+
+- Nouvelle table `projects` (id, name, is_archived, created_at).
+- Nouvelle colonne `paid_items.project_id` (FK vers `projects`, `ON DELETE SET NULL`) : seule la table `paid_items` porte cette association, les instances récurrentes non encore pointées n'ont donc pas de projet tant qu'elles ne sont pas payées.
+- RPC `upsert_paid_item_atomic` : nouveau paramètre `p_project_id` (optionnel, `DEFAULT NULL`).
+
+**Note** : Le fichier `startup/database_complete.sql` est déjà à jour pour les nouvelles installations. Pour une base existante, exécuter le script ci-dessus puis recopier la définition complète de `upsert_paid_item_atomic` depuis `startup/database_complete.sql`.
+
+### 🐛 Corrections
+
+- **Filtre Projets dans Opérations** : correction de la sémantique du filtre qui confondait "tous les projets sélectionnés" et "filtre désactivé".
+  - Cocher **Avec projet** affiche uniquement les opérations rattachées à un projet.
+  - Cocher **Sans projet** affiche uniquement les opérations sans projet.
+  - Ne rien cocher affiche toutes les opérations.
+  - Cocher un projet précis affiche uniquement ce projet, même lorsqu'il s'agit du seul projet existant.
+- **Compatibilité filtres existants** : migration automatique des anciens filtres stockés en `localStorage` vers `projectFilterMode` pour éviter les états incohérents après mise à jour.
+- **Propagation `projectId` dans le planner** : les opérations récurrentes pointées, revenus pointés, variables et paid items orphelins exposent désormais leur `projectId` dans `PlannedItem`, ce qui rend le filtrage projet opérationnel dans toute la vue Opérations.
+
+### ✅ Tests
+
+- Ajout de tests unitaires sur `usePlanner` pour verrouiller les modes :
+  - toutes les opérations
+  - opérations avec projet
+  - opérations sans projet
+  - projet sélectionné
+
+---
+
 ## [2.12.5] - 2026-08-26
 
 ### 🐛 Corrections
