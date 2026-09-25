@@ -23,7 +23,7 @@ export interface PeriodNavigationState {
  */
 export const usePeriodNavigation = (): PeriodNavigationState => {
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [scope, setScope] = useState<"MONTH" | "PERIOD">("PERIOD");
+  const [scope, setScope] = useState<"MONTH" | "PERIOD">("MONTH");
   const [activeWeek, setActiveWeek] = useState(() => {
     const day = new Date().getDate();
     if (day <= 7) return 1;

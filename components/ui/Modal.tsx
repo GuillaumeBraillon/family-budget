@@ -28,7 +28,7 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, 
 
         <div className="p-3 overflow-y-auto">{children}</div>
 
-        {footer && <div className="px-3 py-3 border-t border-slate-100 bg-slate-50">{footer}</div>}
+        {footer && <div className="p-2 border-t border-slate-100 bg-slate-50">{footer}</div>}
       </div>
     </div>
   );

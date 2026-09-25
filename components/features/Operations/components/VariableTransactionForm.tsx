@@ -6,19 +6,21 @@
  * @architecture
  * **Refactorisation Clean Code :**
  * - Logique métier → `useTransactionForm` (hooks/transactions)
- * - UI pure → Ce composant (~200L)
- * - Réduction : 507L → ~200L (-60%)
+ * - UI pure → Ce composant
  *
- * **Flux de données :**
- * ```
- * Props → useTransactionForm (état + validation)
- *           ↓
- *     Composant (render pur)
- * ```
+ * **Design (v2 — mise en page large) :**
+ * - Bandeau "ledger" en tête : type + montant, sur toute la largeur.
+ * - Grille 2 colonnes pour les champs courts (date / compte, projet / note).
+ * - Ventilation bénéficiaires et catégorie restent pleine largeur (contenu variable).
+ * - Les flags (hors budget / remboursement / salaire) sont des puces inline
+ *   toujours visibles, plus d'accordéon à déplier.
+ *
+ * La largeur passe par le prop `maxWidth` du composant <Modal> (défaut "max-w-md"),
+ * ici réglé sur "max-w-3xl" pour accueillir la mise en page 2 colonnes.
  */
 import React, { useState, useRef } from "react";
 import { useError } from "../../../../contexts/ErrorContext";
-import { TrendingUp, TrendingDown, Calendar, Trash2, Clock, CheckCircle2, Star, MessageSquare, RefreshCcw, Banknote } from "lucide-react";
+import { TrendingUp, TrendingDown, Calendar, Trash2, Clock, CheckCircle2, Star, MessageSquare, RefreshCcw, Banknote, X, Check } from "lucide-react";
 import { VariableTransaction, Account, CategoryDef, Person, SavedLabel, AccountType, Project } from "../../../../types";
 import { CategorySelector } from "../../../ui/molecules/CategorySelector";
 import { TextInput, AmountInput, SearchableTextInput } from "../../../ui/molecules/FormInputs";
@@ -29,7 +31,6 @@ import { BeneficiaryAmountSelector } from "../../../ui/molecules/BeneficiaryAmou
 import { ValidationErrorBlock } from "../../../ui/atoms/ValidationErrorBlock";
 import { useValidationScroll } from "../../../../hooks/useValidationScroll";
 import { useTransactionForm } from "../../../../hooks/transactions";
-import { AdvancedOptionsAccordion } from "../../../ui/molecules/AdvancedOptionsAccordion";
 
 interface VariableTransactionFormProps {
   isOpen: boolean;
@@ -48,6 +49,36 @@ interface VariableTransactionFormProps {
   projects?: Project[];
 }
 
+/** Puce d'option inline (remplace l'ancien accordéon "Options avancées") */
+const FlagChip: React.FC<{
+  active: boolean;
+  onClick: () => void;
+  icon: React.ReactNode;
+  label: string;
+  hint?: string;
+  tone: "amber" | "emerald";
+}> = ({ active, onClick, icon, label, hint, tone }) => {
+  const toneClasses = tone === "amber" ? "bg-amber-50 border-amber-200 text-amber-800" : "bg-emerald-50 border-emerald-200 text-emerald-800";
+  const iconBoxTone = tone === "amber" ? "bg-amber-500 border-amber-500" : "bg-emerald-500 border-emerald-500";
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`group flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-bold transition-all ${
+        active ? toneClasses : "bg-white border-slate-200 text-slate-500 hover:border-slate-300"
+      }`}
+      title={hint}
+    >
+      <span className={`flex h-3.5 w-3.5 items-center justify-center rounded border transition-all ${active ? iconBoxTone : "border-slate-300"}`}>
+        {active && <Check size={9} className="text-white" strokeWidth={3} />}
+      </span>
+      {icon}
+      {label}
+    </button>
+  );
+};
+
 export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = ({
   isOpen,
   onClose,
@@ -65,7 +96,6 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
   projects = [],
 }) => {
   const { showError } = useError();
-  // --- HOOKS SPÉCIALISÉS (LOGIQUE DÉLÉGUÉE) ---
 
   const form = useTransactionForm({
     editingTransaction,
@@ -76,27 +106,28 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
     initialMode,
     labelsSuggestions,
     isOpen,
-    categories, // Pour résolution des IDs lors de l'auto-suggestion
+    categories,
   });
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [showAdvanced, setShowAdvanced] = useState(false);
   const errorBlockRef = useRef<HTMLDivElement>(null);
 
-  // Scroll automatique vers les erreurs de validation
   useValidationScroll(form.validationErrors, errorBlockRef);
 
   const handleFormSubmit = async (targetIsWaiting: boolean) => {
     try {
       const result = form.handleSubmit(targetIsWaiting);
       if (!result) return;
-      // La modale ne se ferme qu'une fois la sauvegarde effectivement réussie,
-      // sinon une erreur (ex: RPC) laisserait croire à tort que les changements sont conservés.
       await onAddTransaction(result as VariableTransaction);
       onClose();
     } catch (err) {
       showError(err as Error, "Sauvegarde de transaction");
     }
+  };
+
+  const handleNativeSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    void handleFormSubmit(false);
   };
 
   const handleDelete = async () => {
@@ -124,60 +155,99 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
     );
   }
 
+  const footer = (
+    <div className="flex gap-2.5">
+      {editingTransaction && onDeleteTransaction && (
+        <button
+          type="button"
+          onClick={() => setShowDeleteConfirm(true)}
+          className="px-3 py-2 bg-red-50 text-red-600 rounded-xl font-bold hover:bg-red-100 transition-colors"
+        >
+          <Trash2 size={18} />
+        </button>
+      )}
+
+      <button
+        type="button"
+        onClick={() => handleFormSubmit(true)}
+        className="flex-1 bg-amber-100 text-amber-700 border border-amber-200 py-2 rounded-xl font-bold shadow-sm transition-colors flex items-center justify-center gap-2 hover:bg-amber-200"
+      >
+        <Clock size={18} /> En attente
+      </button>
+      <button
+        type="submit"
+        form="variable-transaction-form"
+        className={`flex-1 text-white py-2 rounded-xl font-bold shadow-sm transition-colors flex items-center justify-center gap-2 ${
+          form.isExpense ? "bg-indigo-600 hover:bg-indigo-700" : "bg-emerald-600 hover:bg-emerald-700"
+        }`}
+      >
+        <CheckCircle2 size={18} /> Pointé (Réel)
+      </button>
+    </div>
+  );
+
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={editingTransaction ? "Modifier l'opération" : "Nouvelle opération"}>
-      <div className="space-y-2.5">
+    <Modal isOpen={isOpen} onClose={onClose} title={editingTransaction ? "Modifier l'opération" : "Nouvelle opération"} maxWidth="max-w-3xl" footer={footer}>
+      <form id="variable-transaction-form" className="space-y-3" onSubmit={handleNativeSubmit}>
         <ValidationErrorBlock errors={form.validationErrors} ref={errorBlockRef} />
 
-        <div>
-          <label className="text-xs font-medium text-slate-500 uppercase block mb-1.5">Type</label>
-          <div className="flex bg-slate-100 p-1 rounded-lg">
-            <button
-              type="button"
-              onClick={() => {
-                form.setType("EXPENSE");
-                form.setIsRefund(false);
-              }}
-              className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm font-bold transition-all ${
-                form.isExpense ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
-              }`}
-            >
-              <TrendingDown size={14} /> Dépense
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                form.setType("INCOME");
-                form.setIsRefund(false);
-              }}
-              className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm font-bold transition-all ${
-                !form.isExpense ? "bg-white text-emerald-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
-              }`}
-            >
-              <TrendingUp size={14} /> Revenu
-            </button>
+        {/* Bandeau ledger, compact : segmented control horizontal + montant sur une seule ligne */}
+        <div
+          className={`rounded-xl border p-1 transition-colors ${form.isExpense ? "bg-indigo-50/50 border-indigo-100" : "bg-emerald-50/50 border-emerald-100"}`}
+        >
+          <div className="flex flex-col sm:flex-row sm:items-end gap-2.5">
+            <div className="shrink-0 flex flex-col gap-1 bg-white/70 p-1 rounded-lg border border-slate-200">
+              <button
+                type="button"
+                onClick={() => {
+                  form.setType("EXPENSE");
+                  form.setIsRefund(false);
+                }}
+                className={`flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-all ${
+                  form.isExpense ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                }`}
+              >
+                <TrendingDown size={13} /> Dépense
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  form.setType("INCOME");
+                  form.setIsRefund(false);
+                }}
+                className={`flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-all ${
+                  !form.isExpense ? "bg-white text-emerald-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                }`}
+              >
+                <TrendingUp size={13} /> Revenu
+              </button>
+            </div>
+            <div className="flex-[2] min-w-[200px] relative">
+              <SearchableTextInput
+                label="Libellé"
+                value={form.label}
+                onChange={(e) => form.handleLabelChange(e.target.value)}
+                onSelectSuggestion={(val) => form.handleLabelChange(val)}
+                placeholder={form.isExpense ? "Ex: Frais, Courses..." : "Ex: Vente, Remboursement..."}
+                suggestions={form.standardSuggestions}
+                required
+                autoFocus={!editingTransaction}
+              />
+              {form.isSuggesting && (
+                <div className="absolute -bottom-4 left-0 text-[10px] text-indigo-600 italic animate-pulse">✨ Recherche de suggestion...</div>
+              )}
+            </div>
+            <div className="flex-1 min-w-[140px]">
+              <AmountInput label="Montant" value={form.amount} onChange={(e) => form.setAmount(e.target.value)} color={form.themeColor} required />
+            </div>
           </div>
         </div>
 
-        <SearchableTextInput
-          label="Libellé"
-          value={form.label}
-          onChange={(e) => form.handleLabelChange(e.target.value)}
-          onSelectSuggestion={(val) => form.handleLabelChange(val)}
-          placeholder={form.isExpense ? "Ex: Frais, Courses..." : "Ex: Vente, Remboursement..."}
-          suggestions={form.standardSuggestions}
-          required
-          autoFocus={!editingTransaction}
-        />
-        {form.isSuggesting && <div className="text-xs text-indigo-600 italic animate-pulse -mt-1">✨ Recherche de suggestion...</div>}
-        <div className="grid grid-cols-2 gap-2.5">
-          <AmountInput label="Montant" value={form.amount} onChange={(e) => form.setAmount(e.target.value)} color={form.themeColor} required />
+        {/* Champs courts en 2 colonnes */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
           <TextInput label="Date" type="date" icon={Calendar} value={form.date} onChange={(e) => form.setDate(e.target.value)} required />
-        </div>
-
-        <div className="grid grid-cols-1 gap-2.5">
           <AccountSelector
-            label={form.isExpense ? (form.isRefund ? "Compte crédité (Remboursement)" : "Compte débité") : "Compte crédité"}
+            label={form.isExpense ? (form.isRefund ? "Compte crédité" : "Compte débité") : "Compte crédité"}
             accounts={accounts}
             value={form.accountId}
             onChange={(e) => form.setAccountId(e.target.value)}
@@ -186,13 +256,7 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
           />
         </div>
 
-        <BeneficiaryAmountSelector
-          people={people}
-          totalAmount={Math.abs(parseFloat(form.amount) || 0)}
-          selectedBeneficiaryAmounts={form.selectedBeneficiaryAmounts}
-          onBeneficiaryAmountsChange={form.setSelectedBeneficiaryAmounts}
-        />
-
+        {/* Catégorie (+ sous-catégorie) — pleine largeur, contenu variable */}
         <CategorySelector
           categories={categories}
           type={form.type}
@@ -202,108 +266,61 @@ export const VariableTransactionForm: React.FC<VariableTransactionFormProps> = (
           onSubCategoryChange={form.setSubCategory}
         />
 
-        <ProjectSelector projects={projects} value={form.projectId} onChange={(e) => form.setProjectId(e.target.value)} />
-
-        <TextInput
-          label="Note / Commentaire"
-          value={form.comments}
-          onChange={(e) => form.setComments(e.target.value)}
-          placeholder="Infos complémentaires..."
-          icon={MessageSquare}
+        {/* Ventilation bénéficiaires — pleine largeur, contenu variable */}
+        <BeneficiaryAmountSelector
+          people={people}
+          totalAmount={Math.abs(parseFloat(form.amount) || 0)}
+          selectedBeneficiaryAmounts={form.selectedBeneficiaryAmounts}
+          onBeneficiaryAmountsChange={form.setSelectedBeneficiaryAmounts}
         />
 
-        <AdvancedOptionsAccordion isOpen={showAdvanced} onToggle={setShowAdvanced}>
-          {/* Toggle Extra Global */}
-          <div
+        {/* Options — puces inline, toujours visibles, plus d'accordéon */}
+
+        <div className="flex flex-wrap gap-2">
+          <FlagChip
+            active={form.isExtra}
             onClick={() => form.setIsExtra(!form.isExtra)}
-            className={`cursor-pointer px-3 py-2.5 rounded-lg border transition-all flex items-center gap-3 ${
-              form.isExtra ? "bg-amber-50 border-amber-200" : "bg-white border-transparent hover:border-slate-200"
-            }`}
-          >
-            <div className={`p-1 rounded ${form.isExtra ? "bg-amber-200 text-amber-700" : "bg-slate-200 text-slate-500"}`}>
-              <Star size={14} fill={form.isExtra ? "currentColor" : "none"} />
-            </div>
-            <div className="flex-1">
-              <span className={`text-xs font-bold block ${form.isExtra ? "text-amber-800" : "text-slate-600"}`}>
-                Dépense temporaire / Exceptionnelle (Hors Budget)
-              </span>
-              {form.isExtra && (
-                <span className="text-[10px] text-amber-600 leading-none">Cette opération ne sera pas comptabilisée dans le budget courant.</span>
-              )}
-            </div>
-            <input type="checkbox" checked={form.isExtra} onChange={() => {}} className="pointer-events-none" />
-          </div>
+            icon={<Star size={12} fill={form.isExtra ? "currentColor" : "none"} />}
+            label="Hors budget (exceptionnelle)"
+            hint="Cette opération ne sera pas comptabilisée dans le budget courant."
+            tone="amber"
+          />
 
           {form.isExpense && (
-            <div
+            <FlagChip
+              active={form.isRefund}
               onClick={() => form.setIsRefund(!form.isRefund)}
-              className={`cursor-pointer px-3 py-2.5 rounded-lg border transition-all flex items-center gap-3 ${
-                form.isRefund ? "bg-emerald-50 border-emerald-200" : "bg-white border-transparent hover:border-slate-200"
-              }`}
-            >
-              <div className={`p-1 rounded ${form.isRefund ? "bg-emerald-200 text-emerald-700" : "bg-slate-200 text-slate-500"}`}>
-                {form.isRefund ? <RefreshCcw size={14} /> : <TrendingDown size={14} />}
-              </div>
-              <div className="flex-1">
-                <span className={`text-xs font-bold block ${form.isRefund ? "text-emerald-800" : "text-slate-600"}`}>C'est un remboursement</span>
-                {form.isRefund && (
-                  <span className="text-[10px] text-emerald-600 leading-none">Ce montant sera déduit de vos dépenses (ex: Mutuelle, Retour produit).</span>
-                )}
-              </div>
-              <input type="checkbox" checked={form.isRefund} onChange={() => {}} className="pointer-events-none" />
-            </div>
+              icon={<RefreshCcw size={12} />}
+              label="Remboursement"
+              hint="Ce montant sera déduit de vos dépenses (ex: Mutuelle, Retour produit)."
+              tone="emerald"
+            />
           )}
 
           {!form.isExpense && (
-            <div
+            <FlagChip
+              active={form.isSalary}
               onClick={() => form.setIsSalary(!form.isSalary)}
-              className={`cursor-pointer px-3 py-2.5 rounded-lg border transition-all flex items-center gap-3 ${
-                form.isSalary ? "bg-emerald-50 border-emerald-200" : "bg-white border-transparent hover:border-slate-200"
-              }`}
-            >
-              <div className={`p-1 rounded ${form.isSalary ? "bg-emerald-200 text-emerald-700" : "bg-slate-200 text-slate-500"}`}>
-                <Banknote size={14} />
-              </div>
-              <div className="flex-1">
-                <span className={`text-xs font-bold block ${form.isSalary ? "text-emerald-800" : "text-slate-600"}`}>C'est un salaire / revenu structurel</span>
-                {form.isSalary && (
-                  <span className="text-[10px] text-emerald-600 leading-none">
-                    Ce revenu sera exclu du budget variable et comptabilisé comme revenu structurel.
-                  </span>
-                )}
-              </div>
-              <input type="checkbox" checked={form.isSalary} onChange={() => {}} className="pointer-events-none" />
-            </div>
+              icon={<Banknote size={12} />}
+              label="Salaire / revenu structurel"
+              hint="Ce revenu sera exclu du budget variable et comptabilisé comme revenu structurel."
+              tone="emerald"
+            />
           )}
-        </AdvancedOptionsAccordion>
-
-        <div className="flex gap-2.5 pt-3 border-t border-slate-100">
-          {editingTransaction && onDeleteTransaction && (
-            <button
-              type="button"
-              onClick={() => setShowDeleteConfirm(true)}
-              className="px-3 py-2 bg-red-50 text-red-600 rounded-xl font-bold hover:bg-red-100 transition-colors"
-            >
-              <Trash2 size={18} />
-            </button>
-          )}
-
-          <button
-            onClick={() => handleFormSubmit(true)}
-            className="flex-1 bg-amber-100 text-amber-700 border border-amber-200 py-2 rounded-xl font-bold shadow-sm transition-colors flex items-center justify-center gap-2 hover:bg-amber-200"
-          >
-            <Clock size={18} /> En attente
-          </button>
-          <button
-            onClick={() => handleFormSubmit(false)}
-            className={`flex-1 text-white py-2 rounded-xl font-bold shadow-sm transition-colors flex items-center justify-center gap-2 ${
-              form.isExpense ? "bg-indigo-600 hover:bg-indigo-700" : "bg-emerald-600 hover:bg-emerald-700"
-            }`}
-          >
-            <CheckCircle2 size={18} /> Pointé (Réel)
-          </button>
         </div>
-      </div>
+
+        {/* Projet + note en 2 colonnes */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          <ProjectSelector projects={projects} value={form.projectId} onChange={(e) => form.setProjectId(e.target.value)} />
+          <TextInput
+            label="Note / Commentaire"
+            value={form.comments}
+            onChange={(e) => form.setComments(e.target.value)}
+            placeholder="Infos complémentaires..."
+            icon={MessageSquare}
+          />
+        </div>
+      </form>
     </Modal>
   );
 };

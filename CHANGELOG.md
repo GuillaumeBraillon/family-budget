@@ -7,6 +7,16 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.14.1] - 2026-09-25
+
+### 🎨 UI/UX
+
+- **Vue Opérations > Formulaire d'opération** : le sélecteur de ventilation par bénéficiaire reprend le langage visuel du sélecteur de catégories (carte, puces d'ajout en un clic, barre de progression du montant restant).
+- **Vue Opérations > Formulaire d'opération** : la touche Entrée valide le formulaire et enregistre l'opération en **Pointé (Réel)** ; le bouton **En attente** reste un clic explicite.
+- **Navigation de période** : le scope d'affichage par défaut passe de **Période** à **Mois** (`usePeriodNavigation`). Un clic Dashboard sur une semaine continue de forcer le scope **Période** à l'arrivée sur Opérations.
+
+---
+
 ## [2.14.0] - 2026-09-25
 
 ### ✨ Fonctionnalités (Features)
