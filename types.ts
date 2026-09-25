@@ -61,6 +61,8 @@ export interface SavedLabel {
   subCategoryId?: string; // Sous-catégorie suggérée pour auto-complétion
   accountId?: string; // Compte suggéré pour auto-complétion
   beneficiaryId?: string; // Bénéficiaire suggéré pour auto-complétion
+  isExtra?: boolean; // Toggle "Extra" suggéré pour auto-complétion
+  isRefund?: boolean; // Toggle "Remboursement" suggéré pour auto-complétion
 }
 
 /**

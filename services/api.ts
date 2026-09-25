@@ -98,7 +98,7 @@ export const fetchInitialData = async () => {
         .order("id", { ascending: true })
         .range(from, to)
     ),
-    supabase.from("saved_labels").select("id, name, type, is_expense, category_id, sub_category_id, account_id, beneficiary_id"),
+    supabase.from("saved_labels").select("id, name, type, is_expense, category_id, sub_category_id, account_id, beneficiary_id, is_extra, is_refund"),
     supabase
       .from("authorized_users")
       .select("email, name, avatar_url, is_allowed, added_at, added_by, last_login_at, notes, is_admin")

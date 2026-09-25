@@ -7,6 +7,22 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.14.0] - 2026-09-25
+
+### ✨ Fonctionnalités (Features)
+
+- **Libellés sauvegardés > Extra / Remboursement** : les toggles "Hors Budget (Extra)" et "Remboursement" d'une opération variable sont désormais mémorisés sur le libellé sauvegardé correspondant.
+  - **Réglages > Libellés** : nouveaux toggles "Hors Budget" et "Remboursement" (onglet Courant) dans le formulaire d'ajout/édition d'un libellé.
+  - **Vue Opérations** : à la saisie d'un libellé déjà connu, les toggles Extra/Remboursement sont automatiquement pré-remplis depuis le libellé sauvegardé.
+  - **Sauvegarde automatique** : à l'enregistrement d'une opération variable, le libellé sauvegardé correspondant (même nom, même sens dépense/revenu) est mis à jour avec les valeurs Extra/Remboursement utilisées, pour pré-remplir la prochaine saisie.
+
+### 🗄️ Base de données
+
+- Nouvelles colonnes `saved_labels.is_extra` et `saved_labels.is_refund` (booléens, défaut `false`).
+- Migration : `supabase/migrations/20260925120000_add_saved_labels_extra_refund.sql`.
+
+---
+
 ## [2.13.1] - 2026-08-30
 
 ### ✨ Fonctionnalités (Features)

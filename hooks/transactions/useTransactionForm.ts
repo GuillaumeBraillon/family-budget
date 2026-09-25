@@ -496,6 +496,10 @@ export const useTransactionForm = ({
             setSelectedBeneficiaryAmounts([{ beneficiaryId: matchingLabel.beneficiaryId, amount: currentAmount }]);
             autoSuggestedBeneficiaryIdRef.current = matchingLabel.beneficiaryId;
           }
+
+          // Auto-suggestion toggles Extra / Remboursement
+          setIsExtra(!!matchingLabel.isExtra);
+          setIsRefund(!!matchingLabel.isRefund);
         } else if (categories.length > 0) {
           // FALLBACK : Utiliser RPC (seulement pour catégorie/sous-catégorie)
           const suggestion = await suggestFromLabel(newLabel);

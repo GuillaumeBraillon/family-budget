@@ -239,6 +239,8 @@ export const apiUpsertLabel = async (label: SavedLabel) =>
     sub_category_id: label.subCategoryId,
     account_id: label.accountId,
     beneficiary_id: label.beneficiaryId,
+    is_extra: !!label.isExtra,
+    is_refund: !!label.isRefund,
   });
 
 export const apiDeleteLabel = async (id: string) => supabase.from("saved_labels").delete().eq("id", id);

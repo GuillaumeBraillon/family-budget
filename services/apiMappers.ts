@@ -90,6 +90,8 @@ export const mapDbSavedLabel = (label: DbSavedLabel): SavedLabel => ({
   subCategoryId: label.sub_category_id,
   accountId: label.account_id,
   beneficiaryId: label.beneficiary_id,
+  isExtra: !!label.is_extra,
+  isRefund: !!label.is_refund,
 });
 
 export const mapDbExpenseConfig = (config: DbExpenseConfig): ExpenseConfig => ({

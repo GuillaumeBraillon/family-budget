@@ -60,6 +60,7 @@ import {
   apiDeleteTransfer,
   apiUpsertVariableTransaction,
   apiDeleteVariableTransaction,
+  apiUpsertLabel,
 } from "../services/api";
 import { isSupabaseConfigured } from "../services/supabase";
 
@@ -442,6 +443,28 @@ export const useBudget = () => {
     await updateOperationsSorting(newSorting);
   };
 
+  /**
+   * Répercute les toggles "Extra" / "Remboursement" d'une transaction variable
+   * sur le libellé sauvegardé correspondant (si existant), pour pré-remplir
+   * automatiquement les prochaines saisies avec le même libellé.
+   */
+  const syncSavedLabelToggles = async (tx: VariableTransaction) => {
+    const trimmedLabel = tx.label.trim().toLowerCase();
+    if (!trimmedLabel) return;
+
+    // Le libellé est saisi avant conversion isRefund → INCOME, donc le remboursement reste côté "Dépenses"
+    const formIsExpense = tx.isRefund ? true : tx.type === "EXPENSE";
+
+    const matchingLabel = budgetDataRef.current.savedLabels.find(
+      (l) => l.type === AccountType.CHECKING && l.isExpense === formIsExpense && l.name.trim().toLowerCase() === trimmedLabel
+    );
+
+    if (!matchingLabel) return;
+    if (!!matchingLabel.isExtra === !!tx.isExtra && !!matchingLabel.isRefund === !!tx.isRefund) return;
+
+    await apiUpsertLabel({ ...matchingLabel, isExtra: !!tx.isExtra, isRefund: !!tx.isRefund });
+  };
+
   const upsertVariableTransaction = async (tx: VariableTransaction) => {
     const oldTx = budgetDataRef.current.variableTransactions.find((t) => t.id === tx.id);
     const isNew = !oldTx;
@@ -464,6 +487,10 @@ export const useBudget = () => {
     if (res.error) {
       throw res.error;
     }
+
+    // Synchronisation auto du libellé sauvegardé (isExtra/isRefund) pour pré-remplir les prochaines saisies
+    await syncSavedLabelToggles(tx);
+
     await loadData(true);
     return res;
   };

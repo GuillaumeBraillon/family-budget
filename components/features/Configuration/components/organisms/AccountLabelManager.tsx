@@ -1,5 +1,21 @@
 import React, { useState } from "react";
-import { Trash2, Save, Tag, DownloadCloud, Search, Check, Info, TrendingDown, TrendingUp, ArrowRightLeft, PiggyBank, CreditCard, List } from "lucide-react";
+import {
+  Trash2,
+  Save,
+  Tag,
+  DownloadCloud,
+  Search,
+  Check,
+  Info,
+  TrendingDown,
+  TrendingUp,
+  ArrowRightLeft,
+  PiggyBank,
+  CreditCard,
+  List,
+  Star,
+  RefreshCcw,
+} from "lucide-react";
 import { SavedLabel, AccountType, CategoryDef, Account, Person } from "../../../../../types";
 import { ConfirmModal } from "../../../../ui/atoms/ConfirmModal";
 import { DataList } from "../../../../ui/molecules/DataList";
@@ -49,6 +65,8 @@ export const AccountLabelManager: React.FC<AccountLabelManagerProps> = ({
   const [subCategory, setSubCategory] = useState("");
   const [accountId, setAccountId] = useState("");
   const [beneficiaryId, setBeneficiaryId] = useState("");
+  const [isExtra, setIsExtra] = useState(false);
+  const [isRefund, setIsRefund] = useState(false);
 
   // Search & Feedback
   const [searchQuery, setSearchQuery] = useState("");
@@ -72,6 +90,8 @@ export const AccountLabelManager: React.FC<AccountLabelManagerProps> = ({
     setSubCategory("");
     setAccountId("");
     setBeneficiaryId("");
+    setIsExtra(false);
+    setIsRefund(false);
     setEditingLabel(null);
     setIsModalOpen(false);
     setDeleteConfirm(null);
@@ -85,6 +105,8 @@ export const AccountLabelManager: React.FC<AccountLabelManagerProps> = ({
     setSubCategory("");
     setAccountId("");
     setBeneficiaryId("");
+    setIsExtra(false);
+    setIsRefund(false);
     setShowAdvanced(false);
     setIsModalOpen(true);
   };
@@ -114,6 +136,9 @@ export const AccountLabelManager: React.FC<AccountLabelManagerProps> = ({
     if (label.beneficiaryId) {
       setBeneficiaryId(label.beneficiaryId);
     }
+
+    setIsExtra(!!label.isExtra);
+    setIsRefund(!!label.isRefund);
 
     setShowAdvanced(false);
     setIsModalOpen(true);
@@ -157,6 +182,8 @@ export const AccountLabelManager: React.FC<AccountLabelManagerProps> = ({
       subCategoryId,
       accountId: accountId || undefined,
       beneficiaryId: beneficiaryId || undefined,
+      isExtra,
+      isRefund: targetIsExpense ? isRefund : false,
     };
     onUpsertLabel(label);
     resetForm();
@@ -252,6 +279,41 @@ export const AccountLabelManager: React.FC<AccountLabelManagerProps> = ({
                   />
                 </div>
               </div>
+
+              {currentTab === AccountType.CHECKING && (
+                <div className="space-y-2">
+                  <p className="text-xs text-slate-600 leading-relaxed">
+                    Pré-remplissez les toggles "Extra" / "Remboursement" lors de la saisie d'une opération avec ce libellé.
+                  </p>
+                  <div
+                    onClick={() => setIsExtra(!isExtra)}
+                    className={`cursor-pointer px-3 py-2 rounded-lg border transition-all flex items-center gap-3 ${
+                      isExtra ? "bg-amber-50 border-amber-200" : "bg-white border-slate-200 hover:border-slate-300"
+                    }`}
+                  >
+                    <div className={`p-1 rounded ${isExtra ? "bg-amber-200 text-amber-700" : "bg-slate-200 text-slate-500"}`}>
+                      <Star size={14} fill={isExtra ? "currentColor" : "none"} />
+                    </div>
+                    <span className={`text-xs font-bold flex-1 ${isExtra ? "text-amber-800" : "text-slate-600"}`}>Hors Budget (Extra)</span>
+                    <input type="checkbox" checked={isExtra} onChange={() => {}} className="pointer-events-none" />
+                  </div>
+
+                  {isExpenseMode && (
+                    <div
+                      onClick={() => setIsRefund(!isRefund)}
+                      className={`cursor-pointer px-3 py-2 rounded-lg border transition-all flex items-center gap-3 ${
+                        isRefund ? "bg-emerald-50 border-emerald-200" : "bg-white border-slate-200 hover:border-slate-300"
+                      }`}
+                    >
+                      <div className={`p-1 rounded ${isRefund ? "bg-emerald-200 text-emerald-700" : "bg-slate-200 text-slate-500"}`}>
+                        <RefreshCcw size={14} />
+                      </div>
+                      <span className={`text-xs font-bold flex-1 ${isRefund ? "text-emerald-800" : "text-slate-600"}`}>Remboursement</span>
+                      <input type="checkbox" checked={isRefund} onChange={() => {}} className="pointer-events-none" />
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </AdvancedOptionsAccordion>
 
