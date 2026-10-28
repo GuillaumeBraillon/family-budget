@@ -37,6 +37,8 @@ import {
 
 // PostgREST plafonne silencieusement chaque requete a ce nombre de lignes (defaut Supabase).
 export const SUPABASE_MAX_ROWS = 1000;
+// Keep PostgREST `in.(...)` filters short enough for browser and proxy URL limits.
+const SUPABASE_IN_FILTER_BATCH_SIZE = 200;
 
 /**
  * Recupere toutes les lignes d'une table en paginant par blocs de SUPABASE_MAX_ROWS,
@@ -53,6 +55,20 @@ export async function fetchAllRows<T>(
     allRows.push(...(data || []));
     if (!data || data.length < SUPABASE_MAX_ROWS) break;
     from += SUPABASE_MAX_ROWS;
+  }
+  return { data: allRows, error: null };
+}
+
+async function fetchRowsByPaidItemInstanceIds<T>(
+  instanceIds: string[],
+  buildQuery: (ids: string[], from: number, to: number) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>
+): Promise<{ data: T[]; error: { message: string } | null }> {
+  const allRows: T[] = [];
+  for (let index = 0; index < instanceIds.length; index += SUPABASE_IN_FILTER_BATCH_SIZE) {
+    const ids = instanceIds.slice(index, index + SUPABASE_IN_FILTER_BATCH_SIZE);
+    const { data, error } = await fetchAllRows<T>((from, to) => buildQuery(ids, from, to));
+    if (error) return { data: allRows, error };
+    allRows.push(...data);
   }
   return { data: allRows, error: null };
 }
@@ -257,8 +273,8 @@ export const apiImportLabels = async () => {
 
   let primaryBeneficiaryByInstance: Record<string, string> = {};
   if (instanceIds.length > 0) {
-    const { data: beneficiaryRows, error: beneficiaryError } = await fetchAllRows((from, to) =>
-      supabase.from("paid_item_beneficiaries").select("paid_item_instance_id, beneficiary_id, amount").in("paid_item_instance_id", instanceIds).range(from, to)
+    const { data: beneficiaryRows, error: beneficiaryError } = await fetchRowsByPaidItemInstanceIds(instanceIds, (ids, from, to) =>
+      supabase.from("paid_item_beneficiaries").select("paid_item_instance_id, beneficiary_id, amount").in("paid_item_instance_id", ids).range(from, to)
     );
 
     if (beneficiaryError) return { error: beneficiaryError };
@@ -381,8 +397,8 @@ export const apiImportVirLabels = async () => {
 
   let primaryBeneficiaryByInstance: Record<string, string> = {};
   if (instanceIds.length > 0) {
-    const { data: beneficiaryRows, error: beneficiaryError } = await fetchAllRows((from, to) =>
-      supabase.from("paid_item_beneficiaries").select("paid_item_instance_id, beneficiary_id, amount").in("paid_item_instance_id", instanceIds).range(from, to)
+    const { data: beneficiaryRows, error: beneficiaryError } = await fetchRowsByPaidItemInstanceIds(instanceIds, (ids, from, to) =>
+      supabase.from("paid_item_beneficiaries").select("paid_item_instance_id, beneficiary_id, amount").in("paid_item_instance_id", ids).range(from, to)
     );
 
     if (beneficiaryError) return { error: beneficiaryError };

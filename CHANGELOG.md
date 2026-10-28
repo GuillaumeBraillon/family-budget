@@ -7,6 +7,14 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.14.2] - 2026-10-28
+
+### 🐛 Corrections (Fixes)
+
+- **Import automatique des libellés** : les identifiants d'opérations envoyés à `paid_item_beneficiaries` sont désormais répartis en lots de 200, évitant les erreurs 400 causées par des filtres `in.(...)` trop longs lors de l'import des libellés CB et VIR.
+
+---
+
 ## [2.14.1] - 2026-09-25
 
 ### 🎨 UI/UX
