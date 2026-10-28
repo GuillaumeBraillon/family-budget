@@ -7,6 +7,14 @@ et ce projet respecte le [Versionnage Sémantique](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.14.3] - 2026-10-28
+
+### 🐛 Corrections (Fixes)
+
+- **Enregistrement des opérations** : la catégorie devient facultative. Une opération peut être enregistrée sans catégorie, qui sera stockée comme une valeur vide.
+
+---
+
 ## [2.14.2] - 2026-10-28
 
 ### 🐛 Corrections (Fixes)

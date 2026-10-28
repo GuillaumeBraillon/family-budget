@@ -110,10 +110,9 @@ const validatePaidItemForRpc = (payload: { instanceId: string; amount: number; p
   if (!payload.label?.trim()) {
     throw new Error("Le libellé est obligatoire.");
   }
-  if (!payload.category?.trim()) {
-    throw new Error("La catégorie est obligatoire.");
-  }
 };
+
+const normalizePaidItemCategory = (category: string | null | undefined) => category?.trim() || "";
 
 const formatSupabaseError = (error: unknown) => {
   if (!error || typeof error !== "object") {
@@ -611,7 +610,7 @@ export const apiSetPaidStatus = async (details: PaidItemDetails | null, instance
       p_payment_date: details.paymentDate,
       p_account_id: details.accountId,
       p_label: details.label,
-      p_category: details.category,
+      p_category: normalizePaidItemCategory(details.category),
       p_sub_category: details.subCategory || null,
       p_type: normalizedPaidItem.type,
       p_is_variable: !!details.isVariable,
@@ -681,7 +680,7 @@ export const apiUpsertVariableTransaction = async (transaction: VariableTransact
     p_payment_date: transaction.date,
     p_account_id: transaction.accountId,
     p_label: transaction.label,
-    p_category: transaction.category,
+    p_category: normalizePaidItemCategory(transaction.category),
     p_sub_category: transaction.subCategory || null,
     p_type: normalizedPaidItem.type,
     p_is_variable: true,
